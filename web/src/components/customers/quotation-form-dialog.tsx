@@ -8,7 +8,7 @@
  * - 报价编号留空则由后端按 QT-YYYYMMDD-NNN 生成；重复时后端返回 409，这里做字段级提示
  */
 import * as React from 'react';
-import { useForm, useFieldArray, type Control } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Plus, ReceiptText, Trash2, TriangleAlert } from 'lucide-react';
@@ -169,21 +169,17 @@ export function QuotationFormDialog({
   }, [open, reset, quotation]);
 
   // 即时金额：行金额 = 数量 × 单价，总额 = 各行之和（与后端 roundMoney 同口径）
-  const watchedItems = watch('items');
+  // 用 useWatch 订阅 items：register 原地修改 item 时 watch('items') 的引用不变，
+  // 若再用 useMemo 按引用缓存会导致总额不刷新（只有 append 新行才重算）。
+  // 这里每次渲染直接计算（明细行数很少，成本可忽略），保证输入即刷新。
+  const watchedItems = useWatch({ control, name: 'items' });
   const currency = watch('currency');
   const status = watch('status');
   const markAsQuoting = watch('markCustomerAsQuoting');
-  const lineAmounts = React.useMemo(
-    () =>
-      (watchedItems ?? []).map((item) =>
-        roundMoney((Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0)),
-      ),
-    [watchedItems],
+  const lineAmounts = (watchedItems ?? []).map((item) =>
+    roundMoney((Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0)),
   );
-  const totalAmount = React.useMemo(
-    () => roundMoney(lineAmounts.reduce((sum, value) => sum + value, 0)),
-    [lineAmounts],
-  );
+  const totalAmount = roundMoney(lineAmounts.reduce((sum, value) => sum + value, 0));
 
   const submit = React.useCallback(async () => {
     await handleSubmit(async (values) => {
