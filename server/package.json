@@ -1,6 +1,6 @@
 {
   "name": "cdlm-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Customer Dev Letter Manager - REST API (Express + MongoDB)",
   "main": "dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "cdlm-web",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Customer Dev Letter Manager - Web (Vite + React 18 + TypeScript + Tailwind + shadcn/ui)",

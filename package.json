@@ -1,6 +1,6 @@
 {
   "name": "customer-dev-letter-manager",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "客户开发信管理工具 —— 客户信息维护 + Excel 导入 + 富文本开发信发送与记录",
   "scripts": {
