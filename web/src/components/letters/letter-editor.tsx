@@ -77,6 +77,7 @@ export const LetterEditor = React.forwardRef<LetterEditorHandle, LetterEditorPro
   ref,
 ) {
   const quillRef = React.useRef<ReactQuill | null>(null);
+  const wrapRef = React.useRef<HTMLDivElement | null>(null);
 
   // modules / formats 引用必须稳定
   const modules = React.useMemo(
@@ -96,6 +97,37 @@ export const LetterEditor = React.forwardRef<LetterEditorHandle, LetterEditorPro
       return null;
     }
   }, []);
+
+  /**
+   * 粘贴兜底：Quill 只处理「落在自己身上」的 paste。
+   * 在 Radix Dialog 里焦点常被弹窗容器抢走，导致 Ctrl+V 丢失、正文粘不进。
+   * 这里在 document 捕获阶段拦截：若焦点不在任何可编辑字段（input/textarea/本编辑器），
+   * 则把剪贴板纯文本插入编辑器光标处，保证「直接粘贴」永远生效。
+   */
+  React.useEffect(() => {
+    if (readOnly) return;
+    const onPaste = (event: ClipboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+      const inOwnEditor = Boolean(target && wrapRef.current?.contains(target));
+      if (target && !inOwnEditor) {
+        const tag = target.tagName;
+        // 焦点在其它输入框 / 文本域 / 其它可编辑区 → 交给原生处理
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return;
+      }
+      const editor = getEditor();
+      if (!editor) return;
+      const text = event.clipboardData?.getData('text/plain');
+      if (!text) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const selection = editor.getSelection(true);
+      const index = selection ? selection.index : editor.getLength();
+      editor.insertText(index, text, 'user');
+      editor.setSelection(index + text.length, 0, 'user');
+    };
+    document.addEventListener('paste', onPaste, true);
+    return () => document.removeEventListener('paste', onPaste, true);
+  }, [getEditor, readOnly]);
 
   React.useImperativeHandle(
     ref,
@@ -123,6 +155,7 @@ export const LetterEditor = React.forwardRef<LetterEditorHandle, LetterEditorPro
 
   return (
     <div
+      ref={wrapRef}
       id={id}
       className={cn(
         'letter-editor rounded-md transition-shadow',
