@@ -1,0 +1,51 @@
+# ---- Dependencies ----
+node_modules/
+.pnp
+.pnp.js
+jspm_packages/
+
+# ---- Build output ----
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ---- Environment ----
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ---- Logs ----
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Runtime data ----
+server/uploads/
+server/tmp/
+coverage/
+.nyc_output/
+
+# ---- Editor / OS ----
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+
+# ---- Misc ----
+.cache/
+temp/
+tmp/
+
+# ---- Local business / customer data (real customer PII, never commit) ----
+Genesis-*.xlsx
+Monarc Jewellery*.md

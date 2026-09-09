@@ -1,0 +1,291 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   主题变量（shadcn/ui 约定）
+   所有颜色以 HSL 分量存储，配合 tailwind.config.ts 的 hsl(var(--x)) 使用。
+   ========================================================================== */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* 主色：天空蓝，呼应「待开发」的状态色 */
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 94%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.625rem;
+
+    /* 侧边栏 */
+    --sidebar: 210 40% 98%;
+    --sidebar-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 214.3 31.8% 91.4%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+
+    /* 业务状态色 */
+    --status-pending: 217 91% 60%;
+    --status-developed: 142 71% 45%;
+    --status-failed: 0 72% 51%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 47% 8%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 47% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 199 89% 55%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 15.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 20%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 20%;
+    --input: 217.2 32.6% 22%;
+    --ring: 199 89% 55%;
+
+    --sidebar: 222.2 47% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-accent: 217.2 32.6% 18%;
+    --sidebar-border: 217.2 32.6% 18%;
+
+    --status-pending: 217 91% 65%;
+    --status-developed: 142 69% 50%;
+    --status-failed: 0 72% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    /* 避免模态框滚动穿透时的布局抖动 */
+    scrollbar-gutter: stable;
+  }
+
+  /* 键盘可达性：仅在键盘操作时显示 focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+/* ==========================================================================
+   通用工具类
+   ========================================================================== */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* 单行 / 多行截断 */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* 表格容器：小屏横向滚动 */
+  .table-scroll {
+    @apply w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ==========================================================================
+   React Quill 适配
+   quill.snow.css 自带白底 + 深色文字，深色模式下必须覆盖。
+   ========================================================================== */
+.ql-container {
+  @apply font-sans text-sm;
+}
+
+.ql-toolbar.ql-snow,
+.ql-container.ql-snow {
+  @apply border-border;
+}
+
+.ql-toolbar.ql-snow {
+  @apply rounded-t-md border-b bg-muted/40 px-2 py-1.5;
+}
+
+.ql-container.ql-snow {
+  @apply rounded-b-md bg-background;
+}
+
+.ql-editor {
+  @apply min-h-[240px] p-4 leading-relaxed;
+}
+
+.ql-editor.ql-blank::before {
+  @apply text-muted-foreground italic;
+  font-style: italic;
+}
+
+/* 工具栏图标颜色跟随主题 */
+.ql-snow .ql-stroke {
+  @apply stroke-foreground;
+}
+.ql-snow .ql-fill,
+.ql-snow .ql-stroke.ql-fill {
+  @apply fill-foreground;
+}
+.ql-snow .ql-picker,
+.ql-snow .ql-picker-label {
+  @apply text-foreground;
+}
+.ql-snow .ql-picker-label:hover,
+.ql-snow .ql-active .ql-stroke,
+.ql-snow .ql-picker-label.ql-active {
+  @apply text-primary;
+}
+.ql-snow .ql-stroke-miter {
+  @apply stroke-foreground;
+}
+
+/* 下拉面板（字号 / 标题选择器） */
+.ql-snow .ql-picker-options {
+  @apply rounded-md border border-border bg-popover shadow-md;
+}
+.ql-snow .ql-picker-item {
+  @apply text-popover-foreground;
+}
+.ql-snow .ql-picker-item:hover,
+.ql-snow .ql-picker-item.ql-selected {
+  @apply text-primary;
+}
+
+/* 链接 / 图片弹窗 */
+.ql-snow .ql-tooltip {
+  @apply rounded-md border-border bg-popover text-popover-foreground shadow-md;
+  z-index: 60;
+}
+.ql-snow .ql-tooltip input[type='text'] {
+  @apply rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground;
+}
+.ql-snow .ql-tooltip a.ql-action,
+.ql-snow .ql-tooltip a.ql-remove {
+  @apply text-primary;
+}
+
+/* 编辑器内的邮件正文样式 */
+.ql-editor a {
+  @apply text-primary underline underline-offset-2;
+}
+.ql-editor blockquote {
+  @apply border-l-4 border-border pl-3 italic text-muted-foreground;
+}
+.ql-editor h1 {
+  @apply text-2xl font-bold;
+}
+.ql-editor h2 {
+  @apply text-xl font-semibold;
+}
+.ql-editor ul,
+.ql-editor ol {
+  @apply pl-6;
+}
+.ql-editor ul {
+  @apply list-disc;
+}
+.ql-editor ol {
+  @apply list-decimal;
+}
+
+/* ==========================================================================
+   邮件预览区（只读渲染 HTML）
+   ========================================================================== */
+.mail-preview {
+  @apply text-sm leading-relaxed;
+}
+.mail-preview p {
+  @apply my-2;
+}
+.mail-preview a {
+  @apply text-primary underline underline-offset-2 break-all;
+}
+.mail-preview ul {
+  @apply my-2 list-disc pl-6;
+}
+.mail-preview ol {
+  @apply my-2 list-decimal pl-6;
+}
+.mail-preview blockquote {
+  @apply my-2 border-l-4 border-border pl-3 italic text-muted-foreground;
+}
+.mail-preview h1,
+.mail-preview h2,
+.mail-preview h3 {
+  @apply mb-2 mt-4 font-semibold;
+}
+.mail-preview img {
+  @apply max-w-full rounded-md;
+}
+
+/* ==========================================================================
+   打印（开发信需要能直接打印/另存为 PDF）
+   ========================================================================== */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    @apply bg-white text-black;
+  }
+}

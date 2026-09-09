@@ -1,0 +1,23 @@
+{
+  "name": "customer-dev-letter-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "客户开发信管理工具 —— 客户信息维护 + Excel 导入 + 富文本开发信发送与记录",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix web",
+    "dev": "concurrently -n \"SERVER,WEB\" -c \"cyan,magenta\" \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:web": "npm run dev --prefix web",
+    "build": "npm run build --prefix server && npm run build --prefix web",
+    "start": "npm run start --prefix server",
+    "typecheck": "npm run typecheck --prefix server && npm run typecheck --prefix web",
+    "lint": "npm run lint --prefix web",
+    "seed": "npm run seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
