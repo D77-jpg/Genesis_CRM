@@ -30,7 +30,7 @@ const envSchema = z.object({
   ADMIN_DISPLAY_NAME: z.string().default('Genesis Admin'),
 
   MAIL_TRANSPORT: z.enum(['mock', 'smtp']).default('mock'),
-  MAIL_FROM: z.string().default('Genesis (Xiamen) Bags Co., Ltd. <sales@genesisbags.com>'),
+  MAIL_FROM: z.string().default('Genesis (Xiamen) Bags Co., Ltd. <sales@genesisgroup.cn>'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: booleanish.default('false'),
