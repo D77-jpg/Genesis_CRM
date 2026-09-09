@@ -29,6 +29,7 @@ import {
   DevelopmentLetter,
   FollowUp,
   LetterTemplate,
+  Quotation,
   User,
   type ICustomer,
 } from '../models';
@@ -487,11 +488,12 @@ function buildValues(customer: Partial<ICustomer>) {
 }
 
 async function reset(): Promise<void> {
-  logger.warn('--reset：正在清空业务集合（customers / developmentletters / followups / customerevents / customerattachments / lettertemplates）...');
+  logger.warn('--reset：正在清空业务集合（customers / developmentletters / followups / customerevents / customerattachments / quotations / lettertemplates）...');
   await DevelopmentLetter.deleteMany({});
   await FollowUp.deleteMany({});
   await CustomerEvent.deleteMany({});
   await CustomerAttachment.deleteMany({});
+  await Quotation.deleteMany({});
   await LetterTemplate.deleteMany({});
   await Customer.deleteMany({});
   logger.info('已清空');

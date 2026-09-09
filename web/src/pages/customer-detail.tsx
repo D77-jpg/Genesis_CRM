@@ -48,6 +48,7 @@ import { Separator, Skeleton } from '@/components/ui/separator';
 import { CustomerFormDialog } from '@/components/customers/customer-form-dialog';
 import { CustomerActivity } from '@/components/customers/customer-activity';
 import { CustomerAttachments } from '@/components/customers/customer-attachments';
+import { CustomerQuotations } from '@/components/customers/customer-quotations';
 import { SendLetterDialog } from '@/components/letters/send-letter-dialog';
 import { LetterViewDialog } from '@/components/letters/letter-view-dialog';
 import { LetterHistoryTable } from '@/components/letters/letter-history-table';
@@ -530,6 +531,10 @@ export function CustomerDetailPage(): React.JSX.Element {
 
       <CustomerActivity customerId={customer.id} onCustomerChanged={() => void reloadCustomer()} />
 
+      {/* ---------------------------- 报价单 ---------------------------- */}
+
+      <CustomerQuotations customerId={customer.id} onCustomerChanged={() => void reloadCustomer()} />
+
       {/* ---------------------------- 开发信历史 ---------------------------- */}
 
       <div ref={lettersAnchor} id="letters" className="scroll-mt-20">
@@ -644,7 +649,7 @@ export function CustomerDetailPage(): React.JSX.Element {
         open={deleteCustomerOpen}
         onOpenChange={setDeleteCustomerOpen}
         title="删除客户"
-        description={`确定要删除「${customer.name}」吗？该客户的 ${customer.letterCount} 条开发信记录也会一并删除，且无法恢复。`}
+        description={`确定要删除「${customer.name}」吗？该客户的 ${customer.letterCount} 条开发信记录及其报价单也会一并删除，且无法恢复。`}
         confirmText="删除客户"
         variant="destructive"
         loading={customerMutating}

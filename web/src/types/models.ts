@@ -35,6 +35,22 @@ export type MailChannel = 'mock' | 'smtp';
 export type UserRole = 'admin' | 'user';
 /** 用户账号启用状态：active 启用 / disabled 停用 */
 export type UserStatus = 'active' | 'disabled';
+/** 报价单状态（V2 报价管理）：草稿 / 已发送 / 谈判中 / 已接受 / 已拒绝 / 已过期 */
+export type QuotationStatus = 'draft' | 'sent' | 'negotiating' | 'accepted' | 'rejected' | 'expired';
+/** 报价币种（外贸常见结算币种），默认 USD；与后端 QUOTATION_CURRENCY 一致 */
+export type QuotationCurrency =
+  | 'USD'
+  | 'EUR'
+  | 'GBP'
+  | 'CNY'
+  | 'JPY'
+  | 'HKD'
+  | 'AUD'
+  | 'CAD'
+  | 'CHF'
+  | 'SGD'
+  | 'AED'
+  | 'NZD';
 
 /* ---------------------------- 客户 ---------------------------- */
 
@@ -283,10 +299,90 @@ export interface DeleteAttachmentResult {
   deleted: number;
 }
 
+/* ---------------------------- 报价单（V2 报价管理） ---------------------------- */
+
+/** 报价明细行；amount 由后端权威计算，前端提交时无需（也无法）伪造 */
+export interface QuotationItem {
+  productName: string;
+  model?: string;
+  quantity: number;
+  unitPrice: number;
+  /** 行金额 = quantity × unitPrice（后端计算） */
+  amount: number;
+}
+
+export interface Quotation {
+  id: string;
+  quotationNo: string;
+  customerId: string;
+  /** 顶层列表 / 详情后端 populate 附带的客户摘要（结构与开发信一致，只读） */
+  customer?: LetterCustomerSummary;
+  title: string;
+  items: QuotationItem[];
+  currency: QuotationCurrency;
+  /** 报价总金额（后端计算：各行金额之和） */
+  totalAmount: number;
+  validityDate?: string | Date | null;
+  paymentTerms?: string;
+  leadTime?: string;
+  moq?: string;
+  notes?: string;
+  status: QuotationStatus;
+  createdBy?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+/** 提交用的明细行（不含 amount，由后端计算） */
+export interface QuotationItemInput {
+  productName: string;
+  model?: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+/** 新建 / 编辑报价单的载荷（amount / totalAmount 不提交，由后端计算） */
+export interface QuotationInput {
+  /** 顶层 POST /api/quotations 时必带；嵌套 POST /customers/:id/quotations 时可省 */
+  customerId?: string;
+  /** 留空则由后端按 QT-YYYYMMDD-NNN 规则生成 */
+  quotationNo?: string;
+  title: string;
+  items: QuotationItemInput[];
+  currency: QuotationCurrency;
+  /** 有效期（yyyy-MM-dd），'' / null 表示未设置 */
+  validityDate?: string | null;
+  paymentTerms?: string;
+  leadTime?: string;
+  moq?: string;
+  notes?: string;
+  status: QuotationStatus;
+  /** 显式联动：创建 / 改状态后把客户推进到「报价中」（仅语义升级，不降级） */
+  markCustomerAsQuoting?: boolean;
+}
+
+/** 更新报价单状态载荷（可携带显式客户状态联动） */
+export interface QuotationStatusInput {
+  status: QuotationStatus;
+  markCustomerAsQuoting?: boolean;
+}
+
+export interface QuotationListQuery extends PaginationParams {
+  customerId?: string;
+  search?: string;
+  status?: QuotationStatus | 'all';
+  currency?: QuotationCurrency;
+}
+
+export interface DeleteQuotationResult {
+  id: string;
+  deleted: number;
+}
+
 /* ---------------------------- 客户时间线 ---------------------------- */
 
-/** 时间线事件类型：客户创建 / 开发信 / 跟进 / 状态变化 / 下一次跟进时间变化 */
-export type TimelineEventType = 'created' | 'letter' | 'followup' | 'status_changed' | 'followup_scheduled';
+/** 时间线事件类型：客户创建 / 开发信 / 跟进 / 报价 / 状态变化 / 下一次跟进时间变化 */
+export type TimelineEventType = 'created' | 'letter' | 'followup' | 'quotation' | 'status_changed' | 'followup_scheduled';
 
 export interface TimelineEvent {
   /** 渲染用的稳定 key */
@@ -302,6 +398,15 @@ export interface TimelineEvent {
     result: FollowUpResult;
     content: string;
     nextFollowUpAt?: string | Date | null;
+  };
+  /** type=quotation：报价单创建 / 发送 / 状态变化都会派生一条事件 */
+  quotation?: {
+    id: string;
+    quotationNo: string;
+    title: string;
+    status: QuotationStatus;
+    totalAmount: number;
+    currency: QuotationCurrency;
   };
   /** type=status_changed */
   statusChange?: { from?: CustomerStatus; to?: CustomerStatus };
@@ -521,6 +626,8 @@ export interface MetaResponse {
   customerStatus: { value: CustomerStatus; label: string }[];
   customerSource: CustomerSource[];
   letterStatus: { value: LetterStatus; label: string }[];
+  quotationStatus: { value: QuotationStatus; label: string }[];
+  quotationCurrency: QuotationCurrency[];
   placeholders: PlaceholderMeta[];
   mailChannel: MailChannel;
   maxPageSize: number;

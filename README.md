@@ -1,6 +1,6 @@
 # Customer Dev Letter Manager（客户开发信管理工具）
 
-面向外贸 / B2B 销售团队的**基础客户 CRM 与开发信管理工具**：Excel 批量导入客户 → 客户分级 / 优先级 / 销售状态 / 标签 / 负责人 / 来源 → 记录客户需求与多渠道联系方式 → 富文本开发信（支持占位符个性化，可从模板中心一键带入）→ 发送并自动归档到客户名下 → 跟进记录（可增改删）与客户 Timeline → 设置下一次跟进 → 客户附件集中存档 → Dashboard 销售工作区提醒今日任务，覆盖「导入 → 开发 → 跟进 → 报价 → 谈判 → 成交 / 流失」的完整销售闭环。
+面向外贸 / B2B 销售团队的**基础客户 CRM 与开发信管理工具**：Excel 批量导入客户 → 客户分级 / 优先级 / 销售状态 / 标签 / 负责人 / 来源 → 记录客户需求与多渠道联系方式 → 富文本开发信（支持占位符个性化，可从模板中心一键带入）→ 发送并自动归档到客户名下 → 跟进记录（可增改删）与客户 Timeline → 设置下一次跟进 → 客户附件集中存档 → **报价单管理（多币种 / 产品明细自动核算 / 状态流转 / 客户状态联动）** → Dashboard 销售工作区提醒今日任务，覆盖「导入 → 开发 → 跟进 → 报价 → 谈判 → 成交 / 流失」的完整销售闭环。
 
 邮件发送默认为 **mock 模式**（不真实投递，但完整落库），配置 SMTP 环境变量后自动切换为真实发送，无需改动任何代码。
 
@@ -35,7 +35,7 @@
 | --- | --- |
 | 前端框架 | **Vite 6 + React 18.3 + TypeScript 5.7** |
 | UI | **Tailwind CSS 3.4 + shadcn/ui**（基于 Radix UI 手工封装，含暗黑模式） |
-| 状态管理 | **Zustand 5**（分域 store：auth / customer / letter / meta / ui / followup / attachment / template / user） |
+| 状态管理 | **Zustand 5**（分域 store：auth / customer / letter / meta / ui / followup / attachment / quotation / template / user） |
 | 富文本 | **React Quill 2** |
 | Excel | **xlsx（SheetJS）** 前端解析 + 后端导出 |
 | 路由 / 表单 / 校验 | React Router 6 · react-hook-form · zod |
@@ -70,7 +70,8 @@
 - ✅ **客户附件区**：上传 / 图片预览 / 下载 / 删除，展示文件名 · 类型 · 大小 · 上传时间（详见「客户附件」小节）
 - ✅ **客户动态**双页签：
   - **跟进记录**：新增 / **编辑** / 查看历史 / 删除错误记录，最新记录置顶高亮
-  - **客户动态（Timeline）**：客户创建 → 发送开发信 → 状态变化 → 跟进 → 修改下次跟进时间，按时间倒序聚合，一眼看清「之前发生过什么、最近一次联系、下一步做什么」
+  - **客户动态（Timeline）**：客户创建 → 发送开发信 → 状态变化 → 跟进 → 修改下次跟进时间 → 报价单创建 / 状态变化，按时间倒序聚合，一眼看清「之前发生过什么、最近一次联系、下一步做什么」
+- ✅ **报价单区（V2）**：为该客户创建 / 编辑 / 查看 / 改状态 / 删除报价单，产品明细动态增删、行金额与总额即时核算（后端二次核算为准），报价事件汇入上方 Timeline（详见「报价管理」小节）
 - ✅ 开发信历史表格（主题 / 状态 / 通道 / 时间），支持**查看（渲染 HTML）· 复制（主题 + 纯文本正文）· 删除 · 重新发送**
 - ✅ 支持 `#letters` 锚点，从列表页的开发信徽章点进来会自动滚动定位
 
@@ -103,6 +104,18 @@
 - ✅ 上传走 **base64 JSON**（复用现有 `express.json` 通道，未引入 multer / 对象存储），单文件默认上限 **15 MB**（`MAX_ATTACHMENT_SIZE`），请求体上限已提到 **25 MB**
 - ✅ 文件落盘到本地 `server/uploads/`（`UPLOAD_DIR`，已在 `.gitignore` 忽略）；下载经**鉴权接口**并按客户归属校验，业务员只能操作自己客户的附件，越权一律 404
 
+### 报价管理（V2）
+
+- ✅ **客户详情页报价单区**：从当前客户直接创建报价（无需再选客户），列表展示**编号 / 标题 / 总金额 / 币种 / 状态 / 有效期 / 创建时间**，支持新增 / 编辑 / 查看详情 / 改状态 / 删除，含 loading / empty / error 态
+- ✅ **产品明细动态行**：可增删多个产品行（产品名称 / 型号 / 数量 / 单价），**每行金额与报价总额前端即时计算显示**，提交后**后端再核算一次为准**（前端传入的金额字段会被后端剥离重算，杜绝篡改）
+- ✅ **完整报价字段**：编号 / 标题 / 产品明细 / 币种（12 种）/ MOQ / 付款方式 / 交期 / 有效期 / 备注 / 状态
+- ✅ **6 种报价状态**：草稿 / 已发送 / 谈判中 / 已接受 / 已拒绝 / 已过期（`draft / sent / negotiating / accepted / rejected / expired`），各用不同色徽章区分
+- ✅ **编号唯一防重**：`quotationNo` 留空由后端按 `QT-YYYYMMDD-NNN` 规则自动生成，用户自定义编号统一大写归一，重复返回 `409` 并在表单字段级提示（不引入任何额外编号依赖）
+- ✅ **显式客户状态联动（不擅自改状态）**：仅在「新增报价」与「改状态」时提供「同时把客户标记为报价中」开关，且后端只在语义可升级时推进（不降级已报价中 / 谈判中 / 成交 / 流失的客户）；**普通编辑报价绝不改动客户销售状态**
+- ✅ **汇入客户 Timeline**：报价创建与状态变化派生为客户动态事件（`type: 'quotation'`，沿用现有 Timeline 结构，不另建一套）
+- ✅ **随客户隔离 + 级联清理**：业务员只能操作自己名下客户的报价，越权一律 404；删除客户会级联删除其全部报价单
+- ℹ️ 报价单为全新独立集合（`quotations`），不改动任何既有客户 / 开发信 / 跟进 / 附件数据结构，旧库无需迁移即可直接使用；本期不含 PDF / PI / 合同导出（V3 规划）
+
 ### 开发信模板中心
 
 - ✅ 模板 CRUD + **一键复制**，按分类管理：首次开发 / 产品推荐 / 报价 / 跟进 / 节日 / 其他
@@ -132,8 +145,8 @@
 - ✅ **两种角色**：管理员（admin）与业务员（user）；管理员在「用户管理」页管理账号（列表 + 新建 + 编辑资料 + 重置密码 + 停用 / 启用 + 删除）
 - ✅ **严格分配制数据隔离**：业务员登录后**只能看到并操作「负责人 = 自己」的客户**；未分配客户（无负责人）**仅管理员可见**，需由管理员分配后才进入业务员视野
 - ✅ **业务员可自建客户，自动归属本人**：手工新建或 Excel 导入的客户 `ownerId` 自动设为自己；管理员可建档并分配给任意人
-- ✅ **越权一律 404**：业务员访问他人客户（详情 / 编辑 / 删除 / 发信 / 跟进 / **附件**）返回 404，不泄露客户是否存在
-- ✅ **从属资源随客户隔离**：开发信记录、跟进记录、**客户附件**、Timeline、Dashboard 统计与销售工作区都按可见客户范围收敛
+- ✅ **越权一律 404**：业务员访问他人客户（详情 / 编辑 / 删除 / 发信 / 跟进 / **附件** / **报价单**）返回 404，不泄露客户是否存在
+- ✅ **从属资源随客户隔离**：开发信记录、跟进记录、**客户附件**、**报价单**、Timeline、Dashboard 统计与销售工作区都按可见客户范围收敛
 - ✅ **管理员专属接口双重防护**：用户管理（`/api/users`）、负责人名单（`/api/customers/owners`）、批量分配负责人（`/api/customers/bulk/owner`）均 `requireRole('admin')`；前端对应 UI（负责人筛选 / 列 / 批量分配 / 用户管理入口）也按角色隐藏
 - ✅ **模板全局共享**：开发信模板对所有登录用户可读写（团队共用话术库）
 - ✅ **账号启用状态**：每个账号有 `active`（启用）/ `disabled`（停用）状态；停用后无法登录，且**已签发的 token 立即失效**（`requireAuth` 每次请求查库校验，返回 `401` 触发前端自动登出）
@@ -160,7 +173,7 @@ Genesis/
 ├── package.json                    # 根：一键安装 / 一键启动（concurrently）
 ├── .gitignore
 ├── scripts/
-│   └── smoke-test.ps1              # 93 组后端 API 冒烟测试（含数据隔离 + 账号管理 + CRM 基础功能回归，PowerShell）
+│   └── smoke-test.ps1              # 112 组后端 API 冒烟测试（含数据隔离 + 账号管理 + CRM 基础功能 + 报价管理回归，PowerShell）
 │
 ├── server/                         # ── 后端：Express + MongoDB ──
 │   ├── package.json
@@ -176,7 +189,7 @@ Genesis/
 │       │   └── logger.ts           # 分级日志（info / warn / error / debug）
 │       ├── constants/
 │       │   └── index.ts            # 枚举（8 销售状态 / 跟进方式 / 跟进结果 / 模板分类 / 活动类型 / 客户来源 /
-│       │                           #   优先级）、状态标签与配色、16 个开发信占位符、Excel 状态别名映射
+│       │                           #   优先级 / 6 报价状态 / 12 报价币种）、状态标签与配色、16 个开发信占位符、Excel 状态别名映射
 │       ├── models/
 │       │   ├── Customer.ts         # 客户模型（partial unique 邮箱索引、letterCount 反范式、tags / ownerId /
 │       │   │                       #   nextFollowUpAt、leadSource / priority、需求信息、联系渠道等 CRM 字段）
@@ -184,6 +197,8 @@ Genesis/
 │       │   ├── DevelopmentLetter.ts# 开发信模型（customerId / subject / content / sentAt / status）
 │       │   ├── FollowUp.ts         # 跟进记录模型（method / result / content / followUpAt / nextFollowUpAt）
 │       │   ├── CustomerEvent.ts    # 客户活动事件（状态变化 / 跟进时间变化，供 Timeline 聚合）
+│       │   ├── Quotation.ts        # 报价单（V2）：quotationNo 唯一 / customerId / items 嵌入明细 / currency /
+│       │   │                       #   totalAmount / validityDate / status / createdBy；pre('validate') 钩子重算金额
 │       │   ├── LetterTemplate.ts   # 开发信模板（name / subject / content / category）
 │       │   ├── User.ts             # 用户模型（bcrypt 哈希、role: admin / user）
 │       │   └── index.ts
@@ -198,14 +213,16 @@ Genesis/
 │       │   ├── letter.validator.ts
 │       │   ├── followup.validator.ts # 跟进记录创建 / 编辑（partial）/ 列表 / 参数校验
 │       │   ├── attachment.validator.ts # 附件上传（base64）/ 参数校验
+│       │   ├── quotation.validator.ts # 报价单（V2）创建 / 编辑 / 改状态 / 列表筛选 / 参数校验（金额字段不入 schema）
 │       │   ├── template.validator.ts # 模板 CRUD 校验
 │       │   └── user.validator.ts    # 用户创建校验（用户名 / 密码 / 角色）
 │       ├── services/
-│       │   ├── customer.service.ts # 列表 / 增删改 / 批量 / 导入 / 导出（可见范围 + 自动归属 + 越权校验 + 级联清附件）
+│       │   ├── customer.service.ts # 列表 / 增删改 / 批量 / 导入 / 导出（可见范围 + 自动归属 + 越权校验 + 级联清附件 / 报价单）
 │       │   ├── letter.service.ts   # 发送 / 重发 / 预览 / 历史 / 删除
 │       │   ├── followup.service.ts # 跟进记录 CRUD（含编辑）+ 回写客户 nextFollowUpAt
 │       │   ├── attachment.service.ts # 附件 base64 落盘 / 列表 / 鉴权下载 / 删除（含磁盘文件清理）
-│       │   ├── timeline.service.ts # 聚合创建 / 开发信 / 跟进 / 活动事件为客户 Timeline
+│       │   ├── quotation.service.ts # 报价单（V2）CRUD + 编号唯一生成 + 金额后端核算 + 状态联动 + 越权隔离
+│       │   ├── timeline.service.ts # 聚合创建 / 开发信 / 跟进 / 活动事件 + 派生报价单事件为客户 Timeline
 │       │   ├── template.service.ts # 开发信模板 CRUD + 复制
 │       │   ├── stats.service.ts    # 仪表盘聚合（含销售漏斗 byStatus + 销售工作区 workspace）
 │       │   ├── mailer.service.ts   # mock 与 smtp 双通道，统一返回投递结果
@@ -217,14 +234,16 @@ Genesis/
 │       │   ├── letter.controller.ts
 │       │   ├── followup.controller.ts # 跟进记录（含编辑）+ 客户 Timeline
 │       │   ├── attachment.controller.ts # 附件列表 / 上传 / 鉴权下载 / 删除
+│       │   ├── quotation.controller.ts # 报价单（V2）列表 / 详情 / 创建 / 编辑 / 改状态 / 删除
 │       │   ├── template.controller.ts
 │       │   ├── stats.controller.ts # 健康检查 + 仪表盘聚合
 │       │   ├── auth.controller.ts
 │       │   └── user.controller.ts  # 用户列表 / 创建 / 编辑 / 重置密码 / 停用启用 / 删除（管理员专属）
 │       ├── routes/
-│       │   ├── index.ts            # /health、/meta（下发枚举与占位符）、挂载各资源路由（含 /users）
-│       │   ├── customer.routes.ts  # 客户 + 批量 + 标签/负责人 + 嵌套跟进（含 PUT 编辑）/ Timeline / 附件（owners、bulk/owner 限管理员）
+│       │   ├── index.ts            # /health、/meta（下发枚举与占位符，含报价状态 / 币种）、挂载各资源路由（含 /users、/quotations）
+│       │   ├── customer.routes.ts  # 客户 + 批量 + 标签/负责人 + 嵌套跟进（含 PUT 编辑）/ Timeline / 附件 / 报价单（owners、bulk/owner 限管理员）
 │       │   ├── letter.routes.ts
+│       │   ├── quotation.routes.ts # 报价单（V2）顶层：列表（多条件筛选）/ 创建 / 详情
 │       │   ├── template.routes.ts  # 开发信模板 CRUD + 复制
 │       │   ├── user.routes.ts      # 用户管理：列表 / 创建 / 编辑 / 重置密码 / 停用启用 / 删除（整体 requireRole('admin')）
 │       │   └── auth.routes.ts      # 登录带限流（防暴力破解）
@@ -263,7 +282,7 @@ Genesis/
         │   ├── login.tsx           # 登录页
         │   ├── dashboard.tsx       # 数据看板 + 销售工作区 + 销售漏斗
         │   ├── customers.tsx       # 客户管理（多维筛选 + 批量操作）
-        │   ├── customer-detail.tsx # 客户详情（基础信息 / 联系方式 / 客户需求 / 附件）+ 跟进 / Timeline / 开发信历史
+        │   ├── customer-detail.tsx # 客户详情（基础信息 / 联系方式 / 客户需求 / 报价单 / 附件）+ 跟进 / Timeline / 开发信历史
         │   ├── templates.tsx       # 开发信模板中心
         │   ├── letters.tsx         # 开发信记录
         │   ├── users.tsx           # 用户管理（仅管理员：列表 + 状态徽章 + 行操作菜单）
@@ -281,13 +300,15 @@ Genesis/
         │   │                       #   customer-activity（跟进 + Timeline 页签）/ customer-timeline /
         │   │                       #   follow-up-dialog（新增 / 编辑双模式）/ follow-up-list /
         │   │                       #   customer-attachments（上传 / 预览 / 下载 / 删除）/
+        │   │                       #   customer-quotations（报价单区）/ quotation-list /
+        │   │                       #   quotation-form-dialog（动态明细 + 即时金额）/ quotation-view-dialog（详情 / 改状态）/
         │   │                       #   import-dialog / column-mapper
         │   ├── dashboard/          # sales-funnel（销售漏斗）/ sales-workspace（销售工作区）
         │   ├── templates/          # template-list / template-form-dialog
         │   ├── letters/            # send-letter-dialog / letter-editor(Quill) / placeholder-bar /
         │                           #   letter-view-dialog / letter-history-table / letter-table
         │   └── users/              # user-form-dialog（新建 / 编辑双模式）+ reset-password-dialog（重置密码），仅管理员
-        ├── store/                  # Zustand：auth / customer / letter / meta / ui / followup / attachment / template / user
+        ├── store/                  # Zustand：auth / customer / letter / meta / ui / followup / attachment / quotation / template / user
         ├── hooks/                  # use-async（竞态 + 卸载安全）/ use-queries（数据订阅）/
         │                           #   use-debounce / use-ui（页面标题、主题）
         ├── lib/                    # api（axios 拦截器）/ excel（解析 + 列映射）/ placeholder /
@@ -494,7 +515,7 @@ cd server
 npm run reset          # 等价于 tsx src/scripts/seed.ts --reset
 ```
 
-> `reset` 会删除 `customers` / `developmentletters` / `followups` / `customerevents` / `customerattachments` / `lettertemplates` 六个集合的全部数据，请谨慎使用。
+> `reset` 会删除 `customers` / `developmentletters` / `followups` / `customerevents` / `customerattachments` / `quotations` / `lettertemplates` 七个集合的全部数据，请谨慎使用。
 
 ### 6. 启动前后端
 
@@ -648,9 +669,9 @@ server {
 powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
 ```
 
-覆盖 93 组场景：健康检查、登录、元数据、客户列表 / 筛选 / 搜索、发送开发信（含占位符渲染断言）、开发信历史与全量列表、预览（含无邮箱客户的 400 与手动收件人）、重发、统计聚合、行业聚合、三个 Excel 导出（校验 `Content-Type` 与 RFC 5987 文件名）、创建 → 批量改状态 → 删除级联、导入（混合行 / `onDuplicate=update` / `dryRun`）、开发信删除后 `letterCount` 递减、错误契约（401 / 404 / 422 / 登录失败）；以及 CRM 升级回归（25–42）：标签 / 负责人词汇表、批量加 / 删标签（自动去重）、按标签 / 负责人（含未分配）/ 跟进时间（今天 / 逾期 / 未来）筛选、批量分配 / 清除负责人、批量设置 / 清除下一次跟进时间、跟进记录增删并同步客户主档、客户 Timeline 聚合、开发信模板 CRUD + 复制 + 分类过滤、批量入参校验（空标签 / 非法负责人返回 422）——全部围绕一个临时客户与临时模板进行并在结尾自动清理；以及**数据隔离回归（43–56）**：管理员创建业务员账号 → 业务员登录 → 断言初始可见客户为 0、访问用户管理 / 负责人名单返回 403、自建客户自动归属本人、管理员未分配客户对业务员不可见、管理员分配后业务员立即可见、业务员调用批量分配负责人返回 403、越权读写他人客户返回 404——临时客户在结尾清理，业务员账号在数据隔离段创建后不会被删除（用户名固定为 `smoke.sales`，重复运行返回 409 并自动跳过）；以及**账号管理回归（57–72）**：管理员创建一次性账号 `smoke.temp` → 编辑资料（显示名 + 角色）→ 重置密码（旧密码登录 `401`、新密码可登录）→ 该账号自建客户 → 自我保护（停用 / 删除 / 降级「自己」均 `403`）→ 停用后**已签发 token 立即 `401`** 且新登录 `403` → 重新启用后可登录 → 删除账号（名下客户转为「未分配」、`reassignedCustomers=1`）→ 删除后其 token `401`、登录 `401` → 清理临时客户并确认账号已从列表移除（`smoke.temp` 结尾自动删除，保证重复运行干净）；以及 **CRM 基础功能回归（73–93）**：创建含来源 / 优先级 / 需求信息 / 联系渠道的客户并校验字段往返 → 优先级省略时默认 `medium` → PUT 编辑需求与优先级（未改字段保留）→ 按 `leadSource` / `priority` 筛选 → 跟进创建 → **编辑**（method / result / 下次跟进时间，且客户 `nextFollowUpAt` 同步）→ 列表反映编辑 → 业务员越权增改他人客户跟进返回 404 → 删除跟进 → 附件 **base64 上传 / 列表 / 鉴权下载（内容逐字节校验）/ 删除**、业务员越权访问附件 404、下载已删除附件 404 → Excel 导入新列（自定义来源 `Dubai Exhibition` 原样保留、`High→high` / `l→low` 归一化）→ 导出含新列 token 校验 → 结尾清理全部临时客户。
+覆盖 112 组场景：健康检查、登录、元数据、客户列表 / 筛选 / 搜索、发送开发信（含占位符渲染断言）、开发信历史与全量列表、预览（含无邮箱客户的 400 与手动收件人）、重发、统计聚合、行业聚合、三个 Excel 导出（校验 `Content-Type` 与 RFC 5987 文件名）、创建 → 批量改状态 → 删除级联、导入（混合行 / `onDuplicate=update` / `dryRun`）、开发信删除后 `letterCount` 递减、错误契约（401 / 404 / 422 / 登录失败）；以及 CRM 升级回归（25–42）：标签 / 负责人词汇表、批量加 / 删标签（自动去重）、按标签 / 负责人（含未分配）/ 跟进时间（今天 / 逾期 / 未来）筛选、批量分配 / 清除负责人、批量设置 / 清除下一次跟进时间、跟进记录增删并同步客户主档、客户 Timeline 聚合、开发信模板 CRUD + 复制 + 分类过滤、批量入参校验（空标签 / 非法负责人返回 422）——全部围绕一个临时客户与临时模板进行并在结尾自动清理；以及**数据隔离回归（43–56）**：管理员创建业务员账号 → 业务员登录 → 断言初始可见客户为 0、访问用户管理 / 负责人名单返回 403、自建客户自动归属本人、管理员未分配客户对业务员不可见、管理员分配后业务员立即可见、业务员调用批量分配负责人返回 403、越权读写他人客户返回 404——临时客户在结尾清理，业务员账号在数据隔离段创建后不会被删除（用户名固定为 `smoke.sales`，重复运行返回 409 并自动跳过）；以及**账号管理回归（57–72）**：管理员创建一次性账号 `smoke.temp` → 编辑资料（显示名 + 角色）→ 重置密码（旧密码登录 `401`、新密码可登录）→ 该账号自建客户 → 自我保护（停用 / 删除 / 降级「自己」均 `403`）→ 停用后**已签发 token 立即 `401`** 且新登录 `403` → 重新启用后可登录 → 删除账号（名下客户转为「未分配」、`reassignedCustomers=1`）→ 删除后其 token `401`、登录 `401` → 清理临时客户并确认账号已从列表移除（`smoke.temp` 结尾自动删除，保证重复运行干净）；以及 **CRM 基础功能回归（73–93）**：创建含来源 / 优先级 / 需求信息 / 联系渠道的客户并校验字段往返 → 优先级省略时默认 `medium` → PUT 编辑需求与优先级（未改字段保留）→ 按 `leadSource` / `priority` 筛选 → 跟进创建 → **编辑**（method / result / 下次跟进时间，且客户 `nextFollowUpAt` 同步）→ 列表反映编辑 → 业务员越权增改他人客户跟进返回 404 → 删除跟进 → 附件 **base64 上传 / 列表 / 鉴权下载（内容逐字节校验）/ 删除**、业务员越权访问附件 404、下载已删除附件 404 → Excel 导入新列（自定义来源 `Dubai Exhibition` 原样保留、`High→high` / `l→low` 归一化）→ 导出含新列 token 校验 → 结尾清理全部临时客户；以及 **报价管理回归（94–112）**：建临时客户 → 自动生成编号（`QT-YYYYMMDD-NNN`）+ 两行明细金额核算（数量 × 单价、总额）+ 有效期 → 详情 / 列表 → 自定义小写编号大写归一 + EUR + 空有效期不误存为 1970 → 重复编号 `409` → 编辑时篡改金额被后端重算忽略 → 改状态（`sent` 不联动、`negotiating` + `markCustomerAsQuoting` 把客户推进为「报价中」）→ 顶层列表按 `customerId` / `status` 筛选 → Timeline 派生报价事件 → 非法 `customerId` / 空明细 / 缺标题 / 数量为 0 返回 `422`、缺失客户 `404` → 业务员越权访问他人客户报价 7 条路由全 `404` → 业务员自建客户 + 报价且管理员可读 → 删除报价 → 已删报价 `404` → 清理临时客户并确认报价随客户级联删除（`quotations=0`）。
 
-> ⚠️ **该脚本会修改数据**：它会新建并删除测试客户（含跟进 / 附件的级联清理）、上传并删除临时附件、改写首位客户的字段、**批量删除全部开发信**，创建并在账号管理段删除一次性账号 `smoke.temp`，并保留一个用户名固定为 `smoke.sales` 的业务员账号（数据隔离段不删账号；`reset` 也不会清除用户）。请勿在存有真实业务数据的库上运行。跑完后用 `npm run reset --prefix server`（清空并重新播种）恢复干净演示数据。
+> ⚠️ **该脚本会修改数据**：它会新建并删除测试客户（含跟进 / 附件 / 报价单的级联清理）、上传并删除临时附件、创建并删除临时报价单、改写首位客户的字段、**批量删除全部开发信**，创建并在账号管理段删除一次性账号 `smoke.temp`，并保留一个用户名固定为 `smoke.sales` 的业务员账号（数据隔离段不删账号；`reset` 也不会清除用户）。请勿在存有真实业务数据的库上运行。跑完后用 `npm run reset --prefix server`（清空并重新播种）恢复干净演示数据。
 
 ---
 
@@ -665,9 +686,9 @@ powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
 
 ### 隔离规则
 
-1. **可见范围**：业务员登录后，客户列表 / 详情 / 开发信 / 跟进 / **附件** / Timeline / Dashboard 统计与销售工作区，全部自动收敛到「自己名下」的客户。未分配客户（无负责人）**仅管理员可见**，需管理员分配后才进入业务员视野。
+1. **可见范围**：业务员登录后，客户列表 / 详情 / 开发信 / 跟进 / **附件** / **报价单** / Timeline / Dashboard 统计与销售工作区，全部自动收敛到「自己名下」的客户。未分配客户（无负责人）**仅管理员可见**，需管理员分配后才进入业务员视野。
 2. **自动归属**：业务员手工新建或 Excel 导入的客户，`ownerId` 强制设为本人（忽略传入值）；管理员建档时默认不分配（未分配），可随后指派给任意人。
-3. **越权即 404**：业务员访问非自己名下的客户（详情 / 编辑 / 删除 / 发信 / 跟进增改删 / **附件上传下载删除**）统一返回 **404** 而非 403——避免通过状态码差异探测他人客户是否存在。
+3. **越权即 404**：业务员访问非自己名下的客户（详情 / 编辑 / 删除 / 发信 / 跟进增改删 / **附件上传下载删除** / **报价单增改删**）统一返回 **404** 而非 403——避免通过状态码差异探测他人客户是否存在。
 4. **归属不可自转**：业务员更新客户时 `ownerId` 字段被忽略；批量分配负责人是管理员专属。
 5. **模板全局共享**：开发信模板对所有登录用户可读写（团队共用话术库），不做隔离。
 
@@ -709,7 +730,7 @@ powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/api/health` | 健康检查（含数据库状态、邮件通道、运行时长） |
-| GET | `/api/meta` | 枚举、占位符定义、公司信息、邮件通道 |
+| GET | `/api/meta` | 枚举（含报价状态 / 币种）、占位符定义、公司信息、邮件通道 |
 
 ### 认证
 
@@ -739,7 +760,7 @@ powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
 | POST | `/api/customers` | 新建 |
 | GET | `/api/customers/:id` | 详情（含 tags / owner / nextFollowUpAt / leadSource / priority / 需求信息 / 联系渠道） |
 | PUT | `/api/customers/:id` | 更新（状态 / 下次跟进时间变化写入 Timeline；支持来源 / 优先级 / 需求信息 / 联系渠道等字段） |
-| DELETE | `/api/customers/:id` | 删除（级联删除其开发信 / 跟进 / 活动事件 / **附件（含磁盘文件）**） |
+| DELETE | `/api/customers/:id` | 删除（级联删除其开发信 / 跟进 / 活动事件 / **附件（含磁盘文件）** / **报价单**） |
 | POST | `/api/customers/import` | 批量导入，返回 `{ created, updated, skipped, failures[] }` |
 | POST | `/api/customers/bulk/status` | 批量改状态 |
 | POST | `/api/customers/bulk/delete` | 批量删除 |
@@ -754,7 +775,7 @@ powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
 | GET | `/api/customers/template` | 下载导入模板 |
 | GET | `/api/customers/:id/letters` | 该客户的开发信历史 |
 | POST | `/api/customers/:id/letters` | **发送开发信**，返回 `{ letter, customer, delivered, channel, message }` |
-| GET | `/api/customers/:id/timeline` | 客户 Timeline（创建 / 开发信 / 跟进 / 状态变化 / 跟进时间变化，倒序） |
+| GET | `/api/customers/:id/timeline` | 客户 Timeline（创建 / 开发信 / 跟进 / 状态变化 / 跟进时间变化 / 报价单，倒序） |
 | GET | `/api/customers/:id/follow-ups` | 该客户的跟进记录列表 |
 | POST | `/api/customers/:id/follow-ups` | 新增跟进记录（可同步回写 nextFollowUpAt） |
 | PUT | `/api/customers/:id/follow-ups/:followUpId` | **编辑跟进记录**（至少改一个字段；改 nextFollowUpAt 会同步回写客户主档） |
@@ -765,6 +786,28 @@ powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
 | DELETE | `/api/customers/:id/attachments/:attachmentId` | 删除附件（同时删除本地磁盘文件） |
 
 > **附件约束**：上传为 base64 JSON（复用 `express.json` 通道，无 multipart），单文件默认 ≤ 15 MB（`MAX_ATTACHMENT_SIZE`），请求体上限 25 MB；文件落盘本地 `server/uploads/`（`UPLOAD_DIR`，已 gitignore）。所有附件接口都先校验客户归属，业务员越权访问他人客户附件一律 **404**；删除客户会级联清理其附件（含磁盘文件）。
+
+### 报价单（V2 报价管理）
+
+顶层 `/api/quotations`（跨客户列表 / 筛选 / 详情）+ 嵌套 `/api/customers/:id/quotations`（客户详情页主用），全部 `requireAuth` 并按客户归属隔离（业务员越权一律 404）。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/quotations` | 报价单分页列表（`customerId` / `status` / `currency` / `search` 筛选，`data` 为分页结构、`customerId` 已 populate 客户名） |
+| POST | `/api/quotations` | 创建（body 带 `customerId`），先校验客户存在且当前用户有权访问 |
+| GET | `/api/quotations/:id` | 报价单详情 |
+| GET | `/api/customers/:id/quotations` | 该客户的报价单列表（按创建时间倒序） |
+| POST | `/api/customers/:id/quotations` | 从当前客户创建报价单（无需再传 `customerId`） |
+| GET | `/api/customers/:id/quotations/:quotationId` | 报价单详情 |
+| PUT | `/api/customers/:id/quotations/:quotationId` | 编辑（金额后端重算；普通编辑不改客户销售状态） |
+| PUT | `/api/customers/:id/quotations/:quotationId/status` | 更新状态（`status`；可带 `markCustomerAsQuoting` 显式把客户推进为「报价中」） |
+| DELETE | `/api/customers/:id/quotations/:quotationId` | 删除，返回 `{ id, deleted }` |
+
+> **金额可信性**：`items[].amount` 与 `totalAmount` 一律由后端计算——入参 schema 不含金额字段（前端传值被 zod 剥离），service 层与模型 `pre('validate')` 钩子各重算一次，前端展示值仅作即时预览。
+> **编号唯一**：`quotationNo` 唯一（大写归一），留空由后端按 `QT-YYYYMMDD-NNN` 生成；重复返回 `409`。
+> **枚举**：`status` = `draft / sent / negotiating / accepted / rejected / expired`；`currency` = USD / EUR / GBP / CNY / JPY / HKD / AUD / CAD / CHF / SGD / AED / NZD（默认 USD）；均可从 `GET /api/meta` 获取（含中文标签）。
+> **客户状态联动**：仅创建 / 改状态接口接收 `markCustomerAsQuoting`，且只在语义可升级时把客户推进为「报价中」（不降级已报价中 / 谈判中 / 成交 / 流失）；普通编辑不携带、后端也不接收该字段。
+> **Timeline**：报价创建与状态变化派生为客户 Timeline 事件（`type: 'quotation'`），沿用现有事件结构；删除客户会级联删除其全部报价单。
 
 ### 开发信
 
@@ -938,7 +981,7 @@ npm run reset
 或手动：
 
 ```bash
-mongosh cdlm --eval "db.customers.drop(); db.developmentletters.drop(); db.followups.drop(); db.customerevents.drop(); db.customerattachments.drop(); db.lettertemplates.drop();"
+mongosh cdlm --eval "db.customers.drop(); db.developmentletters.drop(); db.followups.drop(); db.customerevents.drop(); db.customerattachments.drop(); db.quotations.drop(); db.lettertemplates.drop();"
 ```
 
 ---

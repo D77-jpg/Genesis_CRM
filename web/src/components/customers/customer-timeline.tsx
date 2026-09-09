@@ -4,7 +4,7 @@
  * 把客户的重要事件按时间倒序串成一条竖线，让销售一眼看清：
  *   之前发生过什么 · 最近一次联系是什么时候 · 下一步要做什么。
  * 事件来源（见后端 timeline.service）：
- *   created（建档）/ letter（开发信）/ followup（跟进）/
+ *   created（建档）/ letter（开发信）/ followup（跟进）/ quotation（报价单）/
  *   status_changed（状态变化）/ followup_scheduled（跟进计划变更）。
  */
 import * as React from 'react';
@@ -13,19 +13,20 @@ import {
   Flag,
   Mail,
   NotebookPen,
+  ReceiptText,
   RefreshCw,
   UserPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState, InlineLoader } from '@/components/common/empty-state';
-import { CustomerStatusBadge, LetterStatusBadge } from '@/components/common/status-badge';
+import { CustomerStatusBadge, LetterStatusBadge, QuotationStatusBadge } from '@/components/common/status-badge';
 import {
   FOLLOW_UP_METHOD_LABEL,
   FOLLOW_UP_RESULT_LABEL,
   MAIL_CHANNEL_LABEL,
   TIMELINE_EVENT_LABEL,
 } from '@/constants';
-import { formatDate, formatDateTime, getFollowUpState } from '@/lib/format';
+import { formatDate, formatDateTime, formatMoney, getFollowUpState } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { TimelineEvent, TimelineEventType } from '@/types';
 
@@ -40,6 +41,7 @@ const EVENT_VISUAL: Record<TimelineEventType, { icon: React.ReactNode; dotClass:
   created: { icon: <UserPlus className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-slate-400 text-white' },
   letter: { icon: <Mail className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-blue-500 text-white' },
   followup: { icon: <NotebookPen className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-emerald-500 text-white' },
+  quotation: { icon: <ReceiptText className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-teal-600 text-white' },
   status_changed: { icon: <RefreshCw className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-violet-500 text-white' },
   followup_scheduled: { icon: <CalendarClock className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-amber-500 text-white' },
 };
@@ -87,6 +89,19 @@ function EventBody({ event }: { event: TimelineEvent }): React.JSX.Element | nul
           <p className="line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
             {followUp.content}
           </p>
+        </div>
+      );
+    }
+    case 'quotation': {
+      const quotation = event.quotation;
+      if (!quotation) return null;
+      return (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">{quotation.title || '（无标题）'}</span>
+          <QuotationStatusBadge status={quotation.status} />
+          <span className="text-xs text-muted-foreground">
+            {quotation.quotationNo} · {formatMoney(quotation.totalAmount, quotation.currency)}
+          </span>
         </div>
       );
     }

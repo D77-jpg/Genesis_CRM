@@ -36,6 +36,17 @@ const SORTABLE_LETTER_FIELDS = new Set([
   'updatedAt',
 ]);
 
+const SORTABLE_QUOTATION_FIELDS = new Set([
+  'quotationNo',
+  'title',
+  'currency',
+  'totalAmount',
+  'status',
+  'validityDate',
+  'createdAt',
+  'updatedAt',
+]);
+
 function toPositiveInt(value: unknown, fallback: number): number {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0) return fallback;
@@ -64,6 +75,7 @@ export function parsePagination(
 export const sortableFields = {
   customer: SORTABLE_CUSTOMER_FIELDS,
   letter: SORTABLE_LETTER_FIELDS,
+  quotation: SORTABLE_QUOTATION_FIELDS,
 };
 
 export interface Paginated<T> {

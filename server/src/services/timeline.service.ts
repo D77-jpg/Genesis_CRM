@@ -12,7 +12,7 @@
  *   之前发生过什么 / 最近一次联系是什么时候（lastContactAt）/ 下一步要做什么（nextFollowUpAt + 状态）。
  */
 import { Types } from 'mongoose';
-import { Customer, CustomerEvent, DevelopmentLetter, FollowUp } from '../models';
+import { Customer, CustomerEvent, DevelopmentLetter, FollowUp, Quotation } from '../models';
 import type {
   CustomerEventType,
   CustomerStatus,
@@ -20,14 +20,16 @@ import type {
   FollowUpResult,
   LetterStatus,
   MailChannel,
+  QuotationCurrency,
+  QuotationStatus,
 } from '../constants';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
 
 const logger = createLogger('timeline-service');
 
-/** 时间线事件类型（含从其它集合派生的 created / letter / followup） */
-export type TimelineEventType = 'created' | 'letter' | 'followup' | 'status_changed' | 'followup_scheduled';
+/** 时间线事件类型（含从其它集合派生的 created / letter / followup / quotation） */
+export type TimelineEventType = 'created' | 'letter' | 'followup' | 'quotation' | 'status_changed' | 'followup_scheduled';
 
 export interface TimelineEvent {
   /** 前端渲染用的稳定 key */
@@ -44,6 +46,15 @@ export interface TimelineEvent {
     result: FollowUpResult;
     content: string;
     nextFollowUpAt?: Date | null;
+  };
+  /** type=quotation 时的报价单摘要 */
+  quotation?: {
+    id: string;
+    quotationNo: string;
+    title: string;
+    status: QuotationStatus;
+    totalAmount: number;
+    currency: QuotationCurrency;
   };
   /** type=status_changed 时的状态变化 */
   statusChange?: { from?: CustomerStatus; to?: CustomerStatus };
@@ -81,6 +92,16 @@ interface EventRow {
   fromStatus?: CustomerStatus;
   toStatus?: CustomerStatus;
   nextFollowUpAt?: Date | null;
+}
+interface QuotationRow {
+  _id: Types.ObjectId;
+  quotationNo: string;
+  title: string;
+  status: QuotationStatus;
+  totalAmount: number;
+  currency: QuotationCurrency;
+  createdAt: Date;
+  updatedAt?: Date;
 }
 
 interface CustomerChangeSnapshot {
@@ -159,15 +180,18 @@ export async function getCustomerTimeline(customerId: string, limit = 200): Prom
     throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
   }
 
-  const [letters, followUps, events] = await Promise.all([
+  const [letters, followUps, events, quotations] = await Promise.all([
     DevelopmentLetter.find({ customerId: oid }).sort({ createdAt: -1 }).limit(limit).lean(),
     FollowUp.find({ customerId: oid }).sort({ followUpAt: -1 }).limit(limit).lean(),
     CustomerEvent.find({ customerId: oid }).sort({ at: -1 }).limit(limit).lean(),
+    // 报价单追加在末尾（index 3），不影响上面既有的解构位置
+    Quotation.find({ customerId: oid }).sort({ updatedAt: -1 }).limit(limit).lean(),
   ]);
 
   const letterRows = letters as unknown as LetterRow[];
   const followUpRows = followUps as unknown as FollowUpRow[];
   const eventRows = events as unknown as EventRow[];
+  const quotationRows = quotations as unknown as QuotationRow[];
 
   const items: TimelineEvent[] = [];
 
@@ -202,6 +226,24 @@ export async function getCustomerTimeline(customerId: string, limit = 200): Prom
         result: followUp.result,
         content: followUp.content,
         nextFollowUpAt: followUp.nextFollowUpAt ? new Date(followUp.nextFollowUpAt) : null,
+      },
+    });
+  }
+
+  // 报价单：从集合派生（不重复落库），锚定 updatedAt 以反映「创建 / 发送 / 状态变化」等最近一次关键动作
+  for (const quotation of quotationRows) {
+    const at = quotation.updatedAt ? new Date(quotation.updatedAt) : new Date(quotation.createdAt);
+    items.push({
+      id: `quotation-${String(quotation._id)}`,
+      type: 'quotation',
+      at,
+      quotation: {
+        id: String(quotation._id),
+        quotationNo: quotation.quotationNo,
+        title: quotation.title,
+        status: quotation.status,
+        totalAmount: quotation.totalAmount,
+        currency: quotation.currency,
       },
     });
   }

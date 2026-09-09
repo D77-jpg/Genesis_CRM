@@ -5,6 +5,7 @@
  *   /api/auth/*          登录
  *   /api/customers/*     客户
  *   /api/letters/*       开发信
+ *   /api/quotations/*    报价单（V2）
  *   /api/stats/*         统计
  *   /api/users/*         用户管理（管理员专属）
  */
@@ -20,6 +21,9 @@ import {
   LETTER_STATUS,
   LETTER_STATUS_LABEL,
   MAX_PAGE_SIZE,
+  QUOTATION_CURRENCY,
+  QUOTATION_STATUS,
+  QUOTATION_STATUS_LABEL,
   TEMPLATE_CATEGORY,
   TEMPLATE_CATEGORY_LABEL,
 } from '../constants';
@@ -30,6 +34,7 @@ import { requireAuth } from '../middleware/auth.middleware';
 import authRoutes from './auth.routes';
 import customerRoutes from './customer.routes';
 import letterRoutes from './letter.routes';
+import quotationRoutes from './quotation.routes';
 import templateRoutes from './template.routes';
 import userRoutes from './user.routes';
 
@@ -49,6 +54,8 @@ router.get(
       customerStatus: CUSTOMER_STATUS.map((value) => ({ value, label: CUSTOMER_STATUS_LABEL[value] })),
       customerSource: CUSTOMER_SOURCE,
       letterStatus: LETTER_STATUS.map((value) => ({ value, label: LETTER_STATUS_LABEL[value] })),
+      quotationStatus: QUOTATION_STATUS.map((value) => ({ value, label: QUOTATION_STATUS_LABEL[value] })),
+      quotationCurrency: QUOTATION_CURRENCY,
       templateCategory: TEMPLATE_CATEGORY.map((value) => ({ value, label: TEMPLATE_CATEGORY_LABEL[value] })),
       placeholders: LETTER_PLACEHOLDERS.map(({ key, label }) => ({ key, label, token: `{{${key}}}` })),
       mailChannel: getActiveChannel(),
@@ -68,6 +75,7 @@ router.get(
 router.use('/auth', authRoutes);
 router.use('/customers', customerRoutes);
 router.use('/letters', letterRoutes);
+router.use('/quotations', quotationRoutes);
 router.use('/templates', templateRoutes);
 router.use('/users', userRoutes);
 router.get('/stats/overview', requireAuth, overviewHandler);

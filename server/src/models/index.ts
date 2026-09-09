@@ -21,5 +21,8 @@ export type { ICustomerEvent, CustomerEventDocument } from './CustomerEvent';
 export { CustomerAttachment } from './CustomerAttachment';
 export type { ICustomerAttachment, CustomerAttachmentDocument } from './CustomerAttachment';
 
+export { Quotation, computeQuotationTotals, roundMoney } from './Quotation';
+export type { IQuotation, IQuotationItem, QuotationDocument } from './Quotation';
+
 export { User, hashPassword } from './User';
 export type { IUser, IUserMethods, UserDocument, UserModel, UserRole, UserStatus } from './User';

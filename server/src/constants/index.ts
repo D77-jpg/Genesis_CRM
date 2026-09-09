@@ -95,6 +95,41 @@ export const CUSTOMER_EVENT_TYPE = ['status_changed', 'followup_scheduled'] as c
 export type CustomerEventType = (typeof CUSTOMER_EVENT_TYPE)[number];
 
 /**
+ * 报价单状态（V2 报价管理）
+ * 草稿 → 已发送 → 谈判中 → 已接受 / 已拒绝 / 已过期
+ */
+export const QUOTATION_STATUS = [
+  'draft',
+  'sent',
+  'negotiating',
+  'accepted',
+  'rejected',
+  'expired',
+] as const;
+export type QuotationStatus = (typeof QUOTATION_STATUS)[number];
+
+/**
+ * 报价币种（外贸常见结算币种）。
+ * 采用固定枚举以便前端下拉与展示统一；默认 USD。
+ * 金额始终以「币种最小主单位（元）」存储，保留两位小数。
+ */
+export const QUOTATION_CURRENCY = [
+  'USD',
+  'EUR',
+  'GBP',
+  'CNY',
+  'JPY',
+  'HKD',
+  'AUD',
+  'CAD',
+  'CHF',
+  'SGD',
+  'AED',
+  'NZD',
+] as const;
+export type QuotationCurrency = (typeof QUOTATION_CURRENCY)[number];
+
+/**
  * 开发信模板分类
  * 首次开发 / 产品推荐 / 报价 / 跟进 / 节日 / 其他
  */
@@ -157,6 +192,15 @@ export const TEMPLATE_CATEGORY_LABEL: Record<TemplateCategory, string> = {
   followup: '跟进',
   festival: '节日',
   other: '其他',
+};
+
+export const QUOTATION_STATUS_LABEL: Record<QuotationStatus, string> = {
+  draft: '草稿',
+  sent: '已发送',
+  negotiating: '谈判中',
+  accepted: '已接受',
+  rejected: '已拒绝',
+  expired: '已过期',
 };
 
 /** Excel 导入时可用于识别「状态」列的取值（统一小写比较） */

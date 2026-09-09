@@ -816,4 +816,199 @@ try { Invoke-RestMethod "$base/customers/$fxId" -Headers $h | Out-Null } catch {
   Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
 }
 
+# ==================================================================
+# Quotation-management regression (94-112): V2 feature. Covers create
+# (auto + custom number), per-line and total amount computed by the
+# backend (client-sent amounts are stripped and recomputed), read /
+# list / filter, edit, status update with and without the explicit
+# customer "quoting" linkage, timeline derivation, invalid customerId
+# (422 / 404), invalid payloads (422), salesperson isolation (404 on
+# all 7 routes, no existence leak), the salesperson happy path plus
+# admin read-all, delete, and cascade cleanup. Uses throwaway customers
+# deleted at the end so re-runs stay deterministic. ASCII-only for the
+# same PowerShell 5.1 reason.
+# ==================================================================
+
+$qts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$qCustomNo = "QT-SMOKE-$qts"
+$qCustomNoLower = "qt-smoke-$qts"
+
+# 94. admin creates a throwaway customer to own the quotations
+$qc = Invoke-RestMethod -Method Post -Uri "$base/customers" -ContentType 'application/json' -Headers $h -Body (@{ name = 'Quote Smoke Co'; company = 'Quote Smoke Ltd'; email = "quote.smoke.$qts@example.com"; status = 'pending'; source = 'manual' } | ConvertTo-Json)
+$qcId = $qc.data.id
+Write-Host "--- POST /customers (quotation throwaway) ---" -ForegroundColor Cyan
+Write-Host "id=$qcId status(expect pending)=$($qc.data.status)"
+
+# 95. create with auto number + 2 items; backend computes each line amount and the total
+$q1Body = @{ title = 'Smoke Quote Auto'; currency = 'USD'; validityDate = '2026-12-31'; items = @( @{ productName = 'Steel Ring'; model = 'SR-01'; quantity = 10; unitPrice = 2.5 }, @{ productName = 'Gold Ring'; model = 'GR-02'; quantity = 3; unitPrice = 100 } ) } | ConvertTo-Json -Depth 6
+$q1 = Invoke-RestMethod -Method Post -Uri "$base/customers/$qcId/quotations" -ContentType 'application/json' -Headers $h -Body $q1Body
+$q1Id = $q1.data.id
+$q1No = $q1.data.quotationNo
+$q1NoOk = $q1No -match '^QT-\d{8}-\d{3}$'
+Write-Host "--- POST /customers/:id/quotations (auto number, 2 items, validity set) ---" -ForegroundColor Cyan
+Write-Host "no=$q1No numberPatternOk(expect True)=$q1NoOk line0(expect 25)=$($q1.data.items[0].amount) line1(expect 300)=$($q1.data.items[1].amount) total(expect 325)=$($q1.data.totalAmount) status(expect draft)=$($q1.data.status) validityOk(expect True)=$($q1.data.validityDate -like '2026-12-31*')"
+
+# 96. read the single quotation back via the nested detail route
+$q1Get = Invoke-RestMethod "$base/customers/$qcId/quotations/$q1Id" -Headers $h
+Show 'GET /customers/:id/quotations/:quotationId' @{ quotationNo = $q1Get.data.quotationNo; total = $q1Get.data.totalAmount; itemCount = $q1Get.data.items.Count }
+
+# 97. list the customer's quotations (array shape, newest first)
+$qList = Invoke-RestMethod "$base/customers/$qcId/quotations" -Headers $h
+Write-Host "--- GET /customers/:id/quotations ---" -ForegroundColor Cyan
+Write-Host "count(expect 1)=$($qList.data.Count) firstNo=$($qList.data[0].quotationNo)"
+
+# 98. create with a custom lowercase number; backend stores it upper-cased
+$q2Body = @{ quotationNo = $qCustomNoLower; title = 'Smoke Quote Custom'; currency = 'EUR'; validityDate = $null; items = @( @{ productName = 'Silver Ring'; quantity = 5; unitPrice = 4 }, @{ productName = 'Bronze Ring'; quantity = 2; unitPrice = 1.5 } ) } | ConvertTo-Json -Depth 6
+$q2 = Invoke-RestMethod -Method Post -Uri "$base/customers/$qcId/quotations" -ContentType 'application/json' -Headers $h -Body $q2Body
+$q2Id = $q2.data.id
+Write-Host "--- POST /customers/:id/quotations (custom number, EUR, null validity) ---" -ForegroundColor Cyan
+Write-Host "storedNo(expect $qCustomNo)=$($q2.data.quotationNo) upperOk(expect True)=$($q2.data.quotationNo -ceq $qCustomNo) total(expect 23)=$($q2.data.totalAmount) currency(expect EUR)=$($q2.data.currency) validityUnset(expect True)=$([string]::IsNullOrEmpty($q2.data.validityDate))"
+
+# 99. duplicate custom number -> 409
+try {
+  Invoke-RestMethod -Method Post -Uri "$base/customers/$qcId/quotations" -ContentType 'application/json' -Headers $h -Body (@{ quotationNo = $qCustomNo; title = 'Dup'; items = @( @{ productName = 'X'; quantity = 1; unitPrice = 1 } ) } | ConvertTo-Json -Depth 6) | Out-Null
+  Write-Host "duplicate number UNEXPECTEDLY succeeded"
+} catch {
+  Write-Host "--- POST duplicate quotationNo ---" -ForegroundColor Cyan
+  Write-Host "status(expect 409)=$($_.Exception.Response.StatusCode.value__)"
+}
+
+# 100. edit and tamper the line amounts; backend recomputes and ignores the tampering
+$qEditBody = @{ title = 'Smoke Quote Custom v2'; items = @( @{ productName = 'Silver Ring'; quantity = 5; unitPrice = 4; amount = 999999 }, @{ productName = 'Bronze Ring'; quantity = 2; unitPrice = 1.5; amount = 888888 } ) } | ConvertTo-Json -Depth 6
+$qEdit = Invoke-RestMethod -Method Put -Uri "$base/customers/$qcId/quotations/$q2Id" -ContentType 'application/json' -Headers $h -Body $qEditBody
+Write-Host "--- PUT /customers/:id/quotations/:quotationId (tampered amounts) ---" -ForegroundColor Cyan
+Write-Host "title=$($qEdit.data.title) line0(expect 20)=$($qEdit.data.items[0].amount) line1(expect 3)=$($qEdit.data.items[1].amount) total(expect 23)=$($qEdit.data.totalAmount) tamperIgnored(expect True)=$($qEdit.data.totalAmount -eq 23 -and $qEdit.data.items[0].amount -eq 20)"
+
+# 101. status -> 'sent' WITHOUT linkage; customer sales status stays 'pending'
+$qS1 = Invoke-RestMethod -Method Put -Uri "$base/customers/$qcId/quotations/$q1Id/status" -ContentType 'application/json' -Headers $h -Body (@{ status = 'sent' } | ConvertTo-Json)
+$cAfterSent = Invoke-RestMethod "$base/customers/$qcId" -Headers $h
+Write-Host "--- PUT .../status (sent, no linkage) ---" -ForegroundColor Cyan
+Write-Host "quotationStatus(expect sent)=$($qS1.data.status) customerStatus(expect pending)=$($cAfterSent.data.status)"
+
+# 102. status -> 'negotiating' WITH explicit linkage; customer advances pending -> quoting
+$qS2 = Invoke-RestMethod -Method Put -Uri "$base/customers/$qcId/quotations/$q1Id/status" -ContentType 'application/json' -Headers $h -Body (@{ status = 'negotiating'; markCustomerAsQuoting = $true } | ConvertTo-Json)
+$cAfterLink = Invoke-RestMethod "$base/customers/$qcId" -Headers $h
+Write-Host "--- PUT .../status (negotiating + markCustomerAsQuoting) ---" -ForegroundColor Cyan
+Write-Host "quotationStatus(expect negotiating)=$($qS2.data.status) customerStatus(expect quoting)=$($cAfterLink.data.status)"
+
+# 103. top-level list with filters (by customer, by status); customer summary is populated
+$qByCustomer = Invoke-RestMethod "$base/quotations?customerId=$qcId&limit=50" -Headers $h
+$qByStatus = Invoke-RestMethod "$base/quotations?customerId=$qcId&status=negotiating&limit=50" -Headers $h
+Write-Host "--- GET /quotations (filters) ---" -ForegroundColor Cyan
+Write-Host "byCustomerTotal(expect 2)=$($qByCustomer.data.total) byStatusNegotiating(expect 1)=$($qByStatus.data.total) customerName=$($qByCustomer.data.items[0].customer.name)"
+
+# 104. timeline derives quotation events (+ the status_changed event from the linkage)
+$qTl = Invoke-RestMethod "$base/customers/$qcId/timeline" -Headers $h
+$qTlTypes = ($qTl.data.items | ForEach-Object { $_.type })
+$qQuoteEvents = @($qTlTypes | Where-Object { $_ -eq 'quotation' }).Count
+$qStatusEvents = @($qTlTypes | Where-Object { $_ -eq 'status_changed' }).Count
+Write-Host "--- GET /customers/:id/timeline (quotation derivation) ---" -ForegroundColor Cyan
+Write-Host "quotationEvents(expect 2)=$qQuoteEvents statusChangedEvents(expect 1)=$qStatusEvents types=$(($qTlTypes) -join ',')"
+
+# 105. invalid customerId: malformed ObjectId -> 422 (validate middleware); well-formed but missing -> 404
+try { Invoke-RestMethod "$base/customers/not-an-id/quotations" -Headers $h | Out-Null } catch {
+  Write-Host "--- GET /customers/:badId/quotations ---" -ForegroundColor Cyan
+  Write-Host "status(expect 422)=$($_.Exception.Response.StatusCode.value__)"
+}
+try {
+  Invoke-RestMethod -Method Post -Uri "$base/quotations" -ContentType 'application/json' -Headers $h -Body (@{ customerId = '000000000000000000000000'; title = 'Ghost'; items = @( @{ productName = 'X'; quantity = 1; unitPrice = 1 } ) } | ConvertTo-Json -Depth 6) | Out-Null
+  Write-Host "missing-customer create UNEXPECTEDLY succeeded"
+} catch {
+  Write-Host "--- POST /quotations (missing customer) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+
+# 106. invalid payloads -> 422 (validate middleware: empty items, missing title, non-positive quantity)
+try {
+  Invoke-RestMethod -Method Post -Uri "$base/customers/$qcId/quotations" -ContentType 'application/json' -Headers $h -Body (@{ title = 'No Items'; items = @() } | ConvertTo-Json -Depth 6) | Out-Null
+  Write-Host "empty-items UNEXPECTEDLY succeeded"
+} catch {
+  Write-Host "--- POST quotation (empty items) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 422)=$($_.Exception.Response.StatusCode.value__)"
+}
+try {
+  Invoke-RestMethod -Method Post -Uri "$base/customers/$qcId/quotations" -ContentType 'application/json' -Headers $h -Body (@{ items = @( @{ productName = 'X'; quantity = 1; unitPrice = 1 } ) } | ConvertTo-Json -Depth 6) | Out-Null
+  Write-Host "missing-title UNEXPECTEDLY succeeded"
+} catch {
+  Write-Host "--- POST quotation (missing title) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 422)=$($_.Exception.Response.StatusCode.value__)"
+}
+try {
+  Invoke-RestMethod -Method Post -Uri "$base/customers/$qcId/quotations" -ContentType 'application/json' -Headers $h -Body (@{ title = 'Bad Qty'; items = @( @{ productName = 'X'; quantity = 0; unitPrice = 1 } ) } | ConvertTo-Json -Depth 6) | Out-Null
+  Write-Host "quantity-zero UNEXPECTEDLY succeeded"
+} catch {
+  Write-Host "--- POST quotation (quantity=0) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 422)=$($_.Exception.Response.StatusCode.value__)"
+}
+
+# 107. salesperson isolation: all 7 quotation routes on an admin-owned customer -> 404 (no leak)
+try { Invoke-RestMethod "$base/customers/$qcId/quotations" -Headers $hs | Out-Null } catch {
+  Write-Host "--- GET /customers/:id/quotations (salesperson, other owner) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+try {
+  Invoke-RestMethod -Method Post -Uri "$base/customers/$qcId/quotations" -ContentType 'application/json' -Headers $hs -Body (@{ title = 'Sneak'; items = @( @{ productName = 'X'; quantity = 1; unitPrice = 1 } ) } | ConvertTo-Json -Depth 6) | Out-Null
+} catch {
+  Write-Host "--- POST /customers/:id/quotations (salesperson, other owner) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+try { Invoke-RestMethod "$base/customers/$qcId/quotations/$q1Id" -Headers $hs | Out-Null } catch {
+  Write-Host "--- GET nested quotation detail (salesperson, other owner) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+try {
+  Invoke-RestMethod -Method Put -Uri "$base/customers/$qcId/quotations/$q1Id" -ContentType 'application/json' -Headers $hs -Body (@{ title = 'Hijack' } | ConvertTo-Json) | Out-Null
+} catch {
+  Write-Host "--- PUT nested quotation (salesperson, other owner) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+try {
+  Invoke-RestMethod -Method Put -Uri "$base/customers/$qcId/quotations/$q1Id/status" -ContentType 'application/json' -Headers $hs -Body (@{ status = 'accepted' } | ConvertTo-Json) | Out-Null
+} catch {
+  Write-Host "--- PUT nested quotation status (salesperson, other owner) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+try { Invoke-RestMethod -Method Delete -Uri "$base/customers/$qcId/quotations/$q1Id" -Headers $hs | Out-Null } catch {
+  Write-Host "--- DELETE nested quotation (salesperson, other owner) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+try { Invoke-RestMethod "$base/quotations/$q1Id" -Headers $hs | Out-Null } catch {
+  Write-Host "--- GET /quotations/:id (salesperson, other owner) ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+
+# 108. salesperson happy path: own customer + quotation; admin can also read it (sees all)
+$qtCust = Invoke-RestMethod -Method Post -Uri "$base/customers" -ContentType 'application/json' -Headers $hs -Body (@{ name = 'Sales Quote Co'; company = 'Sales Quote Ltd'; email = "sales.quote.$qts@example.com"; status = 'pending'; source = 'manual' } | ConvertTo-Json)
+$qtCustId = $qtCust.data.id
+$qtQuote = Invoke-RestMethod -Method Post -Uri "$base/customers/$qtCustId/quotations" -ContentType 'application/json' -Headers $hs -Body (@{ title = 'Sales Own Quote'; currency = 'USD'; items = @( @{ productName = 'Widget'; quantity = 3; unitPrice = 5 } ) } | ConvertTo-Json -Depth 6)
+$qtQuoteId = $qtQuote.data.id
+$qtList = Invoke-RestMethod "$base/customers/$qtCustId/quotations" -Headers $hs
+$qtAdminRead = Invoke-RestMethod "$base/quotations/$qtQuoteId" -Headers $h
+Write-Host "--- salesperson creates own customer + quotation ---" -ForegroundColor Cyan
+Write-Host "ownerId(expect $salesId)=$($qtCust.data.ownerId) listCount(expect 1)=$($qtList.data.Count) total(expect 15)=$($qtQuote.data.totalAmount) adminCanRead(expect True)=$($qtAdminRead.data.id -eq $qtQuoteId)"
+
+# 109. delete a quotation; the customer's list drops back to one
+$qDel = Invoke-RestMethod -Method Delete -Uri "$base/customers/$qcId/quotations/$q2Id" -Headers $h
+$qAfterDel = Invoke-RestMethod "$base/customers/$qcId/quotations" -Headers $h
+Show 'DELETE /customers/:id/quotations/:quotationId' @{ deleted = $qDel.data.deleted; id = $qDel.data.id }
+Write-Host "--- GET /customers/:id/quotations (after delete) ---" -ForegroundColor Cyan
+Write-Host "count(expect 1)=$($qAfterDel.data.Count)"
+
+# 110. the deleted quotation is gone (404)
+try { Invoke-RestMethod "$base/customers/$qcId/quotations/$q2Id" -Headers $h | Out-Null } catch {
+  Write-Host "--- GET deleted quotation ---" -ForegroundColor Cyan
+  Write-Host "status(expect 404)=$($_.Exception.Response.StatusCode.value__)"
+}
+
+# 111. cleanup throwaway customers (cascades their quotations)
+$qcd1 = Invoke-RestMethod -Method Delete -Uri "$base/customers/$qcId" -Headers $h
+$qcd2 = Invoke-RestMethod -Method Delete -Uri "$base/customers/$qtCustId" -Headers $h
+Show 'DELETE throwaway quotation customers' @{ adminQuoteCustomer = $qcd1.data.id; salesQuoteCustomer = $qcd2.data.id }
+
+# 112. cascade confirmed: both customers' quotations are gone
+$qc1Gone = Invoke-RestMethod "$base/quotations?customerId=$qcId&limit=50" -Headers $h
+$qc2Gone = Invoke-RestMethod "$base/quotations?customerId=$qtCustId&limit=50" -Headers $h
+Write-Host "--- GET /quotations?customerId= (after cascade delete) ---" -ForegroundColor Cyan
+Write-Host "adminCustomerQuotations(expect 0)=$($qc1Gone.data.total) salesCustomerQuotations(expect 0)=$($qc2Gone.data.total)"
+
 Write-Host "`nALL SMOKE TESTS DONE" -ForegroundColor Green

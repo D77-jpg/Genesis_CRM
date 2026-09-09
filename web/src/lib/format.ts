@@ -87,6 +87,27 @@ export function formatNumber(value?: number | null, fallback = '0'): string {
   return value.toLocaleString('zh-CN');
 }
 
+/**
+ * 金额四舍五入到分（两位小数），与后端 Quotation.roundMoney 口径一致。
+ * 前端即时计算行金额 / 总金额时用它消除浮点误差，后端会再算一次为准。
+ */
+export function roundMoney(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * 金额显示：千分位 + 两位小数，可选前缀币种代码（如 `USD 1,234.50`）。
+ * 与后端「以币种最小主单位（元）保留两位小数」的存储口径一致。
+ */
+export function formatMoney(value?: number | null, currency?: string | null, fallback = '0.00'): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return currency ? `${currency} ${fallback}` : fallback;
+  }
+  const amount = value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currency ? `${currency} ${amount}` : amount;
+}
+
 /** 百分比（0-1 或 0-100 均可，由 caller 决定 digits） */
 export function formatPercent(value?: number | null, digits = 1): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '0%';

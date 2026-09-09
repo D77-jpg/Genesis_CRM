@@ -4,7 +4,7 @@
  * 所有数据库访问都收敛在这里，controller 只做「参数 → 调用 → 响应」。
  */
 import { Types, type AnyKeys, type FilterQuery } from 'mongoose';
-import { Customer, CustomerEvent, DevelopmentLetter, FollowUp, User, type CustomerDocument, type ICustomer } from '../models';
+import { Customer, CustomerEvent, DevelopmentLetter, FollowUp, Quotation, User, type CustomerDocument, type ICustomer } from '../models';
 import { CUSTOMER_STATUS, type CustomerStatus, type CustomerSource } from '../constants';
 import { ApiError } from '../utils/ApiError';
 import { buildPaginated, parsePagination, sortableFields, type Paginated } from '../utils/pagination';
@@ -261,7 +261,7 @@ export async function updateCustomer(
   return getCustomer(id, actor);
 }
 
-/** 删除客户，同时级联清理其开发信 / 跟进记录 / 活动事件 */
+/** 删除客户，同时级联清理其开发信 / 跟进记录 / 活动事件 / 报价单 */
 export async function deleteCustomer(id: string, actor?: AuthUser): Promise<{ id: string; deletedLetters: number }> {
   const customer = await getCustomerByIdOrThrow(id, actor);
   // 先级联清理附件（DB 记录 + 磁盘文件），再删其余从属资源与客户本身
@@ -270,9 +270,11 @@ export async function deleteCustomer(id: string, actor?: AuthUser): Promise<{ id
     DevelopmentLetter.deleteMany({ customerId: customer._id }),
     FollowUp.deleteMany({ customerId: customer._id }),
     CustomerEvent.deleteMany({ customerId: customer._id }),
+    // 报价单追加在末尾，letterResult 仍为 index 0
+    Quotation.deleteMany({ customerId: customer._id }),
   ]);
   await Customer.deleteOne({ _id: customer._id });
-  logger.info(`删除客户: ${customer.name}，级联删除 ${letterResult.deletedCount ?? 0} 封开发信及其跟进记录 / 活动事件 / 附件`);
+  logger.info(`删除客户: ${customer.name}，级联删除 ${letterResult.deletedCount ?? 0} 封开发信及其跟进记录 / 活动事件 / 报价单 / 附件`);
   return { id, deletedLetters: letterResult.deletedCount ?? 0 };
 }
 
@@ -305,15 +307,17 @@ export async function bulkDelete(ids: string[], actor?: AuthUser): Promise<{ del
   }
   // 先级联清理这些客户的附件（DB 记录 + 磁盘文件）
   await purgeCustomerAttachments(deletableIds);
-  // 级联删除开发信 / 跟进记录 / 活动事件 / 客户本身。
+  // 级联删除开发信 / 跟进记录 / 活动事件 / 客户本身 / 报价单。
   // Promise.all 结果按数组顺序对应，用「空位」跳过跟进(index 1)与事件(index 2)的结果，
   // 只取开发信(index 0)与客户(index 3)的删除数——避免解构错位（曾把跟进删除数
   // 误当成客户删除数返回，导致删除无跟进记录的客户时 bulk/delete 误报 NOT_FOUND）。
+  // 报价单删除追加在末尾(index 4)，不参与解构，故不影响上述位置。
   const [letterResult, , , customerResult] = await Promise.all([
     DevelopmentLetter.deleteMany({ customerId: { $in: deletableIds } }),
     FollowUp.deleteMany({ customerId: { $in: deletableIds } }),
     CustomerEvent.deleteMany({ customerId: { $in: deletableIds } }),
     Customer.deleteMany({ _id: { $in: deletableIds } }),
+    Quotation.deleteMany({ customerId: { $in: deletableIds } }),
   ]);
   return {
     deleted: customerResult.deletedCount ?? 0,

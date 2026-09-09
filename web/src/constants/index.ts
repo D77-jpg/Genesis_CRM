@@ -13,6 +13,8 @@ import type {
   FollowUpResult,
   ImportField,
   LetterStatus,
+  QuotationCurrency,
+  QuotationStatus,
   TemplateCategory,
   TimelineEventType,
   UserRole,
@@ -159,6 +161,7 @@ export const TIMELINE_EVENT_LABEL: Record<TimelineEventType, string> = {
   created: '客户创建',
   letter: '开发信',
   followup: '跟进记录',
+  quotation: '报价单',
   status_changed: '状态变化',
   followup_scheduled: '跟进计划',
 };
@@ -222,6 +225,68 @@ export const CUSTOMER_SOURCE_LABEL: Record<string, string> = {
   excel: 'Excel 导入',
   seed: '初始化数据',
 };
+
+/* ---------------------------- 报价单（V2 报价管理） ---------------------------- */
+
+/** 报价单状态取值顺序（与后端 QUOTATION_STATUS 一致） */
+export const QUOTATION_STATUS_VALUES = [
+  'draft',
+  'sent',
+  'negotiating',
+  'accepted',
+  'rejected',
+  'expired',
+] as const;
+
+export const QUOTATION_STATUS_LABEL: Record<QuotationStatus, string> = {
+  draft: '草稿',
+  sent: '已发送',
+  negotiating: '谈判中',
+  accepted: '已接受',
+  rejected: '已拒绝',
+  expired: '已过期',
+};
+
+export const QUOTATION_STATUS_OPTIONS: { value: QuotationStatus; label: string }[] =
+  QUOTATION_STATUS_VALUES.map((value) => ({ value, label: QUOTATION_STATUS_LABEL[value] }));
+
+/** 状态筛选下拉：全部 + 各状态 */
+export const QUOTATION_STATUS_FILTER_OPTIONS: { value: QuotationStatus | 'all'; label: string }[] = [
+  { value: 'all', label: '全部状态' },
+  ...QUOTATION_STATUS_OPTIONS,
+];
+
+/**
+ * 报价单状态彽章配色：草稿=石板灰 / 已发送=蓝 / 谈判中=紫 /
+ * 已接受=翠绿 / 已拒绝=玫红 / 已过期=琥珀。
+ */
+export const QUOTATION_STATUS_BADGE_CLASS: Record<QuotationStatus, string> = {
+  draft: 'border-slate-400/40 bg-slate-400/10 text-slate-600 dark:text-slate-300',
+  sent: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300',
+  negotiating: 'border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-300',
+  accepted: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  rejected: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400',
+  expired: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+};
+
+/** 报价币种取值顺序（与后端 QUOTATION_CURRENCY 一致），默认 USD */
+export const QUOTATION_CURRENCY_VALUES = [
+  'USD',
+  'EUR',
+  'GBP',
+  'CNY',
+  'JPY',
+  'HKD',
+  'AUD',
+  'CAD',
+  'CHF',
+  'SGD',
+  'AED',
+  'NZD',
+] as const;
+
+export const QUOTATION_CURRENCY_OPTIONS: { value: QuotationCurrency; label: string }[] =
+  QUOTATION_CURRENCY_VALUES.map((value) => ({ value, label: value }));
 
 /* ---------------------------- 业务来源（leadSource） ---------------------------- */
 

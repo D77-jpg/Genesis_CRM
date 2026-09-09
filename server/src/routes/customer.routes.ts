@@ -66,6 +66,21 @@ import {
   listAttachmentsHandler,
   uploadAttachmentHandler,
 } from '../controllers/attachment.controller';
+import {
+  createQuotationSchema,
+  listQuotationsQuerySchema,
+  quotationIdParamsSchema,
+  updateQuotationSchema,
+  updateQuotationStatusSchema,
+} from '../validators/quotation.validator';
+import {
+  createQuotationForCustomerHandler,
+  deleteQuotationHandler,
+  getCustomerQuotationHandler,
+  listCustomerQuotationsHandler,
+  updateQuotationHandler,
+  updateQuotationStatusHandler,
+} from '../controllers/quotation.controller';
 
 const router = Router();
 
@@ -113,5 +128,13 @@ router.get('/:id/attachments', validate({ params: idParamsSchema }), listAttachm
 router.post('/:id/attachments', validate({ params: idParamsSchema, body: createAttachmentSchema }), uploadAttachmentHandler);
 router.get('/:id/attachments/:attachmentId/download', validate({ params: attachmentIdParamsSchema }), downloadAttachmentHandler);
 router.delete('/:id/attachments/:attachmentId', validate({ params: attachmentIdParamsSchema }), deleteAttachmentHandler);
+
+/* ---------- 嵌套的报价单（V2 报价管理） ---------- */
+router.get('/:id/quotations', validate({ params: idParamsSchema, query: listQuotationsQuerySchema }), listCustomerQuotationsHandler);
+router.post('/:id/quotations', validate({ params: idParamsSchema, body: createQuotationSchema }), createQuotationForCustomerHandler);
+router.get('/:id/quotations/:quotationId', validate({ params: quotationIdParamsSchema }), getCustomerQuotationHandler);
+router.put('/:id/quotations/:quotationId', validate({ params: quotationIdParamsSchema, body: updateQuotationSchema }), updateQuotationHandler);
+router.put('/:id/quotations/:quotationId/status', validate({ params: quotationIdParamsSchema, body: updateQuotationStatusSchema }), updateQuotationStatusHandler);
+router.delete('/:id/quotations/:quotationId', validate({ params: quotationIdParamsSchema }), deleteQuotationHandler);
 
 export default router;

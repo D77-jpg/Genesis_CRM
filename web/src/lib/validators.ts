@@ -11,6 +11,8 @@ import {
   EMAIL_PATTERN,
   FOLLOW_UP_METHOD_VALUES,
   FOLLOW_UP_RESULT_VALUES,
+  QUOTATION_CURRENCY_VALUES,
+  QUOTATION_STATUS_VALUES,
   TEMPLATE_CATEGORY_VALUES,
   USER_ROLE_VALUES,
 } from '@/constants';
@@ -189,6 +191,64 @@ export const defaultFollowUpFormValues: FollowUpFormValues = {
   result: 'no_reply',
   followUpAt: todayInputDate(),
   nextFollowUpAt: '',
+};
+
+/* ---------------------------- 报价单（V2 报价管理） ---------------------------- */
+
+/**
+ * 报价明细行表单：只接收 productName / model / quantity / unitPrice。
+ * amount 不在表单里 —— 行金额与总金额前端即时算给用户看，提交后由后端再算一次为准。
+ * quantity / unitPrice 用 z.coerce.number 兼容 number 输入框回传的字符串。
+ */
+export const quotationItemFormSchema = z.object({
+  productName: z.string().trim().min(1, '产品名称为必填项').max(200, '产品名称不能超过 200 个字符'),
+  model: z.string().trim().max(200, '型号不能超过 200 个字符').optional().or(z.literal('')),
+  quantity: z.coerce.number().positive('数量必须大于 0').max(1_000_000_000, '数量过大'),
+  unitPrice: z.coerce.number().min(0, '单价不能为负数').max(1_000_000_000, '单价过大'),
+});
+
+/**
+ * 报价单表单：编号 / 标题 / 明细 / 币种 / 状态 / 有效期 / 付款方式 / 交期 / MOQ / 备注。
+ * 规则与后端 quotation.validator 保持一致（前端先拦一道，后端仍是最终权威）。
+ * 编号留空则由后端按 QT-YYYYMMDD-NNN 生成；正则用 * 允许空串。
+ */
+export const quotationFormSchema = z.object({
+  quotationNo: z
+    .string()
+    .trim()
+    .max(60, '报价单编号不能超过 60 个字符')
+    .regex(/^[A-Za-z0-9._-]*$/, '编号只能包含字母、数字、点、下划线和连字符')
+    .optional()
+    .or(z.literal('')),
+  title: z.string().trim().min(1, '报价标题为必填项').max(200, '报价标题不能超过 200 个字符'),
+  currency: z.enum(QUOTATION_CURRENCY_VALUES, { errorMap: () => ({ message: '请选择币种' }) }),
+  status: z.enum(QUOTATION_STATUS_VALUES, { errorMap: () => ({ message: '请选择状态' }) }),
+  validityDate: z.string().trim().max(40).optional().or(z.literal('')),
+  paymentTerms: optionalText(300, '付款方式'),
+  leadTime: optionalText(200, '交期'),
+  moq: optionalText(120, 'MOQ'),
+  notes: optionalText(5000, '备注'),
+  items: z
+    .array(quotationItemFormSchema)
+    .min(1, '报价明细至少需要一行产品')
+    .max(200, '报价明细最多 200 行'),
+  /** 显式联动：保存后把客户推进到「报价中」（仅新增 / 改状态时用，普通编辑不勾选） */
+  markCustomerAsQuoting: z.boolean(),
+});
+export type QuotationFormValues = z.infer<typeof quotationFormSchema>;
+
+export const defaultQuotationFormValues: QuotationFormValues = {
+  quotationNo: '',
+  title: '',
+  currency: 'USD',
+  status: 'draft',
+  validityDate: '',
+  paymentTerms: '',
+  leadTime: '',
+  moq: '',
+  notes: '',
+  items: [{ productName: '', model: '', quantity: 1, unitPrice: 0 }],
+  markCustomerAsQuoting: false,
 };
 
 /* ---------------------------- 开发信模板 ---------------------------- */
