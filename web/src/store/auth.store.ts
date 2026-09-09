@@ -5,12 +5,17 @@
  * - 401 时由 lib/api.ts 回调 handleSessionExpired，避免 api 层反向依赖 store
  */
 import { create } from 'zustand';
-import { apiGet, apiPost, getToken, setUnauthorizedHandler, toErrorMessage } from '@/lib/api';
-import { STORAGE_KEYS } from '@/constants';
+import { apiGet, apiPost, getToken, setUnauthorizedHandler, toErrorMessage, ApiClientError } from '@/lib/api';
+import { ROUTES, STORAGE_KEYS } from '@/constants';
 import { removeStorage, writeStorage } from '@/lib/utils';
 import type { AuthUser, LoginResult } from '@/types';
 
 export type AuthStatus = 'idle' | 'bootstrapping' | 'authenticated' | 'unauthenticated';
+
+/** 首屏恢复登录态遇瞬态错误（后端重启 / 网络抖动）时的重试参数，避免误掉登录 */
+const BOOTSTRAP_RETRIES = 3;
+const BOOTSTRAP_RETRY_DELAY = 1500;
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface AuthState {
   user: AuthUser | null;
@@ -77,20 +82,35 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
 
     set({ status: 'bootstrapping', token });
-    try {
-      const user = await apiGet<AuthUser>('/auth/me');
-      set({ user, status: 'authenticated', initialized: true });
-    } catch {
-      // token 过期或被篡改：静默清理，交给路由守卫跳登录页
-      removeStorage(STORAGE_KEYS.token);
-      set({ user: null, token: null, status: 'unauthenticated', initialized: true });
+    for (let attempt = 0; attempt < BOOTSTRAP_RETRIES; attempt++) {
+      try {
+        const user = await apiGet<AuthUser>('/auth/me');
+        set({ user, status: 'authenticated', initialized: true });
+        return;
+      } catch (error) {
+        const status = error instanceof ApiClientError ? error.status : 0;
+        // 401/403：token 确实失效 → 静默清理，交给路由守卫跳登录页
+        if (status === 401 || status === 403) {
+          removeStorage(STORAGE_KEYS.token);
+          set({ user: null, token: null, status: 'unauthenticated', initialized: true });
+          return;
+        }
+        // 网络抖动 / 后端重启 / 5xx：token 可能仍有效，不销毁，稍后重试
+        if (attempt < BOOTSTRAP_RETRIES - 1) await sleep(BOOTSTRAP_RETRY_DELAY);
+      }
     }
+    // 重试耗尽仍连不上：保留 localStorage 里的 token（服务恢复后刷新可免重输），仅回到未登录态
+    set({ user: null, token: null, status: 'unauthenticated', initialized: true });
   },
 
   handleSessionExpired() {
     if (get().status === 'unauthenticated') return;
     removeStorage(STORAGE_KEYS.token);
     set({ user: null, token: null, status: 'unauthenticated', initialized: true });
+    // 强制整页跳登录页：避免残留的内存态 UI 在掉登录后仍能被继续操作
+    if (window.location.pathname !== ROUTES.login) {
+      window.location.assign(ROUTES.login);
+    }
   },
 }));
 
