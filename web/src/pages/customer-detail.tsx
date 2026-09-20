@@ -13,6 +13,8 @@ import {
   Boxes,
   Building2,
   CalendarClock,
+  ChevronDown,
+  ChevronUp,
   Contact,
   Facebook,
   Flag,
@@ -63,6 +65,7 @@ import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { useLetterStore } from '@/store/letter.store';
 import { formatDate, formatDateTime, formatRelative, getFollowUpState, initials, toInputDate } from '@/lib/format';
 import { parseTagsText } from '@/lib/validators';
+import { readStorage, writeStorage } from '@/lib/utils';
 import {
   CUSTOMER_LEAD_SOURCE_OPTIONS,
   CUSTOMER_PRIORITY_BADGE_CLASS,
@@ -72,6 +75,7 @@ import {
   DEFAULT_PAGE_SIZE,
   EMAIL_PATTERN,
   ROUTES,
+  STORAGE_KEYS,
 } from '@/constants';
 import type { Customer, CustomerInput, CustomerPriority, CustomerStatus, DevelopmentLetter } from '@/types';
 
@@ -264,6 +268,17 @@ export function CustomerDetailPage(): React.JSX.Element {
   const [viewOpen, setViewOpen] = React.useState(false);
   const [deleteLetterTarget, setDeleteLetterTarget] = React.useState<DevelopmentLetter | null>(null);
   const [deleteCustomerOpen, setDeleteCustomerOpen] = React.useState(false);
+  // 客户信息默认只展示业务员常用字段，其余收进「展开全部」；状态按浏览器记住
+  const [infoExpanded, setInfoExpanded] = React.useState(() =>
+    readStorage<boolean>(STORAGE_KEYS.customerInfoExpanded, false),
+  );
+
+  const toggleInfoExpanded = React.useCallback(() => {
+    setInfoExpanded((prev) => {
+      writeStorage(STORAGE_KEYS.customerInfoExpanded, !prev);
+      return !prev;
+    });
+  }, []);
 
   /** 发信 / 重发成功后：刷新客户档案与开发信历史 */
   const refreshAll = React.useCallback(async () => {
@@ -525,6 +540,16 @@ export function CustomerDetailPage(): React.JSX.Element {
               <CalendarClock className="h-3 w-3" aria-hidden />
               {customer.lastContactAt ? `最近联系 ${formatRelative(customer.lastContactAt)}` : '尚未联系'}
             </Badge>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-expanded={infoExpanded}
+              onClick={toggleInfoExpanded}
+            >
+              {infoExpanded ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
+              {infoExpanded ? '收起' : '展开全部'}
+            </Button>
           </div>
         </CardHeader>
 
@@ -535,6 +560,7 @@ export function CustomerDetailPage(): React.JSX.Element {
               <span>该客户的下一次跟进时间（{formatDate(customer.nextFollowUpAt)}）已逾期，请尽快联系。</span>
             </div>
           ) : null}
+          {/* 常用字段常驻显示；分类与补充信息收进「展开全部」，避免页面被字段占满 */}
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             <EditableInfoRow
               icon={<Building2 className="h-3.5 w-3.5" />}
@@ -566,56 +592,6 @@ export function CustomerDetailPage(): React.JSX.Element {
               onSave={textSaver('phone')}
             />
             <EditableInfoRow
-              icon={<User className="h-3.5 w-3.5" />}
-              label="职位"
-              value={customer.title}
-              placeholder="例如 Founder / Buyer"
-              maxLength={120}
-              onSave={textSaver('title')}
-            />
-            <EditableInfoRow
-              icon={<Building2 className="h-3.5 w-3.5" />}
-              label="行业"
-              value={customer.industry}
-              placeholder="例如 Fine Jewellery"
-              datalistId="detail-industry-options"
-              datalist={industries}
-              maxLength={120}
-              onSave={textSaver('industry')}
-            />
-            <EditableInfoRow
-              icon={<Globe className="h-3.5 w-3.5" />}
-              label="国家 / 地区"
-              value={customer.country}
-              placeholder="例如 New Zealand"
-              maxLength={120}
-              onSave={textSaver('country')}
-            />
-            <EditableInfoRow
-              icon={<Globe className="h-3.5 w-3.5" />}
-              label="官网"
-              value={customer.website}
-              href={
-                customer.website
-                  ? customer.website.startsWith('http')
-                    ? customer.website
-                    : `https://${customer.website}`
-                  : undefined
-              }
-              placeholder="https://example.com"
-              maxLength={300}
-              onSave={textSaver('website')}
-            />
-            <EditableInfoRow
-              icon={<MapPin className="h-3.5 w-3.5" />}
-              label="地址"
-              value={customer.address}
-              placeholder="街道 / 城市 / 邮编"
-              maxLength={500}
-              className="sm:col-span-2"
-              onSave={textSaver('address')}
-            />
-            <EditableInfoRow
               icon={<Activity className="h-3.5 w-3.5" />}
               label="开发状态"
               kind="select"
@@ -625,15 +601,6 @@ export function CustomerDetailPage(): React.JSX.Element {
               onSave={saveStatus}
             />
             <EditableInfoRow
-              icon={<Star className="h-3.5 w-3.5" />}
-              label="客户等级"
-              value={customer.grade}
-              placeholder="例如 A"
-              maxLength={20}
-              hint="例如 A / B / C，便于分层跟进"
-              onSave={textSaver('grade')}
-            />
-            <EditableInfoRow
               icon={<Flag className="h-3.5 w-3.5" />}
               label="优先级"
               kind="select"
@@ -641,15 +608,6 @@ export function CustomerDetailPage(): React.JSX.Element {
               options={CUSTOMER_PRIORITY_OPTIONS}
               selectClassName={customer.priority ? CUSTOMER_PRIORITY_BADGE_CLASS[customer.priority] : undefined}
               onSave={savePriority}
-            />
-            <EditableInfoRow
-              icon={<Tag className="h-3.5 w-3.5" />}
-              label="来源"
-              kind="select"
-              value={customer.leadSource}
-              options={[{ value: SOURCE_NONE, label: '未设置' }, ...leadSourceOptions]}
-              currentSelectValue={customer.leadSource?.trim() ? customer.leadSource.trim() : SOURCE_NONE}
-              onSave={saveLeadSource}
             />
             {isAdmin ? (
               <EditableInfoRow
@@ -670,25 +628,6 @@ export function CustomerDetailPage(): React.JSX.Element {
               displayValue={customer.nextFollowUpAt ? formatDate(customer.nextFollowUpAt) : undefined}
               onSave={saveFollowUpDate}
             />
-            <InfoRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="更新时间" value={formatDateTime(customer.updatedAt)} />
-            <EditableInfoRow
-              icon={<Tags className="h-3.5 w-3.5" />}
-              label="标签"
-              value={customer.tags.join(', ')}
-              placeholder="多个标签用逗号分隔，例如：珠宝, 高优先级"
-              maxLength={600}
-              className="sm:col-span-2 lg:col-span-3"
-              renderValue={(raw) => (
-                <span className="flex flex-wrap gap-1.5">
-                  {parseTagsText(raw).map((tag) => (
-                    <Badge key={tag} variant="outline" className="font-normal">
-                      {tag}
-                    </Badge>
-                  ))}
-                </span>
-              )}
-              onSave={saveTags}
-            />
             <EditableInfoRow
               icon={<NotebookText className="h-3.5 w-3.5" />}
               label="备注"
@@ -704,6 +643,99 @@ export function CustomerDetailPage(): React.JSX.Element {
               )}
               onSave={textSaver('notes')}
             />
+
+            {/* ---- 展开后显示：客户分类与补充信息 ---- */}
+            {infoExpanded ? (
+              <>
+                <EditableInfoRow
+                  icon={<Star className="h-3.5 w-3.5" />}
+                  label="客户等级"
+                  value={customer.grade}
+                  placeholder="例如 A"
+                  maxLength={20}
+                  hint="例如 A / B / C，便于分层跟进"
+                  onSave={textSaver('grade')}
+                />
+                <EditableInfoRow
+                  icon={<User className="h-3.5 w-3.5" />}
+                  label="职位"
+                  value={customer.title}
+                  placeholder="例如 Founder / Buyer"
+                  maxLength={120}
+                  onSave={textSaver('title')}
+                />
+                <EditableInfoRow
+                  icon={<Building2 className="h-3.5 w-3.5" />}
+                  label="行业"
+                  value={customer.industry}
+                  placeholder="例如 Fine Jewellery"
+                  datalistId="detail-industry-options"
+                  datalist={industries}
+                  maxLength={120}
+                  onSave={textSaver('industry')}
+                />
+                <EditableInfoRow
+                  icon={<Globe className="h-3.5 w-3.5" />}
+                  label="国家 / 地区"
+                  value={customer.country}
+                  placeholder="例如 New Zealand"
+                  maxLength={120}
+                  onSave={textSaver('country')}
+                />
+                <EditableInfoRow
+                  icon={<Globe className="h-3.5 w-3.5" />}
+                  label="官网"
+                  value={customer.website}
+                  href={
+                    customer.website
+                      ? customer.website.startsWith('http')
+                        ? customer.website
+                        : `https://${customer.website}`
+                      : undefined
+                  }
+                  placeholder="https://example.com"
+                  maxLength={300}
+                  onSave={textSaver('website')}
+                />
+                <EditableInfoRow
+                  icon={<MapPin className="h-3.5 w-3.5" />}
+                  label="地址"
+                  value={customer.address}
+                  placeholder="街道 / 城市 / 邮编"
+                  maxLength={500}
+                  className="sm:col-span-2"
+                  onSave={textSaver('address')}
+                />
+                <EditableInfoRow
+                  icon={<Tag className="h-3.5 w-3.5" />}
+                  label="来源"
+                  kind="select"
+                  value={customer.leadSource}
+                  options={[{ value: SOURCE_NONE, label: '未设置' }, ...leadSourceOptions]}
+                  currentSelectValue={customer.leadSource?.trim() ? customer.leadSource.trim() : SOURCE_NONE}
+                  onSave={saveLeadSource}
+                />
+                <InfoRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="更新时间" value={formatDateTime(customer.updatedAt)} />
+                <EditableInfoRow
+                  icon={<Tags className="h-3.5 w-3.5" />}
+                  label="标签"
+                  value={customer.tags.join(', ')}
+                  placeholder="多个标签用逗号分隔，例如：珠宝, 高优先级"
+                  maxLength={600}
+                  className="sm:col-span-2 lg:col-span-3"
+                  renderValue={(raw) => (
+                    <span className="flex flex-wrap gap-1.5">
+                      {parseTagsText(raw).map((tag) => (
+                        <Badge key={tag} variant="outline" className="font-normal">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </span>
+                  )}
+                  onSave={saveTags}
+                />
+              </>
+            ) : null}
           </dl>
 
           {!customer.email ? (
@@ -722,30 +754,10 @@ export function CustomerDetailPage(): React.JSX.Element {
             <Contact className="h-4 w-4 text-muted-foreground" aria-hidden />
             联系方式
           </CardTitle>
-          <CardDescription>邮件、电话与社交渠道，完整链接可直接点击发起联系</CardDescription>
+          <CardDescription>WhatsApp、Skype 与社交主页；邮箱和手机号见上方「客户信息」，完整链接可直接点击发起联系</CardDescription>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-            <EditableInfoRow
-              icon={<Mail className="h-3.5 w-3.5" />}
-              label="Email"
-              kind="email"
-              value={customer.email}
-              href={customer.email ? `mailto:${customer.email}` : undefined}
-              placeholder="name@company.com"
-              maxLength={200}
-              validate={validateEmail}
-              onSave={saveEmail}
-            />
-            <EditableInfoRow
-              icon={<Phone className="h-3.5 w-3.5" />}
-              label="Phone"
-              value={customer.phone}
-              href={customer.phone ? `tel:${customer.phone}` : undefined}
-              placeholder="例如 +64 21 000 0000"
-              maxLength={60}
-              onSave={textSaver('phone')}
-            />
             <EditableInfoRow
               icon={<MessageCircle className="h-3.5 w-3.5" />}
               label="WhatsApp"

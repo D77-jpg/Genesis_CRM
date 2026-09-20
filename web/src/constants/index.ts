@@ -31,6 +31,8 @@ export const STORAGE_KEYS = {
   /** 记住上次使用的开发信模板，提升连续发信效率 */
   lastTemplate: 'cdlm-last-letter-template',
   activeProject: 'cdlm-active-project',
+  /** 客户详情页「客户信息」是否展开全部字段（业务员常看的字段默认收起其余部分） */
+  customerInfoExpanded: 'cdlm-customer-info-expanded',
 } as const;
 
 /* ---------------------------- 路由 ---------------------------- */
