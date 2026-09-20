@@ -185,7 +185,7 @@ export const listTagsHandler = asyncHandler(async (req: Request, res: Response) 
   sendSuccess(res, data);
 });
 
-export const listOwnersHandler = asyncHandler(async (_req: Request, res: Response) => {
-  const data = await listOwners();
+export const listOwnersHandler = asyncHandler(async (req: Request, res: Response) => {
+  const data = await listOwners(req.user);
   sendSuccess(res, data);
 });

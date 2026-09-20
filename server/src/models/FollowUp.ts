@@ -15,6 +15,7 @@ import {
 } from '../constants';
 
 export interface IFollowUp {
+  projectId: Types.ObjectId;
   /** 所属客户 */
   customerId: Types.ObjectId;
   /** 跟进方式：email / whatsapp / phone / chat / other */
@@ -38,6 +39,7 @@ export type FollowUpModel = Model<IFollowUp>;
 
 const FollowUpSchema = new Schema<IFollowUp>(
   {
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     customerId: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
@@ -85,9 +87,9 @@ const FollowUpSchema = new Schema<IFollowUp>(
 );
 
 // 客户详情页按跟进时间倒序拉取历史
-FollowUpSchema.index({ customerId: 1, followUpAt: -1 });
+FollowUpSchema.index({ projectId: 1, customerId: 1, followUpAt: -1 });
 // 「今日 / 逾期」等按下一次跟进时间的聚合查询
-FollowUpSchema.index({ nextFollowUpAt: 1 });
+FollowUpSchema.index({ projectId: 1, nextFollowUpAt: 1 });
 
 export const FollowUp = model<IFollowUp, FollowUpModel>('FollowUp', FollowUpSchema);
 

@@ -4,7 +4,7 @@
  * 密码使用 bcryptjs 加盐哈希存储，序列化时永不输出 passwordHash。
  * 首次启动服务时会自动写入 .env 中配置的默认管理员账号。
  */
-import { Schema, model, type HydratedDocument, type Model } from 'mongoose';
+import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export type UserRole = 'admin' | 'user';
@@ -18,6 +18,9 @@ export interface IUser {
   displayName: string;
   role: UserRole;
   status: UserStatus;
+  /** 可访问的项目。系统管理员不受此列表限制，普通用户严格按此列表授权。 */
+  projectIds: Types.ObjectId[];
+  defaultProjectId?: Types.ObjectId;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -48,6 +51,8 @@ const UserSchema = new Schema<IUser, {}, IUserMethods>(
     role: { type: String, enum: ['admin', 'user'], default: 'admin' },
     // 旧数据无此字段时按「启用」处理（查询逻辑用 status !== 'disabled' 判断），无需迁移
     status: { type: String, enum: ['active', 'disabled'], default: 'active' },
+    projectIds: { type: [Schema.Types.ObjectId], ref: 'Project', default: [] },
+    defaultProjectId: { type: Schema.Types.ObjectId, ref: 'Project' },
     lastLoginAt: { type: Date },
   },
   {

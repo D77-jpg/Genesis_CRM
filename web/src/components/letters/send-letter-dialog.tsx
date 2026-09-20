@@ -50,7 +50,7 @@ import { PlaceholderBar } from './placeholder-bar';
 import { sendLetterSchema, type SendLetterFormValues } from '@/lib/validators';
 import { buildPlaceholderValues, findMissingPlaceholders, renderTemplate } from '@/lib/placeholder';
 import { toErrorMessage } from '@/lib/api';
-import { readStorage, writeStorage } from '@/lib/utils';
+import { createClientId, readStorage, writeStorage } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/use-debounce';
 import { useSaveShortcut } from '@/hooks/use-ui';
 import { useLetterStore } from '@/store/letter.store';
@@ -73,6 +73,7 @@ export interface SendLetterDialogProps {
   /** 重发场景：带出原信的主题与模板 */
   letter?: DevelopmentLetter | null;
   /** 发送 / 存草稿成功后回调，父级据此刷新历史列表与客户信息 */
+  reply?: { id: string; subject: string; from: string };
   onSent?: (result: SendLetterResult) => void;
 }
 
@@ -135,6 +136,7 @@ export function SendLetterDialog({
   onOpenChange,
   customer,
   letter = null,
+  reply,
   onSent,
 }: SendLetterDialogProps): React.JSX.Element {
   const sendLetter = useLetterStore((state) => state.sendLetter);
@@ -149,6 +151,9 @@ export function SendLetterDialog({
   const fetchTemplates = useTemplateStore((state) => state.fetchList);
 
   const editorRef = React.useRef<LetterEditorHandle | null>(null);
+  const [scheduledAt, setScheduledAt] = React.useState('');
+  const requestKey = React.useRef(createClientId());
+  const submitLock = React.useRef(false);
   const [activeTab, setActiveTab] = React.useState<'edit' | 'preview'>('edit');
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -182,6 +187,8 @@ export function SendLetterDialog({
 
     setActiveTab('edit');
     setServerError(null);
+    setScheduledAt('');
+    requestKey.current = createClientId();
 
     // 优先级：重发的原信 > 上次使用的模板 > 内置默认模板
     const source = letter
@@ -189,15 +196,15 @@ export function SendLetterDialog({
       : (loadSavedTemplate() ?? { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE });
 
     reset({
-      subject: source.subject ?? '',
-      content: source.content ?? '',
-      recipientEmail: letter?.recipientEmail ?? customer?.email ?? '',
+      subject: reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : source.subject ?? '',
+      content: reply ? '' : source.content ?? '',
+      recipientEmail: reply?.from ?? letter?.recipientEmail ?? customer?.email ?? '',
       // 只有「待开发」客户才需要推进状态，已联系及之后的客户默认关掉更贴合直觉
       markAsDeveloped: customer?.status === 'pending',
       saveAsDraft: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在「打开 / 客户 / 原信」变化时重建表单
-  }, [open, customerId, letterId, reset]);
+  }, [open, customerId, letterId, reply?.id, reset]);
 
   // 打开时确保模板列表已加载（供「从模板导入」选择器使用；已加载则不重复请求）
   React.useEffect(() => {
@@ -241,16 +248,22 @@ export function SendLetterDialog({
 
   const submit = React.useCallback(
     async (asDraft: boolean) => {
+      if (reply && asDraft) return;
       if (!customer) {
         setServerError('缺少客户信息，无法发送开发信');
         return;
       }
 
       await handleSubmit(async (values) => {
+        if (submitLock.current) return;
+        submitLock.current = true;
         setServerError(null);
         try {
+          if (!asDraft && scheduledAt && new Date(scheduledAt).getTime() <= Date.now()) throw new Error('定时时间必须晚于当前时间');
           const result = letter
             ? await resendLetter(letter.id, {
+                requestKey: requestKey.current,
+                scheduledAt: !asDraft && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
                 subject: values.subject,
                 content: values.content,
                 recipientEmail: values.recipientEmail,
@@ -258,6 +271,9 @@ export function SendLetterDialog({
               })
             : await sendLetter({
                 customerId: customer.id,
+                requestKey: requestKey.current,
+                scheduledAt: !asDraft && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+                replyToId: reply?.id,
                 subject: values.subject,
                 content: values.content,
                 recipientEmail: values.recipientEmail,
@@ -270,6 +286,8 @@ export function SendLetterDialog({
 
           if (asDraft) {
             toast.success('草稿已保存', { description: result.message || '可在开发信记录中继续编辑发送' });
+          } else if (['scheduled', 'queued', 'sending', 'retrying'].includes(result.letter.status)) {
+            toast.success('发送任务已保存', { description: result.message });
           } else if (!result.delivered) {
             // 发送失败但已落库：给出可操作提示
             toast.error('发送失败，记录已保存', { description: result.message });
@@ -286,10 +304,10 @@ export function SendLetterDialog({
         } catch (error) {
           // store 已把后端错误转成中文提示，这里直接展示
           setServerError(toErrorMessage(error, asDraft ? '保存草稿失败' : '开发信发送失败'));
-        }
+        } finally { submitLock.current = false; }
       })();
     },
-    [customer, letter, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
+    [customer, letter, reply, scheduledAt, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
   );
 
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送
@@ -331,12 +349,12 @@ export function SendLetterDialog({
       if (id === TEMPLATE_PICK_NONE) return;
       const template = templateItems.find((item) => item.id === id);
       if (!template) return;
-      setValue('subject', template.subject ?? '', { shouldValidate: true, shouldDirty: true });
+      setValue('subject', reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : template.subject ?? '', { shouldValidate: true, shouldDirty: true });
       setValue('content', template.content ?? '', { shouldValidate: true, shouldDirty: true });
       setActiveTab('edit');
       toast.success('已导入模板', { description: template.name });
     },
-    [templateItems, setValue],
+    [templateItems, setValue, reply],
   );
 
   const contentLength = (content ?? '').replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length;
@@ -347,7 +365,7 @@ export function SendLetterDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-4 w-4 text-primary" aria-hidden />
-            {letter ? '重新发送开发信' : '发送开发信'}
+            {reply ? '回复客户邮件' : letter ? '重新发送开发信' : '发送开发信'}
           </DialogTitle>
           <DialogDescription>
             {letter
@@ -358,6 +376,7 @@ export function SendLetterDialog({
 
         <DialogBody className="space-y-4">
           {customer ? <RecipientCard customer={customer} /> : null}
+          <div className="space-y-1"><Label htmlFor="scheduled-mail-at">定时发送（留空立即发送，使用本地时间）</Label><Input id="scheduled-mail-at" type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} disabled={sending} /></div>
 
           {serverError ? (
             <Alert variant="destructive">
@@ -372,7 +391,6 @@ export function SendLetterDialog({
               <Info aria-hidden />
               <AlertDescription>
                 当前为{MAIL_CHANNEL_LABEL.mock}模式：开发信会完整保存到该客户的记录中，但不会真正投递邮件。
-                在 server/.env 配置 SMTP_* 后重启后端即可切换为真实发送。
               </AlertDescription>
             </Alert>
           ) : null}
@@ -427,10 +445,11 @@ export function SendLetterDialog({
                     autoComplete="off"
                     invalid={Boolean(errors.recipientEmail)}
                     {...register('recipientEmail')}
+                    readOnly={!!reply}
                   />
                   <FieldMessage
                     error={errors.recipientEmail?.message}
-                    hint={customer?.email ? '默认取客户档案邮箱，可临时修改' : '该客户未填写邮箱，请手动输入收件地址'}
+                    hint={reply ? '回复地址取原邮件发件人' : customer?.email ? '默认取客户档案邮箱，可临时修改' : '该客户未填写邮箱，请手动输入收件地址'}
                   />
                 </div>
 
@@ -448,6 +467,7 @@ export function SendLetterDialog({
                     autoComplete="off"
                     invalid={Boolean(errors.subject)}
                     {...register('subject')}
+                    readOnly={!!reply}
                   />
                   <FieldMessage error={errors.subject?.message} hint="主题同样支持占位符" />
                 </div>
@@ -552,18 +572,18 @@ export function SendLetterDialog({
 
         <DialogFooter className="items-center">
           <span className="mr-auto hidden text-2xs text-muted-foreground lg:inline">
-            Ctrl/Cmd + Enter 发送 · Ctrl/Cmd + S 存草稿
+            {reply ? 'Ctrl/Cmd + Enter 发送回复' : 'Ctrl/Cmd + Enter 发送 · Ctrl/Cmd + S 存草稿'}
           </span>
           <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={sending}>
             取消
           </Button>
-          <Button type="button" variant="outline" onClick={() => void submit(true)} loading={sending} disabled={sending}>
+          <Button type="button" variant="outline" onClick={() => void submit(true)} loading={sending} disabled={sending || !!reply}>
             {!sending ? <Save className="h-3.5 w-3.5" aria-hidden /> : null}
             存草稿
           </Button>
           <Button type="button" onClick={() => void submit(false)} loading={sending} disabled={sending || !customer}>
             {!sending ? <Send className="h-3.5 w-3.5" aria-hidden /> : null}
-            {letter ? '重新发送' : '发送开发信'}
+            {scheduledAt ? '保存定时任务' : reply ? '发送回复' : letter ? '重新发送' : '发送开发信'}
           </Button>
         </DialogFooter>
       </DialogContent>

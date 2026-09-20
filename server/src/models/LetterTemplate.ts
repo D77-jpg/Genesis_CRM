@@ -9,6 +9,7 @@ import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoos
 import { TEMPLATE_CATEGORY, type TemplateCategory } from '../constants';
 
 export interface ILetterTemplate {
+  projectId: Types.ObjectId;
   /** 模板名称（便于在模板中心识别） */
   name: string;
   /** 模板主题（支持 {{占位符}}） */
@@ -28,6 +29,7 @@ export type LetterTemplateModel = Model<ILetterTemplate>;
 
 const LetterTemplateSchema = new Schema<ILetterTemplate>(
   {
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     name: {
       type: String,
       required: [true, '模板名称为必填项'],
@@ -68,7 +70,7 @@ const LetterTemplateSchema = new Schema<ILetterTemplate>(
 );
 
 // 模板中心按分类浏览 + 按更新时间倒序
-LetterTemplateSchema.index({ category: 1, updatedAt: -1 });
+LetterTemplateSchema.index({ projectId: 1, category: 1, updatedAt: -1 });
 
 export const LetterTemplate = model<ILetterTemplate, LetterTemplateModel>('LetterTemplate', LetterTemplateSchema);
 

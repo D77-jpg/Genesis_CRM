@@ -9,6 +9,7 @@ import { apiGet, apiPost, getToken, setUnauthorizedHandler, toErrorMessage, ApiC
 import { ROUTES, STORAGE_KEYS } from '@/constants';
 import { removeStorage, writeStorage } from '@/lib/utils';
 import type { AuthUser, LoginResult } from '@/types';
+import { useProjectStore } from './project.store';
 
 export type AuthStatus = 'idle' | 'bootstrapping' | 'authenticated' | 'unauthenticated';
 
@@ -63,6 +64,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   logout({ silent = false } = {}) {
     removeStorage(STORAGE_KEYS.token);
+    useProjectStore.getState().reset();
     set({
       user: null,
       token: null,
@@ -84,7 +86,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ status: 'bootstrapping', token });
     for (let attempt = 0; attempt < BOOTSTRAP_RETRIES; attempt++) {
       try {
-        const user = await apiGet<AuthUser>('/auth/me');
+        const { user } = await apiGet<{ user: AuthUser }>('/auth/me');
         set({ user, status: 'authenticated', initialized: true });
         return;
       } catch (error) {
@@ -106,6 +108,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   handleSessionExpired() {
     if (get().status === 'unauthenticated') return;
     removeStorage(STORAGE_KEYS.token);
+    useProjectStore.getState().reset();
     set({ user: null, token: null, status: 'unauthenticated', initialized: true });
     // 强制整页跳登录页：避免残留的内存态 UI 在掉登录后仍能被继续操作
     if (window.location.pathname !== ROUTES.login) {

@@ -6,11 +6,12 @@
  */
 import * as React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FileText, LayoutDashboard, Mail, PanelLeftClose, PanelLeftOpen, UserCog, Users, X } from 'lucide-react';
+import { FileText, FolderKanban, LayoutDashboard, Mail, PanelLeftClose, PanelLeftOpen, UserCog, Users, X } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useMetaStore } from '@/store/meta.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
+import { useProjectStore } from '@/store/project.store';
 
 export interface NavItem {
   to: string;
@@ -25,9 +26,11 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.dashboard, label: '仪表盘', icon: LayoutDashboard, end: true },
   { to: ROUTES.customers, label: '客户管理', icon: Users, end: false },
+  { to: '/mail', label: '邮件中心', icon: Mail, end: false },
   { to: ROUTES.letters, label: '开发信记录', icon: Mail, end: false },
   { to: ROUTES.templates, label: '模板中心', icon: FileText, end: false },
   { to: ROUTES.users, label: '用户管理', icon: UserCog, end: false, adminOnly: true },
+  { to: ROUTES.projects, label: '项目工作空间', icon: FolderKanban, end: false, adminOnly: true },
 ];
 
 interface SidebarProps {
@@ -39,7 +42,8 @@ interface SidebarProps {
 }
 
 function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
-  const companyName = useMetaStore((state) => state.meta?.company?.name);
+  const fallbackCompanyName = useMetaStore((state) => state.meta?.company?.name);
+  const project = useProjectStore((state) => state.activeProject);
 
   return (
     <div className={cn('flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-3', collapsed && 'justify-center px-0')}>
@@ -48,9 +52,9 @@ function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
       </span>
       {!collapsed && (
         <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold leading-tight">开发信管理</span>
+          <span className="block truncate text-sm font-semibold leading-tight">{project?.name || '外贸 CRM'}</span>
           <span className="block truncate text-2xs text-muted-foreground">
-            {companyName || 'Customer Dev Letter Manager'}
+            {project?.companyName || fallbackCompanyName || 'Customer Dev Letter Manager'}
           </span>
         </span>
       )}

@@ -24,12 +24,15 @@ import type {
   QuotationStatus,
 } from '../constants';
 import { ApiError } from '../utils/ApiError';
+import { projectScope } from '../utils/access';
 import { createLogger } from '../config/logger';
+import type { AuthUser } from '../types/express';
 
+import { MailMessage } from '../models/MailMessage';
 const logger = createLogger('timeline-service');
 
 /** 时间线事件类型（含从其它集合派生的 created / letter / followup / quotation） */
-export type TimelineEventType = 'created' | 'letter' | 'followup' | 'quotation' | 'status_changed' | 'followup_scheduled';
+export type TimelineEventType = 'created' | 'letter' | 'mail_received' | 'mail_opened' | 'mail_clicked' | 'followup' | 'quotation' | 'status_changed' | 'followup_scheduled';
 
 export interface TimelineEvent {
   /** 前端渲染用的稳定 key */
@@ -39,6 +42,8 @@ export interface TimelineEvent {
   at: Date;
   /** type=letter 时的开发信摘要 */
   letter?: { id: string; subject: string; status: LetterStatus; channel: MailChannel };
+  mail?: { id: string; subject: string; from: string };
+  interaction?: { letterId: string; subject: string; count: number; lastAt?: Date; url?: string };
   /** type=followup 时的跟进记录摘要 */
   followUp?: {
     id: string;
@@ -76,6 +81,15 @@ interface LetterRow {
   channel: MailChannel;
   sentAt?: Date | null;
   createdAt: Date;
+  tracking?: {
+    openedAt?: Date | null;
+    openCount?: number;
+    lastOpenedAt?: Date | null;
+    clickedAt?: Date | null;
+    clickCount?: number;
+    lastClickedAt?: Date | null;
+    links?: { originalUrl: string; clickCount?: number }[];
+  };
 }
 interface FollowUpRow {
   _id: Types.ObjectId;
@@ -124,15 +138,18 @@ export async function recordCustomerChanges(
   before: CustomerChangeSnapshot,
   after: CustomerChangeSnapshot,
   userId?: string,
+  projectId?: string,
 ): Promise<void> {
   try {
-    if (!Types.ObjectId.isValid(customerId)) return;
+    if (!Types.ObjectId.isValid(customerId) || !projectId || !Types.ObjectId.isValid(projectId)) return;
     const oid = new Types.ObjectId(customerId);
+    const projectOid = new Types.ObjectId(projectId);
     const now = new Date();
     const createdBy = userId && Types.ObjectId.isValid(userId) ? new Types.ObjectId(userId) : undefined;
 
     const docs: {
       customerId: Types.ObjectId;
+      projectId: Types.ObjectId;
       type: CustomerEventType;
       at: Date;
       fromStatus?: CustomerStatus;
@@ -144,6 +161,7 @@ export async function recordCustomerChanges(
     if (before.status && after.status && before.status !== after.status) {
       docs.push({
         customerId: oid,
+        projectId: projectOid,
         type: 'status_changed',
         at: now,
         fromStatus: before.status,
@@ -155,6 +173,7 @@ export async function recordCustomerChanges(
     if (followUpTimeValue(before.nextFollowUpAt) !== followUpTimeValue(after.nextFollowUpAt)) {
       docs.push({
         customerId: oid,
+        projectId: projectOid,
         type: 'followup_scheduled',
         at: now,
         nextFollowUpAt: after.nextFollowUpAt ?? null,
@@ -169,23 +188,23 @@ export async function recordCustomerChanges(
 }
 
 /** 聚合某客户的完整时间线（按时间倒序） */
-export async function getCustomerTimeline(customerId: string, limit = 200): Promise<CustomerTimeline> {
+export async function getCustomerTimeline(customerId: string, limit = 200, actor?: AuthUser): Promise<CustomerTimeline> {
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
   }
   const oid = new Types.ObjectId(customerId);
 
-  const customer = await Customer.findById(oid).select('_id createdAt').lean();
+  const customer = await Customer.findOne({ _id: oid, ...projectScope(actor) }).select('_id projectId createdAt').lean();
   if (!customer) {
     throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
   }
 
   const [letters, followUps, events, quotations] = await Promise.all([
-    DevelopmentLetter.find({ customerId: oid }).sort({ createdAt: -1 }).limit(limit).lean(),
-    FollowUp.find({ customerId: oid }).sort({ followUpAt: -1 }).limit(limit).lean(),
-    CustomerEvent.find({ customerId: oid }).sort({ at: -1 }).limit(limit).lean(),
+    DevelopmentLetter.find({ customerId: oid, ...projectScope(actor) }).sort({ createdAt: -1 }).limit(limit).lean(),
+    FollowUp.find({ customerId: oid, ...projectScope(actor) }).sort({ followUpAt: -1 }).limit(limit).lean(),
+    CustomerEvent.find({ customerId: oid, ...projectScope(actor) }).sort({ at: -1 }).limit(limit).lean(),
     // 报价单追加在末尾（index 3），不影响上面既有的解构位置
-    Quotation.find({ customerId: oid }).sort({ updatedAt: -1 }).limit(limit).lean(),
+    Quotation.find({ customerId: oid, ...projectScope(actor) }).sort({ updatedAt: -1 }).limit(limit).lean(),
   ]);
 
   const letterRows = letters as unknown as LetterRow[];
@@ -213,6 +232,32 @@ export async function getCustomerTimeline(customerId: string, limit = 200): Prom
         channel: letter.channel,
       },
     });
+    if (letter.tracking?.openedAt) {
+      items.push({
+        id: `mail-opened-${String(letter._id)}`,
+        type: 'mail_opened',
+        at: new Date(letter.tracking.openedAt),
+        interaction: {
+          letterId: String(letter._id), subject: letter.subject,
+          count: letter.tracking.openCount ?? 1,
+          lastAt: letter.tracking.lastOpenedAt ? new Date(letter.tracking.lastOpenedAt) : undefined,
+        },
+      });
+    }
+    if (letter.tracking?.clickedAt) {
+      const firstClicked = letter.tracking.links?.find((link) => (link.clickCount ?? 0) > 0);
+      items.push({
+        id: `mail-clicked-${String(letter._id)}`,
+        type: 'mail_clicked',
+        at: new Date(letter.tracking.clickedAt),
+        interaction: {
+          letterId: String(letter._id), subject: letter.subject,
+          count: letter.tracking.clickCount ?? 1,
+          lastAt: letter.tracking.lastClickedAt ? new Date(letter.tracking.lastClickedAt) : undefined,
+          url: firstClicked?.originalUrl,
+        },
+      });
+    }
   }
 
   for (const followUp of followUpRows) {
@@ -269,10 +314,16 @@ export async function getCustomerTimeline(customerId: string, limit = 200): Prom
 
   items.sort((a, b) => b.at.getTime() - a.at.getTime());
 
+  const received = await MailMessage.find({ customerId: oid, ...projectScope(actor) }).sort({ sentAt: -1 }).limit(limit).select('_id subject from sentAt');
+  for (const mail of received) items.push({ id: `mail-${mail._id}`, type: 'mail_received', at: mail.sentAt,
+    mail: { id: String(mail._id), subject: mail.subject, from: mail.from } });
+  items.sort((a, b) => b.at.getTime() - a.at.getTime());
+
   // 最近一次联系 = 已发送开发信 或 跟进记录 的最新时间
   let lastContactAt: Date | null = null;
+  for (const mail of received) if (!lastContactAt || mail.sentAt > lastContactAt) lastContactAt = mail.sentAt;
   for (const letter of letterRows) {
-    if (letter.status !== 'sent') continue;
+    if (!['sent', 'opened'].includes(letter.status)) continue;
     const at = letter.sentAt ? new Date(letter.sentAt) : new Date(letter.createdAt);
     if (!lastContactAt || at.getTime() > lastContactAt.getTime()) lastContactAt = at;
   }

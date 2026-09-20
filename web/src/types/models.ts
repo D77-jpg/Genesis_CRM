@@ -28,13 +28,14 @@ export type CustomerSource = 'manual' | 'excel' | 'seed';
  */
 export type CustomerPriority = 'high' | 'medium' | 'low';
 /** 开发信状态 */
-export type LetterStatus = 'draft' | 'sent' | 'failed';
+export type LetterStatus = 'draft' | 'sent' | 'opened' | 'failed' | 'queued' | 'scheduled' | 'sending' | 'retrying' | 'cancelled';
 /** 发送通道 */
 export type MailChannel = 'mock' | 'smtp';
 /** 用户角色 */
 export type UserRole = 'admin' | 'user';
 /** 用户账号启用状态：active 启用 / disabled 停用 */
 export type UserStatus = 'active' | 'disabled';
+export type ProjectStatus = 'active' | 'archived';
 /** 报价单状态（V2 报价管理）：草稿 / 已发送 / 谈判中 / 已接受 / 已拒绝 / 已过期 */
 export type QuotationStatus = 'draft' | 'sent' | 'negotiating' | 'accepted' | 'rejected' | 'expired';
 /** 报价币种（外贸常见结算币种），默认 USD；与后端 QUOTATION_CURRENCY 一致 */
@@ -173,9 +174,32 @@ export interface DevelopmentLetter {
   sentBy?: string;
   createdAt: string | Date;
   updatedAt: string | Date;
+  tracking?: MailTrackingSummary;
+}
+
+export interface MailTrackingSummary {
+  enabled: boolean;
+  opened: boolean;
+  openedAt?: string | Date;
+  openCount: number;
+  lastOpenedAt?: string | Date;
+  clicked: boolean;
+  clickedAt?: string | Date;
+  clickCount: number;
+  lastClickedAt?: string | Date;
+  clickedLinks: {
+    url: string;
+    clickedAt?: string | Date;
+    clickCount: number;
+    lastClickedAt?: string | Date;
+  }[];
+  accuracyNotice: string;
 }
 
 export interface SendLetterPayload {
+  scheduledAt?: string;
+  requestKey?: string;
+  replyToId?: string;
   customerId?: string;
   subject: string;
   /** 富文本 HTML，可含 {{placeholder}} */
@@ -188,6 +212,8 @@ export interface SendLetterPayload {
 }
 
 export interface ResendLetterPayload {
+  scheduledAt?: string;
+  requestKey?: string;
   subject?: string;
   content?: string;
   recipientEmail?: string;
@@ -382,7 +408,7 @@ export interface DeleteQuotationResult {
 /* ---------------------------- 客户时间线 ---------------------------- */
 
 /** 时间线事件类型：客户创建 / 开发信 / 跟进 / 报价 / 状态变化 / 下一次跟进时间变化 */
-export type TimelineEventType = 'created' | 'letter' | 'followup' | 'quotation' | 'status_changed' | 'followup_scheduled';
+export type TimelineEventType = 'created' | 'letter' | 'mail_received' | 'mail_opened' | 'mail_clicked' | 'followup' | 'quotation' | 'status_changed' | 'followup_scheduled';
 
 export interface TimelineEvent {
   /** 渲染用的稳定 key */
@@ -390,7 +416,9 @@ export interface TimelineEvent {
   type: TimelineEventType;
   at: string | Date;
   /** type=letter */
+  mail?: { id: string; subject: string; from: string };
   letter?: { id: string; subject: string; status: LetterStatus; channel: MailChannel };
+  interaction?: { letterId: string; subject: string; count: number; lastAt?: string | Date; url?: string };
   /** type=followup */
   followUp?: {
     id: string;
@@ -583,6 +611,8 @@ export interface UserDto {
   role: UserRole;
   /** 账号启用状态：active 启用 / disabled 停用 */
   status: UserStatus;
+  projectIds: string[];
+  defaultProjectId?: string;
   /** 最近一次登录时间，从未登录过为 null */
   lastLoginAt?: string | Date | null;
   createdAt: string | Date;
@@ -596,13 +626,37 @@ export interface CreateUserInput {
   /** 显示名，留空时后端回退为用户名 */
   displayName?: string;
   role: UserRole;
+  projectIds?: string[];
 }
 
 /** 编辑用户资料（PUT /api/users/:id）：显示名 / 角色，至少一项 */
 export interface UpdateUserInput {
   displayName?: string;
   role?: UserRole;
+  projectIds?: string[];
 }
+
+/* ---------------------------- 多项目工作空间 ---------------------------- */
+
+export interface Project {
+  id: string;
+  name: string;
+  slug: string;
+  code: string;
+  industry?: string;
+  companyName: string;
+  website?: string;
+  moq?: string;
+  senderName?: string;
+  mailFrom?: string;
+  mailProfileKey: string;
+  mailChannel?: MailChannel;
+  status: ProjectStatus;
+  isDefault: boolean;
+}
+
+export type CreateProjectInput = Omit<Project, 'id' | 'status' | 'isDefault' | 'mailChannel'>;
+export type UpdateProjectInput = Partial<Omit<CreateProjectInput, 'slug' | 'code'>> & { status?: ProjectStatus };
 
 /** 重置密码（PUT /api/users/:id/password） */
 export interface ResetPasswordInput {

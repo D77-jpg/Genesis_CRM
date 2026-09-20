@@ -24,7 +24,7 @@ export const CUSTOMER_STATUS = [
 export type CustomerStatus = (typeof CUSTOMER_STATUS)[number];
 
 /** 开发信状态 */
-export const LETTER_STATUS = ['draft', 'sent', 'failed'] as const;
+export const LETTER_STATUS = ['draft', 'sent', 'opened', 'failed', 'queued', 'scheduled', 'sending', 'retrying', 'cancelled'] as const;
 export type LetterStatus = (typeof LETTER_STATUS)[number];
 
 /** 发送通道 */
@@ -161,8 +161,10 @@ export const CUSTOMER_PRIORITY_LABEL: Record<CustomerPriority, string> = {
 };
 
 export const LETTER_STATUS_LABEL: Record<LetterStatus, string> = {
+  queued: '等待发送', scheduled: '定时发送', sending: '发送中', retrying: '等待重试', cancelled: '已取消',
   draft: '草稿',
   sent: '已发送',
+  opened: '已打开',
   failed: '发送失败',
 };
 

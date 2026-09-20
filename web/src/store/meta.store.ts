@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { apiGet, toErrorMessage } from '@/lib/api';
 import { PLACEHOLDER_DEFS, type PlaceholderDef } from '@/constants';
 import type { MailChannel, MetaResponse } from '@/types';
+import { useProjectStore } from './project.store';
 
 /** 属于「我方信息」分组的占位符 key */
 const COMPANY_KEYS = new Set(['companyName', 'companyWebsite', 'moq', 'senderName']);
@@ -25,6 +26,8 @@ export function toPlaceholderDefs(meta: MetaResponse | null): PlaceholderDef[] {
 
 interface MetaState {
   meta: MetaResponse | null;
+  /** 当前项目的公司资料；作为 state 保存，确保 Zustand selector 返回稳定引用。 */
+  company: MetaResponse['company'] | null;
   loading: boolean;
   error: string | null;
   loaded: boolean;
@@ -43,6 +46,7 @@ interface MetaState {
 
 export const useMetaStore = create<MetaState>()((set, get) => ({
   meta: null,
+  company: null,
   loading: false,
   error: null,
   loaded: false,
@@ -58,13 +62,23 @@ export const useMetaStore = create<MetaState>()((set, get) => ({
     set({ loading: true, error: null });
     try {
       const meta = await apiGet<MetaResponse>('/meta');
+      const project = useProjectStore.getState().activeProject;
       set({
         meta,
+        company: project
+          ? {
+              name: project.companyName,
+              website: project.website ?? '',
+              moq: project.moq ?? '',
+              senderName: project.senderName ?? '',
+              mailFrom: project.mailFrom ?? '',
+            }
+          : meta.company,
         // 在写入 state 时就算好，保证 selector 拿到的永远是同一个引用
         placeholderDefs: toPlaceholderDefs(meta),
         loading: false,
         loaded: true,
-        mailChannel: meta.mailChannel ?? 'mock',
+        mailChannel: useProjectStore.getState().activeProject?.mailChannel ?? meta.mailChannel ?? 'mock',
       });
     } catch (error) {
       // 元数据不是关键路径：失败时保留静态兜底，只在控制台留痕
@@ -81,5 +95,5 @@ export function selectPlaceholderDefs(state: MetaState): PlaceholderDef[] {
 
 /** 我方公司信息，占位符本地预览时使用 */
 export function selectCompany(state: MetaState): MetaResponse['company'] | null {
-  return state.meta?.company ?? null;
+  return state.company;
 }

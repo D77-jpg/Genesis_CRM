@@ -1,7 +1,6 @@
 /**
  * 登录页
  * ------------------------------------------------------------------
- * mock 登录：默认账号 admin / password（由后端 seed 脚本写入，可用环境变量覆盖）。
  * 这里只做「表单校验 + 调用 store.login」，登录态与 token 持久化都在 auth.store 里。
  */
 import * as React from 'react';
@@ -9,13 +8,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { AlertTriangle, KeyRound, Loader2, LogIn, Mail, ShieldCheck, User } from 'lucide-react';
+import { AlertTriangle, KeyRound, LogIn, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label, FieldMessage } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { loginSchema, type LoginFormValues } from '@/lib/validators';
 import { useAuthStore } from '@/store/auth.store';
@@ -25,9 +23,6 @@ import { ROUTES } from '@/constants';
 import { readStorage, writeStorage } from '@/lib/utils';
 
 const REMEMBER_KEY = 'cdlm-remembered-username';
-
-/** 登录页右上角的快捷入口：直接填入演示账号，省掉手动输入 */
-const DEMO_CREDENTIALS = { username: 'admin', password: 'password' };
 
 export function LoginPage(): React.JSX.Element {
   usePageTitle('登录');
@@ -93,12 +88,6 @@ export function LoginPage(): React.JSX.Element {
 
   // Radix Checkbox 不是原生 input，走 watch + setValue 而不是 register，避免事件形状不匹配
   const remember = watch('remember');
-
-  const fillDemo = React.useCallback(() => {
-    setValue('username', DEMO_CREDENTIALS.username, { shouldValidate: true });
-    setValue('password', DEMO_CREDENTIALS.password, { shouldValidate: true });
-    clearErrors();
-  }, [setValue, clearErrors]);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
@@ -205,29 +194,7 @@ export function LoginPage(): React.JSX.Element {
               {loggingIn ? '正在登录…' : '登录'}
             </Button>
           </form>
-
-          <Separator className="my-5" />
-
-          <div className="space-y-2">
-            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-              演示账号（由 seed 脚本创建，可在 server/.env 中修改）
-            </p>
-            <div className="flex items-center justify-between gap-2 rounded-md bg-muted/60 px-3 py-2">
-              <code className="text-xs text-foreground">
-                {DEMO_CREDENTIALS.username} / {DEMO_CREDENTIALS.password}
-              </code>
-              <Button type="button" variant="ghost" size="sm" onClick={fillDemo} disabled={loggingIn}>
-                一键填入
-              </Button>
-            </div>
-          </div>
         </div>
-
-        <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          {status === 'bootstrapping' ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : null}
-          首次使用请先启动后端服务与 MongoDB，并执行 npm run seed 初始化数据
-        </p>
       </div>
     </div>
   );

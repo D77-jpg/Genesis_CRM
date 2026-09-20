@@ -20,6 +20,9 @@ const htmlContentSchema = z
   });
 
 export const sendLetterSchema = z.object({
+  scheduledAt: z.string().datetime().transform((v) => new Date(v)).optional(),
+  requestKey: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/).optional(),
+  replyToId: objectIdSchema.optional(),
   /** 目标客户；也可通过 URL /customers/:id/letters 传入 */
   customerId: objectIdSchema.optional(),
   subject: z.string().trim().min(1, '邮件主题为必填项').max(300, '邮件主题不能超过 300 个字符'),
@@ -39,6 +42,8 @@ export const sendLetterSchema = z.object({
 });
 
 export const resendLetterSchema = z.object({
+  scheduledAt: z.string().datetime().transform((v) => new Date(v)).optional(),
+  requestKey: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   subject: z.string().trim().min(1).max(300).optional(),
   content: htmlContentSchema.optional(),
   recipientEmail: z

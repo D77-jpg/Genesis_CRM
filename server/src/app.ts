@@ -18,6 +18,32 @@ import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 
 const logger = createLogger('app');
 
+function isPrivateNetworkHostname(hostname: string): boolean {
+  const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (normalized === 'localhost' || normalized === '::1') return true;
+  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')) return true;
+
+  const octets = normalized.split('.').map(Number);
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  return octets[0] === 10
+    || octets[0] === 127
+    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
+    || (octets[0] === 192 && octets[1] === 168);
+}
+
+function isAllowedCorsOrigin(origin: string): boolean {
+  if (env.corsOrigins.includes('*') || env.corsOrigins.includes(origin)) return true;
+  if (!env.CORS_ALLOW_PRIVATE_NETWORK) return false;
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
+    return env.corsLanPorts.includes(port) && isPrivateNetworkHostname(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** CORS 白名单校验：未配置的来源一律拒绝（同源请求 origin 为 undefined，放行） */
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
@@ -25,7 +51,7 @@ const corsOptions: cors.CorsOptions = {
       callback(null, true);
       return;
     }
-    if (env.corsOrigins.includes('*') || env.corsOrigins.includes(origin)) {
+    if (isAllowedCorsOrigin(origin)) {
       callback(null, true);
       return;
     }
@@ -34,7 +60,8 @@ const corsOptions: cors.CorsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Project-Id'],
+  exposedHeaders: ['X-Project-Id'],
   maxAge: 86400,
 };
 
@@ -51,6 +78,7 @@ const apiLimiter = rateLimit({
 
 export function createApp(): Application {
   const app = express();
+  const crmCors = cors(corsOptions);
 
   // 反向代理（nginx 等）场景下正确识别协议与客户端 IP
   app.set('trust proxy', 1);
@@ -65,7 +93,15 @@ export function createApp(): Application {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
-  app.use(cors(corsOptions));
+  // Tracking is a token-only public resource loaded by external mail clients.
+  // It returns no CRM data, so it must not be rejected by the CRM UI CORS list.
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (req.headers['access-control-request-private-network'] === 'true' && origin && isAllowedCorsOrigin(origin)) {
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+    return req.path.startsWith('/api/tracking/') ? next() : crmCors(req, res, next);
+  });
   app.use(compression());
 
   /* ---------- 请求体解析 ----------
@@ -77,7 +113,8 @@ export function createApp(): Application {
 
   /* ---------- 访问日志 ---------- */
   app.use(morgan(env.isProd ? 'combined' : 'dev', {
-    skip: (req) => req.path === '/api/health',
+    // Tracking tokens authorize event writes; do not persist them in access logs.
+    skip: (req) => req.path === '/api/health' || req.originalUrl.startsWith('/api/tracking/'),
   }));
 
   /* ---------- 路由 ---------- */
@@ -89,7 +126,7 @@ export function createApp(): Application {
       success: true,
       data: {
         name: 'Customer Dev Letter Manager API',
-        version: '2.0.0',
+        version: '2.6.0',
         docs: '/api/health, /api/meta',
         env: env.NODE_ENV,
       },

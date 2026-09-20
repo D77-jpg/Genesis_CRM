@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label, FieldMessage, RequiredMark } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ApiClientError } from '@/lib/api';
 import {
   defaultUserFormValues,
@@ -36,6 +37,7 @@ import { USER_ROLE_LABEL, USER_ROLE_OPTIONS } from '@/constants';
 import { useUserStore } from '@/store/user.store';
 import { useSaveShortcut } from '@/hooks/use-ui';
 import type { CreateUserInput, UpdateUserInput, UserDto, UserRole } from '@/types';
+import { useProjectStore } from '@/store/project.store';
 
 export interface UserFormDialogProps {
   open: boolean;
@@ -55,13 +57,14 @@ function toCreatePayload(values: UserFormValues): CreateUserInput {
     username: values.username.trim().toLowerCase(),
     password: values.password,
     role: values.role,
+    projectIds: values.projectIds,
     ...(displayName ? { displayName } : {}),
   };
 }
 
 /** 编辑：表单值 → 更新载荷（只提交显示名 + 角色） */
 function toUpdatePayload(values: UserFormValues): UpdateUserInput {
-  return { displayName: values.displayName?.trim() ?? '', role: values.role };
+  return { displayName: values.displayName?.trim() ?? '', role: values.role, projectIds: values.projectIds };
 }
 
 export function UserFormDialog({
@@ -74,6 +77,8 @@ export function UserFormDialog({
   const isEdit = Boolean(user);
   const createUser = useUserStore((state) => state.createUser);
   const updateUser = useUserStore((state) => state.updateUser);
+  const projects = useProjectStore((state) => state.items).filter((project) => project.status === 'active');
+  const activeProject = useProjectStore((state) => state.activeProject);
   const [submitting, setSubmitting] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -81,9 +86,9 @@ export function UserFormDialog({
   const initial = React.useMemo<UserFormValues>(
     () =>
       user
-        ? { username: user.username, password: '', displayName: user.displayName, role: user.role }
-        : { ...defaultUserFormValues },
-    [user],
+        ? { username: user.username, password: '', displayName: user.displayName, role: user.role, projectIds: user.projectIds ?? [] }
+        : { ...defaultUserFormValues, projectIds: activeProject ? [activeProject.id] : [] },
+    [user, activeProject],
   );
 
   const {
@@ -109,6 +114,7 @@ export function UserFormDialog({
   }, [open, reset, initial]);
 
   const roleValue = watch('role');
+  const selectedProjects = watch('projectIds');
 
   const submit = React.useCallback(async () => {
     await handleSubmit(async (values) => {
@@ -271,6 +277,27 @@ export function UserFormDialog({
                 hint="业务员只看自己名下客户；管理员可分配客户、管理用户"
               />
             </div>
+
+            {roleValue === 'user' ? (
+              <fieldset>
+                <legend className="text-sm font-medium">可访问项目 <span className="text-destructive">*</span></legend>
+                <div className="mt-2 space-y-2 rounded-md border p-3">
+                  {projects.map((project) => {
+                    const checked = selectedProjects.includes(project.id);
+                    return (
+                      <label key={project.id} className="flex min-h-9 cursor-pointer items-center gap-3 rounded-sm px-1 text-sm hover:bg-muted/50">
+                        <Checkbox checked={checked} onCheckedChange={(next) => setValue('projectIds', next
+                          ? [...new Set([...selectedProjects, project.id])]
+                          : selectedProjects.filter((id) => id !== project.id), { shouldValidate: true })} />
+                        <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                        <span className="text-xs text-muted-foreground">{project.code}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <FieldMessage error={fieldError('projectIds')} hint="移出项目后，该用户在该项目名下的客户会转为未分配" />
+              </fieldset>
+            ) : null}
           </form>
         </DialogBody>
 

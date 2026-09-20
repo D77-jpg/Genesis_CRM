@@ -29,6 +29,7 @@ export interface IQuotationItem {
 }
 
 export interface IQuotation {
+  projectId: Types.ObjectId;
   /** 报价单编号（唯一） */
   quotationNo: string;
   /** 所属客户 */
@@ -116,6 +117,7 @@ const QuotationItemSchema = new Schema<IQuotationItem>(
 
 const QuotationSchema = new Schema<IQuotation>(
   {
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     quotationNo: {
       type: String,
       required: [true, '报价单编号为必填项'],
@@ -190,11 +192,11 @@ QuotationSchema.pre('validate', function recalcAmounts(next) {
 });
 
 // 报价编号唯一（入库前已 trim + uppercase，故普通唯一索引即可防重）
-QuotationSchema.index({ quotationNo: 1 }, { unique: true });
+QuotationSchema.index({ projectId: 1, quotationNo: 1 }, { unique: true });
 // 客户详情页按创建时间倒序拉取报价
-QuotationSchema.index({ customerId: 1, createdAt: -1 });
+QuotationSchema.index({ projectId: 1, customerId: 1, createdAt: -1 });
 // 顶层列表按状态 + 时间筛选
-QuotationSchema.index({ status: 1, createdAt: -1 });
+QuotationSchema.index({ projectId: 1, status: 1, createdAt: -1 });
 
 export const Quotation = model<IQuotation, QuotationModel>('Quotation', QuotationSchema);
 

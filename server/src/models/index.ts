@@ -26,3 +26,6 @@ export type { IQuotation, IQuotationItem, QuotationDocument } from './Quotation'
 
 export { User, hashPassword } from './User';
 export type { IUser, IUserMethods, UserDocument, UserModel, UserRole, UserStatus } from './User';
+
+export { Project } from './Project';
+export type { IProject, ProjectDocument, ProjectModel, ProjectStatus } from './Project';

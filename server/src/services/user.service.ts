@@ -6,7 +6,7 @@
  * 涉及「让管理员失去权限」的操作（停用 / 删除 / 降级）受自我保护与「最后一个启用管理员」约束。
  */
 import { Types } from 'mongoose';
-import { Customer, User, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
+import { Customer, Project, User, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
 import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator';
@@ -20,6 +20,8 @@ export interface UserDto {
   displayName: string;
   role: UserRole;
   status: UserStatus;
+  projectIds: string[];
+  defaultProjectId?: string;
   lastLoginAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -32,7 +34,20 @@ export interface UserDto {
 function toUserDto(doc: Record<string, unknown>): UserDto {
   const { _id, ...rest } = doc as Record<string, unknown> & { _id: Types.ObjectId };
   // 旧数据可能没有 status 字段，统一回退为 active
-  return { ...rest, id: _id.toString(), status: (rest.status as UserStatus) ?? 'active' } as unknown as UserDto;
+  return { ...rest, id: _id.toString(), status: (rest.status as UserStatus) ?? 'active',
+    projectIds: ((rest.projectIds as unknown[]) ?? []).map(String),
+    defaultProjectId: rest.defaultProjectId ? String(rest.defaultProjectId) : undefined } as unknown as UserDto;
+}
+
+async function resolveProjectIds(values?: string[]): Promise<Types.ObjectId[]> {
+  if (!values?.length) {
+    const fallback = await Project.findOne({ status: 'active' }).sort({ isDefault: -1, createdAt: 1 }).select('_id');
+    return fallback ? [fallback._id] : [];
+  }
+  const ids = [...new Set(values)].map((id) => new Types.ObjectId(id));
+  const count = await Project.countDocuments({ _id: { $in: ids }, status: 'active' });
+  if (count !== ids.length) throw ApiError.badRequest('包含不存在或已归档的项目');
+  return ids;
 }
 
 /** 全部用户（管理员 + 业务员），按创建时间升序；用户管理列表与负责人下拉均可复用 */
@@ -50,11 +65,15 @@ export async function createUser(input: CreateUserInput): Promise<UserDto> {
   }
 
   const passwordHash = await hashPassword(input.password);
+  const projectIds = await resolveProjectIds(input.projectIds);
+  if (input.role === 'user' && projectIds.length === 0) throw ApiError.badRequest('业务员至少需要加入一个项目');
   const user = await User.create({
     username,
     passwordHash,
     displayName: input.displayName?.trim() || username,
     role: input.role,
+    projectIds,
+    defaultProjectId: projectIds[0],
   });
   logger.info(`创建用户: ${user.username}（角色 ${user.role}）`);
 
@@ -114,6 +133,17 @@ export async function updateUser(actorId: string, targetId: string, input: Updat
   }
   if (input.role !== undefined) {
     target.role = input.role;
+  }
+  if (input.projectIds !== undefined) {
+    const previous = target.projectIds.map(String);
+    const next = await resolveProjectIds(input.projectIds);
+    if ((input.role ?? target.role) === 'user' && next.length === 0) throw ApiError.badRequest('业务员至少需要加入一个项目');
+    target.projectIds = next;
+    if (!target.defaultProjectId || !next.some((id) => String(id) === String(target.defaultProjectId))) {
+      target.defaultProjectId = next[0];
+    }
+    const removed = previous.filter((id) => !next.some((candidate) => String(candidate) === id)).map((id) => new Types.ObjectId(id));
+    if (removed.length) await Customer.updateMany({ ownerId: target._id, projectId: { $in: removed } }, { $set: { ownerId: null } });
   }
   await target.save({ validateBeforeSave: false });
   logger.info(`更新用户资料: ${target.username}`);

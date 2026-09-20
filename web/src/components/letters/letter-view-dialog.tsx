@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { LetterStatusBadge } from '@/components/common/status-badge';
+import { MailInteractionSummary } from '@/components/letters/mail-interaction-summary';
 import { copyToClipboard, formatDateTime, htmlToPlainText } from '@/lib/format';
 import { MAIL_CHANNEL_LABEL } from '@/constants';
 import { cn } from '@/lib/utils';
@@ -154,6 +155,8 @@ export function LetterViewDialog({
               <span className="break-all font-mono text-2xs">{letter.messageId || '—'}</span>
             </MetaRow>
           </dl>
+
+          {['sent', 'opened'].includes(letter.status) ? <MailInteractionSummary sentAt={letter.sentAt} tracking={letter.tracking} detailed /> : null}
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">

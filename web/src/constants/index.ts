@@ -30,6 +30,7 @@ export const STORAGE_KEYS = {
   pageSize: 'cdlm-page-size',
   /** 记住上次使用的开发信模板，提升连续发信效率 */
   lastTemplate: 'cdlm-last-letter-template',
+  activeProject: 'cdlm-active-project',
 } as const;
 
 /* ---------------------------- 路由 ---------------------------- */
@@ -42,6 +43,7 @@ export const ROUTES = {
   letters: '/letters',
   templates: '/templates',
   users: '/users',
+  projects: '/projects',
 } as const;
 
 /** 生成客户详情页路径 */
@@ -158,6 +160,9 @@ export const FOLLOW_UP_RESULT_OPTIONS: { value: FollowUpResult; label: string }[
 
 /** 客户时间线事件文案 */
 export const TIMELINE_EVENT_LABEL: Record<TimelineEventType, string> = {
+  mail_received: '收到邮件',
+  mail_opened: '首次打开邮件',
+  mail_clicked: '首次点击邮件链接',
   created: '客户创建',
   letter: '开发信',
   followup: '跟进记录',
@@ -197,20 +202,25 @@ export const TEMPLATE_CATEGORY_FILTER_OPTIONS: { value: TemplateCategory | 'all'
 ];
 
 export const LETTER_STATUS_LABEL: Record<LetterStatus, string> = {
+  queued: '等待发送', scheduled: '定时发送', sending: '发送中', retrying: '等待重试', cancelled: '已取消',
   draft: '草稿',
   sent: '已发送',
+  opened: '已打开',
   failed: '发送失败',
 };
 
 export const LETTER_STATUS_BADGE_CLASS: Record<LetterStatus, string> = {
+  queued: 'text-muted-foreground', scheduled: 'text-primary', sending: 'text-primary', retrying: 'text-destructive', cancelled: 'text-muted-foreground',
   draft: 'border-border bg-muted text-muted-foreground',
   sent: 'border-status-developed/30 bg-status-developed/10 text-status-developed',
+  opened: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300',
   failed: 'border-status-failed/30 bg-status-failed/10 text-status-failed',
 };
 
 export const LETTER_STATUS_OPTIONS: { value: LetterStatus | 'all'; label: string }[] = [
   { value: 'all', label: '全部状态' },
   { value: 'sent', label: '已发送' },
+  { value: 'opened', label: '已打开' },
   { value: 'draft', label: '草稿' },
   { value: 'failed', label: '发送失败' },
 ];

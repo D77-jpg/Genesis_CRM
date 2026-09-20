@@ -85,11 +85,12 @@ async function unlinkQuietly(filePath: string): Promise<void> {
 }
 
 /** 拉取某客户的全部附件（按上传时间倒序，最新的在最前） */
-export async function listAttachments(customerId: string): Promise<AttachmentDto[]> {
+export async function listAttachments(customerId: string, projectId?: string): Promise<AttachmentDto[]> {
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
   }
-  const docs = await CustomerAttachment.find({ customerId: new Types.ObjectId(customerId) }).sort({ createdAt: -1 });
+  if (!projectId || !Types.ObjectId.isValid(projectId)) throw ApiError.notFound('项目不存在或无权访问');
+  const docs = await CustomerAttachment.find({ customerId: new Types.ObjectId(customerId), projectId: new Types.ObjectId(projectId) }).sort({ createdAt: -1 });
   return docs.map(toAttachmentDto);
 }
 
@@ -98,10 +99,12 @@ export async function createAttachment(
   customerId: string,
   input: CreateAttachmentInput,
   userId?: string,
+  projectId?: string,
 ): Promise<AttachmentDto> {
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
   }
+  if (!projectId || !Types.ObjectId.isValid(projectId)) throw ApiError.notFound('项目不存在或无权访问');
 
   const buffer = decodeBase64(input.dataBase64);
   if (buffer.length === 0) {
@@ -124,6 +127,7 @@ export async function createAttachment(
   }
 
   const doc = await CustomerAttachment.create({
+    projectId: new Types.ObjectId(projectId),
     customerId: new Types.ObjectId(customerId),
     originalName: input.originalName,
     filename,
@@ -141,6 +145,7 @@ export async function createAttachment(
 export async function getAttachmentForDownload(
   customerId: string,
   attachmentId: string,
+  projectId?: string,
 ): Promise<AttachmentDownload> {
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
@@ -148,9 +153,11 @@ export async function getAttachmentForDownload(
   if (!Types.ObjectId.isValid(attachmentId)) {
     throw ApiError.badRequest('附件 ID 格式不正确');
   }
+  if (!projectId || !Types.ObjectId.isValid(projectId)) throw ApiError.notFound('项目不存在或无权访问');
   const doc = await CustomerAttachment.findOne({
     _id: new Types.ObjectId(attachmentId),
     customerId: new Types.ObjectId(customerId),
+    projectId: new Types.ObjectId(projectId),
   });
   if (!doc) {
     throw ApiError.notFound('附件不存在或无权访问');
@@ -168,6 +175,7 @@ export async function getAttachmentForDownload(
 export async function deleteAttachment(
   customerId: string,
   attachmentId: string,
+  projectId?: string,
 ): Promise<{ id: string; deleted: number }> {
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
@@ -175,9 +183,11 @@ export async function deleteAttachment(
   if (!Types.ObjectId.isValid(attachmentId)) {
     throw ApiError.badRequest('附件 ID 格式不正确');
   }
+  if (!projectId || !Types.ObjectId.isValid(projectId)) throw ApiError.notFound('项目不存在或无权访问');
   const doc = await CustomerAttachment.findOneAndDelete({
     _id: new Types.ObjectId(attachmentId),
     customerId: new Types.ObjectId(customerId),
+    projectId: new Types.ObjectId(projectId),
   });
   if (!doc) {
     throw ApiError.notFound('附件不存在或无权删除');

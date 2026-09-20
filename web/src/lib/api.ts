@@ -66,6 +66,8 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.set('Authorization', `Bearer ${token}`);
   }
+  const projectId = readStorage<string | null>(STORAGE_KEYS.activeProject, null);
+  if (projectId) config.headers.set('X-Project-Id', projectId);
   return config;
 });
 

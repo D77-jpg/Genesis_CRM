@@ -11,6 +11,7 @@ import { UserMenu } from './user-menu';
 import { NAV_ITEMS } from './sidebar';
 import { MAIL_CHANNEL_LABEL, ROUTES } from '@/constants';
 import { useMetaStore } from '@/store/meta.store';
+import { ProjectSwitcher } from './project-switcher';
 
 /** 根据当前路径推断标题（客户详情页会带上「客户详情」） */
 function resolveTitle(pathname: string): string {
@@ -41,6 +42,8 @@ export function Header({ onOpenMobileNav }: { onOpenMobileNav: () => void }): Re
 
       <h2 className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-base">{title}</h2>
 
+      <ProjectSwitcher />
+
       {/* mock 通道时明确告知用户「不会真的发出去」，避免误判 */}
       {channel === 'mock' && (
         <Tooltip>
@@ -51,7 +54,7 @@ export function Header({ onOpenMobileNav }: { onOpenMobileNav: () => void }): Re
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-[16rem]">
-            当前为模拟发送：开发信会完整记录到数据库，但不会真正投递邮件。在 server/.env 中配置 SMTP_* 变量后重启即可切换为真实发送。
+            当前为模拟发送：开发信会完整记录，但不会真正投递邮件。
           </TooltipContent>
         </Tooltip>
       )}

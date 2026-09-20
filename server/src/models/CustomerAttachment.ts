@@ -12,6 +12,7 @@
 import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoose';
 
 export interface ICustomerAttachment {
+  projectId: Types.ObjectId;
   /** 所属客户 */
   customerId: Types.ObjectId;
   /** 上传时的原始文件名（用于展示 / 下载还原） */
@@ -35,6 +36,7 @@ export type CustomerAttachmentModel = Model<ICustomerAttachment>;
 
 const CustomerAttachmentSchema = new Schema<ICustomerAttachment>(
   {
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     customerId: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
@@ -84,7 +86,7 @@ const CustomerAttachmentSchema = new Schema<ICustomerAttachment>(
 );
 
 // 客户详情页按上传时间倒序拉取附件
-CustomerAttachmentSchema.index({ customerId: 1, createdAt: -1 });
+CustomerAttachmentSchema.index({ projectId: 1, customerId: 1, createdAt: -1 });
 
 export const CustomerAttachment = model<ICustomerAttachment, CustomerAttachmentModel>(
   'CustomerAttachment',

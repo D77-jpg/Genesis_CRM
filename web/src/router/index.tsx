@@ -26,9 +26,11 @@ const CustomersPage = React.lazy(() => import('@/pages/customers').then((m) => (
 const CustomerDetailPage = React.lazy(() =>
   import('@/pages/customer-detail').then((m) => ({ default: m.CustomerDetailPage })),
 );
+const MailPage = React.lazy(() => import('@/pages/mail').then(m => ({ default: m.MailPage })));
 const LettersPage = React.lazy(() => import('@/pages/letters').then((m) => ({ default: m.LettersPage })));
 const TemplatesPage = React.lazy(() => import('@/pages/templates').then((m) => ({ default: m.TemplatesPage })));
 const UsersPage = React.lazy(() => import('@/pages/users').then((m) => ({ default: m.UsersPage })));
+const ProjectsPage = React.lazy(() => import('@/pages/projects').then((m) => ({ default: m.ProjectsPage })));
 const NotFoundPage = React.lazy(() => import('@/pages/not-found').then((m) => ({ default: m.NotFoundPage })));
 
 /** 懒加载页面的统一 Suspense 包装（局部工具，不对外导出） */
@@ -57,11 +59,16 @@ export const router = createBrowserRouter([
       { index: true, element: withSuspense(<DashboardPage />) },
       { path: 'customers', element: withSuspense(<CustomersPage />) },
       { path: 'customers/:id', element: withSuspense(<CustomerDetailPage />) },
+      { path: 'mail', element: withSuspense(<MailPage />) },
       { path: 'letters', element: withSuspense(<LettersPage />) },
       { path: 'templates', element: withSuspense(<TemplatesPage />) },
       {
         path: 'users',
         element: <AdminRoute>{withSuspense(<UsersPage />)}</AdminRoute>,
+      },
+      {
+        path: 'projects',
+        element: <AdminRoute>{withSuspense(<ProjectsPage />)}</AdminRoute>,
       },
       { path: '*', element: withSuspense(<NotFoundPage />) },
     ],

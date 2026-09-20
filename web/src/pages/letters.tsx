@@ -200,8 +200,7 @@ export function LettersPage(): React.JSX.Element {
       {mailChannel === 'mock' ? (
         <Alert variant="warning">
           <AlertDescription>
-            当前邮件通道为「模拟发送」：开发信会完整落库并计入统计，但不会真实投递到收件人邮箱。在{' '}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-2xs">server/.env</code> 配置 SMTP_* 后即可切换为真实发送。
+            当前邮件通道为「模拟发送」：开发信会完整记录并计入统计，但不会真实投递到收件人邮箱。
           </AlertDescription>
         </Alert>
       ) : null}

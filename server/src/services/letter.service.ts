@@ -1,18 +1,24 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { newMessageId, processMailJob } from './mail-queue.service';
+import { safeMailHtml } from './mail-security';
+import { prepareTrackedHtml, trackingSummary, type TrackingSummary } from './mail-tracking.service';
+import { MailMessage } from '../models/MailMessage';
 /**
  * 开发信业务逻辑
  * ------------------------------------------------------------------
  * 关键约束（对应产品需求）：
  *   「发送后的开发信必须同步记录到该客户的开发信记录中」
- * 因此这里的顺序是：先渲染 → 再发送 → 无论成功失败都落库一条记录，
- * 失败时记录 status=failed + error，保证历史可追溯、可重发。
+ * V2.1：先渲染并持久化任务 → 原子领取 → SMTP → 记录结果与重试历史。
+ * 投递结果未知时保持待核实，禁止自动重发。
  *
  * 说明：MongoDB Community 单机部署不支持多文档事务，
- * 所以计数器维护采用原子 $inc，并在异常分支做补偿，避免脏数据。
+ * 所以发送计数采用原子 $inc + 同文档幂等标识，支持崩溃后重做副作用。
  */
 import { Types, type FilterQuery } from 'mongoose';
 import {
   Customer,
   DevelopmentLetter,
+  Project,
   type CustomerDocument,
   type ICustomer,
   type IDevelopmentLetter,
@@ -30,8 +36,9 @@ import {
   type PlaceholderValues,
 } from '../utils/text';
 import { getCustomerByIdOrThrow } from './customer.service';
-import { getActiveChannel, sendMail } from './mailer.service';
-import { assertCustomerAccess, customerRefScope } from '../utils/access';
+import { getActiveChannel, getProjectActiveChannel } from './mailer.service';
+import { getProjectMailConfig } from './project-mail-config.service';
+import { assertCustomerAccess, customerRefScope, projectScope, requireProjectId } from '../utils/access';
 import type { AuthUser } from '../types/express';
 import type {
   ListLettersQuery,
@@ -65,10 +72,14 @@ export interface LetterDto {
   channel: IDevelopmentLetter['channel'];
   sentAt?: Date;
   messageId?: string;
+  scheduledAt?: Date;
+  threadId?: string;
+  needsReview?: boolean;
   error?: string;
   sentBy?: string;
   createdAt: Date;
   updatedAt: Date;
+  tracking?: TrackingSummary;
 }
 
 /* ------------------------------------------------------------------ */
@@ -76,13 +87,14 @@ export interface LetterDto {
 /* ------------------------------------------------------------------ */
 
 /** 由客户 + 环境变量构造完整的占位符取值表 */
-function buildValues(customer: Partial<ICustomer>): PlaceholderValues {
+async function buildValues(customer: Partial<ICustomer>): Promise<PlaceholderValues> {
+  const project = customer.projectId ? await Project.findById(customer.projectId).lean() : null;
   return {
     ...buildPlaceholderValues(customer),
-    companyName: env.COMPANY_NAME,
-    companyWebsite: env.COMPANY_WEBSITE,
-    moq: env.COMPANY_MOQ,
-    senderName: env.SENDER_NAME,
+    companyName: project?.companyName || env.COMPANY_NAME,
+    companyWebsite: project?.website || env.COMPANY_WEBSITE,
+    moq: project?.moq || env.COMPANY_MOQ,
+    senderName: project?.senderName || env.SENDER_NAME,
   };
 }
 
@@ -103,7 +115,7 @@ export async function renderLetter(
   content: string,
   recipientEmailOverride?: string,
 ): Promise<RenderedLetter> {
-  const values = buildValues(customer);
+  const values = await buildValues(customer);
   const recipientEmail = (recipientEmailOverride || customer.email || '').trim().toLowerCase();
 
   if (!recipientEmail) {
@@ -115,7 +127,7 @@ export async function renderLetter(
   return {
     // 主题走纯文本渲染（不转义），正文走 HTML 渲染（转义，防存储型 XSS）
     subject: renderTemplate(subject, values, { escape: false }),
-    html: renderTemplate(content, values, { escape: true }),
+    html: safeMailHtml(renderTemplate(content, values, { escape: true })),
     text: htmlToPlainText(renderTemplate(content, values, { escape: false })),
     recipientEmail,
     recipientName: customer.name ?? '',
@@ -182,6 +194,7 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
   const rawCustomerId = doc.customerId;
   const summary = toCustomerSummary(rawCustomerId);
   const customerId = summary?.id ?? String(rawCustomerId ?? '');
+  const tracking = trackingSummary(doc.tracking);
 
   return {
     id: String((doc._id ?? doc.id ?? '').toString()),
@@ -193,29 +206,29 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     content: String(doc.content ?? ''),
     contentText: String(doc.contentText ?? ''),
     template: String(doc.template ?? ''),
+    scheduledAt: doc.scheduledAt as Date | undefined,
+    threadId: doc.threadId as string | undefined,
+    needsReview: Boolean(doc.needsReview),
     status: doc.status as IDevelopmentLetter['status'],
     channel: doc.channel as IDevelopmentLetter['channel'],
     ...(doc.sentAt ? { sentAt: doc.sentAt as Date } : {}),
     ...(doc.messageId ? { messageId: String(doc.messageId) } : {}),
     ...(doc.error ? { error: String(doc.error) } : {}),
     ...(doc.sentBy ? { sentBy: String(doc.sentBy) } : {}),
+    ...(tracking ? { tracking } : {}),
     createdAt: doc.createdAt as Date,
     updatedAt: doc.updatedAt as Date,
   };
 }
 
 export async function listLetters(query: ListLettersQuery, actor?: AuthUser): Promise<Paginated<LetterDto>> {
+  if (query.customerId) await getCustomerByIdOrThrow(query.customerId, actor);
   const { page, limit, skip, sortBy, sortOrder } = parsePagination(
     query as unknown as Record<string, unknown>,
     { allowedSortFields: sortableFields.letter, defaultSortBy: 'sentAt' },
   );
 
-  const filter: FilterQuery<IDevelopmentLetter> = buildLetterFilter(query);
-  // 全局列表（未指定 customerId）时，业务员只看自己名下客户的开发信；
-  // 嵌套在客户详情下的列表（带 customerId）由入口 getCustomerByIdOrThrow 做归属校验。
-  if (!query.customerId) {
-    Object.assign(filter, await customerRefScope(actor));
-  }
+  const filter = { $and: [buildLetterFilter(query), await customerRefScope(actor)] } as FilterQuery<IDevelopmentLetter>;
   const sortSpec: Record<string, 1 | -1> = {};
   sortSpec[sortBy] = sortOrder;
   sortSpec._id = -1;
@@ -241,12 +254,12 @@ export async function listLetters(query: ListLettersQuery, actor?: AuthUser): Pr
 
 export async function getLetter(id: string, actor?: AuthUser): Promise<LetterDto> {
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('开发信 ID 格式不正确');
-  const doc = await DevelopmentLetter.findById(id).populate('customerId', 'name company email status ownerId');
+  const doc = await DevelopmentLetter.findOne({ _id: id, ...projectScope(actor) }).populate('customerId', 'name company email status ownerId projectId');
   if (!doc) throw ApiError.notFound(`开发信不存在或已被删除（id=${id}）`);
 
   // 业务员只能查看自己名下客户的开发信（客户已删时 populated 为 null，同样拒绝）
   const customer = doc.customerId as unknown as { ownerId?: unknown } | null;
-  assertCustomerAccess(actor, customer?.ownerId);
+  assertCustomerAccess(actor, customer?.ownerId, doc.projectId);
 
   return toLetterDto(doc.toObject({ virtuals: false, depopulate: false }) as unknown as Record<string, unknown>);
 }
@@ -273,6 +286,12 @@ async function persistAndSend(options: {
   markAsDeveloped: boolean;
   saveAsDraft: boolean;
   userId?: string;
+  scheduledAt?: Date;
+  requestKey?: string;
+  replyToId?: string;
+  threadId?: string;
+  inReplyTo?: string;
+  references?: string[];
 }): Promise<SendLetterResult> {
   const {
     customer,
@@ -285,84 +304,94 @@ async function persistAndSend(options: {
   } = options;
 
   const rendered = await renderLetter(customer, subjectTemplate, contentTemplate, recipientEmailOverride);
+  const mailConfig = await getProjectMailConfig(String(customer.projectId));
+  const activeChannel = mailConfig.transport;
 
   // 1) 草稿：直接落库，不发送、不改客户状态
   if (saveAsDraft) {
     const draft = await DevelopmentLetter.create({
+      projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail,
       subject: rendered.subject,
+      senderAddress: mailConfig.mailFrom,
       content: rendered.html,
       contentText: rendered.text,
       template: contentTemplate,
       status: 'draft',
-      channel: getActiveChannel(),
+      channel: activeChannel,
       sentBy: userId ? new Types.ObjectId(userId) : undefined,
     });
     logger.info(`已保存开发信草稿 -> ${rendered.recipientEmail}`);
     return {
       letter: toLetterDto(draft.toObject({ virtuals: false }) as unknown as Record<string, unknown>),
       customer: customer.toJSON() as unknown as ICustomer & { id: string },
-      channel: getActiveChannel(),
+      channel: activeChannel,
       delivered: false,
       message: '草稿已保存，未发送',
     };
   }
 
-  // 2) 真实 / 模拟发送
-  const mailResult = await sendMail({
-    to: rendered.recipientEmail,
-    toName: rendered.recipientName,
-    subject: rendered.subject,
-    html: rendered.html,
-    text: rendered.text,
-  });
-
-  // 3) 无论成功失败都记录，保证「发送后的开发信必须同步记录」
-  const letter = await DevelopmentLetter.create({
-    customerId: customer._id,
-    recipientName: rendered.recipientName,
-    recipientEmail: rendered.recipientEmail,
-    subject: rendered.subject,
-    content: rendered.html,
-    contentText: rendered.text,
-    template: contentTemplate,
-    status: mailResult.accepted ? 'sent' : 'failed',
-    channel: mailResult.channel,
-    sentAt: mailResult.accepted ? new Date() : undefined,
-    messageId: mailResult.messageId,
-    error: mailResult.accepted ? undefined : mailResult.error,
-    sentBy: userId ? new Types.ObjectId(userId) : undefined,
-  });
-
-  // 4) 发送成功才更新客户计数与状态
-  if (mailResult.accepted) {
-    const update: Record<string, unknown> = {
-      $inc: { letterCount: 1 },
-      $set: { lastContactAt: letter.sentAt ?? new Date() },
-    };
-    // 语义升级：发送成功后只把「待开发」推进到「已联系」，不降级已推进的客户
-    if (markAsDeveloped && customer.status === 'pending') {
-      (update.$set as Record<string, unknown>).status = 'contacted';
-    }
-    await Customer.updateOne({ _id: customer._id }, update);
+  let threadId: string = options.threadId || randomUUID();
+  let inReplyTo = options.inReplyTo;
+  let references: string[] = options.references || [];
+  if (options.replyToId) {
+    const parent = await MailMessage.findOne({ _id: options.replyToId, customerId: customer._id, projectId: customer.projectId });
+    if (!parent) throw ApiError.notFound('邮件不存在或无权访问');
+    threadId = parent.threadId;
+    inReplyTo = parent.messageId || undefined;
+    references = [...parent.references, ...(inReplyTo ? [inReplyTo] : [])].slice(-50);
+    rendered.recipientEmail = parent.from;
+    rendered.subject = /^re:/i.test(parent.subject) ? parent.subject : 'Re: ' + parent.subject;
   }
-
-  const refreshed = await Customer.findById(customer._id);
-  const customerDto = (refreshed ?? customer).toJSON() as unknown as ICustomer & { id: string };
-
+  const requestKey = createHash('sha256').update(JSON.stringify([userId, options.requestKey || [customer.id, rendered, options.scheduledAt, Math.floor(Date.now() / 60000)]])).digest('hex');
+  if (options.scheduledAt && options.scheduledAt.getTime() <= Date.now() && !await DevelopmentLetter.exists({ requestKey, projectId: customer.projectId })) throw ApiError.badRequest('定时时间必须晚于当前时间');
+  const due = options.scheduledAt ?? new Date();
+  let prepared: ReturnType<typeof prepareTrackedHtml> = { deliveryHtml: rendered.html };
+  try {
+    prepared = prepareTrackedHtml(rendered.html);
+  } catch {
+    // Tracking is optional telemetry. A malformed configuration or unexpected
+    // HTML must never prevent the durable send task from being created.
+    logger.warn('邮件追踪准备失败，已降级为正常发送');
+  }
+  let letter;
+  try {
+    letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
+      projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
+      recipientEmail: rendered.recipientEmail, subject: rendered.subject,
+      senderAddress: mailConfig.mailFrom,
+      content: rendered.html, deliveryContent: prepared.deliveryHtml,
+      contentText: rendered.text, template: contentTemplate,
+      status: options.scheduledAt ? 'scheduled' : 'queued', channel: activeChannel,
+      messageId: newMessageId(), threadId, inReplyTo, references,
+      scheduledAt: options.scheduledAt, nextAttemptAt: due, markAsDeveloped,
+      sentBy: userId ? new Types.ObjectId(userId) : undefined,
+      ...(prepared.tracking ? { tracking: prepared.tracking } : {}),
+      history: [{ at: new Date(), status: options.scheduledAt ? 'scheduled' : 'queued' }],
+    } }, { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true });
+  } catch (error) {
+    if ((error as { code?: number }).code !== 11000) throw error;
+    letter = await DevelopmentLetter.findOne({ requestKey, projectId: customer.projectId });
+  }
+  if (!letter) throw ApiError.internal('发送任务保存失败');
+  if (String(letter.customerId) !== String(customer._id)) throw ApiError.conflict('请求标识已用于其他客户');
+  if (letter.subject !== rendered.subject || letter.content !== rendered.html || letter.recipientEmail !== rendered.recipientEmail) throw ApiError.conflict('同一请求标识不能用于不同邮件内容，请重新打开编辑器');
+  if (letter.scheduledAt?.getTime() !== options.scheduledAt?.getTime()) throw ApiError.conflict('同一请求标识不能修改定时时间，请取消原任务后重新创建');
+  // Immediate requests use the SAME durable worker path; background polling also
+  // picks the task up if this HTTP request disconnects or the process restarts.
+  if (!options.scheduledAt) await processMailJob(String(letter._id));
+  letter = (await DevelopmentLetter.findOne({ _id: letter._id, projectId: customer.projectId }))!;
+  const refreshed = await Customer.findOne({ _id: customer._id, projectId: customer.projectId });
   return {
-    letter: toLetterDto(letter.toObject({ virtuals: false }) as unknown as Record<string, unknown>),
-    customer: customerDto,
-    channel: mailResult.channel,
-    delivered: mailResult.accepted,
-    message: mailResult.accepted
-      ? mailResult.channel === 'mock'
-        ? '开发信已发送（MOCK 模式，未真实投递到邮箱）'
-        : '开发信已发送'
-      : `开发信发送失败：${mailResult.error ?? '未知错误'}（记录已保存，可稍后重发）`,
+    letter: toLetterDto(letter.toObject() as unknown as Record<string, unknown>),
+    customer: (refreshed ?? customer).toJSON() as unknown as ICustomer & { id: string },
+    channel: letter.channel, delivered: ['sent', 'opened'].includes(letter.status),
+    message: ['sent', 'opened'].includes(letter.status) ? (letter.channel === 'mock' ? '开发信已发送（MOCK 模式，未真实投递）' : '开发信已发送')
+      : letter.status === 'failed' ? (letter.error || '发送失败') : '发送任务已保存，可在邮件中心查看进度',
   };
+
 }
 
 /** 发送新开发信 */
@@ -380,7 +409,10 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     recipientEmailOverride: input.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: input.saveAsDraft,
+    replyToId: input.replyToId,
     userId: actor?.id,
+    scheduledAt: input.scheduledAt,
+    requestKey: input.requestKey,
   });
 }
 
@@ -396,11 +428,12 @@ export async function resendLetter(
 ): Promise<SendLetterResult> {
   if (!Types.ObjectId.isValid(letterId)) throw ApiError.badRequest('开发信 ID 格式不正确');
 
-  const original = await DevelopmentLetter.findById(letterId);
+  const original = await DevelopmentLetter.findOne({ _id: letterId, ...projectScope(actor) });
   if (!original) throw ApiError.notFound(`开发信不存在或已被删除（id=${letterId}）`);
 
   // 归属校验：业务员只能重发自己名下客户的开发信
   const customer = await getCustomerByIdOrThrow(String(original.customerId), actor);
+  if (['queued', 'scheduled', 'sending', 'retrying'].includes(original.status) || original.needsReview) throw ApiError.conflict('任务进行中或投递结果待核实，不能重发');
 
   // 优先用原始模板（含占位符），没有模板时退化为已渲染的正文
   const contentTemplate = input.content ?? original.template ?? original.content;
@@ -414,6 +447,11 @@ export async function resendLetter(
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: false,
     userId: actor?.id,
+    scheduledAt: input.scheduledAt,
+    requestKey: input.requestKey || `resend_${original.id}_${createHash('sha256').update(JSON.stringify([input, Math.floor(Date.now() / 60000)])).digest('hex')}`,
+    threadId: original.threadId,
+    inReplyTo: original.inReplyTo,
+    references: original.references,
   });
 }
 
@@ -425,20 +463,21 @@ export async function resendLetter(
 export async function deleteLetter(id: string, actor?: AuthUser): Promise<{ id: string }> {
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('开发信 ID 格式不正确');
 
-  const letter = await DevelopmentLetter.findById(id).populate('customerId', 'ownerId');
+  const letter = await DevelopmentLetter.findOne({ _id: id, ...projectScope(actor) }).populate('customerId', 'ownerId projectId');
   if (!letter) throw ApiError.notFound(`开发信不存在或已被删除（id=${id}）`);
 
   // populate 后 customerId 为对象，先取出裸 id 供计数器回退使用
   const populated = letter.customerId as unknown as { _id?: Types.ObjectId; ownerId?: unknown } | null;
   const customerIdStr = String(populated?._id ?? letter.customerId);
   // 业务员只能删除自己名下客户的开发信
-  assertCustomerAccess(actor, populated?.ownerId);
+  assertCustomerAccess(actor, populated?.ownerId, letter.projectId);
 
-  await DevelopmentLetter.deleteOne({ _id: letter._id });
+  if (['queued', 'scheduled', 'sending', 'retrying'].includes(letter.status) || letter.needsReview) throw ApiError.conflict('请先取消任务；发送中或待核实记录不能删除');
+  await DevelopmentLetter.deleteOne({ _id: letter._id, ...projectScope(actor), status: { $nin: ['queued', 'scheduled', 'sending', 'retrying'] }, needsReview: { $ne: true } });
 
-  if (letter.status === 'sent') {
+  if (['sent', 'opened'].includes(letter.status)) {
     // 带 letterCount > 0 条件的原子 $inc，既保证并发安全又不会出现负数
-    await decrementLetterCount(customerIdStr, 1);
+    await decrementLetterCount(customerIdStr, 1, requireProjectId(actor));
   }
 
   logger.info(`删除开发信: ${id}`);
@@ -446,10 +485,10 @@ export async function deleteLetter(id: string, actor?: AuthUser): Promise<{ id: 
 }
 
 /** 原子回退客户的开发信计数 */
-async function decrementLetterCount(customerId: string, count: number): Promise<void> {
+async function decrementLetterCount(customerId: string, count: number, projectId?: Types.ObjectId): Promise<void> {
   try {
     await Customer.updateOne(
-      { _id: new Types.ObjectId(customerId), letterCount: { $gte: count } },
+      { _id: new Types.ObjectId(customerId), ...(projectId ? { projectId } : {}), letterCount: { $gte: count } },
       { $inc: { letterCount: -count } },
     );
   } catch (error) {
@@ -468,6 +507,7 @@ export async function bulkDeleteLetters(ids: string[], actor?: AuthUser): Promis
 
   // 严格分配制：只在业务员可见范围内取出待删记录（也用于按客户分组回退计数器）
   const refScope = await customerRefScope(actor);
+  Object.assign(refScope, { status: { $nin: ['queued', 'scheduled', 'sending', 'retrying'] }, needsReview: { $ne: true } });
   const targets = await DevelopmentLetter.find({ _id: { $in: objectIds }, ...refScope })
     .select({ _id: 1, customerId: 1, status: 1 })
     .lean();
@@ -476,17 +516,17 @@ export async function bulkDeleteLetters(ids: string[], actor?: AuthUser): Promis
   if (targetList.length === 0) return { deleted: 0 };
 
   const deletableIds = targetList.map((t) => t._id);
-  const { deletedCount } = await DevelopmentLetter.deleteMany({ _id: { $in: deletableIds } });
+  const { deletedCount } = await DevelopmentLetter.deleteMany({ _id: { $in: deletableIds }, ...projectScope(actor) });
 
   const counter = new Map<string, number>();
   targetList.forEach((t) => {
-    if (t.status !== 'sent') return;
+    if (!['sent', 'opened'].includes(t.status)) return;
     const key = String(t.customerId);
     counter.set(key, (counter.get(key) ?? 0) + 1);
   });
 
   for (const [customerId, count] of counter) {
-    await decrementLetterCount(customerId, count);
+    await decrementLetterCount(customerId, count, requireProjectId(actor));
   }
 
   return { deleted: deletedCount ?? 0 };
@@ -529,13 +569,13 @@ export async function getLetterStats(actor?: AuthUser): Promise<LetterStats> {
 
   const [total, sent, draft, failed, sent7d, sent30d, byDayRaw] = await Promise.all([
     DevelopmentLetter.countDocuments({ ...refScope }),
-    DevelopmentLetter.countDocuments({ ...refScope, status: 'sent' }),
+    DevelopmentLetter.countDocuments({ ...refScope, status: { $in: ['sent', 'opened'] } }),
     DevelopmentLetter.countDocuments({ ...refScope, status: 'draft' }),
     DevelopmentLetter.countDocuments({ ...refScope, status: 'failed' }),
-    DevelopmentLetter.countDocuments({ ...refScope, status: 'sent', sentAt: { $gte: sevenDaysAgo } }),
-    DevelopmentLetter.countDocuments({ ...refScope, status: 'sent', sentAt: { $gte: thirtyDaysAgo } }),
+    DevelopmentLetter.countDocuments({ ...refScope, status: { $in: ['sent', 'opened'] }, sentAt: { $gte: sevenDaysAgo } }),
+    DevelopmentLetter.countDocuments({ ...refScope, status: { $in: ['sent', 'opened'] }, sentAt: { $gte: thirtyDaysAgo } }),
     DevelopmentLetter.aggregate<{ _id: string; count: number }>([
-      { $match: { ...refScope, status: 'sent', sentAt: { $gte: thirtyDaysAgo } } },
+      { $match: { ...refScope, status: { $in: ['sent', 'opened'] }, sentAt: { $gte: thirtyDaysAgo } } },
       {
         $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$sentAt' } },
@@ -545,6 +585,7 @@ export async function getLetterStats(actor?: AuthUser): Promise<LetterStats> {
       { $sort: { _id: 1 } },
     ]),
   ]);
+  const channel = await getProjectActiveChannel(actor?.projectId);
 
   return {
     total,
@@ -553,7 +594,7 @@ export async function getLetterStats(actor?: AuthUser): Promise<LetterStats> {
     failed,
     sent7d,
     sent30d,
-    channel: getActiveChannel(),
+    channel,
     byDay: byDayRaw,
   };
 }

@@ -65,7 +65,7 @@ export const listCustomerQuotationsHandler = asyncHandler(async (req: Request, r
   // 归属校验：业务员只能查看自己名下客户的报价单
   await getCustomerByIdOrThrow(req.params.id, req.user);
   const query = req.query as unknown as ListQuotationsQuery;
-  const data = await listCustomerQuotations(req.params.id, query.limit);
+  const data = await listCustomerQuotations(req.params.id, query.limit, req.user);
   sendSuccess(res, data);
 });
 
@@ -79,7 +79,7 @@ export const createQuotationForCustomerHandler = asyncHandler(async (req: Reques
 /** GET /api/customers/:id/quotations/:quotationId —— 单份详情 */
 export const getCustomerQuotationHandler = asyncHandler(async (req: Request, res: Response) => {
   await getCustomerByIdOrThrow(req.params.id, req.user);
-  const data = await getCustomerQuotation(req.params.id, req.params.quotationId);
+  const data = await getCustomerQuotation(req.params.id, req.params.quotationId, req.user);
   sendSuccess(res, data);
 });
 

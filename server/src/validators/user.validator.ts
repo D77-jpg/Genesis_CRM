@@ -4,6 +4,7 @@
  * 仅管理员可用：创建 / 编辑资料 / 重置密码 / 停用启用，用户名规则与 User 模型保持一致。
  */
 import { z } from 'zod';
+import { objectIdSchema } from './common';
 
 /** 用户名：字母 / 数字 / . _ -，3-40 位，统一转小写（与 User 模型 username 约束一致） */
 const usernameSchema = z
@@ -21,6 +22,8 @@ export const createUserSchema = z.object({
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional(),
   /** 角色：admin 管理员 / user 业务员，默认业务员 */
   role: z.enum(['admin', 'user']).default('user'),
+  /** 普通用户可进入的项目；不传时兼容旧客户端，自动分配默认项目。 */
+  projectIds: z.array(objectIdSchema).max(100).optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -30,9 +33,10 @@ export const updateUserSchema = z
   .object({
     displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional(),
     role: z.enum(['admin', 'user']).optional(),
+    projectIds: z.array(objectIdSchema).max(100).optional(),
   })
-  .refine((data) => data.displayName !== undefined || data.role !== undefined, {
-    message: '至少提供要修改的字段（displayName 或 role）',
+  .refine((data) => data.displayName !== undefined || data.role !== undefined || data.projectIds !== undefined, {
+    message: '至少提供要修改的字段',
   });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

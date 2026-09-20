@@ -25,7 +25,7 @@ import type { CustomerStatus, QuotationCurrency, QuotationStatus } from '../cons
 import { ApiError } from '../utils/ApiError';
 import { buildPaginated, parsePagination, sortableFields, type Paginated } from '../utils/pagination';
 import { escapeRegExp } from '../utils/text';
-import { assertCustomerAccess, customerRefScope } from '../utils/access';
+import { assertCustomerAccess, customerRefScope, projectScope, requireProjectId } from '../utils/access';
 import { createLogger } from '../config/logger';
 import { updateCustomer } from './customer.service';
 import type { AuthUser } from '../types/express';
@@ -172,17 +172,17 @@ function mapWriteError(err: unknown): never {
  * 生成报价编号：QT-YYYYMMDD-NNN（NNN 为当天序号，从 001 起）。
  * 用「当天已有数量」作为起点并逐个探测是否被占用，配合唯一索引兜底，简单可靠、无需额外依赖。
  */
-async function generateQuotationNo(): Promise<string> {
+async function generateQuotationNo(actor?: AuthUser): Promise<string> {
   const now = new Date();
   const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
-  const base = await Quotation.countDocuments({ createdAt: { $gte: startOfToday } });
+  const base = await Quotation.countDocuments({ ...projectScope(actor), createdAt: { $gte: startOfToday } });
 
   for (let seq = base + 1; seq <= base + 500; seq += 1) {
     const candidate = `QT-${ymd}-${String(seq).padStart(3, '0')}`;
     // eslint-disable-next-line no-await-in-loop
-    const exists = await Quotation.findOne({ quotationNo: candidate }).select('_id');
+    const exists = await Quotation.findOne({ ...projectScope(actor), quotationNo: candidate }).select('_id');
     if (!exists) return candidate;
   }
   // 极端兜底（同一天生成上千份）：附加时间戳片段，保证唯一
@@ -190,15 +190,15 @@ async function generateQuotationNo(): Promise<string> {
 }
 
 /** 解析最终使用的报价编号：用户自定义则查重，未提供则自动生成 */
-async function resolveQuotationNo(provided?: string, excludeId?: string): Promise<string> {
+async function resolveQuotationNo(provided?: string, excludeId?: string, actor?: AuthUser): Promise<string> {
   if (provided) {
-    const dupFilter: FilterQuery<IQuotation> = { quotationNo: provided };
+    const dupFilter: FilterQuery<IQuotation> = { ...projectScope(actor), quotationNo: provided };
     if (excludeId) dupFilter._id = { $ne: new Types.ObjectId(excludeId) };
     const dup = await Quotation.findOne(dupFilter).select('_id');
     if (dup) throw ApiError.conflict(`报价单编号已存在：${provided}`);
     return provided;
   }
-  return generateQuotationNo();
+  return generateQuotationNo(actor);
 }
 
 /* ------------------------------------------------------------------ */
@@ -224,10 +224,7 @@ export async function listQuotations(query: ListQuotationsQuery, actor?: AuthUse
     defaultSortBy: 'createdAt',
   });
 
-  const filter = buildQuotationFilter(query);
-  if (!query.customerId) {
-    Object.assign(filter, await customerRefScope(actor));
-  }
+  const filter = { $and: [buildQuotationFilter(query), await customerRefScope(actor)] } as FilterQuery<IQuotation>;
   const sortSpec: Record<string, 1 | -1> = {};
   sortSpec[sortBy] = sortOrder;
   sortSpec._id = -1;
@@ -247,11 +244,11 @@ export async function listQuotations(query: ListQuotationsQuery, actor?: AuthUse
 }
 
 /** 某客户的报价单（按创建时间倒序），供客户详情页展示 */
-export async function listCustomerQuotations(customerId: string, limit = 200): Promise<QuotationDto[]> {
+export async function listCustomerQuotations(customerId: string, limit = 200, actor?: AuthUser): Promise<QuotationDto[]> {
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
   }
-  const docs = await Quotation.find({ customerId: new Types.ObjectId(customerId) })
+  const docs = await Quotation.find({ customerId: new Types.ObjectId(customerId), ...projectScope(actor) })
     .sort({ createdAt: -1 })
     .limit(limit);
   return docs.map(toDto);
@@ -260,20 +257,21 @@ export async function listCustomerQuotations(customerId: string, limit = 200): P
 /** 顶层查看单份报价单详情（业务员仅限自己名下客户） */
 export async function getQuotation(id: string, actor?: AuthUser): Promise<QuotationDto> {
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('报价单 ID 格式不正确');
-  const doc = await Quotation.findById(id).populate('customerId', 'name company email status ownerId');
+  const doc = await Quotation.findOne({ _id: id, ...projectScope(actor) }).populate('customerId', 'name company email status ownerId projectId');
   if (!doc) throw ApiError.notFound(`报价单不存在或已被删除（id=${id}）`);
   const customer = doc.customerId as unknown as { ownerId?: unknown } | null;
-  assertCustomerAccess(actor, customer?.ownerId);
+  assertCustomerAccess(actor, customer?.ownerId, doc.projectId);
   return toDto(doc);
 }
 
 /** 嵌套查看：某客户下的单份报价单（客户归属校验在控制器 getCustomerByIdOrThrow 完成） */
-export async function getCustomerQuotation(customerId: string, quotationId: string): Promise<QuotationDto> {
+export async function getCustomerQuotation(customerId: string, quotationId: string, actor?: AuthUser): Promise<QuotationDto> {
   if (!Types.ObjectId.isValid(customerId)) throw ApiError.badRequest('客户 ID 格式不正确');
   if (!Types.ObjectId.isValid(quotationId)) throw ApiError.badRequest('报价单 ID 格式不正确');
   const doc = await Quotation.findOne({
     _id: new Types.ObjectId(quotationId),
     customerId: new Types.ObjectId(customerId),
+    ...projectScope(actor),
   });
   if (!doc) throw ApiError.notFound('报价单不存在或无权访问');
   return toDto(doc);
@@ -307,18 +305,19 @@ export async function createQuotation(
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
   }
-  const customer = await Customer.findById(customerId).select('_id status ownerId');
+  const customer = await Customer.findOne({ _id: customerId, ...projectScope(actor) }).select('_id status ownerId projectId');
   if (!customer) {
     throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
   }
-  assertCustomerAccess(actor, customer.ownerId);
+  assertCustomerAccess(actor, customer.ownerId, customer.projectId);
 
-  const quotationNo = await resolveQuotationNo(input.quotationNo);
+  const quotationNo = await resolveQuotationNo(input.quotationNo, undefined, actor);
   const { items, totalAmount } = computeQuotationTotals(input.items);
 
   let doc: QuotationDocument;
   try {
     doc = await Quotation.create({
+      projectId: requireProjectId(actor),
       quotationNo,
       customerId: customer._id,
       title: input.title,
@@ -355,9 +354,9 @@ export async function updateQuotation(
   if (!Types.ObjectId.isValid(customerId)) throw ApiError.badRequest('客户 ID 格式不正确');
   if (!Types.ObjectId.isValid(quotationId)) throw ApiError.badRequest('报价单 ID 格式不正确');
 
-  const customer = await Customer.findById(customerId).select('_id ownerId');
+  const customer = await Customer.findOne({ _id: customerId, ...projectScope(actor) }).select('_id ownerId projectId');
   if (!customer) throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
-  assertCustomerAccess(actor, customer.ownerId);
+  assertCustomerAccess(actor, customer.ownerId, customer.projectId);
 
   const patch: Record<string, unknown> = {};
   if (input.title !== undefined) patch.title = input.title;
@@ -376,13 +375,13 @@ export async function updateQuotation(
     patch.totalAmount = totalAmount;
   }
   if (input.quotationNo !== undefined) {
-    patch.quotationNo = await resolveQuotationNo(input.quotationNo, quotationId);
+    patch.quotationNo = await resolveQuotationNo(input.quotationNo, quotationId, actor);
   }
 
   let doc: QuotationDocument | null;
   try {
     doc = await Quotation.findOneAndUpdate(
-      { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId) },
+      { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId), ...projectScope(actor) },
       { $set: patch },
       { new: true, runValidators: true },
     );
@@ -405,12 +404,12 @@ export async function updateQuotationStatus(
   if (!Types.ObjectId.isValid(customerId)) throw ApiError.badRequest('客户 ID 格式不正确');
   if (!Types.ObjectId.isValid(quotationId)) throw ApiError.badRequest('报价单 ID 格式不正确');
 
-  const customer = await Customer.findById(customerId).select('_id status ownerId');
+  const customer = await Customer.findOne({ _id: customerId, ...projectScope(actor) }).select('_id status ownerId projectId');
   if (!customer) throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
-  assertCustomerAccess(actor, customer.ownerId);
+  assertCustomerAccess(actor, customer.ownerId, customer.projectId);
 
   const doc = await Quotation.findOneAndUpdate(
-    { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId) },
+    { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId), ...projectScope(actor) },
     { $set: { status: input.status } },
     { new: true, runValidators: true },
   );
@@ -433,13 +432,14 @@ export async function deleteQuotation(
   if (!Types.ObjectId.isValid(customerId)) throw ApiError.badRequest('客户 ID 格式不正确');
   if (!Types.ObjectId.isValid(quotationId)) throw ApiError.badRequest('报价单 ID 格式不正确');
 
-  const customer = await Customer.findById(customerId).select('_id ownerId');
+  const customer = await Customer.findOne({ _id: customerId, ...projectScope(actor) }).select('_id ownerId projectId');
   if (!customer) throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
-  assertCustomerAccess(actor, customer.ownerId);
+  assertCustomerAccess(actor, customer.ownerId, customer.projectId);
 
   const { deletedCount } = await Quotation.deleteOne({
     _id: new Types.ObjectId(quotationId),
     customerId: new Types.ObjectId(customerId),
+    ...projectScope(actor),
   });
   if (!deletedCount) throw ApiError.notFound('报价单不存在或已被删除');
 

@@ -14,15 +14,23 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import env from '../config/env';
 import { createLogger } from '../config/logger';
 import type { MailChannel } from '../constants';
+import { mailError } from './mail-security';
+import { Project } from '../models';
+import { getProjectMailConfig, smtpConfigured, type ProjectMailConfig } from './project-mail-config.service';
 
 const logger = createLogger('mailer');
 
 export interface SendMailPayload {
+  projectId?: string;
+  from?: string;
   to: string;
   toName?: string;
   subject: string;
   html: string;
   text?: string;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string[];
 }
 
 export interface SendMailResult {
@@ -36,32 +44,46 @@ export interface SendMailResult {
   error?: string;
   /** 发送耗时（ms） */
   durationMs: number;
+  retryable?: boolean;
+  uncertain?: boolean;
 }
 
-let transporter: Transporter | null = null;
+const transporters = new Map<string, Transporter>();
 
 /** 当前生效的通道：配置了 MAIL_TRANSPORT=smtp 且参数齐全才启用真实发送 */
 export function getActiveChannel(): MailChannel {
-  return env.smtpConfigured ? 'smtp' : 'mock';
+  return env.MAIL_TRANSPORT;
+}
+
+export async function getProjectActiveChannel(projectId?: string): Promise<MailChannel> {
+  return (await getProjectMailConfig(projectId)).transport;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** 懒加载 SMTP transporter，避免 mock 模式下无谓地建立连接 */
-function getTransporter(): Transporter | null {
-  if (!env.smtpConfigured) return null;
-  if (transporter) return transporter;
+function getTransporter(config: ProjectMailConfig): Transporter | null {
+  if (!smtpConfigured(config)) return null;
+  const cached = transporters.get(config.profileKey);
+  if (cached) return cached;
 
-  transporter = nodemailer.createTransport({
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
-    auth: { user: env.SMTP_USER as string, pass: env.SMTP_PASS as string },
+  const transporter = nodemailer.createTransport({
+    host: config.smtp.host,
+    port: config.smtp.port,
+    secure: config.smtp.secure,
+    requireTLS: config.smtp.requireTLS,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 45000,
+    disableFileAccess: true,
+    disableUrlAccess: true,
+    auth: { user: config.smtp.user as string, pass: config.smtp.pass as string },
     pool: true,
     maxConnections: 3,
     maxMessages: 100,
   });
-  logger.info(`SMTP transporter 已初始化: ${env.SMTP_HOST}:${env.SMTP_PORT}`);
+  transporters.set(config.profileKey, transporter);
+  logger.info(`项目邮箱 ${config.profileKey} 的 SMTP transporter 已初始化: ${config.smtp.host}:${config.smtp.port}`);
   return transporter;
 }
 
@@ -80,14 +102,14 @@ async function sendViaMock(payload: SendMailPayload): Promise<SendMailResult> {
   return {
     accepted: true,
     channel: 'mock',
-    messageId: generateMessageId('mock'),
+    messageId: payload.messageId ?? generateMessageId('mock'),
     durationMs: Date.now() - started,
   };
 }
 
-async function sendViaSmtp(payload: SendMailPayload): Promise<SendMailResult> {
+async function sendViaSmtp(payload: SendMailPayload, config: ProjectMailConfig): Promise<SendMailResult> {
   const started = Date.now();
-  const transport = getTransporter();
+  const transport = getTransporter(config);
   if (!transport) {
     return {
       accepted: false,
@@ -99,27 +121,35 @@ async function sendViaSmtp(payload: SendMailPayload): Promise<SendMailResult> {
 
   try {
     const info = await transport.sendMail({
-      from: env.MAIL_FROM,
-      to: payload.toName ? `"${payload.toName}" <${payload.to}>` : payload.to,
+      from: payload.from || config.mailFrom,
+      to: payload.toName ? { name: payload.toName, address: payload.to } : payload.to,
       subject: payload.subject,
       html: payload.html,
       text: payload.text || undefined,
+      messageId: payload.messageId,
+      inReplyTo: payload.inReplyTo,
+      references: payload.references,
     });
 
     logger.info(`[smtp] 开发信发送成功 -> ${payload.to} | messageId=${info.messageId}`);
     return {
-      accepted: true,
+      accepted: (info.accepted?.length ?? 0) > 0,
       channel: 'smtp',
       messageId: info.messageId,
       durationMs: Date.now() - started,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = mailError(error, 'SMTP');
+    const detail = error as { code?: string; command?: string; responseCode?: number };
+    const rejected = Boolean(detail.responseCode && detail.responseCode >= 400);
+    const beforeData = ['CONN', 'AUTH', 'MAIL FROM', 'RCPT TO'].includes(detail.command ?? '') || ['EDNS', 'ECONNREFUSED', 'ENOTFOUND', 'EAUTH'].includes(detail.code ?? '');
     logger.error(`[smtp] 开发信发送失败 -> ${payload.to}`, message);
     return {
       accepted: false,
       channel: 'smtp',
       error: message,
+      retryable: rejected ? detail.responseCode! < 500 : beforeData && detail.code !== 'EAUTH',
+      uncertain: !rejected && !beforeData,
       durationMs: Date.now() - started,
     };
   }
@@ -127,26 +157,38 @@ async function sendViaSmtp(payload: SendMailPayload): Promise<SendMailResult> {
 
 /** 统一发送入口 */
 export async function sendMail(payload: SendMailPayload): Promise<SendMailResult> {
+  const config = await getProjectMailConfig(payload.projectId);
   if (!payload.to) {
-    return { accepted: false, channel: getActiveChannel(), error: '收件人邮箱为空', durationMs: 0 };
+    return { accepted: false, channel: config.transport, error: '收件人邮箱为空', durationMs: 0 };
   }
-  return getActiveChannel() === 'smtp' ? sendViaSmtp(payload) : sendViaMock(payload);
+  return config.transport === 'smtp' ? sendViaSmtp(payload, config) : sendViaMock(payload);
 }
 
 /** 启动时自检 SMTP 连通性（失败只告警，不阻断服务启动） */
 export async function verifyMailer(): Promise<void> {
-  const channel = getActiveChannel();
-  if (channel === 'mock') {
-    logger.warn('邮件通道为 MOCK 模式：开发信只入库、不真实发送。配置 SMTP_* 后重启即可切换为真实发送。');
-    return;
-  }
-  try {
-    await getTransporter()?.verify();
-    logger.info('SMTP 连接自检通过');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.warn(`SMTP 连接自检失败（服务仍会启动，发送时将返回失败状态）: ${message}`);
+  const projects = await Project.find({ status: 'active' }).select('_id name');
+  for (const project of projects) {
+    const config = await getProjectMailConfig(String(project._id));
+    if (config.transport === 'mock') {
+      logger.warn(`${project.name} 邮件通道为 MOCK 模式：只入库、不真实发送`);
+      continue;
+    }
+    if (!smtpConfigured(config)) {
+      logger.warn(`${project.name} SMTP 配置不完整，发送任务会明确失败`);
+      continue;
+    }
+    try {
+      await getTransporter(config)?.verify();
+      logger.info(`${project.name} SMTP 连接自检通过`);
+    } catch (error) {
+      logger.warn(`${project.name} SMTP 连接自检失败（服务仍会启动）: ${mailError(error, 'SMTP')}`);
+    }
   }
 }
 
 export default sendMail;
+
+export function closeMailer(): void {
+  transporters.forEach((transporter) => transporter.close());
+  transporters.clear();
+}

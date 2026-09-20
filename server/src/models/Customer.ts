@@ -16,6 +16,8 @@ import {
 } from '../constants';
 
 export interface ICustomer {
+  /** 所属项目空间 */
+  projectId: Types.ObjectId;
   /** 姓名 / 联系人（必填） */
   name: string;
   /** 公司名称 */
@@ -76,6 +78,8 @@ export interface ICustomer {
   tags: string[];
   /** 已发送开发信数量（反范式计数，随开发信增删同步维护） */
   letterCount: number;
+  /** Idempotent queue side effects; internal, excluded from customer DTOs. */
+  mailEffectIds?: Types.ObjectId[];
   /** 最近一次发送开发信的时间 */
   lastContactAt?: Date;
   /** 负责人（引用 User）；单用户环境下可留空 */
@@ -98,6 +102,7 @@ export type CustomerModel = Model<ICustomer, {}, ICustomerMethods>;
 
 const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
   {
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     name: {
       type: String,
       required: [true, '客户姓名为必填项'],
@@ -168,6 +173,7 @@ const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
       },
     },
     letterCount: { type: Number, default: 0, min: 0 },
+    mailEffectIds: { type: [Schema.Types.ObjectId], select: false, default: undefined },
     lastContactAt: { type: Date },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     nextFollowUpAt: { type: Date, index: true },
@@ -181,6 +187,7 @@ const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
       versionKey: false,
       transform: (_doc, ret: Record<string, unknown>) => {
         delete ret._id;
+        delete ret.mailEffectIds;
         return ret;
       },
     },
@@ -188,14 +195,14 @@ const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
 );
 
 // 组合索引：状态 + 更新时间倒序（列表页最常见的查询）
-CustomerSchema.index({ status: 1, updatedAt: -1 });
+CustomerSchema.index({ projectId: 1, status: 1, updatedAt: -1 });
 // 全文索引：姓名 / 公司 / 邮箱 / 行业，供后端 $text 搜索兜底
 CustomerSchema.index({ name: 'text', company: 'text', email: 'text', industry: 'text' });
 // 邮箱唯一性：仅在填写了邮箱时生效（sparse + partial），
 // 同时承担 email 字段的单列索引职责
 CustomerSchema.index(
-  { email: 1 },
-  { unique: true, partialFilterExpression: { email: { $type: 'string', $ne: '' } } },
+  { projectId: 1, email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string', $gt: '' } } },
 );
 
 CustomerSchema.methods.isDeveloped = function isDeveloped(this: CustomerDocument): boolean {

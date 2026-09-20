@@ -16,6 +16,7 @@ import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoos
 import { CUSTOMER_EVENT_TYPE, type CustomerEventType, type CustomerStatus } from '../constants';
 
 export interface ICustomerEvent {
+  projectId: Types.ObjectId;
   /** 所属客户 */
   customerId: Types.ObjectId;
   /** 事件类型：status_changed 状态变化 / followup_scheduled 下一次跟进时间变化 */
@@ -39,6 +40,7 @@ export type CustomerEventModel = Model<ICustomerEvent>;
 
 const CustomerEventSchema = new Schema<ICustomerEvent>(
   {
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     customerId: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
@@ -75,7 +77,7 @@ const CustomerEventSchema = new Schema<ICustomerEvent>(
 );
 
 // 客户时间线按时间倒序拉取
-CustomerEventSchema.index({ customerId: 1, at: -1 });
+CustomerEventSchema.index({ projectId: 1, customerId: 1, at: -1 });
 
 export const CustomerEvent = model<ICustomerEvent, CustomerEventModel>('CustomerEvent', CustomerEventSchema);
 

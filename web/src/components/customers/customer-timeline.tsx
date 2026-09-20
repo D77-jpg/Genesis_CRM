@@ -12,6 +12,8 @@ import {
   CalendarClock,
   Flag,
   Mail,
+  Eye,
+  Link2,
   NotebookPen,
   ReceiptText,
   RefreshCw,
@@ -38,6 +40,9 @@ export interface CustomerTimelineProps {
 
 /** 每种事件的图标 + 主色，做「明显但简洁」的区分 */
 const EVENT_VISUAL: Record<TimelineEventType, { icon: React.ReactNode; dotClass: string }> = {
+  mail_received: { icon: <Mail className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-primary text-primary-foreground' },
+  mail_opened: { icon: <Eye className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-blue-500 text-white' },
+  mail_clicked: { icon: <Link2 className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-cyan-600 text-white' },
   created: { icon: <UserPlus className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-slate-400 text-white' },
   letter: { icon: <Mail className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-blue-500 text-white' },
   followup: { icon: <NotebookPen className="h-3.5 w-3.5" aria-hidden />, dotClass: 'bg-emerald-500 text-white' },
@@ -59,6 +64,17 @@ function scheduledText(value?: string | Date | null): { text: string; className:
 /** 单个事件的正文描述 */
 function EventBody({ event }: { event: TimelineEvent }): React.JSX.Element | null {
   switch (event.type) {
+    case 'mail_received': return <a className="text-sm text-primary underline" href={'/mail?id=' + event.mail?.id}>{event.mail?.subject} · {event.mail?.from}</a>;
+    case 'mail_opened':
+    case 'mail_clicked': {
+      const interaction = event.interaction;
+      if (!interaction) return null;
+      return <div className="mt-1 space-y-1 text-sm">
+        <a className="font-medium text-primary underline underline-offset-2" href={`/mail?id=${interaction.letterId}&direction=outbound`}>{interaction.subject || '（无主题）'}</a>
+        <p className="text-xs text-muted-foreground">累计 {interaction.count} 次{interaction.lastAt ? ` · 最近 ${formatDateTime(interaction.lastAt)}` : ''}</p>
+        {interaction.url ? <p className="max-w-xl truncate text-xs text-muted-foreground" title={interaction.url}>{interaction.url}</p> : null}
+      </div>;
+    }
     case 'letter': {
       const letter = event.letter;
       if (!letter) return null;

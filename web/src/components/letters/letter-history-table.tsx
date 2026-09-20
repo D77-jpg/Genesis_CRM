@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/popover';
 import { LetterStatusBadge } from '@/components/common/status-badge';
+import { MailInteractionSummary } from '@/components/letters/mail-interaction-summary';
 import { DataPagination } from '@/components/common/data-pagination';
 import { EmptyState, ErrorState } from '@/components/common/empty-state';
 import { copyToClipboard, formatDateTime, formatRelative, htmlToPlainText } from '@/lib/format';
@@ -146,6 +147,7 @@ export function LetterHistoryTable({
                     {htmlToPlainText(letter.content).replace(/\n+/g, ' ').slice(0, 80) || '（无正文）'}
                   </span>
                 </button>
+                {['sent', 'opened'].includes(letter.status) ? <div className="mt-1.5"><MailInteractionSummary sentAt={letter.sentAt} tracking={letter.tracking} /></div> : null}
               </TableCell>
 
               <TableCell className="hidden sm:table-cell">

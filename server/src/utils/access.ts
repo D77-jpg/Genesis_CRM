@@ -20,6 +20,21 @@ export function isAdmin(user?: AuthUser | null): boolean {
   return user?.role === 'admin';
 }
 
+/** 当前业务请求的项目范围。没有项目上下文时返回永不命中的条件，默认拒绝。 */
+export function projectScope(user?: AuthUser | null): Record<string, unknown> {
+  if (!user?.projectId || !Types.ObjectId.isValid(user.projectId)) {
+    return { projectId: new Types.ObjectId() };
+  }
+  return { projectId: new Types.ObjectId(user.projectId) };
+}
+
+export function requireProjectId(user?: AuthUser | null): Types.ObjectId {
+  if (!user?.projectId || !Types.ObjectId.isValid(user.projectId)) {
+    throw ApiError.notFound('项目不存在或无权访问');
+  }
+  return new Types.ObjectId(user.projectId);
+}
+
 /** 从 populate 前后两种形态里安全取出负责人 id 字符串 */
 function ownerIdToString(ownerId: unknown): string {
   if (!ownerId) return '';
@@ -35,16 +50,20 @@ function ownerIdToString(ownerId: unknown): string {
  * 管理员返回空对象（不限制）；业务员返回 { ownerId: 自己 }，天然排除未分配与他人客户。
  */
 export function customerScope(user?: AuthUser | null): Record<string, unknown> {
-  if (!user || isAdmin(user)) return {};
-  return { ownerId: new Types.ObjectId(user.id) };
+  const scope = projectScope(user);
+  if (!user || isAdmin(user)) return scope;
+  return { ...scope, ownerId: new Types.ObjectId(user.id) };
 }
 
 /**
  * 校验对单个客户的访问权：业务员访问非自己名下客户一律抛 404。
  * 用 404 而非 403，避免通过状态码差异探测他人客户是否存在。
  */
-export function assertCustomerAccess(user: AuthUser | undefined | null, ownerId: unknown): void {
-  if (!user || isAdmin(user)) return;
+export function assertCustomerAccess(user: AuthUser | undefined | null, ownerId: unknown, projectId?: unknown): void {
+  if (!user?.projectId || (projectId && String(projectId) !== user.projectId)) {
+    throw ApiError.notFound('客户不存在或无权访问');
+  }
+  if (isAdmin(user)) return;
   if (ownerIdToString(ownerId) !== user.id) {
     throw ApiError.notFound('客户不存在或无权访问');
   }
@@ -55,8 +74,9 @@ export function assertCustomerAccess(user: AuthUser | undefined | null, ownerId:
  * 返回 null 表示不限制（管理员）。
  */
 export async function visibleCustomerIds(user?: AuthUser | null): Promise<Types.ObjectId[] | null> {
-  if (!user || isAdmin(user)) return null;
-  const docs = await Customer.find({ ownerId: new Types.ObjectId(user.id) }).select('_id').lean();
+  if (!user?.projectId) return [];
+  if (isAdmin(user)) return null;
+  const docs = await Customer.find({ ...projectScope(user), ownerId: new Types.ObjectId(user.id) }).select('_id').lean();
   return (docs as unknown as { _id: Types.ObjectId }[]).map((d) => d._id);
 }
 
@@ -65,8 +85,9 @@ export async function visibleCustomerIds(user?: AuthUser | null): Promise<Types.
  * 管理员不限制；业务员限定 customerId ∈ 自己名下客户，无客户时返回永不命中的条件。
  */
 export async function customerRefScope(user?: AuthUser | null): Promise<Record<string, unknown>> {
+  const project = projectScope(user);
   const ids = await visibleCustomerIds(user);
-  if (ids === null) return {};
-  if (ids.length === 0) return { customerId: new Types.ObjectId() };
-  return { customerId: { $in: ids } };
+  if (ids === null) return project;
+  if (ids.length === 0) return { ...project, customerId: new Types.ObjectId() };
+  return { ...project, customerId: { $in: ids } };
 }

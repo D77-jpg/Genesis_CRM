@@ -11,6 +11,15 @@ export interface AuthUser {
   username: string;
   displayName: string;
   role: UserRole;
+  /** requireProject 解析后的当前项目；业务接口必须存在。 */
+  projectId?: string;
+}
+
+export interface ActiveProject {
+  id: string;
+  slug: string;
+  code: string;
+  name: string;
 }
 
 /** JWT 载荷 */
@@ -28,6 +37,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      project?: ActiveProject;
     }
   }
 }

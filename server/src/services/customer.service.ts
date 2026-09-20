@@ -1,3 +1,4 @@
+import { prepareMailDeletion, purgeCustomerMail } from './mail-cleanup.service';
 /**
  * 客户业务逻辑
  * ------------------------------------------------------------------
@@ -9,7 +10,7 @@ import { CUSTOMER_STATUS, type CustomerStatus, type CustomerSource } from '../co
 import { ApiError } from '../utils/ApiError';
 import { buildPaginated, parsePagination, sortableFields, type Paginated } from '../utils/pagination';
 import { escapeRegExp } from '../utils/text';
-import { assertCustomerAccess, customerScope, isAdmin } from '../utils/access';
+import { assertCustomerAccess, customerScope, isAdmin, projectScope, requireProjectId } from '../utils/access';
 import { createLogger } from '../config/logger';
 import { importRowSchema } from '../validators/customer.validator';
 import { recordCustomerChanges } from './timeline.service';
@@ -180,12 +181,12 @@ export async function getCustomerByIdOrThrow(id: string, actor?: AuthUser): Prom
   if (!Types.ObjectId.isValid(id)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
   }
-  const customer = await Customer.findById(id);
+  const customer = await Customer.findOne({ _id: id, ...projectScope(actor) });
   if (!customer) {
     throw ApiError.notFound(`客户不存在或已被删除（id=${id}）`);
   }
   // 业务员访问非自己名下客户 → 404（不泄露存在性）
-  assertCustomerAccess(actor, customer.ownerId);
+  assertCustomerAccess(actor, customer.ownerId, customer.projectId);
   return customer as CustomerDocument;
 }
 
@@ -193,13 +194,13 @@ export async function getCustomer(id: string, actor?: AuthUser): Promise<Custome
   if (!Types.ObjectId.isValid(id)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
   }
-  const raw = await Customer.findById(id).populate('ownerId', 'displayName username').lean();
+  const raw = await Customer.findOne({ _id: id, ...projectScope(actor) }).populate('ownerId', 'displayName username').lean();
   if (!raw) {
     throw ApiError.notFound(`客户不存在或已被删除（id=${id}）`);
   }
   const record = raw as unknown as Record<string, unknown>;
   // populate 后 ownerId 为对象，assertCustomerAccess 内部已兼容两种形态
-  assertCustomerAccess(actor, record.ownerId);
+  assertCustomerAccess(actor, record.ownerId, record.projectId);
   return toCustomerDto(record);
 }
 
@@ -213,6 +214,7 @@ export async function createCustomer(
 ): Promise<CustomerDto> {
   const payload: Record<string, unknown> = {
     ...input,
+    projectId: requireProjectId(actor),
     source: 'manual' as CustomerSource,
     createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
   };
@@ -236,17 +238,17 @@ export async function updateCustomer(
   }
 
   // 先取改动前的快照，用于对比出「状态变化 / 下一次跟进时间变化」并写入活动时间线
-  const before = await Customer.findById(id).select('status nextFollowUpAt ownerId').lean();
+  const before = await Customer.findOne({ _id: id, ...projectScope(actor) }).select('status nextFollowUpAt ownerId projectId').lean();
   if (!before) throw ApiError.notFound('客户不存在或已被删除');
   // 业务员只能改自己名下客户
-  assertCustomerAccess(actor, (before as { ownerId?: unknown }).ownerId);
+  assertCustomerAccess(actor, (before as { ownerId?: unknown }).ownerId, (before as { projectId?: unknown }).projectId);
 
   // 过滤掉 undefined，避免 $set 把字段清空；null 保留（用于清除负责人 / 跟进时间）
   const patch = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined));
   // 严格分配制：业务员不能转移客户归属（负责人仅管理员可调整）
   if (actor && !isAdmin(actor)) delete patch.ownerId;
 
-  const customer = await Customer.findByIdAndUpdate(id, { $set: patch }, { new: true, runValidators: true });
+  const customer = await Customer.findOneAndUpdate({ _id: id, ...projectScope(actor) }, { $set: patch }, { new: true, runValidators: true });
   if (!customer) throw ApiError.notFound('客户不存在或已被删除');
 
   // 记录活动事件（best-effort，内部已 try/catch，不会阻断更新）
@@ -255,6 +257,7 @@ export async function updateCustomer(
     { status: before.status, nextFollowUpAt: before.nextFollowUpAt },
     { status: customer.status, nextFollowUpAt: customer.nextFollowUpAt },
     actor?.id,
+    actor?.projectId,
   );
 
   // 重新读取以带出负责人摘要
@@ -264,16 +267,19 @@ export async function updateCustomer(
 /** 删除客户，同时级联清理其开发信 / 跟进记录 / 活动事件 / 报价单 */
 export async function deleteCustomer(id: string, actor?: AuthUser): Promise<{ id: string; deletedLetters: number }> {
   const customer = await getCustomerByIdOrThrow(id, actor);
+  const childScope = { projectId: customer.projectId, customerId: customer._id };
   // 先级联清理附件（DB 记录 + 磁盘文件），再删其余从属资源与客户本身
+  await prepareMailDeletion([customer._id], customer.projectId);
+  await purgeCustomerMail([customer._id], customer.projectId);
   await purgeCustomerAttachments(customer._id);
   const [letterResult] = await Promise.all([
-    DevelopmentLetter.deleteMany({ customerId: customer._id }),
-    FollowUp.deleteMany({ customerId: customer._id }),
-    CustomerEvent.deleteMany({ customerId: customer._id }),
+    DevelopmentLetter.deleteMany(childScope),
+    FollowUp.deleteMany(childScope),
+    CustomerEvent.deleteMany(childScope),
     // 报价单追加在末尾，letterResult 仍为 index 0
-    Quotation.deleteMany({ customerId: customer._id }),
+    Quotation.deleteMany(childScope),
   ]);
-  await Customer.deleteOne({ _id: customer._id });
+  await Customer.deleteOne({ _id: customer._id, projectId: customer.projectId });
   logger.info(`删除客户: ${customer.name}，级联删除 ${letterResult.deletedCount ?? 0} 封开发信及其跟进记录 / 活动事件 / 报价单 / 附件`);
   return { id, deletedLetters: letterResult.deletedCount ?? 0 };
 }
@@ -306,18 +312,22 @@ export async function bulkDelete(ids: string[], actor?: AuthUser): Promise<{ del
     return { deleted: 0, deletedLetters: 0 };
   }
   // 先级联清理这些客户的附件（DB 记录 + 磁盘文件）
+  const projectId = requireProjectId(actor);
+  await prepareMailDeletion(deletableIds, projectId);
+  await purgeCustomerMail(deletableIds, projectId);
   await purgeCustomerAttachments(deletableIds);
+  const childScope = { ...projectScope(actor), customerId: { $in: deletableIds } };
   // 级联删除开发信 / 跟进记录 / 活动事件 / 客户本身 / 报价单。
   // Promise.all 结果按数组顺序对应，用「空位」跳过跟进(index 1)与事件(index 2)的结果，
   // 只取开发信(index 0)与客户(index 3)的删除数——避免解构错位（曾把跟进删除数
   // 误当成客户删除数返回，导致删除无跟进记录的客户时 bulk/delete 误报 NOT_FOUND）。
   // 报价单删除追加在末尾(index 4)，不参与解构，故不影响上述位置。
   const [letterResult, , , customerResult] = await Promise.all([
-    DevelopmentLetter.deleteMany({ customerId: { $in: deletableIds } }),
-    FollowUp.deleteMany({ customerId: { $in: deletableIds } }),
-    CustomerEvent.deleteMany({ customerId: { $in: deletableIds } }),
-    Customer.deleteMany({ _id: { $in: deletableIds } }),
-    Quotation.deleteMany({ customerId: { $in: deletableIds } }),
+    DevelopmentLetter.deleteMany(childScope),
+    FollowUp.deleteMany(childScope),
+    CustomerEvent.deleteMany(childScope),
+    Customer.deleteMany({ _id: { $in: deletableIds }, ...projectScope(actor) }),
+    Quotation.deleteMany(childScope),
   ]);
   return {
     deleted: customerResult.deletedCount ?? 0,
@@ -531,6 +541,7 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
 
     toInsert.push({
       ...buildPatchFromRow(row, defaultStatus),
+      projectId: requireProjectId(actor),
       source: 'excel' as CustomerSource,
       createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
       // 严格分配制：业务员导入的客户直接归自己名下
@@ -587,7 +598,7 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
   if (toUpdate.length > 0) {
     const ops = toUpdate.map((item) => ({
       updateOne: {
-        filter: { _id: item.id },
+        filter: { _id: item.id, ...projectScope(actor) },
         update: { $set: item.patch },
       },
     }));
@@ -768,8 +779,9 @@ export interface OwnerOption {
   username: string;
 }
 
-export async function listOwners(): Promise<OwnerOption[]> {
-  const users = await User.find({}).sort({ createdAt: 1 }).lean();
+export async function listOwners(actor?: AuthUser): Promise<OwnerOption[]> {
+  const projectId = requireProjectId(actor);
+  const users = await User.find({ status: { $ne: 'disabled' }, $or: [{ role: 'admin' }, { projectIds: projectId }] }).sort({ createdAt: 1 }).lean();
   return (users as unknown as { _id: Types.ObjectId; username: string; displayName?: string }[]).map((u) => ({
     id: u._id.toString(),
     name: u.displayName?.trim() || u.username,

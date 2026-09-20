@@ -98,7 +98,7 @@ export async function getSalesWorkspace(actor?: AuthUser): Promise<SalesWorkspac
     Customer.countDocuments({ ...scope, nextFollowUpAt: { $lt: startOfToday } }),
     Customer.countDocuments({ ...scope, nextFollowUpAt: { $gte: startOfTomorrow } }),
     Customer.countDocuments({ ...scope, createdAt: { $gte: startOfToday } }),
-    DevelopmentLetter.countDocuments({ ...refScope, status: 'sent', sentAt: { $gte: startOfToday } }),
+    DevelopmentLetter.countDocuments({ ...refScope, status: { $in: ['sent', 'opened'] }, sentAt: { $gte: startOfToday } }),
     // 逾期：越早的越紧急，升序排在最前
     Customer.find({ ...scope, nextFollowUpAt: { $lt: startOfToday } })
       .select(BRIEF_FIELDS)

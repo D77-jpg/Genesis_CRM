@@ -11,7 +11,7 @@ import {
   Activity,
   Building2,
   CircleDashed,
-  FileSpreadsheet,
+  FileEdit,
   MailCheck,
   MailWarning,
   Percent,
@@ -27,7 +27,6 @@ import { SalesFunnel } from '@/components/dashboard/sales-funnel';
 import { SalesWorkspaceSection } from '@/components/dashboard/sales-workspace';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, StatCard } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useOverviewStats } from '@/hooks/use-queries';
@@ -37,6 +36,7 @@ import { formatRelative, initials } from '@/lib/format';
 import { customerDetailPath, MAIL_CHANNEL_LABEL, ROUTES } from '@/constants';
 import { cn } from '@/lib/utils';
 import type { DevelopmentLetter } from '@/types';
+import { useProjectStore } from '@/store/project.store';
 
 /** 横向条形：行业 / 等级分布 */
 function BarList({
@@ -166,7 +166,7 @@ export function DashboardPage(): React.JSX.Element {
   usePageTitle('仪表盘');
   const { data, loading, error, run } = useOverviewStats();
   const mailChannel = useMetaStore((state) => state.mailChannel);
-  const companyName = useMetaStore((state) => state.meta?.company?.name);
+  const companyName = useProjectStore((state) => state.activeProject?.companyName);
 
   // 趋势图只取最近 14 天，柱子太多会挤在一起
   const trend = React.useMemo(() => (data?.letter.byDay ?? []).slice(-14), [data]);
@@ -215,8 +215,7 @@ export function DashboardPage(): React.JSX.Element {
       {mailChannel === 'mock' ? (
         <Alert variant="warning">
           <AlertDescription>
-            当前邮件通道为「{MAIL_CHANNEL_LABEL.mock}」：开发信会完整落库并计入统计，但不会真实投递。配置{' '}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-2xs">server/.env</code> 里的 SMTP_* 变量即可切换为真实发送。
+            当前邮件通道为「{MAIL_CHANNEL_LABEL.mock}」：开发信会完整记录并计入统计，但不会真实投递给收件人。
           </AlertDescription>
         </Alert>
       ) : null}
@@ -289,10 +288,11 @@ export function DashboardPage(): React.JSX.Element {
               hint={letter && letter.failed > 0 ? '到开发信记录页查看失败原因' : '一切正常'}
             />
             <StatCard
-              label="当前通道"
-              value={<span className="text-base">{MAIL_CHANNEL_LABEL[letter?.channel ?? mailChannel] ?? '—'}</span>}
-              icon={<FileSpreadsheet className="h-4 w-4" aria-hidden />}
-              hint="由后端环境变量决定"
+              label="草稿开发信"
+              value={letter?.draft.toLocaleString('zh-CN') ?? '—'}
+              icon={<FileEdit className="h-4 w-4" aria-hidden />}
+              tone="pending"
+              hint={letter && letter.draft > 0 ? '到开发信记录页继续编辑发送' : '还没有草稿'}
             />
           </div>
 
@@ -375,11 +375,10 @@ export function DashboardPage(): React.JSX.Element {
                   <p className="mt-1 text-xs text-muted-foreground">
                     先在「客户管理」里导入或新建客户，然后选择客户点击「发送开发信」
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <div className="mt-3 flex justify-center">
                     <Button type="button" size="sm" asChild>
                       <Link to={ROUTES.customers}>去客户管理</Link>
                     </Button>
-                    <Badge variant="muted">演示账号 admin / password</Badge>
                   </div>
                 </div>
               )}

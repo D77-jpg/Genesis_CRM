@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$base = 'http://127.0.0.1:5000/api'
+$base = if ($env:SMOKE_BASE_URL) { $env:SMOKE_BASE_URL.TrimEnd('/') } else { 'http://127.0.0.1:5000/api' }
 $ProgressPreference = 'SilentlyContinue'
 # 后端返回 UTF-8 中文，PowerShell 5.1 默认按系统代码页解码会乱码
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -685,6 +685,9 @@ $fxFuUpd = Invoke-RestMethod -Method Put -Uri "$base/customers/$fxId/follow-ups/
 Show 'PUT /customers/:id/follow-ups/:followUpId (edit)' @{ id = $fxFuUpd.data.id; method = $fxFuUpd.data.method; result = $fxFuUpd.data.result; nextFollowUpAt = $fxFuUpd.data.nextFollowUpAt }
 $afterFxEdit = Invoke-RestMethod "$base/customers/$fxId" -Headers $h
 Write-Host "--- GET /customers/:id (after follow-up edit sync) ---" -ForegroundColor Cyan
+$fxFollowUpSyncOk = ([DateTimeOffset]$afterFxEdit.data.nextFollowUpAt).ToUnixTimeMilliseconds() -eq ([DateTimeOffset]$fxFuNext2).ToUnixTimeMilliseconds()
+if (-not $fxFollowUpSyncOk) { throw 'Edited follow-up date was not synchronized to customer' }
+Write-Host "followUpSyncOk(expect True)=$fxFollowUpSyncOk"
 Write-Host "nextFollowUpAt(expect the +9d value)=$($afterFxEdit.data.nextFollowUpAt)"
 
 # 80. list follow-ups: the edit must be reflected (newest first)
@@ -846,7 +849,9 @@ $q1Id = $q1.data.id
 $q1No = $q1.data.quotationNo
 $q1NoOk = $q1No -match '^QT-\d{8}-\d{3}$'
 Write-Host "--- POST /customers/:id/quotations (auto number, 2 items, validity set) ---" -ForegroundColor Cyan
-Write-Host "no=$q1No numberPatternOk(expect True)=$q1NoOk line0(expect 25)=$($q1.data.items[0].amount) line1(expect 300)=$($q1.data.items[1].amount) total(expect 325)=$($q1.data.totalAmount) status(expect draft)=$($q1.data.status) validityOk(expect True)=$($q1.data.validityDate -like '2026-12-31*')"
+$q1ValidityOk = ([DateTimeOffset]$q1.data.validityDate).UtcDateTime.ToString('yyyy-MM-dd') -eq '2026-12-31'
+if (-not $q1ValidityOk) { throw 'Quotation validity date did not round-trip' }
+Write-Host "no=$q1No numberPatternOk(expect True)=$q1NoOk line0(expect 25)=$($q1.data.items[0].amount) line1(expect 300)=$($q1.data.items[1].amount) total(expect 325)=$($q1.data.totalAmount) status(expect draft)=$($q1.data.status) validityOk(expect True)=$q1ValidityOk"
 
 # 96. read the single quotation back via the nested detail route
 $q1Get = Invoke-RestMethod "$base/customers/$qcId/quotations/$q1Id" -Headers $h

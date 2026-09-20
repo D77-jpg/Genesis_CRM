@@ -18,10 +18,12 @@
  *          「今日新增」演示由未回填 createdIso 的新客户承担（其 createdAt = 脚本运行时刻）。
  */
 import env from '../config/env';
+import { Types } from 'mongoose';
 import { connectDatabase, disconnectDatabase } from '../config/db';
 import { createLogger } from '../config/logger';
 import { bootstrapAdminUser } from '../services/auth.service';
 import { migrateLegacyCustomerStatus } from '../services/customer.service';
+import { bootstrapProjects } from '../services/project.service';
 import {
   Customer,
   CustomerAttachment,
@@ -30,6 +32,7 @@ import {
   FollowUp,
   LetterTemplate,
   Quotation,
+  Project,
   User,
   type ICustomer,
 } from '../models';
@@ -487,19 +490,20 @@ function buildValues(customer: Partial<ICustomer>) {
   };
 }
 
-async function reset(): Promise<void> {
+async function reset(projectId: Types.ObjectId): Promise<void> {
   logger.warn('--reset：正在清空业务集合（customers / developmentletters / followups / customerevents / customerattachments / quotations / lettertemplates）...');
-  await DevelopmentLetter.deleteMany({});
-  await FollowUp.deleteMany({});
-  await CustomerEvent.deleteMany({});
-  await CustomerAttachment.deleteMany({});
-  await Quotation.deleteMany({});
-  await LetterTemplate.deleteMany({});
-  await Customer.deleteMany({});
+  const scope = { projectId };
+  await DevelopmentLetter.deleteMany(scope);
+  await FollowUp.deleteMany(scope);
+  await CustomerEvent.deleteMany(scope);
+  await CustomerAttachment.deleteMany(scope);
+  await Quotation.deleteMany(scope);
+  await LetterTemplate.deleteMany(scope);
+  await Customer.deleteMany(scope);
   logger.info('已清空');
 }
 
-async function seed(): Promise<void> {
+async function seed(projectId: Types.ObjectId): Promise<void> {
   const admin = await User.findOne({ username: env.ADMIN_USERNAME.trim().toLowerCase() });
   const adminId = admin?._id;
 
@@ -511,12 +515,13 @@ async function seed(): Promise<void> {
 
   for (const item of SEED_CUSTOMERS) {
     const { letters, followUps, events, createdIso, assignOwner, followUpOffsetDays, ...fields } = item;
-    const existing = await Customer.findOne({ email: fields.email });
+    const existing = await Customer.findOne({ projectId, email: fields.email });
     const isNew = !existing;
 
     const customerId = existing
       ? existing._id
       : (await Customer.create({
+          projectId,
           ...fields,
           source: 'seed',
           letterCount: 0,
@@ -536,6 +541,7 @@ async function seed(): Promise<void> {
     // 开发信：以「主题 + 客户」判重，保证脚本可重复执行
     for (const letter of letters) {
       const exists = await DevelopmentLetter.findOne({
+        projectId,
         customerId,
         subject: renderTemplate(letter.subject, buildValues(item)),
       });
@@ -547,6 +553,7 @@ async function seed(): Promise<void> {
       const text = htmlToPlainText(renderTemplate(letter.html, values, { escape: false }));
 
       await DevelopmentLetter.create({
+        projectId,
         customerId,
         recipientName: item.name,
         recipientEmail: item.email,
@@ -565,9 +572,10 @@ async function seed(): Promise<void> {
     // 跟进记录：以 (customerId, followUpAt) 判重
     for (const fu of followUps ?? []) {
       const followUpAt = new Date(fu.followUpAt);
-      const exists = await FollowUp.findOne({ customerId, followUpAt });
+      const exists = await FollowUp.findOne({ projectId, customerId, followUpAt });
       if (exists) continue;
       await FollowUp.create({
+        projectId,
         customerId,
         method: fu.method,
         result: fu.result,
@@ -582,9 +590,10 @@ async function seed(): Promise<void> {
     // 变更事件：以 (customerId, type, at) 判重（用于 Timeline 的状态 / 跟进时间变化）
     for (const ev of events ?? []) {
       const at = new Date(ev.at);
-      const exists = await CustomerEvent.findOne({ customerId, type: ev.type, at });
+      const exists = await CustomerEvent.findOne({ projectId, customerId, type: ev.type, at });
       if (exists) continue;
       await CustomerEvent.create({
+        projectId,
         customerId,
         type: ev.type,
         at,
@@ -601,16 +610,16 @@ async function seed(): Promise<void> {
     // 回写计数器与最近联系时间（取「已发送开发信」与「跟进记录」的较新者）；
     // 新客户额外回填 createdAt，让 Timeline 的「客户创建」排在最早。
     const [count, lastLetter, lastFollowUp] = await Promise.all([
-      DevelopmentLetter.countDocuments({ customerId, status: 'sent' }),
-      DevelopmentLetter.findOne({ customerId, status: 'sent' }).sort({ sentAt: -1 }).select('sentAt'),
-      FollowUp.findOne({ customerId }).sort({ followUpAt: -1 }).select('followUpAt'),
+      DevelopmentLetter.countDocuments({ projectId, customerId, status: { $in: ['sent', 'opened'] } }),
+      DevelopmentLetter.findOne({ projectId, customerId, status: { $in: ['sent', 'opened'] } }).sort({ sentAt: -1 }).select('sentAt'),
+      FollowUp.findOne({ projectId, customerId }).sort({ followUpAt: -1 }).select('followUpAt'),
     ]);
     const patch: Record<string, unknown> = { letterCount: count };
     const contactTimes = [lastLetter?.sentAt, lastFollowUp?.followUpAt]
       .filter((d): d is Date => Boolean(d))
       .map((d) => new Date(d).getTime());
     if (contactTimes.length > 0) patch.lastContactAt = new Date(Math.max(...contactTimes));
-    await Customer.updateOne({ _id: customerId }, { $set: patch });
+    await Customer.updateOne({ _id: customerId, projectId }, { $set: patch });
     // createdAt 受 Mongoose timestamps 保护，普通 update 改不动；用底层 driver 直接回填，
     // 让 Timeline 的「客户创建」排在其开发信 / 跟进之前，也让「今日新增」只统计真正今天导入的客户。
     if (isNew && createdIso) {
@@ -621,9 +630,9 @@ async function seed(): Promise<void> {
   // 开发信模板：以 name 判重
   let createdTemplates = 0;
   for (const tpl of SEED_TEMPLATES) {
-    const exists = await LetterTemplate.findOne({ name: tpl.name });
+    const exists = await LetterTemplate.findOne({ projectId, name: tpl.name });
     if (exists) continue;
-    await LetterTemplate.create({ ...tpl, ...(adminId ? { createdBy: adminId } : {}) });
+    await LetterTemplate.create({ projectId, ...tpl, ...(adminId ? { createdBy: adminId } : {}) });
     createdTemplates += 1;
   }
 
@@ -631,7 +640,7 @@ async function seed(): Promise<void> {
   logger.info(
     `Seed 完成：新增客户 ${createdCustomers}（跳过 ${skippedCustomers}），开发信 ${createdLetters}，跟进记录 ${createdFollowUps}，活动事件 ${createdEvents}，模板 ${createdTemplates}`,
   );
-  logger.info(`登录账号：${env.ADMIN_USERNAME} / ${env.ADMIN_PASSWORD}`);
+  logger.info('登录账号使用环境变量配置（不输出凭据）');
   logger.info('----------------------------------------------');
 }
 
@@ -639,10 +648,14 @@ async function main(): Promise<void> {
   const shouldReset = process.argv.includes('--reset');
   try {
     await connectDatabase();
+    await bootstrapProjects();
     await bootstrapAdminUser();
+    await bootstrapProjects();
     await migrateLegacyCustomerStatus();
-    if (shouldReset) await reset();
-    await seed();
+    const genesis = await Project.findOne({ slug: 'genesis-bags' }).select('_id');
+    if (!genesis) throw new Error('Genesis Bags 项目初始化失败');
+    if (shouldReset) await reset(genesis._id);
+    await seed(genesis._id);
   } catch (error) {
     logger.error('Seed 失败', error instanceof Error ? error.stack : String(error));
     process.exitCode = 1;

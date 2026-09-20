@@ -11,6 +11,7 @@ import { PageLoader } from '@/components/common/page-loader';
 import { useAuthStore } from '@/store/auth.store';
 import { useMetaStore } from '@/store/meta.store';
 import { ROUTES } from '@/constants';
+import { useProjectStore } from '@/store/project.store';
 
 /** 路由切换后回到顶部（详情页的 #letters 锚点由页面自己处理） */
 export function ScrollToTop(): null {
@@ -29,6 +30,11 @@ export function ProtectedRoute(): React.JSX.Element {
   const initialized = useAuthStore((state) => state.initialized);
   const bootstrap = useAuthStore((state) => state.bootstrap);
   const fetchMeta = useMetaStore((state) => state.fetchMeta);
+  const projectInitialized = useProjectStore((state) => state.initialized);
+  const projectLoading = useProjectStore((state) => state.loading);
+  const activeProject = useProjectStore((state) => state.activeProject);
+  const projectError = useProjectStore((state) => state.error);
+  const initializeProjects = useProjectStore((state) => state.initialize);
   const location = useLocation();
 
   // 首屏：有 token 就校验，没有就直接进入未登录态
@@ -36,10 +42,14 @@ export function ProtectedRoute(): React.JSX.Element {
     if (!initialized) void bootstrap();
   }, [initialized, bootstrap]);
 
-  // 登录成功后拉一次元数据（占位符定义、我方公司信息、邮件通道）
   React.useEffect(() => {
-    if (status === 'authenticated') void fetchMeta();
-  }, [status, fetchMeta]);
+    if (status === 'authenticated') void initializeProjects();
+  }, [status, initializeProjects]);
+
+  // 当前项目解析完成后再拉元数据，防止业务请求使用旧项目上下文。
+  React.useEffect(() => {
+    if (status === 'authenticated' && projectInitialized && activeProject) void fetchMeta({ force: true });
+  }, [status, projectInitialized, activeProject, fetchMeta]);
 
   if (!initialized) {
     return <PageLoader label="正在恢复登录状态…" />;
@@ -50,6 +60,9 @@ export function ProtectedRoute(): React.JSX.Element {
     const from = `${location.pathname}${location.search}${location.hash}`;
     return <Navigate to={ROUTES.login} replace state={{ from }} />;
   }
+
+  if (projectLoading || !projectInitialized) return <PageLoader label="正在加载项目工作空间…" />;
+  if (!activeProject) return <PageLoader label={projectError || '当前账号没有可访问的项目'} />;
 
   return <AppShell />;
 }

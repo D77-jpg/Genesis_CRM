@@ -29,7 +29,7 @@ import {
 } from '../constants';
 import { getActiveChannel } from '../services/mailer.service';
 import { healthHandler, overviewHandler } from '../controllers/stats.controller';
-import { requireAuth } from '../middleware/auth.middleware';
+import { requireAuth, requireProject } from '../middleware/auth.middleware';
 
 import authRoutes from './auth.routes';
 import customerRoutes from './customer.routes';
@@ -37,6 +37,9 @@ import letterRoutes from './letter.routes';
 import quotationRoutes from './quotation.routes';
 import templateRoutes from './template.routes';
 import userRoutes from './user.routes';
+import mailRoutes from './mail.routes';
+import trackingRoutes from './tracking.routes';
+import projectRoutes from './project.routes';
 
 const router = Router();
 
@@ -73,11 +76,15 @@ router.get(
 
 /* ---------- 需要登录的接口 ---------- */
 router.use('/auth', authRoutes);
-router.use('/customers', customerRoutes);
-router.use('/letters', letterRoutes);
-router.use('/quotations', quotationRoutes);
-router.use('/templates', templateRoutes);
+// 真实邮件客户端不携带 CRM JWT；该路由只接受随机 token，且不返回 CRM 数据。
+router.use('/tracking', trackingRoutes);
+router.use('/projects', projectRoutes);
+router.use('/customers', requireAuth, requireProject, customerRoutes);
+router.use('/letters', requireAuth, requireProject, letterRoutes);
+router.use('/mail', requireAuth, requireProject, mailRoutes);
+router.use('/quotations', requireAuth, requireProject, quotationRoutes);
+router.use('/templates', requireAuth, requireProject, templateRoutes);
 router.use('/users', userRoutes);
-router.get('/stats/overview', requireAuth, overviewHandler);
+router.get('/stats/overview', requireAuth, requireProject, overviewHandler);
 
 export default router;

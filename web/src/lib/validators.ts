@@ -300,6 +300,9 @@ export const userFormSchema = z.object({
   password: z.string().min(6, '密码至少 6 位').max(72, '密码最多 72 位'),
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional().or(z.literal('')),
   role: z.enum(USER_ROLE_VALUES, { errorMap: () => ({ message: '请选择角色' }) }),
+  projectIds: z.array(z.string()).default([]),
+}).superRefine((value, ctx) => {
+  if (value.role === 'user' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '业务员至少需要加入一个项目' });
 });
 export type UserFormValues = z.infer<typeof userFormSchema>;
 
@@ -308,6 +311,7 @@ export const defaultUserFormValues: UserFormValues = {
   password: '',
   displayName: '',
   role: 'user',
+  projectIds: [],
 };
 
 /**
@@ -319,6 +323,7 @@ export const editUserFormSchema = z.object({
   password: z.string(),
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional().or(z.literal('')),
   role: z.enum(USER_ROLE_VALUES, { errorMap: () => ({ message: '请选择角色' }) }),
+  projectIds: z.array(z.string()).default([]),
 });
 
 /** 重置密码表单：仅一个新密码字段 */

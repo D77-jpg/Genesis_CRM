@@ -9,6 +9,8 @@ import { LetterTemplate, type LetterTemplateDocument } from '../models';
 import type { TemplateCategory } from '../constants';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
+import { projectScope, requireProjectId } from '../utils/access';
+import type { AuthUser } from '../types/express';
 import type {
   CreateTemplateInput,
   ListTemplatesQuery,
@@ -43,8 +45,8 @@ function toTemplateDto(doc: LetterTemplateDocument): TemplateDto {
 }
 
 /** 列表：可按分类过滤，关键词模糊匹配名称 / 主题；按更新时间倒序 */
-export async function listTemplates(query: ListTemplatesQuery = {}): Promise<TemplateDto[]> {
-  const filter: Record<string, unknown> = {};
+export async function listTemplates(query: ListTemplatesQuery = {}, actor?: AuthUser): Promise<TemplateDto[]> {
+  const filter: Record<string, unknown> = { ...projectScope(actor) };
   if (query.category) filter.category = query.category;
   if (query.keyword) {
     const keyword = query.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -56,11 +58,11 @@ export async function listTemplates(query: ListTemplatesQuery = {}): Promise<Tem
 }
 
 /** 单个模板详情 */
-export async function getTemplate(id: string): Promise<TemplateDto> {
+export async function getTemplate(id: string, actor?: AuthUser): Promise<TemplateDto> {
   if (!Types.ObjectId.isValid(id)) {
     throw ApiError.badRequest('模板 ID 格式不正确');
   }
-  const doc = await LetterTemplate.findById(id);
+  const doc = await LetterTemplate.findOne({ _id: id, ...projectScope(actor) });
   if (!doc) {
     throw ApiError.notFound(`模板不存在或已被删除（id=${id}）`);
   }
@@ -68,25 +70,26 @@ export async function getTemplate(id: string): Promise<TemplateDto> {
 }
 
 /** 新建模板 */
-export async function createTemplate(input: CreateTemplateInput, userId?: string): Promise<TemplateDto> {
+export async function createTemplate(input: CreateTemplateInput, actor?: AuthUser): Promise<TemplateDto> {
   const doc = await LetterTemplate.create({
+    projectId: requireProjectId(actor),
     name: input.name,
     subject: input.subject,
     content: input.content,
     category: input.category,
-    createdBy: userId ? new Types.ObjectId(userId) : undefined,
+    createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
   });
   logger.info(`新建开发信模板: id=${doc.id} name=${input.name} category=${input.category}`);
   return toTemplateDto(doc);
 }
 
 /** 编辑模板（只改传入的字段） */
-export async function updateTemplate(id: string, input: UpdateTemplateInput): Promise<TemplateDto> {
+export async function updateTemplate(id: string, input: UpdateTemplateInput, actor?: AuthUser): Promise<TemplateDto> {
   if (!Types.ObjectId.isValid(id)) {
     throw ApiError.badRequest('模板 ID 格式不正确');
   }
   const patch = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
-  const doc = await LetterTemplate.findByIdAndUpdate(id, { $set: patch }, { new: true, runValidators: true });
+  const doc = await LetterTemplate.findOneAndUpdate({ _id: id, ...projectScope(actor) }, { $set: patch }, { new: true, runValidators: true });
   if (!doc) {
     throw ApiError.notFound(`模板不存在或已被删除（id=${id}）`);
   }
@@ -95,11 +98,11 @@ export async function updateTemplate(id: string, input: UpdateTemplateInput): Pr
 }
 
 /** 删除模板 */
-export async function deleteTemplate(id: string): Promise<{ id: string; deleted: number }> {
+export async function deleteTemplate(id: string, actor?: AuthUser): Promise<{ id: string; deleted: number }> {
   if (!Types.ObjectId.isValid(id)) {
     throw ApiError.badRequest('模板 ID 格式不正确');
   }
-  const { deletedCount } = await LetterTemplate.deleteOne({ _id: new Types.ObjectId(id) });
+  const { deletedCount } = await LetterTemplate.deleteOne({ _id: new Types.ObjectId(id), ...projectScope(actor) });
   if (!deletedCount) {
     throw ApiError.notFound('模板不存在或已被删除');
   }
@@ -111,17 +114,18 @@ export async function deleteTemplate(id: string): Promise<{ id: string; deleted:
  * 复制模板：以现有模板为底稿新建一份，名称追加「副本」。
  * 复制出的模板与源模板彼此独立，改一个不影响另一个。
  */
-export async function duplicateTemplate(id: string, userId?: string): Promise<TemplateDto> {
-  const source = await LetterTemplate.findById(id);
+export async function duplicateTemplate(id: string, actor?: AuthUser): Promise<TemplateDto> {
+  const source = await LetterTemplate.findOne({ _id: id, ...projectScope(actor) });
   if (!source) {
     throw ApiError.notFound(`模板不存在或已被删除（id=${id}）`);
   }
   const copy = await LetterTemplate.create({
+    projectId: requireProjectId(actor),
     name: `${source.name} 副本`.slice(0, 120),
     subject: source.subject,
     content: source.content,
     category: source.category,
-    createdBy: userId ? new Types.ObjectId(userId) : source.createdBy,
+    createdBy: actor ? new Types.ObjectId(actor.id) : source.createdBy,
   });
   logger.info(`复制开发信模板: from=${id} to=${copy.id}`);
   return toTemplateDto(copy);

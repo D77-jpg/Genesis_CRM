@@ -27,33 +27,33 @@ import type {
 
 export const listTemplatesHandler = asyncHandler(async (req: Request, res: Response) => {
   const query = req.query as unknown as ListTemplatesQuery;
-  const data = await listTemplates(query);
+  const data = await listTemplates(query, req.user);
   sendSuccess(res, data);
 });
 
 export const getTemplateHandler = asyncHandler(async (req: Request, res: Response) => {
-  const data = await getTemplate(req.params.id);
+  const data = await getTemplate(req.params.id, req.user);
   sendSuccess(res, data);
 });
 
 export const createTemplateHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as CreateTemplateInput;
-  const data = await createTemplate(input, req.user?.id);
+  const data = await createTemplate(input, req.user);
   sendSuccess(res, data, 201);
 });
 
 export const updateTemplateHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as UpdateTemplateInput;
-  const data = await updateTemplate(req.params.id, input);
+  const data = await updateTemplate(req.params.id, input, req.user);
   sendSuccess(res, data);
 });
 
 export const duplicateTemplateHandler = asyncHandler(async (req: Request, res: Response) => {
-  const data = await duplicateTemplate(req.params.id, req.user?.id);
+  const data = await duplicateTemplate(req.params.id, req.user);
   sendSuccess(res, data, 201);
 });
 
 export const deleteTemplateHandler = asyncHandler(async (req: Request, res: Response) => {
-  const data = await deleteTemplate(req.params.id);
+  const data = await deleteTemplate(req.params.id, req.user);
   sendSuccess(res, data);
 });

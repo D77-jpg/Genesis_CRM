@@ -37,7 +37,7 @@ function setDownloadHeaders(res: Response, originalName: string, mimeType: strin
 /** GET /api/customers/:id/attachments */
 export const listAttachmentsHandler = asyncHandler(async (req: Request, res: Response) => {
   await getCustomerByIdOrThrow(req.params.id, req.user);
-  const data = await listAttachments(req.params.id);
+  const data = await listAttachments(req.params.id, req.user?.projectId);
   sendSuccess(res, data);
 });
 
@@ -45,14 +45,14 @@ export const listAttachmentsHandler = asyncHandler(async (req: Request, res: Res
 export const uploadAttachmentHandler = asyncHandler(async (req: Request, res: Response) => {
   await getCustomerByIdOrThrow(req.params.id, req.user);
   const input = req.body as CreateAttachmentInput;
-  const data = await createAttachment(req.params.id, input, req.user?.id);
+  const data = await createAttachment(req.params.id, input, req.user?.id, req.user?.projectId);
   sendSuccess(res, data, 201);
 });
 
 /** GET /api/customers/:id/attachments/:attachmentId/download —— 下载附件 */
 export const downloadAttachmentHandler = asyncHandler(async (req: Request, res: Response) => {
   await getCustomerByIdOrThrow(req.params.id, req.user);
-  const file = await getAttachmentForDownload(req.params.id, req.params.attachmentId);
+  const file = await getAttachmentForDownload(req.params.id, req.params.attachmentId, req.user?.projectId);
   setDownloadHeaders(res, file.originalName, file.mimeType);
   res.setHeader('Content-Length', String(file.buffer.length));
   res.send(file.buffer);
@@ -61,6 +61,6 @@ export const downloadAttachmentHandler = asyncHandler(async (req: Request, res: 
 /** DELETE /api/customers/:id/attachments/:attachmentId */
 export const deleteAttachmentHandler = asyncHandler(async (req: Request, res: Response) => {
   await getCustomerByIdOrThrow(req.params.id, req.user);
-  const data = await deleteAttachment(req.params.id, req.params.attachmentId);
+  const data = await deleteAttachment(req.params.id, req.params.attachmentId, req.user?.projectId);
   sendSuccess(res, data);
 });

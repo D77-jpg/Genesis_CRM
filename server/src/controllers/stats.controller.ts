@@ -57,7 +57,7 @@ export const healthHandler = asyncHandler(async (_req: Request, res: Response) =
     env: env.NODE_ENV,
     database: dbStatusMap[dbState] ?? 'unknown',
     mailChannel: getActiveChannel(),
-    version: '2.0.0',
+    version: '2.6.0',
   };
 
   // 数据库不可用时返回 503，方便容器探针识别
