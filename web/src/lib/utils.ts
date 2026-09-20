@@ -42,6 +42,20 @@ export function removeStorage(key: string): void {
   }
 }
 
+/** 清理某一类动态 localStorage 键（例如退出登录时移除未同步的个人草稿）。 */
+export function removeStorageByPrefix(prefix: string): void {
+  try {
+    const keys: string[] = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith(prefix)) keys.push(key);
+    }
+    keys.forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    /* noop */
+  }
+}
+
 /**
  * 生成浏览器侧请求标识。
  *

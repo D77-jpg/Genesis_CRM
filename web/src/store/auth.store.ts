@@ -6,8 +6,8 @@
  */
 import { create } from 'zustand';
 import { apiGet, apiPost, getToken, setUnauthorizedHandler, toErrorMessage, ApiClientError } from '@/lib/api';
-import { ROUTES, STORAGE_KEYS } from '@/constants';
-import { removeStorage, writeStorage } from '@/lib/utils';
+import { ROUTES, SCRATCHPAD_PENDING_PREFIX, STORAGE_KEYS } from '@/constants';
+import { removeStorage, removeStorageByPrefix, writeStorage } from '@/lib/utils';
 import type { AuthUser, LoginResult } from '@/types';
 import { useProjectStore } from './project.store';
 
@@ -64,6 +64,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   logout({ silent = false } = {}) {
     removeStorage(STORAGE_KEYS.token);
+    removeStorageByPrefix(SCRATCHPAD_PENDING_PREFIX);
     useProjectStore.getState().reset();
     set({
       user: null,
@@ -94,6 +95,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         // 401/403：token 确实失效 → 静默清理，交给路由守卫跳登录页
         if (status === 401 || status === 403) {
           removeStorage(STORAGE_KEYS.token);
+          removeStorageByPrefix(SCRATCHPAD_PENDING_PREFIX);
           set({ user: null, token: null, status: 'unauthenticated', initialized: true });
           return;
         }
@@ -108,6 +110,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   handleSessionExpired() {
     if (get().status === 'unauthenticated') return;
     removeStorage(STORAGE_KEYS.token);
+    removeStorageByPrefix(SCRATCHPAD_PENDING_PREFIX);
     useProjectStore.getState().reset();
     set({ user: null, token: null, status: 'unauthenticated', initialized: true });
     // 强制整页跳登录页：避免残留的内存态 UI 在掉登录后仍能被继续操作

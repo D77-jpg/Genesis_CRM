@@ -13,6 +13,7 @@ import { useUiStore } from '@/store/ui.store';
 import { useIsMobile } from '@/hooks/use-ui';
 import { useEscapeKey } from '@/hooks/use-ui';
 import { cn } from '@/lib/utils';
+import { ScratchpadPanel } from '@/components/scratchpad/scratchpad-panel';
 
 const SIDEBAR_WIDTH = '15rem';
 const SIDEBAR_WIDTH_COLLAPSED = '4.5rem';
@@ -80,6 +81,7 @@ export function AppShell(): React.JSX.Element {
           </div>
         </main>
       </div>
+      <ScratchpadPanel />
     </div>
   );
 }

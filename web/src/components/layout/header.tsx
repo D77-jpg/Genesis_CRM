@@ -3,7 +3,7 @@
  */
 import * as React from 'react';
 import { useLocation } from 'react-router-dom';
-import { FlaskConical, Menu } from 'lucide-react';
+import { FlaskConical, Menu, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/popover';
 import { ThemeToggle } from './theme-toggle';
@@ -12,6 +12,7 @@ import { NAV_ITEMS } from './sidebar';
 import { MAIL_CHANNEL_LABEL, ROUTES } from '@/constants';
 import { useMetaStore } from '@/store/meta.store';
 import { ProjectSwitcher } from './project-switcher';
+import { useUiStore } from '@/store/ui.store';
 
 /** 根据当前路径推断标题（客户详情页会带上「客户详情」） */
 function resolveTitle(pathname: string): string {
@@ -26,6 +27,8 @@ export function Header({ onOpenMobileNav }: { onOpenMobileNav: () => void }): Re
   const { pathname } = useLocation();
   const channel = useMetaStore((state) => state.mailChannel);
   const title = React.useMemo(() => resolveTitle(pathname), [pathname]);
+  const scratchpadOpen = useUiStore((state) => state.scratchpadOpen);
+  const toggleScratchpad = useUiStore((state) => state.toggleScratchpad);
 
   return (
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-5">
@@ -58,6 +61,23 @@ export function Header({ onOpenMobileNav }: { onOpenMobileNav: () => void }): Re
           </TooltipContent>
         </Tooltip>
       )}
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant={scratchpadOpen ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-10 w-10 sm:h-9 sm:w-9"
+            onClick={toggleScratchpad}
+            aria-label={scratchpadOpen ? '关闭个人随手记' : '打开个人随手记'}
+            aria-expanded={scratchpadOpen}
+          >
+            <StickyNote className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">个人随手记 · Ctrl/Cmd + Shift + M</TooltipContent>
+      </Tooltip>
 
       <ThemeToggle />
       <UserMenu />

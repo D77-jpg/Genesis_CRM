@@ -35,6 +35,12 @@ export const STORAGE_KEYS = {
   customerInfoExpanded: 'cdlm-customer-info-expanded',
 } as const;
 
+/** 仅保存尚未同步到服务端的随手记；后缀为 userId:projectId。 */
+export const SCRATCHPAD_PENDING_PREFIX = 'cdlm-scratchpad-pending:';
+
+/** 与后端模型限制保持一致。 */
+export const SCRATCHPAD_MAX_LENGTH = 50_000;
+
 /* ---------------------------- 路由 ---------------------------- */
 
 export const ROUTES = {

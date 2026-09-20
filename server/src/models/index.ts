@@ -29,3 +29,6 @@ export type { IUser, IUserMethods, UserDocument, UserModel, UserRole, UserStatus
 
 export { Project } from './Project';
 export type { IProject, ProjectDocument, ProjectModel, ProjectStatus } from './Project';
+
+export { Scratchpad } from './Scratchpad';
+export type { IScratchpad, ScratchpadDocument, ScratchpadModel } from './Scratchpad';

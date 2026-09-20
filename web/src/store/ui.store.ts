@@ -30,17 +30,22 @@ interface UiState {
   sidebarCollapsed: boolean;
   /** 移动端抽屉是否展开 */
   mobileNavOpen: boolean;
+  /** 全局个人随手记面板是否展开 */
+  scratchpadOpen: boolean;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
   setMobileNavOpen: (open: boolean) => void;
+  setScratchpadOpen: (open: boolean) => void;
+  toggleScratchpad: () => void;
 }
 
 export const useUiStore = create<UiState>()((set, get) => ({
   theme: detectInitialTheme(),
   sidebarCollapsed: readStorage<boolean>(STORAGE_KEYS.sidebar, false),
   mobileNavOpen: false,
+  scratchpadOpen: false,
 
   setTheme: (theme) => {
     applyTheme(theme);
@@ -62,6 +67,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
   },
 
   setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
+  setScratchpadOpen: (open) => set({ scratchpadOpen: open }),
+  toggleScratchpad: () => set((state) => ({ scratchpadOpen: !state.scratchpadOpen })),
 }));
 
 // 模块加载时同步一次，保证 store 与 DOM 状态一致

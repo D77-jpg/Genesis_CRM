@@ -40,6 +40,7 @@ import userRoutes from './user.routes';
 import mailRoutes from './mail.routes';
 import trackingRoutes from './tracking.routes';
 import projectRoutes from './project.routes';
+import scratchpadRoutes from './scratchpad.routes';
 
 const router = Router();
 
@@ -84,6 +85,7 @@ router.use('/letters', requireAuth, requireProject, letterRoutes);
 router.use('/mail', requireAuth, requireProject, mailRoutes);
 router.use('/quotations', requireAuth, requireProject, quotationRoutes);
 router.use('/templates', requireAuth, requireProject, templateRoutes);
+router.use('/scratchpad', requireAuth, requireProject, scratchpadRoutes);
 router.use('/users', userRoutes);
 router.get('/stats/overview', requireAuth, requireProject, overviewHandler);
 

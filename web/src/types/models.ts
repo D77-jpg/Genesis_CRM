@@ -655,6 +655,19 @@ export interface Project {
   isDefault: boolean;
 }
 
+/* ---------------------------- 个人随手记 ---------------------------- */
+
+export interface Scratchpad {
+  content: string;
+  version: number;
+  updatedAt: string | null;
+}
+
+export interface UpdateScratchpadInput {
+  content: string;
+  expectedVersion: number;
+}
+
 export type CreateProjectInput = Omit<Project, 'id' | 'status' | 'isDefault' | 'mailChannel'>;
 export type UpdateProjectInput = Partial<Omit<CreateProjectInput, 'slug' | 'code'>> & { status?: ProjectStatus };
 

@@ -16,7 +16,7 @@ import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
 import { runMailQueue } from './services/mail-queue.service';
 import { syncInbox } from './services/mail-sync.service';
-import { Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, LetterTemplate, Project, Quotation, User } from './models';
+import { Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, LetterTemplate, Project, Quotation, Scratchpad, User } from './models';
 import { MailMessage, MailSyncState } from './models/MailMessage';
 
 const mailTimers: NodeJS.Timeout[] = [];
@@ -31,7 +31,7 @@ async function bootstrap(): Promise<void> {
     await bootstrapProjects();
     await migrateLegacyCustomerStatus();
     await Promise.all([Project.init(), User.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
-      FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Quotation.init(), LetterTemplate.init()]);
+      FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init()]);
     const app = createApp();
     const server = http.createServer(app);
     // 邮箱连通性检查可能受网络、防火墙或上游超时影响，不能阻塞 CRM 登录与启动。
