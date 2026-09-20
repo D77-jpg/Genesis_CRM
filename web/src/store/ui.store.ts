@@ -32,6 +32,8 @@ interface UiState {
   mobileNavOpen: boolean;
   /** 全局个人随手记面板是否展开 */
   scratchpadOpen: boolean;
+  /** 全局只读 Agent 面板是否展开 */
+  agentOpen: boolean;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -39,6 +41,8 @@ interface UiState {
   setMobileNavOpen: (open: boolean) => void;
   setScratchpadOpen: (open: boolean) => void;
   toggleScratchpad: () => void;
+  setAgentOpen: (open: boolean) => void;
+  toggleAgent: () => void;
 }
 
 export const useUiStore = create<UiState>()((set, get) => ({
@@ -46,6 +50,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   sidebarCollapsed: readStorage<boolean>(STORAGE_KEYS.sidebar, false),
   mobileNavOpen: false,
   scratchpadOpen: false,
+  agentOpen: false,
 
   setTheme: (theme) => {
     applyTheme(theme);
@@ -67,8 +72,10 @@ export const useUiStore = create<UiState>()((set, get) => ({
   },
 
   setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
-  setScratchpadOpen: (open) => set({ scratchpadOpen: open }),
-  toggleScratchpad: () => set((state) => ({ scratchpadOpen: !state.scratchpadOpen })),
+  setScratchpadOpen: (open) => set({ scratchpadOpen: open, ...(open ? { agentOpen: false } : {}) }),
+  toggleScratchpad: () => set((state) => ({ scratchpadOpen: !state.scratchpadOpen, agentOpen: state.scratchpadOpen ? state.agentOpen : false })),
+  setAgentOpen: (open) => set({ agentOpen: open, ...(open ? { scratchpadOpen: false } : {}) }),
+  toggleAgent: () => set((state) => ({ agentOpen: !state.agentOpen, scratchpadOpen: state.agentOpen ? state.scratchpadOpen : false })),
 }));
 
 // 模块加载时同步一次，保证 store 与 DOM 状态一致

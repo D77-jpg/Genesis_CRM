@@ -3,6 +3,62 @@
  */
 import type { PaginationParams } from './api';
 
+/* ---------------------------- Agent V1.0 ---------------------------- */
+
+export type AgentContext =
+  | { type: 'global' }
+  | { type: 'customer'; resourceId: string }
+  | { type: 'mail'; resourceId: string; direction: 'inbound' | 'outbound' };
+
+export interface AgentSession {
+  id: string;
+  title: string;
+  context: AgentContext;
+  status: 'active' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentMessage {
+  id: string;
+  sessionId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  status: 'completed' | 'failed';
+  createdAt: string;
+}
+
+export interface AgentStatus {
+  provider: 'mock' | 'openai';
+  model: string;
+  available: boolean;
+  mode: 'mock' | 'live';
+  readOnly: true;
+  toolCount: number;
+}
+
+export interface AgentUsage {
+  runs: number;
+  completed: number;
+  failed: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  toolCalls: number;
+}
+
+export interface AgentAction {
+  id: string;
+  sessionId: string;
+  toolName: string;
+  riskLevel: 'read' | 'write' | 'high';
+  requiresApproval: boolean;
+  approvalStatus: 'not_required' | 'pending' | 'approved' | 'rejected';
+  executionStatus: 'pending' | 'succeeded' | 'failed' | 'rejected';
+  resultSummary?: string;
+  createdAt: string;
+}
+
 /* ---------------------------- 枚举 ---------------------------- */
 
 /**

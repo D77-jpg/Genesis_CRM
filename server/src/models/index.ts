@@ -32,3 +32,17 @@ export type { IProject, ProjectDocument, ProjectModel, ProjectStatus } from './P
 
 export { Scratchpad } from './Scratchpad';
 export type { IScratchpad, ScratchpadDocument, ScratchpadModel } from './Scratchpad';
+
+export { AgentSession, AgentMessage, AgentRun, AgentAction } from './Agent';
+export type {
+  IAgentSession,
+  IAgentMessage,
+  IAgentRun,
+  IAgentAction,
+  AgentContextType,
+  AgentProviderName,
+  AgentSessionDocument,
+  AgentMessageDocument,
+  AgentRunDocument,
+  AgentActionDocument,
+} from './Agent';
