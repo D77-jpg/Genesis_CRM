@@ -28,6 +28,19 @@ import {
   getScratchpadCustomerPreview,
   updateScratchpadCustomerPreview,
 } from '../services/agent/scratchpad-customer.service';
+import {
+  createCustomerAnalysis,
+  getCustomerAnalysis,
+  saveAnalysisEmailDraft,
+  scheduleAnalysisFollowUp,
+  updateCustomerAnalysis,
+} from '../services/agent/customer-analysis.service';
+import {
+  agentCustomerAnalysisParamsSchema,
+  confirmAgentAnalysisActionSchema,
+  createAgentCustomerAnalysisSchema,
+  updateAgentCustomerAnalysisSchema,
+} from '../validators/agent.validator';
 
 const router = Router();
 const messageLimiter = rateLimit({
@@ -68,6 +81,22 @@ router.post('/scratchpad-customer/previews/:id/confirm', messageLimiter, validat
 }));
 router.post('/scratchpad-customer/previews/:id/cancel', validate({ params: agentCustomerPreviewParamsSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await cancelScratchpadCustomerPreview(req.params.id, req.user!));
+}));
+
+router.post('/customer-analyses', messageLimiter, validate({ body: createAgentCustomerAnalysisSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await createCustomerAnalysis(req.body, req.user!), 201);
+}));
+router.get('/customer-analyses/:id', validate({ params: agentCustomerAnalysisParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await getCustomerAnalysis(req.params.id, req.user!));
+}));
+router.put('/customer-analyses/:id', validate({ params: agentCustomerAnalysisParamsSchema, body: updateAgentCustomerAnalysisSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateCustomerAnalysis(req.params.id, req.body, req.user!));
+}));
+router.post('/customer-analyses/:id/save-email-draft', messageLimiter, validate({ params: agentCustomerAnalysisParamsSchema, body: confirmAgentAnalysisActionSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await saveAnalysisEmailDraft(req.params.id, req.body, req.user!), 201);
+}));
+router.post('/customer-analyses/:id/schedule-followup', messageLimiter, validate({ params: agentCustomerAnalysisParamsSchema, body: confirmAgentAnalysisActionSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await scheduleAnalysisFollowUp(req.params.id, req.body, req.user!), 201);
 }));
 
 export default router;

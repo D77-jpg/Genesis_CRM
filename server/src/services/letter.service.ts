@@ -309,7 +309,7 @@ async function persistAndSend(options: {
 
   // 1) 草稿：直接落库，不发送、不改客户状态
   if (saveAsDraft) {
-    const draft = await DevelopmentLetter.create({
+    const payload = {
       projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
@@ -322,7 +322,30 @@ async function persistAndSend(options: {
       status: 'draft',
       channel: activeChannel,
       sentBy: userId ? new Types.ObjectId(userId) : undefined,
-    });
+      ...(options.requestKey ? { requestKey: options.requestKey } : {}),
+    };
+    let draft;
+    if (options.requestKey) {
+      try {
+        draft = await DevelopmentLetter.findOneAndUpdate(
+          { projectId: customer.projectId, requestKey: options.requestKey },
+          { $setOnInsert: payload },
+          { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true },
+        );
+      } catch (error) {
+        if ((error as { code?: number }).code !== 11000) throw error;
+        draft = await DevelopmentLetter.findOne({ projectId: customer.projectId, requestKey: options.requestKey });
+      }
+      if (!draft) throw ApiError.internal('开发信草稿保存失败');
+      if (String(draft.customerId) !== String(customer._id)
+        || draft.subject !== rendered.subject
+        || draft.contentText !== rendered.text
+        || draft.status !== 'draft') {
+        throw ApiError.conflict('同一请求标识不能用于不同的开发信草稿');
+      }
+    } else {
+      draft = await DevelopmentLetter.create(payload);
+    }
     logger.info(`已保存开发信草稿 -> ${rendered.recipientEmail}`);
     return {
       letter: toLetterDto(draft.toObject({ virtuals: false }) as unknown as Record<string, unknown>),

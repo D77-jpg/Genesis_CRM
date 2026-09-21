@@ -55,8 +55,33 @@ export const confirmAgentCustomerPreviewSchema = z.object({
 }).strict();
 export const agentCustomerPreviewParamsSchema = z.object({ id: objectId }).strict();
 
+export const createAgentCustomerAnalysisSchema = z.object({
+  customerId: objectId,
+  idempotencyKey,
+}).strict();
+export const updateAgentCustomerAnalysisSchema = z.object({
+  expectedVersion: z.number().int().min(1),
+  emailDraft: z.object({
+    subject: z.string().trim().min(1, '邮件主题不能为空').max(300),
+    bodyText: z.string().trim().min(1, '邮件正文不能为空').max(20000),
+  }).strict().optional(),
+  followUpPlan: z.object({
+    method: z.enum(['email', 'whatsapp', 'phone', 'chat', 'other']),
+    content: z.string().trim().min(1, '跟进目的不能为空').max(5000),
+    dueAt: z.coerce.date(),
+  }).strict().optional(),
+}).strict().refine((value) => Boolean(value.emailDraft || value.followUpPlan), { message: '至少需要更新一项内容' });
+export const confirmAgentAnalysisActionSchema = z.object({
+  expectedVersion: z.number().int().min(1),
+  idempotencyKey,
+}).strict();
+export const agentCustomerAnalysisParamsSchema = z.object({ id: objectId }).strict();
+
 export type CreateAgentSessionBody = z.infer<typeof createAgentSessionSchema>;
 export type SendAgentMessageBody = z.infer<typeof sendAgentMessageSchema>;
 export type CreateAgentCustomerPreviewBody = z.infer<typeof createAgentCustomerPreviewSchema>;
 export type UpdateAgentCustomerPreviewBody = z.infer<typeof updateAgentCustomerPreviewSchema>;
 export type ConfirmAgentCustomerPreviewBody = z.infer<typeof confirmAgentCustomerPreviewSchema>;
+export type CreateAgentCustomerAnalysisBody = z.infer<typeof createAgentCustomerAnalysisSchema>;
+export type UpdateAgentCustomerAnalysisBody = z.infer<typeof updateAgentCustomerAnalysisSchema>;
+export type ConfirmAgentAnalysisActionBody = z.infer<typeof confirmAgentAnalysisActionSchema>;

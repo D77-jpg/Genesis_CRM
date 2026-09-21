@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Bot,
+  BarChart3,
   CheckCircle2,
   ChevronDown,
   CircleOff,
@@ -28,6 +29,7 @@ import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
 import type { AgentAction, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
 import { ScratchpadCustomerPreviewView } from './scratchpad-customer-preview';
+import { CustomerAnalysisView } from './customer-analysis';
 
 interface SendResult {
   userMessage: AgentMessage;
@@ -81,6 +83,10 @@ function actionLabel(toolName: string): string {
     extract_scratchpad_customer: '提取随手记客户',
     update_scratchpad_customer_preview: '编辑客户预览',
     create_customer_from_scratchpad: '确认创建客户',
+    analyze_customer_and_draft_email: '分析客户并生成邮件草稿',
+    edit_customer_analysis_draft: '编辑分析草稿',
+    save_agent_email_draft: '确认保存开发信草稿',
+    schedule_agent_followup: '确认安排跟进',
   };
   return labels[toolName] ?? toolName;
 }
@@ -92,6 +98,10 @@ export function AgentPanel(): React.JSX.Element | null {
   const setOpen = useUiStore((state) => state.setAgentOpen);
   const toggleOpen = useUiStore((state) => state.toggleAgent);
   const customerPreviewId = useUiStore((state) => state.agentCustomerPreviewId);
+  const customerAnalysisId = useUiStore((state) => state.agentCustomerAnalysisId);
+  const customerAnalysisCustomerId = useUiStore((state) => state.agentCustomerAnalysisCustomerId);
+  const openCustomerAnalysis = useUiStore((state) => state.openAgentCustomerAnalysis);
+  const clearCustomerAnalysis = useUiStore((state) => state.clearAgentCustomerAnalysis);
   const isMobile = useIsMobile();
   const location = useLocation();
   const context = React.useMemo(() => routeContext(location.pathname, location.search), [location.pathname, location.search]);
@@ -105,6 +115,7 @@ export function AgentPanel(): React.JSX.Element | null {
   const [draft, setDraft] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [sending, setSending] = React.useState(false);
+  const [analyzing, setAnalyzing] = React.useState(false);
   const [error, setError] = React.useState('');
   const [tab, setTab] = React.useState('chat');
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -162,9 +173,14 @@ export function AgentPanel(): React.JSX.Element | null {
   }, [open, activeSessionId]);
 
   React.useEffect(() => {
-    if (customerPreviewId) setTab('customer-preview');
-    else if (tab === 'customer-preview') setTab('chat');
-  }, [customerPreviewId, tab]);
+    if (customerAnalysisId) setTab('customer-analysis');
+    else if (customerPreviewId) setTab('customer-preview');
+    else if (tab === 'customer-preview' || tab === 'customer-analysis') setTab('chat');
+  }, [customerAnalysisId, customerPreviewId, tab]);
+
+  React.useEffect(() => {
+    if (customerAnalysisId && (context.type !== 'customer' || customerAnalysisCustomerId !== context.resourceId)) clearCustomerAnalysis();
+  }, [clearCustomerAnalysis, context, customerAnalysisCustomerId, customerAnalysisId]);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -229,6 +245,22 @@ export function AgentPanel(): React.JSX.Element | null {
     }
   }
 
+  async function startCustomerAnalysis() {
+    if (context.type !== 'customer' || analyzing) return;
+    setAnalyzing(true);
+    setError('');
+    try {
+      const analysis = await apiPost<{ id: string }>('/agent/customer-analyses', {
+        customerId: context.resourceId,
+        idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      });
+      openCustomerAnalysis(analysis.id, context.resourceId);
+      await loadRecords();
+    } catch (reason) {
+      setError(toErrorMessage(reason, '客户分析生成失败，CRM 数据未改动'));
+    } finally { setAnalyzing(false); }
+  }
+
   if (!open || !user || !project) return null;
 
   const activeContext = sessions.find((session) => session.id === activeSessionId)?.context ?? context;
@@ -245,7 +277,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">业务 Agent</h2>
-            <Badge variant="outline" className="text-[10px]">V1.1 · 确认后写入</Badge>
+            <Badge variant="outline" className="text-[10px]">V1.2 · 确认后写入</Badge>
           </div>
           <p className="truncate text-xs text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
         </div>
@@ -259,6 +291,7 @@ export function AgentPanel(): React.JSX.Element | null {
           <TabsList>
             <TabsTrigger value="chat"><Sparkles className="h-3.5 w-3.5" />对话</TabsTrigger>
             {customerPreviewId && <TabsTrigger value="customer-preview"><UserPlus className="h-3.5 w-3.5" />客户预览</TabsTrigger>}
+            {customerAnalysisId && <TabsTrigger value="customer-analysis"><BarChart3 className="h-3.5 w-3.5" />客户分析</TabsTrigger>}
             <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -288,7 +321,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
           <div className="flex items-start gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-            Agent 对话仍为只读；“随手记转客户”只会在你核对预览并明确确认后创建客户，绝不会自动发送邮件。
+            Agent 对话与分析数据读取保持只读；保存开发信草稿或安排跟进都需要你明确确认，Agent 不能直接发送邮件。
           </div>
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
@@ -297,8 +330,9 @@ export function AgentPanel(): React.JSX.Element | null {
               <div className="space-y-5 py-8 text-center">
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></span>
                 <div><p className="font-medium">从当前工作上下文开始</p><p className="mt-1 text-sm text-muted-foreground">Agent 会通过只读工具获取数据，再给出分析建议。</p></div>
+                {context.type === 'customer' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startCustomerAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}<span><span className="block">分析客户并生成英文邮件草稿</span><span className="mt-0.5 block text-xs font-normal opacity-80">汇总档案、时间线、邮件、跟进与报价</span></span></Button>}
                 <div className="space-y-2">
-                  {suggestions(context).map((item) => <Button key={item} type="button" variant="outline" className="h-auto w-full justify-start whitespace-normal py-2 text-left" onClick={() => void sendMessage(item)}>{item}</Button>)}
+                  {suggestions(context).filter((item) => context.type !== 'customer' || item !== '分析当前客户并建议下一步').map((item) => <Button key={item} type="button" variant="outline" className="h-auto w-full justify-start whitespace-normal py-2 text-left" onClick={() => void sendMessage(item)}>{item}</Button>)}
                 </div>
               </div>
             )}
@@ -341,6 +375,7 @@ export function AgentPanel(): React.JSX.Element | null {
         </TabsContent>
 
         {customerPreviewId && <TabsContent value="customer-preview" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><ScratchpadCustomerPreviewView previewId={customerPreviewId} onRecordsChanged={loadRecords} /></TabsContent>}
+        {customerAnalysisId && <TabsContent value="customer-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><CustomerAnalysisView analysisId={customerAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-3 gap-2">

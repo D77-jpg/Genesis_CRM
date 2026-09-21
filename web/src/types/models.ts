@@ -89,6 +89,41 @@ export interface AgentCustomerPreview {
   updatedAt: string;
 }
 
+/* ---------------------------- Agent V1.2 ---------------------------- */
+
+export interface AgentAnalysisSource {
+  sourceId: string;
+  kind: 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation';
+  recordId: string;
+  label: string;
+  occurredAt?: string | Date;
+}
+
+export interface AgentAnalysisClaim {
+  text: string;
+  rationale?: string;
+  sourceIds: string[];
+}
+
+export interface AgentCustomerAnalysis {
+  id: string;
+  customerId: string;
+  sources: AgentAnalysisSource[];
+  facts: AgentAnalysisClaim[];
+  gaps: AgentAnalysisClaim[];
+  recommendations: AgentAnalysisClaim[];
+  emailDraft: { subject: string; bodyText: string };
+  followUpPlan: { method: FollowUpMethod; content: string; dueAt: string | Date };
+  emailStatus: 'editable' | 'saving' | 'saved' | 'failed';
+  followUpStatus: 'editable' | 'scheduling' | 'scheduled' | 'failed';
+  createdLetterId?: string;
+  scheduledAt?: string | Date;
+  version: number;
+  lastError?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
 /* ---------------------------- 枚举 ---------------------------- */
 
 /**

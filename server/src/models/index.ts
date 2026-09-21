@@ -56,3 +56,12 @@ export type {
   AgentCustomerDuplicate,
   AgentCustomerField,
 } from './AgentCustomerPreview';
+
+export { AgentCustomerAnalysis } from './AgentCustomerAnalysis';
+export type {
+  IAgentCustomerAnalysis,
+  AgentCustomerAnalysisDocument,
+  AgentAnalysisSource,
+  AgentAnalysisSourceKind,
+  AgentAnalysisClaim,
+} from './AgentCustomerAnalysis';

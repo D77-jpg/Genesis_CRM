@@ -36,6 +36,9 @@ interface UiState {
   agentOpen: boolean;
   /** 正在查看的“随手记转客户”预览。 */
   agentCustomerPreviewId: string | null;
+  /** 正在查看的“客户分析与邮件草稿”。 */
+  agentCustomerAnalysisId: string | null;
+  agentCustomerAnalysisCustomerId: string | null;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -47,6 +50,8 @@ interface UiState {
   toggleAgent: () => void;
   openAgentCustomerPreview: (id: string) => void;
   clearAgentCustomerPreview: () => void;
+  openAgentCustomerAnalysis: (id: string, customerId: string) => void;
+  clearAgentCustomerAnalysis: () => void;
 }
 
 export const useUiStore = create<UiState>()((set, get) => ({
@@ -56,6 +61,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
   scratchpadOpen: false,
   agentOpen: false,
   agentCustomerPreviewId: null,
+  agentCustomerAnalysisId: null,
+  agentCustomerAnalysisCustomerId: null,
 
   setTheme: (theme) => {
     applyTheme(theme);
@@ -81,8 +88,10 @@ export const useUiStore = create<UiState>()((set, get) => ({
   toggleScratchpad: () => set((state) => ({ scratchpadOpen: !state.scratchpadOpen, agentOpen: state.scratchpadOpen ? state.agentOpen : false })),
   setAgentOpen: (open) => set({ agentOpen: open, ...(open ? { scratchpadOpen: false } : {}) }),
   toggleAgent: () => set((state) => ({ agentOpen: !state.agentOpen, scratchpadOpen: state.agentOpen ? state.scratchpadOpen : false })),
-  openAgentCustomerPreview: (id) => set({ agentOpen: true, scratchpadOpen: false, agentCustomerPreviewId: id }),
+  openAgentCustomerPreview: (id) => set({ agentOpen: true, scratchpadOpen: false, agentCustomerPreviewId: id, agentCustomerAnalysisId: null, agentCustomerAnalysisCustomerId: null }),
   clearAgentCustomerPreview: () => set({ agentCustomerPreviewId: null }),
+  openAgentCustomerAnalysis: (id, customerId) => set({ agentOpen: true, scratchpadOpen: false, agentCustomerAnalysisId: id, agentCustomerAnalysisCustomerId: customerId, agentCustomerPreviewId: null }),
+  clearAgentCustomerAnalysis: () => set({ agentCustomerAnalysisId: null, agentCustomerAnalysisCustomerId: null }),
 }));
 
 // 模块加载时同步一次，保证 store 与 DOM 状态一致

@@ -6,6 +6,8 @@ import type {
   AgentProviderTurn,
   CustomerExtractionRequest,
   CustomerExtractionResult,
+  CustomerAnalysisRequest,
+  CustomerAnalysisResult,
 } from './provider';
 
 function lineValue(content: string, labels: string[]): string {
@@ -117,5 +119,38 @@ export class MockAgentProvider implements AgentProvider {
 
   async extractCustomer(request: CustomerExtractionRequest): Promise<CustomerExtractionResult> {
     return { ...mockExtract(request.content), usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } };
+  }
+
+  async analyzeCustomer(request: CustomerAnalysisRequest): Promise<CustomerAnalysisResult> {
+    const profile = request.input.sourceCatalog.find((source) => source.kind === 'profile');
+    const timeline = request.input.sourceCatalog.filter((source) => source.kind === 'timeline');
+    const mails = request.input.sourceCatalog.filter((source) => source.kind === 'mail');
+    const followups = request.input.sourceCatalog.filter((source) => source.kind === 'followup');
+    const quotations = request.input.sourceCatalog.filter((source) => source.kind === 'quotation');
+    const profileData = (profile?.content ?? {}) as Record<string, unknown>;
+    const facts = [
+      { text: `客户为 ${String(profileData.company || request.input.customerName)}，联系人 ${request.input.customerName}。`, sourceIds: profile ? [profile.sourceId] : [] },
+      ...(profileData.requirementNotes ? [{ text: `已记录需求：${String(profileData.requirementNotes)}`, sourceIds: [profile!.sourceId] }] : []),
+      ...(mails.length ? [{ text: `CRM 中共有 ${mails.length} 封可用于分析的往来邮件。`, sourceIds: mails.slice(0, 3).map((source) => source.sourceId) }] : []),
+      ...(quotations.length ? [{ text: `已存在 ${quotations.length} 份报价记录。`, sourceIds: quotations.slice(0, 3).map((source) => source.sourceId) }] : []),
+    ];
+    const gaps = [
+      ...(!profileData.email ? [{ text: '客户档案缺少邮箱，保存邮件草稿前需要补充。', sourceIds: profile ? [profile.sourceId] : [] }] : []),
+      ...(!profileData.requirementNotes ? [{ text: '当前资料未明确记录采购需求或目标产品。', sourceIds: profile ? [profile.sourceId] : [] }] : []),
+      ...(!quotations.length ? [{ text: '尚未找到报价记录，价格、MOQ 与交期仍需确认。', sourceIds: profile ? [profile.sourceId] : [] }] : []),
+    ];
+    const evidence = [profile?.sourceId, timeline[0]?.sourceId, followups[0]?.sourceId, mails[0]?.sourceId].filter(Boolean) as string[];
+    const dueAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    return {
+      facts,
+      gaps,
+      recommendations: [{ text: '发送一封简短英文邮件，确认当前采购优先级、规格和目标时间。', rationale: '先补齐关键需求，再决定是否准备正式报价。', sourceIds: evidence.length ? evidence : profile ? [profile.sourceId] : [] }],
+      emailDraft: {
+        subject: `Next steps for ${String(profileData.company || request.input.customerName)}`,
+        bodyText: `Dear ${request.input.customerName},\n\nThank you for your interest. To make sure we prepare the most relevant information, could you please confirm your preferred product specifications, estimated quantity, and target timeline?\n\nOnce we have these details, we will review the next steps with you.\n\nBest regards,`,
+      },
+      followUpPlan: { method: 'email', content: '确认客户规格、预计数量和目标采购时间，并根据回复准备下一步资料。', dueAt },
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+    };
   }
 }

@@ -9,6 +9,7 @@ let mongoose: typeof import('mongoose');
 let service: typeof import('../src/services/agent/agent.service');
 let tools: typeof import('../src/services/agent/tool-registry');
 let workflow: typeof import('../src/services/agent/scratchpad-customer.service');
+let analysisWorkflow: typeof import('../src/services/agent/customer-analysis.service');
 
 const projectA = new Types.ObjectId();
 const projectB = new Types.ObjectId();
@@ -27,6 +28,7 @@ before(async () => {
   await Promise.all([
     models.AgentSession.init(), models.AgentMessage.init(), models.AgentRun.init(), models.AgentAction.init(),
     models.AgentCustomerPreview.init(), models.Scratchpad.init(), models.Customer.init(), models.User.init(),
+    models.AgentCustomerAnalysis.init(), models.DevelopmentLetter.init(), models.FollowUp.init(), models.CustomerEvent.init(), models.Quotation.init(),
   ]);
   await models.User.insertMany([
     { _id: userA, username: 'alice', passwordHash: 'test-hash', displayName: 'Alice', role: 'user', projectIds: [projectA] },
@@ -35,6 +37,7 @@ before(async () => {
   service = await import('../src/services/agent/agent.service');
   tools = await import('../src/services/agent/tool-registry');
   workflow = await import('../src/services/agent/scratchpad-customer.service');
+  analysisWorkflow = await import('../src/services/agent/customer-analysis.service');
 });
 
 after(async () => {
@@ -204,6 +207,74 @@ test('concurrent confirmation is locked and creates at most one customer', async
   assert.equal((await Scratchpad.findOne({ projectId: projectA, userId: userA }).lean())?.content, note);
 });
 
+test('customer analysis separates sourced facts and suggestions, then saves only a draft and schedules follow-up after confirmation', async () => {
+  const { AgentAction, Customer, CustomerEvent, DevelopmentLetter } = await import('../src/models');
+  const customer = await Customer.create({
+    projectId: projectA, ownerId: userA, name: 'Olivia Stone', company: 'Northwind Retail', email: 'olivia.analysis@example.com',
+    country: 'United Kingdom', industry: 'Retail', requirementNotes: 'Looking for 800 recycled tote bags for a spring campaign.',
+    priority: 'high', source: 'manual',
+  });
+  const analysis = await analysisWorkflow.createCustomerAnalysis({
+    customerId: customer.id, idempotencyKey: 'analysis-v12-create-0001',
+  }, actorA);
+  assert.ok(analysis.facts.length > 0);
+  assert.ok(analysis.recommendations.length > 0);
+  assert.ok(analysis.facts.every((claim) => claim.sourceIds.length > 0));
+  assert.ok(analysis.recommendations.every((claim) => claim.sourceIds.length > 0));
+  const knownSources = new Set(analysis.sources.map((source) => source.sourceId));
+  assert.ok(analysis.facts.flatMap((claim) => claim.sourceIds).every((id) => knownSources.has(id)));
+  assert.match(analysis.emailDraft.bodyText, /^Dear Olivia Stone,/);
+
+  const repeated = await analysisWorkflow.createCustomerAnalysis({
+    customerId: customer.id, idempotencyKey: 'analysis-v12-create-0001',
+  }, actorA);
+  assert.equal(repeated.id, analysis.id);
+  await assert.rejects(
+    () => analysisWorkflow.getCustomerAnalysis(analysis.id, actorB),
+    (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 404),
+  );
+
+  const dueAt = new Date(Date.now() + 5 * 86400000);
+  const edited = await analysisWorkflow.updateCustomerAnalysis(analysis.id, {
+    expectedVersion: analysis.version,
+    emailDraft: { subject: 'Recycled tote bag requirements', bodyText: 'Dear Olivia,\n\nCould you confirm the preferred dimensions and delivery date?\n\nBest regards,' },
+    followUpPlan: { method: 'email', content: 'Confirm dimensions and delivery date.', dueAt },
+  }, actorA);
+  const emailSaved = await analysisWorkflow.saveAnalysisEmailDraft(analysis.id, {
+    expectedVersion: edited.version, idempotencyKey: 'analysis-v12-email-0001',
+  }, actorA);
+  assert.equal(emailSaved.analysis.emailStatus, 'saved');
+  const draft = await DevelopmentLetter.findById(emailSaved.letterId).lean();
+  assert.equal(draft?.status, 'draft');
+  assert.equal(draft?.sentAt, undefined);
+  assert.equal(draft?.subject, 'Recycled tote bag requirements');
+  assert.equal((await Customer.findById(customer._id).lean())?.letterCount, 0);
+  const repeatedEmail = await analysisWorkflow.saveAnalysisEmailDraft(analysis.id, {
+    expectedVersion: edited.version, idempotencyKey: 'analysis-v12-email-0001',
+  }, actorA);
+  assert.equal(repeatedEmail.idempotent, true);
+  assert.equal(await DevelopmentLetter.countDocuments({ projectId: projectA, requestKey: `agent-analysis-email:${analysis.id}` }), 1);
+
+  const scheduled = await analysisWorkflow.scheduleAnalysisFollowUp(analysis.id, {
+    expectedVersion: emailSaved.analysis.version, idempotencyKey: 'analysis-v12-followup-01',
+  }, actorA);
+  assert.equal(scheduled.analysis.followUpStatus, 'scheduled');
+  assert.equal((await Customer.findById(customer._id).lean())?.nextFollowUpAt?.getTime(), dueAt.getTime());
+  assert.equal(await CustomerEvent.countDocuments({ projectId: projectA, customerId: customer._id, type: 'followup_scheduled' }), 1);
+  const repeatedSchedule = await analysisWorkflow.scheduleAnalysisFollowUp(analysis.id, {
+    expectedVersion: emailSaved.analysis.version, idempotencyKey: 'analysis-v12-followup-01',
+  }, actorA);
+  assert.equal(repeatedSchedule.idempotent, true);
+
+  const actions = await AgentAction.find({ projectId: projectA, userId: userA, workflowId: analysis.id }).lean();
+  const saveAction = actions.find((action) => action.toolName === 'save_agent_email_draft');
+  const followUpAction = actions.find((action) => action.toolName === 'schedule_agent_followup');
+  assert.equal(saveAction?.approvalStatus, 'approved');
+  assert.equal(saveAction?.executionStatus, 'succeeded');
+  assert.equal(followUpAction?.approvalStatus, 'approved');
+  assert.equal(followUpAction?.executionStatus, 'succeeded');
+});
+
 test('OpenAI adapter uses stateless Responses API with strict server-side tools', async () => {
   const { OpenAIResponsesProvider } = await import('../src/services/agent/openai-provider');
   const originalFetch = globalThis.fetch;
@@ -215,6 +286,19 @@ test('OpenAI adapter uses stateless Responses API with strict server-side tools'
     capturedHeaders = init?.headers;
     const capturedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
     capturedBodies.push(capturedBody);
+    if ((capturedBody.text as { format?: { name?: string } } | undefined)?.format?.name === 'customer_analysis_and_email_draft') {
+      return new Response(JSON.stringify({
+        status: 'completed',
+        output_text: JSON.stringify({
+          facts: [{ text: 'Structured fact', sourceIds: ['profile:1'] }],
+          gaps: [{ text: 'Structured gap', sourceIds: ['profile:1'] }],
+          recommendations: [{ text: 'Structured recommendation', rationale: 'Structured rationale', sourceIds: ['profile:1'] }],
+          emailDraft: { subject: 'Next steps', bodyText: 'Dear Ava,\n\nHello.\n\nBest regards,' },
+          followUpPlan: { method: 'email', content: 'Follow up', dueAt: '2030-01-02T03:04:05.000Z' },
+        }),
+        usage: { input_tokens: 20, output_tokens: 10, total_tokens: 30 },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     if (capturedBody.text) {
       return new Response(JSON.stringify({
         status: 'completed',
@@ -257,6 +341,16 @@ test('OpenAI adapter uses stateless Responses API with strict server-side tools'
     assert.equal(format?.strict, true);
     assert.equal(format?.schema?.additionalProperties, false);
     assert.equal(capturedBodies[1]?.store, false);
+    const analysis = await adapter.analyzeCustomer({
+      input: { customerName: 'Ava', sourceCatalog: [{ sourceId: 'profile:1', kind: 'profile', label: 'profile', content: { name: 'Ava' } }] },
+      safetyIdentifier: 'hashed-user',
+    });
+    assert.equal(analysis.facts[0]?.sourceIds[0], 'profile:1');
+    const analysisFormat = (capturedBodies[2]?.text as { format?: { name?: string; type?: string; strict?: boolean } }).format;
+    assert.equal(analysisFormat?.name, 'customer_analysis_and_email_draft');
+    assert.equal(analysisFormat?.type, 'json_schema');
+    assert.equal(analysisFormat?.strict, true);
+    assert.equal(capturedBodies[2]?.store, false);
   } finally {
     globalThis.fetch = originalFetch;
   }
