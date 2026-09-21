@@ -34,6 +34,8 @@ interface UiState {
   scratchpadOpen: boolean;
   /** 全局只读 Agent 面板是否展开 */
   agentOpen: boolean;
+  /** 正在查看的“随手记转客户”预览。 */
+  agentCustomerPreviewId: string | null;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -43,6 +45,8 @@ interface UiState {
   toggleScratchpad: () => void;
   setAgentOpen: (open: boolean) => void;
   toggleAgent: () => void;
+  openAgentCustomerPreview: (id: string) => void;
+  clearAgentCustomerPreview: () => void;
 }
 
 export const useUiStore = create<UiState>()((set, get) => ({
@@ -51,6 +55,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   mobileNavOpen: false,
   scratchpadOpen: false,
   agentOpen: false,
+  agentCustomerPreviewId: null,
 
   setTheme: (theme) => {
     applyTheme(theme);
@@ -76,6 +81,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
   toggleScratchpad: () => set((state) => ({ scratchpadOpen: !state.scratchpadOpen, agentOpen: state.scratchpadOpen ? state.agentOpen : false })),
   setAgentOpen: (open) => set({ agentOpen: open, ...(open ? { scratchpadOpen: false } : {}) }),
   toggleAgent: () => set((state) => ({ agentOpen: !state.agentOpen, scratchpadOpen: state.agentOpen ? state.scratchpadOpen : false })),
+  openAgentCustomerPreview: (id) => set({ agentOpen: true, scratchpadOpen: false, agentCustomerPreviewId: id }),
+  clearAgentCustomerPreview: () => set({ agentCustomerPreviewId: null }),
 }));
 
 // 模块加载时同步一次，保证 store 与 DOM 状态一致

@@ -12,6 +12,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
 import type { AgentAction, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
+import { ScratchpadCustomerPreviewView } from './scratchpad-customer-preview';
 
 interface SendResult {
   userMessage: AgentMessage;
@@ -76,6 +78,9 @@ function actionLabel(toolName: string): string {
     get_customer_followups: '读取跟进记录',
     get_customer_quotations: '读取报价记录',
     get_dashboard_summary: '读取仪表盘',
+    extract_scratchpad_customer: '提取随手记客户',
+    update_scratchpad_customer_preview: '编辑客户预览',
+    create_customer_from_scratchpad: '确认创建客户',
   };
   return labels[toolName] ?? toolName;
 }
@@ -86,6 +91,7 @@ export function AgentPanel(): React.JSX.Element | null {
   const open = useUiStore((state) => state.agentOpen);
   const setOpen = useUiStore((state) => state.setAgentOpen);
   const toggleOpen = useUiStore((state) => state.toggleAgent);
+  const customerPreviewId = useUiStore((state) => state.agentCustomerPreviewId);
   const isMobile = useIsMobile();
   const location = useLocation();
   const context = React.useMemo(() => routeContext(location.pathname, location.search), [location.pathname, location.search]);
@@ -100,6 +106,7 @@ export function AgentPanel(): React.JSX.Element | null {
   const [loading, setLoading] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [tab, setTab] = React.useState('chat');
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -153,6 +160,11 @@ export function AgentPanel(): React.JSX.Element | null {
   React.useEffect(() => {
     if (open) window.requestAnimationFrame(() => textareaRef.current?.focus());
   }, [open, activeSessionId]);
+
+  React.useEffect(() => {
+    if (customerPreviewId) setTab('customer-preview');
+    else if (tab === 'customer-preview') setTab('chat');
+  }, [customerPreviewId, tab]);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -233,7 +245,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">业务 Agent</h2>
-            <Badge variant="outline" className="text-[10px]">V1.0 · 只读</Badge>
+            <Badge variant="outline" className="text-[10px]">V1.1 · 确认后写入</Badge>
           </div>
           <p className="truncate text-xs text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
         </div>
@@ -242,10 +254,11 @@ export function AgentPanel(): React.JSX.Element | null {
         </Button>
       </div>
 
-      <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col">
+      <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2">
           <TabsList>
             <TabsTrigger value="chat"><Sparkles className="h-3.5 w-3.5" />对话</TabsTrigger>
+            {customerPreviewId && <TabsTrigger value="customer-preview"><UserPlus className="h-3.5 w-3.5" />客户预览</TabsTrigger>}
             <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -275,7 +288,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
           <div className="flex items-start gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-            V1.0 只能读取当前权限范围内的数据，不会创建客户、修改记录或发送邮件。
+            Agent 对话仍为只读；“随手记转客户”只会在你核对预览并明确确认后创建客户，绝不会自动发送邮件。
           </div>
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
@@ -327,19 +340,21 @@ export function AgentPanel(): React.JSX.Element | null {
           </form>
         </TabsContent>
 
+        {customerPreviewId && <TabsContent value="customer-preview" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><ScratchpadCustomerPreviewView previewId={customerPreviewId} onRecordsChanged={loadRecords} /></TabsContent>}
+
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">运行</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.runs}</p></div>
             <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">工具调用</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.toolCalls}</p></div>
             <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Token</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.totalTokens.toLocaleString()}</p></div>
           </div>
-          <div className="mt-5 flex items-center justify-between"><h3 className="text-sm font-semibold">工具与审批记录</h3><Badge variant="muted">只读免审批</Badge></div>
+          <div className="mt-5 flex items-center justify-between"><h3 className="text-sm font-semibold">工具与审批记录</h3><Badge variant="muted">写入需确认</Badge></div>
           <div className="mt-3 space-y-2">
             {actions.length === 0 && <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">暂无工具调用记录</div>}
             {actions.map((action) => (
               <div key={action.id} className="rounded-lg border p-3">
-                <div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{actionLabel(action.toolName)}</p><Badge variant={action.executionStatus === 'succeeded' ? 'developed' : action.executionStatus === 'failed' ? 'failed' : 'muted'}>{action.executionStatus === 'succeeded' ? '成功' : action.executionStatus === 'failed' ? '失败' : '处理中'}</Badge></div>
-                <p className="mt-1 text-xs text-muted-foreground">{action.resultSummary || '等待执行'} · {action.approvalStatus === 'not_required' ? '只读免审批' : '需要审批'}</p>
+                <div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{actionLabel(action.toolName)}</p><Badge variant={action.executionStatus === 'succeeded' ? 'developed' : action.executionStatus === 'failed' ? 'failed' : 'muted'}>{action.executionStatus === 'succeeded' ? '成功' : action.executionStatus === 'failed' ? '失败' : action.executionStatus === 'rejected' ? '已取消' : '处理中'}</Badge></div>
+                <p className="mt-1 text-xs text-muted-foreground">{action.resultSummary || '等待执行'} · {action.approvalStatus === 'not_required' ? '只读免审批' : action.approvalStatus === 'approved' ? '用户已确认' : '用户已取消'}</p>
                 <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3" />{formatDateTime(action.createdAt)}</p>
               </div>
             ))}

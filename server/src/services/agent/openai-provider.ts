@@ -1,5 +1,14 @@
 import env from '../../config/env';
-import { AgentProviderError, type AgentInputItem, type AgentProvider, type AgentProviderRequest, type AgentProviderTurn } from './provider';
+import { AGENT_CUSTOMER_FIELDS } from '../../models';
+import {
+  AgentProviderError,
+  type AgentInputItem,
+  type AgentProvider,
+  type AgentProviderRequest,
+  type AgentProviderTurn,
+  type CustomerExtractionRequest,
+  type CustomerExtractionResult,
+} from './provider';
 
 interface OpenAIResponse {
   status?: string;
@@ -28,6 +37,37 @@ function outputText(response: OpenAIResponse): string {
   }
   return parts.join('\n').trim();
 }
+
+const customerExtractionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['fields', 'uncertainties'],
+  properties: {
+    fields: {
+      type: 'object',
+      additionalProperties: false,
+      required: [...AGENT_CUSTOMER_FIELDS],
+      properties: {
+        company: { type: 'string' }, name: { type: 'string' }, email: { type: 'string' }, phone: { type: 'string' },
+        country: { type: 'string' }, industry: { type: 'string' }, requirementNotes: { type: 'string' }, leadSource: { type: 'string' },
+        priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+      },
+    },
+    uncertainties: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['field', 'reason', 'confidence'],
+        properties: {
+          field: { type: 'string', enum: [...AGENT_CUSTOMER_FIELDS] },
+          reason: { type: 'string' },
+          confidence: { type: 'number', minimum: 0, maximum: 1 },
+        },
+      },
+    },
+  },
+} as const;
 
 export class OpenAIResponsesProvider implements AgentProvider {
   readonly name = 'openai' as const;
@@ -104,5 +144,49 @@ export class OpenAIResponsesProvider implements AgentProvider {
         totalTokens: Number(usage.total_tokens ?? 0),
       },
     };
+  }
+
+  async extractCustomer(request: CustomerExtractionRequest): Promise<CustomerExtractionResult> {
+    if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
+    let response: Response;
+    try {
+      response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(this.config.timeoutMs),
+        body: JSON.stringify({
+          model: this.config.model,
+          store: false,
+          instructions: [
+            '从 B2B 外贸业务员的随手记中提取客户资料。只提取原文明确支持的信息，不要猜测。',
+            '缺失字段输出空字符串；优先级缺失时输出 medium，并把缺失、含糊或可能识别错误的字段列入 uncertainties。',
+            'requirementNotes 保留对采购需求有用的关键细节；leadSource 表示获客渠道。',
+          ].join('\n'),
+          input: request.content,
+          text: { format: { type: 'json_schema', name: 'scratchpad_customer_preview', strict: true, schema: customerExtractionSchema } },
+          max_output_tokens: 1600,
+          safety_identifier: request.safetyIdentifier,
+        }),
+      });
+    } catch (error) {
+      const code = error instanceof DOMException && error.name === 'TimeoutError' ? 'OPENAI_TIMEOUT' : 'OPENAI_UNREACHABLE';
+      throw new AgentProviderError(code);
+    }
+    let body: OpenAIResponse;
+    try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
+    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+    try {
+      const parsed = JSON.parse(outputText(body)) as Omit<CustomerExtractionResult, 'usage'>;
+      const usage = body.usage ?? {};
+      return {
+        fields: parsed.fields,
+        uncertainties: parsed.uncertainties,
+        usage: {
+          inputTokens: Number(usage.input_tokens ?? 0), outputTokens: Number(usage.output_tokens ?? 0), totalTokens: Number(usage.total_tokens ?? 0),
+        },
+      };
+    } catch {
+      throw new AgentProviderError('OPENAI_INVALID_STRUCTURED_OUTPUT');
+    }
   }
 }

@@ -8,6 +8,7 @@ import {
   RefreshCw,
   StickyNote,
   Trash2,
+  UserRoundPlus,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,14 +25,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useEscapeKey, useIsMobile } from '@/hooks/use-ui';
-import { apiGet, apiPut, ApiClientError, toErrorMessage } from '@/lib/api';
+import { apiGet, apiPost, apiPut, ApiClientError, toErrorMessage } from '@/lib/api';
 import { copyToClipboard } from '@/lib/format';
 import { readStorage, removeStorage, writeStorage } from '@/lib/utils';
 import { SCRATCHPAD_MAX_LENGTH, SCRATCHPAD_PENDING_PREFIX } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
-import type { Scratchpad, UpdateScratchpadInput } from '@/types';
+import type { AgentCustomerPreview, Scratchpad, UpdateScratchpadInput } from '@/types';
 
 const AUTO_SAVE_DELAY = 1_000;
 
@@ -65,6 +66,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
   const open = useUiStore((state) => state.scratchpadOpen);
   const setOpen = useUiStore((state) => state.setScratchpadOpen);
   const toggleOpen = useUiStore((state) => state.toggleScratchpad);
+  const openAgentCustomerPreview = useUiStore((state) => state.openAgentCustomerPreview);
   const isMobile = useIsMobile();
 
   const [content, setContent] = React.useState('');
@@ -72,6 +74,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
   const [lastSavedAt, setLastSavedAt] = React.useState<string | null>(null);
   const [clearOpen, setClearOpen] = React.useState(false);
   const [serverConflict, setServerConflict] = React.useState<Scratchpad | null>(null);
+  const [extracting, setExtracting] = React.useState(false);
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const contentRef = React.useRef('');
@@ -80,7 +83,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
   const loadedRef = React.useRef(false);
   const savingRef = React.useRef(false);
   const saveTimerRef = React.useRef<number | null>(null);
-  const saveRef = React.useRef<() => Promise<void>>(async () => undefined);
+  const saveRef = React.useRef<() => Promise<boolean>>(async () => false);
 
   const contextKey = user && project ? `${user.id}:${project.id}` : null;
   const pendingKey = contextKey ? `${SCRATCHPAD_PENDING_PREFIX}${contextKey}` : null;
@@ -157,12 +160,12 @@ export function ScratchpadPanel(): React.JSX.Element | null {
   }, [clearSaveTimer, contextKey, loadLatest, pendingKey]);
 
   const saveNow = React.useCallback(async () => {
-    if (!loadedRef.current || !pendingKey || savingRef.current || serverConflict) return;
+    if (!loadedRef.current || !pendingKey || savingRef.current || serverConflict) return false;
     const snapshot = contentRef.current;
     if (snapshot === serverContentRef.current) {
       removeStorage(pendingKey);
       setStatus('saved');
-      return;
+      return true;
     }
 
     clearSaveTimer();
@@ -187,6 +190,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
         setStatus('dirty');
         scheduleSave();
       }
+      return true;
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 409) {
         let latest: Scratchpad = { content: '', version: -1, updatedAt: null };
@@ -201,6 +205,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
         setStatus('offline');
         scheduleSave(5_000);
       }
+      return false;
     } finally {
       savingRef.current = false;
     }
@@ -276,6 +281,27 @@ export function ScratchpadPanel(): React.JSX.Element | null {
     setContent('');
     setClearOpen(false);
     window.requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const handleExtractCustomer = async () => {
+    if (!content.trim() || extracting) return;
+    setExtracting(true);
+    try {
+      const saved = await saveRef.current();
+      if (!saved) {
+        toast.error('请先完成随手记同步', { description: '内容未同步时不会交给 Agent，避免提取旧版本。' });
+        return;
+      }
+      const preview = await apiPost<AgentCustomerPreview>('/agent/scratchpad-customer/previews', {
+        idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      });
+      openAgentCustomerPreview(preview.id);
+      toast.success('客户信息已提取', { description: '请在创建前核对标记为“不确定”的字段。' });
+    } catch (error) {
+      toast.error('Agent 提取失败', { description: `${toErrorMessage(error)}。随手记没有改动。` });
+    } finally {
+      setExtracting(false);
+    }
   };
 
   const loadServerVersion = () => {
@@ -367,6 +393,17 @@ export function ScratchpadPanel(): React.JSX.Element | null {
             className="min-h-0 flex-1 resize-none text-base leading-relaxed sm:text-sm"
             spellCheck
           />
+
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <div className="flex items-start gap-2">
+              <UserRoundPlus className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <div className="min-w-0 flex-1"><p className="text-sm font-medium">交给 Agent 整理成客户</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">先提取并查重，再由你编辑确认。原随手记始终保留。</p></div>
+            </div>
+            <Button type="button" className="mt-3 w-full" onClick={() => void handleExtractCustomer()} disabled={!content.trim() || extracting || status === 'loading' || status === 'saving' || status === 'offline' || status === 'conflict'}>
+              {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRoundPlus className="h-4 w-4" />}
+              {extracting ? '正在提取并查重…' : '提取客户信息'}
+            </Button>
+          </div>
 
           <div className="flex shrink-0 items-center justify-between gap-3">
             <span className="text-xs tabular-nums text-muted-foreground">

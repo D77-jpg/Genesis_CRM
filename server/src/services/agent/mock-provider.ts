@@ -1,4 +1,52 @@
-import type { AgentInputItem, AgentProvider, AgentProviderRequest, AgentProviderTurn } from './provider';
+import type { AgentCustomerField, AgentCustomerPreviewFields, AgentCustomerUncertainty } from '../../models';
+import type {
+  AgentInputItem,
+  AgentProvider,
+  AgentProviderRequest,
+  AgentProviderTurn,
+  CustomerExtractionRequest,
+  CustomerExtractionResult,
+} from './provider';
+
+function lineValue(content: string, labels: string[]): string {
+  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const match = new RegExp(`^(?:${escaped})\\s*[：:]\\s*(.+)$`, 'im').exec(content);
+  return match?.[1]?.trim() ?? '';
+}
+
+function priorityValue(content: string): 'high' | 'medium' | 'low' {
+  const raw = lineValue(content, ['优先级', 'priority']).toLowerCase();
+  if (/high|urgent|高|紧急/.test(raw)) return 'high';
+  if (/low|低/.test(raw)) return 'low';
+  return 'medium';
+}
+
+function mockExtract(content: string): { fields: AgentCustomerPreviewFields; uncertainties: AgentCustomerUncertainty[] } {
+  const email = content.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? '';
+  const phoneLine = lineValue(content, ['电话', '手机', 'phone', 'tel', 'mobile']);
+  const fields: AgentCustomerPreviewFields = {
+    company: lineValue(content, ['公司', '公司名称', 'company']),
+    name: lineValue(content, ['联系人', '姓名', 'contact', 'contact name', 'name']),
+    email,
+    phone: phoneLine,
+    country: lineValue(content, ['国家', '国家/地区', 'country', 'region']),
+    industry: lineValue(content, ['行业', 'industry']),
+    requirementNotes: lineValue(content, ['需求', '客户需求', 'requirement', 'requirements', 'needs']),
+    leadSource: lineValue(content, ['来源', '业务来源', 'source', 'channel']),
+    priority: priorityValue(content),
+  };
+  const labels: Record<AgentCustomerField, string> = {
+    company: '公司', name: '联系人', email: '邮箱', phone: '电话', country: '国家', industry: '行业',
+    requirementNotes: '需求', leadSource: '来源', priority: '优先级',
+  };
+  const uncertainties = (Object.keys(labels) as AgentCustomerField[])
+    .filter((field) => field !== 'priority' && !fields[field])
+    .map((field) => ({ field, reason: `随手记中未明确找到${labels[field]}`, confidence: 0.2 }));
+  if (!lineValue(content, ['优先级', 'priority'])) {
+    uncertainties.push({ field: 'priority', reason: '随手记中未注明优先级，暂按“中”处理', confidence: 0.4 });
+  }
+  return { fields, uncertainties };
+}
 
 function lastToolOutput(input: AgentInputItem[]): { callId: string; output: string } | null {
   const item = [...input].reverse().find((entry) => entry.type === 'function_call_output');
@@ -65,5 +113,9 @@ export class MockAgentProvider implements AgentProvider {
       toolCalls: [{ callId, name: selected.name, arguments: JSON.stringify(selected.arguments) }],
       usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
     };
+  }
+
+  async extractCustomer(request: CustomerExtractionRequest): Promise<CustomerExtractionResult> {
+    return { ...mockExtract(request.content), usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } };
   }
 }

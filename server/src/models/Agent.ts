@@ -27,7 +27,8 @@ export interface IAgentMessage {
 export interface IAgentRun {
   projectId: Types.ObjectId;
   userId: Types.ObjectId;
-  sessionId: Types.ObjectId;
+  sessionId?: Types.ObjectId;
+  workflowId?: Types.ObjectId;
   provider: AgentProviderName;
   model: string;
   status: 'running' | 'completed' | 'failed';
@@ -44,8 +45,9 @@ export interface IAgentRun {
 export interface IAgentAction {
   projectId: Types.ObjectId;
   userId: Types.ObjectId;
-  sessionId: Types.ObjectId;
-  runId: Types.ObjectId;
+  sessionId?: Types.ObjectId;
+  runId?: Types.ObjectId;
+  workflowId?: Types.ObjectId;
   toolName: string;
   riskLevel: 'read' | 'write' | 'high';
   arguments: Record<string, unknown>;
@@ -98,7 +100,8 @@ const agentRunSchema = new Schema<IAgentRun>(
   {
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    sessionId: { type: Schema.Types.ObjectId, ref: 'AgentSession', required: true },
+    sessionId: { type: Schema.Types.ObjectId, ref: 'AgentSession' },
+    workflowId: { type: Schema.Types.ObjectId, ref: 'AgentCustomerPreview' },
     provider: { type: String, enum: ['mock', 'openai'], required: true },
     model: { type: String, required: true, maxlength: 100 },
     status: { type: String, enum: ['running', 'completed', 'failed'], required: true },
@@ -117,8 +120,9 @@ const agentActionSchema = new Schema<IAgentAction>(
   {
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    sessionId: { type: Schema.Types.ObjectId, ref: 'AgentSession', required: true },
-    runId: { type: Schema.Types.ObjectId, ref: 'AgentRun', required: true },
+    sessionId: { type: Schema.Types.ObjectId, ref: 'AgentSession' },
+    runId: { type: Schema.Types.ObjectId, ref: 'AgentRun' },
+    workflowId: { type: Schema.Types.ObjectId, ref: 'AgentCustomerPreview' },
     toolName: { type: String, required: true, maxlength: 100 },
     riskLevel: { type: String, enum: ['read', 'write', 'high'], required: true },
     arguments: { type: Schema.Types.Mixed, required: true, default: {} },

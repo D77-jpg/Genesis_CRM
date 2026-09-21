@@ -15,6 +15,19 @@ import {
   sendAgentMessage,
 } from '../services/agent/agent.service';
 import { agentSessionParamsSchema, createAgentSessionSchema, sendAgentMessageSchema } from '../validators/agent.validator';
+import {
+  agentCustomerPreviewParamsSchema,
+  confirmAgentCustomerPreviewSchema,
+  createAgentCustomerPreviewSchema,
+  updateAgentCustomerPreviewSchema,
+} from '../validators/agent.validator';
+import {
+  cancelScratchpadCustomerPreview,
+  confirmScratchpadCustomerPreview,
+  createScratchpadCustomerPreview,
+  getScratchpadCustomerPreview,
+  updateScratchpadCustomerPreview,
+} from '../services/agent/scratchpad-customer.service';
 
 const router = Router();
 const messageLimiter = rateLimit({
@@ -40,5 +53,21 @@ router.post('/sessions/:id/messages', messageLimiter, validate({ params: agentSe
 router.get('/usage', asyncHandler(async (req, res) => sendSuccess(res, await getAgentUsage(req.user!))));
 router.get('/actions', asyncHandler(async (req, res) => sendSuccess(res, await listAgentActions(req.user!))));
 router.get('/approvals', asyncHandler(async (req, res) => sendSuccess(res, await listAgentActions(req.user!))));
+
+router.post('/scratchpad-customer/previews', messageLimiter, validate({ body: createAgentCustomerPreviewSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await createScratchpadCustomerPreview(req.body, req.user!), 201);
+}));
+router.get('/scratchpad-customer/previews/:id', validate({ params: agentCustomerPreviewParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await getScratchpadCustomerPreview(req.params.id, req.user!));
+}));
+router.put('/scratchpad-customer/previews/:id', validate({ params: agentCustomerPreviewParamsSchema, body: updateAgentCustomerPreviewSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateScratchpadCustomerPreview(req.params.id, req.body, req.user!));
+}));
+router.post('/scratchpad-customer/previews/:id/confirm', messageLimiter, validate({ params: agentCustomerPreviewParamsSchema, body: confirmAgentCustomerPreviewSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await confirmScratchpadCustomerPreview(req.params.id, req.body, req.user!), 201);
+}));
+router.post('/scratchpad-customer/previews/:id/cancel', validate({ params: agentCustomerPreviewParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await cancelScratchpadCustomerPreview(req.params.id, req.user!));
+}));
 
 export default router;

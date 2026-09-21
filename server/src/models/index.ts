@@ -46,3 +46,13 @@ export type {
   AgentRunDocument,
   AgentActionDocument,
 } from './Agent';
+
+export { AgentCustomerPreview, AGENT_CUSTOMER_FIELDS } from './AgentCustomerPreview';
+export type {
+  IAgentCustomerPreview,
+  AgentCustomerPreviewDocument,
+  AgentCustomerPreviewFields,
+  AgentCustomerUncertainty,
+  AgentCustomerDuplicate,
+  AgentCustomerField,
+} from './AgentCustomerPreview';

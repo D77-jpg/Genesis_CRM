@@ -49,7 +49,7 @@ export interface AgentUsage {
 
 export interface AgentAction {
   id: string;
-  sessionId: string;
+  sessionId?: string;
   toolName: string;
   riskLevel: 'read' | 'write' | 'high';
   requiresApproval: boolean;
@@ -57,6 +57,36 @@ export interface AgentAction {
   executionStatus: 'pending' | 'succeeded' | 'failed' | 'rejected';
   resultSummary?: string;
   createdAt: string;
+}
+
+/* ---------------------------- Agent V1.1 ---------------------------- */
+
+export type AgentCustomerField = 'company' | 'name' | 'email' | 'phone' | 'country' | 'industry' | 'requirementNotes' | 'leadSource' | 'priority';
+
+export interface AgentCustomerPreviewFields {
+  company: string;
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  industry: string;
+  requirementNotes: string;
+  leadSource: string;
+  priority: CustomerPriority;
+}
+
+export interface AgentCustomerPreview {
+  id: string;
+  sourceVersion: number;
+  fields: AgentCustomerPreviewFields;
+  uncertainties: { field: AgentCustomerField; reason: string; confidence: number }[];
+  duplicates: { customerId: string; name: string; company?: string; email?: string; phone?: string; reasons: string[] }[];
+  status: 'preview' | 'creating' | 'created' | 'cancelled' | 'failed';
+  version: number;
+  createdCustomerId?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /* ---------------------------- 枚举 ---------------------------- */

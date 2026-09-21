@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { AGENT_CUSTOMER_FIELDS } from '../models';
+import { CUSTOMER_PRIORITY } from '../constants';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, '资源 ID 格式不正确');
 
@@ -21,5 +23,40 @@ export const agentSessionParamsSchema = z.object({
   id: objectId,
 }).strict();
 
+const idempotencyKey = z.string().trim().min(16).max(128).regex(/^[a-zA-Z0-9._:-]+$/, '幂等键格式不正确');
+
+export const agentCustomerFieldsSchema = z.object({
+  company: z.string().trim().max(200),
+  name: z.string().trim().max(120),
+  email: z.string().trim().toLowerCase().max(200),
+  phone: z.string().trim().max(60),
+  country: z.string().trim().max(120),
+  industry: z.string().trim().max(120),
+  requirementNotes: z.string().trim().max(5000),
+  leadSource: z.string().trim().max(120),
+  priority: z.enum(CUSTOMER_PRIORITY),
+}).strict();
+
+export const agentCustomerUncertaintySchema = z.object({
+  field: z.enum(AGENT_CUSTOMER_FIELDS),
+  reason: z.string().trim().min(1).max(300),
+  confidence: z.number().min(0).max(1),
+}).strict();
+
+export const createAgentCustomerPreviewSchema = z.object({ idempotencyKey }).strict();
+export const updateAgentCustomerPreviewSchema = z.object({
+  expectedVersion: z.number().int().min(1),
+  fields: agentCustomerFieldsSchema,
+}).strict();
+export const confirmAgentCustomerPreviewSchema = z.object({
+  expectedVersion: z.number().int().min(1),
+  idempotencyKey,
+  duplicateAcknowledged: z.boolean().default(false),
+}).strict();
+export const agentCustomerPreviewParamsSchema = z.object({ id: objectId }).strict();
+
 export type CreateAgentSessionBody = z.infer<typeof createAgentSessionSchema>;
 export type SendAgentMessageBody = z.infer<typeof sendAgentMessageSchema>;
+export type CreateAgentCustomerPreviewBody = z.infer<typeof createAgentCustomerPreviewSchema>;
+export type UpdateAgentCustomerPreviewBody = z.infer<typeof updateAgentCustomerPreviewSchema>;
+export type ConfirmAgentCustomerPreviewBody = z.infer<typeof confirmAgentCustomerPreviewSchema>;

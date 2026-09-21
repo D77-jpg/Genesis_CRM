@@ -249,7 +249,7 @@ export async function getAgentUsage(actor: AuthUser) {
 export async function listAgentActions(actor: AuthUser) {
   const docs = await AgentAction.find(scope(actor)).sort({ createdAt: -1 }).limit(100).lean();
   return docs.map((doc) => ({
-    id: String(doc._id), sessionId: String(doc.sessionId), toolName: doc.toolName,
+    id: String(doc._id), sessionId: doc.sessionId ? String(doc.sessionId) : undefined, toolName: doc.toolName,
     riskLevel: doc.riskLevel, requiresApproval: doc.requiresApproval, approvalStatus: doc.approvalStatus,
     executionStatus: doc.executionStatus, resultSummary: doc.resultSummary, createdAt: doc.createdAt,
   }));
