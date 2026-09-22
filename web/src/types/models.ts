@@ -14,6 +14,10 @@ export interface AgentSession {
   id: string;
   title: string;
   context: AgentContext;
+  contextName?: string;
+  messageCount: number;
+  lastMessagePreview?: string;
+  lastMessageAt?: string;
   status: 'active' | 'archived';
   createdAt: string;
   updatedAt: string;
@@ -395,6 +399,8 @@ export interface DevelopmentLetter {
   messageId?: string;
   error?: string;
   sentBy?: string;
+  senderAddress?: string;
+  mailAccountId?: string;
   createdAt: string | Date;
   updatedAt: string | Date;
   tracking?: MailTrackingSummary;
@@ -840,6 +846,71 @@ export interface UserDto {
   lastLoginAt?: string | Date | null;
   createdAt: string | Date;
   updatedAt: string | Date;
+}
+
+export type MailAccountStatus = 'active' | 'disabled';
+export type MailVerificationStatus = 'unverified' | 'verified' | 'failed';
+
+export interface UserMailAccount {
+  id: string;
+  projectId: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpRequireTls: boolean;
+  smtpUsername: string;
+  imapEnabled: boolean;
+  imapHost?: string;
+  imapPort: number;
+  imapSecure: boolean;
+  imapUsername?: string;
+  credentialSet: boolean;
+  status: MailAccountStatus;
+  verificationStatus: MailVerificationStatus;
+  verifiedAt?: string | Date;
+  lastVerificationError?: string;
+  imapVerificationStatus: MailVerificationStatus;
+  imapVerifiedAt?: string | Date;
+  lastImapVerificationError?: string;
+  dailyLimit: number;
+  usedToday: number;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface MailAccountInput {
+  email: string;
+  displayName: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpRequireTls: boolean;
+  smtpUsername: string;
+  imapEnabled: boolean;
+  imapHost?: string;
+  imapPort: number;
+  imapSecure: boolean;
+  imapUsername?: string;
+  password?: string;
+  status: MailAccountStatus;
+  dailyLimit: number;
+}
+
+export interface MailAccountVerificationResult {
+  success: boolean;
+  message: string;
+  account: UserMailAccount;
+}
+
+export interface CurrentMailSender {
+  channel: MailChannel;
+  canSend: boolean;
+  reason?: string;
+  account: UserMailAccount | null;
+  senderAddress: string;
 }
 
 /** 新建用户的载荷（POST /api/users，仅管理员可用） */

@@ -13,13 +13,14 @@ import { customerRefScope, isAdmin, projectScope } from '../utils/access';
 import { MailMessage, MailSyncState } from '../models/MailMessage';
 import { DevelopmentLetter, Customer } from '../models';
 import { getCustomerByIdOrThrow } from '../services/customer.service';
-import { findThread, mailboxKey, syncInbox } from '../services/mail-sync.service';
+import { findThread, mailboxKey, personalMailboxKey, syncInbox, syncPersonalInbox } from '../services/mail-sync.service';
 import { sendLetterSchema } from '../validators/letter.validator';
 import { sendLetter } from '../services/letter.service';
 import type { AuthUser } from '../types/express';
 import { safeMailHtml } from '../services/mail-security';
 import { trackingSummary } from '../services/mail-tracking.service';
 import { getProjectMailConfig, imapConfigured, smtpConfigured } from '../services/project-mail-config.service';
+import { getMailAccount } from '../services/mail-account.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -64,16 +65,38 @@ function outgoingDto(doc: InstanceType<typeof DevelopmentLetter>) {
 }
 
 router.get('/status', asyncHandler(async (req, res) => {
-  if (!isAdmin(req.user)) throw ApiError.notFound();
-  const config = await getProjectMailConfig(req.user!.projectId);
-  const state = await MailSyncState.findById(await mailboxKey(req.user!.projectId)).select('lastSyncAt lastError skipped failedUids');
-  sendSuccess(res, { enabled: config.imap.enabled, imapConfigured: imapConfigured(config), smtpConfigured: smtpConfigured(config), channel: config.transport,
-    lastSyncAt: state?.lastSyncAt, lastError: state?.lastError, skipped: state?.skipped || 0, failedCount: state?.failedUids.length || 0 });
+  const projectId = req.user!.projectId!;
+  const [config, account] = await Promise.all([getProjectMailConfig(projectId), getMailAccount(projectId, req.user!.id)]);
+  const personal = Boolean(account?.imapEnabled);
+  const useLegacyProjectInbox = !personal && isAdmin(req.user);
+  const stateKey = personal && account?.imapUsername
+    ? personalMailboxKey({ projectId, accountId: account.id, username: account.imapUsername, mailbox: 'INBOX' })
+    : useLegacyProjectInbox ? await mailboxKey(projectId) : null;
+  const state = stateKey ? await MailSyncState.findById(stateKey).select('lastSyncAt lastError skipped failedUids') : null;
+  const enabled = personal ? account?.status === 'active' : useLegacyProjectInbox && config.imap.enabled;
+  const configured = personal
+    ? Boolean(account?.imapHost && account?.imapUsername && account?.credentialSet)
+    : useLegacyProjectInbox && imapConfigured(config);
+  sendSuccess(res, { enabled: Boolean(enabled), configured, source: personal || !useLegacyProjectInbox ? 'personal' : 'project',
+    verificationStatus: personal ? account?.imapVerificationStatus : configured ? 'verified' : 'unverified',
+    mailboxAddress: personal ? account?.email : undefined,
+    smtpConfigured: personal ? account?.verificationStatus === 'verified' : smtpConfigured(config), channel: config.transport,
+    lastSyncAt: state?.lastSyncAt, lastError: state?.lastError || (personal ? account?.lastImapVerificationError : undefined),
+    skipped: state?.skipped || 0, failedCount: state?.failedUids.length || 0 });
 }));
 router.post('/sync', asyncHandler(async (req, res) => {
+  const projectId = req.user!.projectId!;
+  const account = await getMailAccount(projectId, req.user!.id);
+  if (account?.imapEnabled) {
+    if (account.status !== 'active' || account.imapVerificationStatus !== 'verified') {
+      throw ApiError.conflict('个人收件邮箱尚未验证或已停用');
+    }
+    void syncPersonalInbox(projectId, req.user!.id);
+    return sendSuccess(res, { message: '已请求同步当前个人收件邮箱' }, 202);
+  }
   if (!isAdmin(req.user)) throw ApiError.notFound();
-  const config = await getProjectMailConfig(req.user!.projectId);
-  void syncInbox(req.user!.projectId);
+  const config = await getProjectMailConfig(projectId);
+  void syncInbox(projectId);
   sendSuccess(res, { message: config.imap.enabled ? '已请求当前项目后台同步' : '当前项目 IMAP 未启用，请配置后重启' }, 202);
 }));
 router.get('/', validate({ query: listQuery }), asyncHandler(async (req, res) => {
@@ -120,7 +143,8 @@ router.post('/:id/link', validate({ params, body: z.object({ customerId: idSchem
   const doc = await inbound(req.params.id, req.user!);
   const customer = await getCustomerByIdOrThrow(req.body.customerId, req.user);
   if (doc.customerId) throw ApiError.conflict('邮件已关联客户');
-  const threadId = await findThread(customer._id, doc.subject, [...doc.references, doc.inReplyTo || ''], doc.from, req.user!.projectId);
+  const threadId = await findThread(customer._id, doc.subject, [...doc.references, doc.inReplyTo || ''], doc.from,
+    req.user!.projectId, doc.mailAccountId ? String(doc.mailAccountId) : undefined);
   const result = await MailMessage.updateOne({ _id: doc._id, customerId: null, ...projectScope(req.user) }, { $set: { customerId: customer._id, threadId } });
   if (!result.modifiedCount) throw ApiError.conflict('邮件已关联客户');
   sendSuccess(res, { id: String(doc._id), customerId: String(customer._id) });
@@ -128,6 +152,9 @@ router.post('/:id/link', validate({ params, body: z.object({ customerId: idSchem
 router.post('/:id/reply', validate({ params, body: sendLetterSchema }), asyncHandler(async (req, res) => {
   const doc = await inbound(req.params.id, req.user!);
   if (!doc.customerId) throw ApiError.badRequest('请先关联客户再回复');
+  if (doc.mailboxUserId && String(doc.mailboxUserId) !== req.user!.id) {
+    throw ApiError.conflict('该邮件属于其他业务员的个人邮箱，请由邮箱所属业务员回复');
+  }
   const result = await sendLetter({ ...req.body, customerId: String(doc.customerId), replyToId: String(doc._id), saveAsDraft: false }, req.user);
   sendSuccess(res, result, 201);
 }));

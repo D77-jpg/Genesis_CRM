@@ -70,7 +70,8 @@ before(async () => {
   await projectService.bootstrapProjects();
   projectId = String((await models.Project.findOne({ slug: 'genesis-bags' }))!._id);
   ironhueProjectId = String((await models.Project.findOne({ slug: 'ironhue' }))!._id);
-  await Promise.all([models.Project.init(), models.Customer.init(), models.DevelopmentLetter.init(), mailModels.MailMessage.init(), mailModels.MailSyncState.init(), models.User.init()]);
+  await Promise.all([models.Project.init(), models.Customer.init(), models.DevelopmentLetter.init(), mailModels.MailMessage.init(), mailModels.MailSyncState.init(), models.User.init(),
+    models.UserMailAccount.init(), models.MailQuotaBucket.init(), models.MailAccountAudit.init()]);
   const auth = await import('../src/services/auth.service');
   for (const role of ['admin', 'sales', 'other']) {
     const user = await models.User.create({ username: `${role}${suffix}`, passwordHash: await models.hashPassword('fixture-password'), role: role === 'admin' ? 'admin' : 'user', status: 'active', projectIds: [projectId], defaultProjectId: projectId });
@@ -122,7 +123,7 @@ test('16 allowed attachment preserved and malicious attachment blocked', async (
 test('17 attachment download needs JWT and customer scope', async () => { const doc = await mailModels.MailMessage.findById(incomingId); const id = String(doc!.attachments[0]._id); const url = `/mail/${incomingId}/attachments/${id}`; await request('GET', url, otherToken, undefined, 404); await request('GET', url, '', undefined, 401); const r = await fetch(base + url, { headers: { Authorization: `Bearer ${salesToken}` } }); assert.equal(r.status, 200); assert.match(r.headers.get('content-disposition')!, /^attachment/); assert.equal(await r.text(), '%PDF-1.4 fixture'); });
 test('18 attachment size, spoofed type and unsafe extension rejected', () => { assert.equal(security.attachmentAllowed('bad.exe', 'application/pdf', Buffer.from('%PDF-x'), 100), false); assert.equal(security.attachmentAllowed('fake.pdf', 'application/pdf', Buffer.from('MZ'), 100), false); assert.equal(security.attachmentAllowed('a.txt', 'text/plain', Buffer.from('12345'), 4), false); });
 test('19 unknown email never creates a customer', async () => { const count = await models.Customer.countDocuments(); const doc = await sync.importMail(mime(`unknown-${suffix}`, sender), 'fixture'); unknownId = String(doc._id); assert.equal(doc.customerId, null); assert.equal(await models.Customer.countDocuments(), count); });
-test('20 unknown mailbox/admin-only APIs return 404 for sales', async () => { await request('GET', '/mail?folder=unknown', salesToken, undefined, 404); await request('GET', `/mail/${unknownId}`, salesToken, undefined, 404); await request('POST', `/mail/${unknownId}/read`, salesToken, { read: true }, 404); await request('POST', `/mail/${unknownId}/link`, salesToken, { customerId }, 404); await request('GET', '/mail/status', salesToken, undefined, 404); await request('POST', '/mail/sync', salesToken, {}, 404); });
+test('20 unknown mailbox remains admin-only while personal sync status is safe', async () => { await request('GET', '/mail?folder=unknown', salesToken, undefined, 404); await request('GET', `/mail/${unknownId}`, salesToken, undefined, 404); await request('POST', `/mail/${unknownId}/read`, salesToken, { read: true }, 404); await request('POST', `/mail/${unknownId}/link`, salesToken, { customerId }, 404); const status = await request('GET', '/mail/status', salesToken); assert.equal(status.enabled, false); await request('POST', '/mail/sync', salesToken, {}, 404); });
 test('21 administrators see unknown mail; ordinary inbox does not leak', async () => { const unknown = await request('GET', '/mail?folder=unknown'); assert.ok(unknown.items.some((m: { id: string }) => m.id === unknownId)); const own = await request('GET', '/mail', salesToken); assert.ok(!own.items.some((m: { id: string }) => m.id === unknownId)); });
 test('22 manual customer association exposes only to new owner', async () => { await request('POST', `/mail/${unknownId}/link`, adminToken, { customerId }); const d = await request('GET', `/mail/${unknownId}`, salesToken); assert.equal(d.customer.id, customerId); await request('GET', `/mail/${unknownId}`, otherToken, undefined, 404); await request('POST', `/mail/${unknownId}/link`, adminToken, { customerId: otherCustomerId }, 409); });
 test('23 Message-ID and In-Reply-To join outgoing/incoming thread', async () => { const d = await request('GET', `/mail/${incomingId}`, salesToken); assert.equal(d.mail.threadId, threadId); assert.ok(d.thread.some((m: { id: string }) => m.id === sentId)); });
@@ -522,4 +523,129 @@ test('71 CORS permits CRM origins on private LAN ports but rejects public and un
 
   assert.equal((await preflight('http://192.168.50.24:3000')).status, 403);
   assert.equal((await preflight('http://203.0.113.10:5173')).status, 403);
+});
+
+let personalMailAccountId = '';
+const personalMailbox = `sales.${suffix}@example.com`;
+
+test('72 admin assigns an encrypted per-user mailbox and credentials never leave the server', async () => {
+  const beforeConfig = await request('GET', '/mail-accounts/current', salesToken);
+  assert.equal(beforeConfig.channel, 'mock');
+  assert.equal(beforeConfig.canSend, true);
+  assert.equal(beforeConfig.account, null);
+
+  await request('GET', `/mail-accounts/users/${salesId}`, otherToken, undefined, 403);
+  await request('PUT', `/mail-accounts/users/${salesId}`, adminToken, {
+    email: personalMailbox, displayName: 'Sales Fixture', smtpHost: 'smtp.example.com', smtpPort: 465,
+    smtpSecure: true, smtpRequireTls: true, smtpUsername: personalMailbox, status: 'active', dailyLimit: 1,
+  }, 400);
+
+  const saved = await request('PUT', `/mail-accounts/users/${salesId}`, adminToken, {
+    email: personalMailbox, displayName: 'Sales Fixture', smtpHost: 'smtp.example.com', smtpPort: 465,
+    smtpSecure: true, smtpRequireTls: true, smtpUsername: personalMailbox, password: 'fixture-authorization-code',
+    imapEnabled: true, imapHost: 'imap.example.com', imapPort: 993, imapSecure: true, imapUsername: personalMailbox,
+    status: 'active', dailyLimit: 1,
+  });
+  personalMailAccountId = saved.id;
+  assert.equal(saved.email, personalMailbox);
+  assert.equal(saved.credentialSet, true);
+  assert.equal(saved.credentialCiphertext, undefined);
+  assert.equal(saved.password, undefined);
+  assert.equal(saved.imapEnabled, true);
+  assert.equal(saved.imapVerificationStatus, 'unverified');
+
+  const stored = await models.UserMailAccount.findById(saved.id).select('+credentialCiphertext +credentialIv +credentialTag');
+  assert.ok(stored?.credentialCiphertext);
+  assert.notEqual(stored?.credentialCiphertext, 'fixture-authorization-code');
+  const current = await request('GET', '/mail-accounts/current', salesToken);
+  assert.equal(current.account.id, saved.id);
+  assert.equal(current.account.credentialCiphertext, undefined);
+});
+
+test('73 user mailboxes are project scoped and cross-project configuration is rejected', async () => {
+  assert.equal(await request('GET', `/mail-accounts/users/${salesId}`, adminToken, undefined, 200, ironhueProjectId), null);
+  await request('PUT', `/mail-accounts/users/${salesId}`, adminToken, {
+    email: personalMailbox, displayName: 'Wrong Project', smtpHost: 'smtp.example.com', smtpPort: 465,
+    smtpSecure: true, smtpRequireTls: true, smtpUsername: personalMailbox, password: 'fixture-code',
+    status: 'active', dailyLimit: 100,
+  }, 404, ironhueProjectId);
+});
+
+test('74 personal IMAP sync isolates the mailbox, links only owned customers, and blocks cross-user replies', async () => {
+  await models.UserMailAccount.updateOne({ _id: personalMailAccountId }, { $set: {
+    verificationStatus: 'verified', verifiedAt: new Date(), imapVerificationStatus: 'verified', imapVerifiedAt: new Date(),
+  } });
+  const fake = { on() {}, close() {}, async connect() {}, mailbox: { uidValidity: 1n, uidNext: 2 },
+    async getMailboxLock() { return { release() {} }; }, async search() { return [1]; },
+    async fetchOne(_uid: number, query: { size?: boolean }) { return query.size ? { size: 1024 } : { source: mime(`personal-imap-${suffix}`) }; } };
+  const synced = await sync.syncPersonalInbox(projectId, salesId, (options: any) => {
+    assert.equal(options.auth.user, personalMailbox); assert.equal(options.auth.pass, 'fixture-authorization-code');
+    return fake as unknown as ImapFlow;
+  });
+  assert.equal(synced, true);
+  const mail = await mailModels.MailMessage.findOne({ messageId: `<personal-imap-${suffix}@fixture.test>` });
+  assert.equal(String(mail?.customerId), customerId);
+  assert.equal(String(mail?.mailboxUserId), salesId);
+  assert.equal(String(mail?.mailAccountId), personalMailAccountId);
+  const foreign = await sync.importMail(mime(`personal-foreign-${suffix}`, `other.${suffix}@example.com`), 'personal-foreign', projectId,
+    { mailAccountId: personalMailAccountId, userId: salesId, address: personalMailbox });
+  assert.equal(foreign.customerId, null);
+  const status = await request('GET', '/mail/status', salesToken);
+  assert.equal(status.source, 'personal'); assert.equal(status.verificationStatus, 'verified'); assert.equal(status.mailboxAddress, personalMailbox);
+  await request('POST', `/mail/${mail?._id}/reply`, adminToken, { subject: 'Wrong sender', content: '<p>x</p>', requestKey: randomUUID() }, 409);
+});
+
+test('75 scheduled SMTP jobs lock the sender account and consume its atomic daily quota', async () => {
+  config.MAIL_TRANSPORT = 'smtp';
+  try {
+    const id = await scheduled({ subject: 'Personal sender' });
+    const created = await models.DevelopmentLetter.findById(id);
+    assert.equal(String(created?.mailAccountId), personalMailAccountId);
+    assert.match(created?.senderAddress || '', new RegExp(personalMailbox.replace('.', '\\.')));
+    await due(id);
+    let payload: any;
+    await queue.processMailJob(id, async (value) => { payload = value; return accepted(); });
+    assert.equal(payload.mailAccountId, personalMailAccountId);
+    assert.equal(payload.senderUserId, salesId);
+    assert.equal((await models.DevelopmentLetter.findById(id))?.status, 'sent');
+    const bucket = await models.MailQuotaBucket.findOne({ mailAccountId: personalMailAccountId });
+    assert.equal(bucket?.attempts, 1);
+    assert.ok(await models.MailAccountAudit.exists({ accountId: personalMailAccountId, action: 'send_success' }));
+  } finally {
+    config.MAIL_TRANSPORT = 'mock';
+  }
+});
+
+test('76 daily mailbox quota blocks delivery without contacting SMTP', async () => {
+  config.MAIL_TRANSPORT = 'smtp';
+  try {
+    const id = await scheduled({ subject: 'Over quota' });
+    await due(id);
+    let deliveries = 0;
+    await queue.processMailJob(id, async () => { deliveries += 1; return accepted(); });
+    const job = await models.DevelopmentLetter.findById(id);
+    assert.equal(deliveries, 0);
+    assert.equal(job?.status, 'failed');
+    assert.match(job?.error || '', /额度已用完/);
+    assert.ok(await models.MailAccountAudit.exists({ accountId: personalMailAccountId, action: 'quota_blocked' }));
+  } finally {
+    config.MAIL_TRANSPORT = 'mock';
+  }
+});
+
+test('77 disabled or unverified mailboxes block real sending while drafts remain available', async () => {
+  await request('PUT', `/mail-accounts/users/${salesId}`, adminToken, {
+    email: personalMailbox, displayName: 'Sales Fixture', smtpHost: 'smtp.example.com', smtpPort: 465,
+    smtpSecure: true, smtpRequireTls: true, smtpUsername: personalMailbox, status: 'disabled', dailyLimit: 1,
+    imapEnabled: true, imapHost: 'imap.example.com', imapPort: 993, imapSecure: true, imapUsername: personalMailbox,
+  });
+  config.MAIL_TRANSPORT = 'smtp';
+  try {
+    await request('POST', '/letters', salesToken, { customerId, subject: 'Blocked', content: '<p>Blocked</p>', requestKey: randomUUID() }, 409);
+    const draft = await request('POST', '/letters', salesToken, { customerId, subject: 'Draft allowed', content: '<p>Draft</p>', requestKey: randomUUID(), saveAsDraft: true }, 201);
+    assert.equal(draft.letter.status, 'draft');
+    assert.equal(draft.delivered, false);
+  } finally {
+    config.MAIL_TRANSPORT = 'mock';
+  }
 });

@@ -71,7 +71,9 @@ test('tool registry exposes read-only tools only', () => {
 
 test('sessions and messages are isolated by user and project', async () => {
   const created = await service.createAgentSession({ context: { type: 'global' } }, actorA);
-  assert.equal((await service.listAgentSessions(actorA)).length, 1);
+  const emptySessions = await service.listAgentSessions(actorA);
+  assert.equal(emptySessions.length, 1);
+  assert.equal(emptySessions[0]?.messageCount, 0);
   assert.equal((await service.listAgentSessions(actorB)).length, 0);
   assert.equal((await service.listAgentSessions(actorOtherProject)).length, 0);
 
@@ -79,6 +81,10 @@ test('sessions and messages are isolated by user and project', async () => {
   assert.equal(result.degraded, false);
   assert.equal(result.assistantMessage.status, 'completed');
   assert.equal((await service.listAgentMessages(created.id, actorA)).length, 2);
+  const summarized = await service.listAgentSessions(actorA);
+  assert.equal(summarized[0]?.messageCount, 2);
+  assert.equal(summarized[0]?.title, '总结今天的销售工作区');
+  assert.ok(summarized[0]?.lastMessagePreview);
   await assert.rejects(() => service.listAgentMessages(created.id, actorB), (error: unknown) => (
     Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 404)
   ));
@@ -88,6 +94,19 @@ test('sessions and messages are isolated by user and project', async () => {
   assert.equal(actions[0]?.toolName, 'get_dashboard_summary');
   assert.equal(actions[0]?.riskLevel, 'read');
   assert.equal(actions[0]?.approvalStatus, 'not_required');
+});
+
+test('session rename and archive remain scoped to the current user and project', async () => {
+  const created = await service.createAgentSession({ context: { type: 'global' } }, actorA);
+  const renamed = await service.updateAgentSession(created.id, { title: '本周重点客户' }, actorA);
+  assert.equal(renamed.title, '本周重点客户');
+  await assert.rejects(
+    () => service.updateAgentSession(created.id, { title: '越权修改' }, actorB),
+    (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 404),
+  );
+  const archived = await service.updateAgentSession(created.id, { status: 'archived' }, actorA);
+  assert.equal(archived.status, 'archived');
+  assert.equal((await service.listAgentSessions(actorA)).some((item) => item.id === created.id), false);
 });
 
 test('chat requests are idempotent and prompt injection stays inside read-only boundaries', async () => {

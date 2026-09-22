@@ -19,6 +19,8 @@ export interface IDevelopmentLetter {
   subject: string;
   /** 发送时使用的项目发件身份快照 */
   senderAddress?: string;
+  /** 真实发送时锁定的业务员邮箱账户；草稿或 Mock 任务可为空。 */
+  mailAccountId?: Types.ObjectId;
   /** 富文本正文（HTML），占位符已在发送时替换完成 */
   content: string;
   /** 实际交给 SMTP 的追踪版 HTML；敏感字段，不对 API 输出 */
@@ -110,6 +112,7 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
       maxlength: [100000, '开发信正文过长'],
     },
     senderAddress: { type: String, trim: true, maxlength: 300 },
+    mailAccountId: { type: Schema.Types.ObjectId, ref: 'UserMailAccount', index: true },
     deliveryContent: { type: String, select: false, maxlength: 120000 },
     contentText: { type: String, default: '' },
     template: { type: String, default: '' },

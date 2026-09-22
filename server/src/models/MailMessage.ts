@@ -3,6 +3,9 @@ import { Schema, model } from 'mongoose';
 // Only inbound mail is stored here. Outbound mail keeps the V1 DevelopmentLetter model.
 const schema = new Schema({
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+  mailAccountId: { type: Schema.Types.ObjectId, ref: 'UserMailAccount', index: true },
+  mailboxUserId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+  mailboxAddress: { type: String, trim: true, lowercase: true, maxlength: 200 },
   dedupKey: { type: String, required: true },
   deleted: { type: Boolean, default: false },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer', index: true, default: null },
@@ -27,6 +30,7 @@ const schema = new Schema({
 }, { timestamps: true, versionKey: false });
 schema.index({ projectId: 1, dedupKey: 1 }, { unique: true });
 schema.index({ projectId: 1, customerId: 1, sentAt: -1 });
+schema.index({ projectId: 1, mailboxUserId: 1, sentAt: -1 });
 schema.index({ projectId: 1, threadId: 1, sentAt: 1 });
 export const MailMessage = model('MailMessage', schema);
 

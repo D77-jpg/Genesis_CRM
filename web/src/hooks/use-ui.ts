@@ -40,7 +40,10 @@ export function useEscapeKey(handler: () => void, active = true): void {
   useEffect(() => {
     if (!active) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') handler();
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const target = event.target;
+      if (target instanceof Element && target.closest('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      handler();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
