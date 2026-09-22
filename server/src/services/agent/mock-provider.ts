@@ -8,6 +8,8 @@ import type {
   CustomerExtractionResult,
   CustomerAnalysisRequest,
   CustomerAnalysisResult,
+  MailThreadAnalysisRequest,
+  MailThreadAnalysisResult,
 } from './provider';
 
 function lineValue(content: string, labels: string[]): string {
@@ -150,6 +152,36 @@ export class MockAgentProvider implements AgentProvider {
         bodyText: `Dear ${request.input.customerName},\n\nThank you for your interest. To make sure we prepare the most relevant information, could you please confirm your preferred product specifications, estimated quantity, and target timeline?\n\nOnce we have these details, we will review the next steps with you.\n\nBest regards,`,
       },
       followUpPlan: { method: 'email', content: '确认客户规格、预计数量和目标采购时间，并根据回复准备下一步资料。', dueAt },
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+    };
+  }
+
+  async analyzeMailThread(request: MailThreadAnalysisRequest): Promise<MailThreadAnalysisResult> {
+    const messages = request.input.messages;
+    const latestInbound = [...messages].reverse().find((item) => item.direction === 'inbound');
+    const evidence = latestInbound ? [latestInbound.messageId] : messages.length ? [messages[messages.length - 1]!.messageId] : [];
+    const text = latestInbound?.text ?? '';
+    const products = /(?:^|\n)\s*(?:product|model|产品|型号)\s*[:：]\s*([^\n。]+)/i.exec(text)?.[1]?.trim();
+    const quantity = /(?:^|\n)\s*(?:quantity|qty|数量)\s*[:：]\s*([^\n。]+)/i.exec(text)?.[1]?.trim() ?? '';
+    const price = /(?:^|\n)\s*(?:price|价格|报价)\s*[:：]\s*([^\n。]+)/i.exec(text)?.[1]?.trim() ?? '';
+    const delivery = /(?:^|\n)\s*(?:delivery|lead time|交期|交货)\s*[:：]\s*([^\n。]+)/i.exec(text)?.[1]?.trim() ?? '';
+    const questions = text.split(/(?<=[?？])/).map((item) => item.trim()).filter((item) => /[?？]$/.test(item)).slice(0, 5);
+    const name = request.input.customer?.name || 'there';
+    const subject = latestInbound?.subject ? (/^re:/i.test(latestInbound.subject) ? latestInbound.subject : `Re: ${latestInbound.subject}`) : 'Re: Your inquiry';
+    return {
+      summary: `该线程共有 ${messages.length} 封邮件。${latestInbound ? '最新一封客户来信已用于意图和需求提取。' : '当前未找到客户来信。'}`,
+      intent: { category: /price|quote|报价/i.test(text) ? 'quotation_request' : 'inquiry', label: /price|quote|报价/i.test(text) ? '询价/报价请求' : '产品咨询', confidence: 0.82, evidenceMessageIds: evidence },
+      extracted: {
+        products: products ? [{ value: products, evidenceMessageIds: evidence }] : [],
+        quantity: { value: quantity, evidenceMessageIds: quantity ? evidence : [] },
+        price: { value: price, evidenceMessageIds: price ? evidence : [] },
+        delivery: { value: delivery, evidenceMessageIds: delivery ? evidence : [] },
+        questions: questions.map((question) => ({ text: question, evidenceMessageIds: evidence })),
+      },
+      safety: { classification: 'normal', reason: 'Mock Provider 未识别到受保护信号；服务端仍会独立复核。', evidenceMessageIds: evidence },
+      replyDraft: { subject, bodyText: `Dear ${name},\n\nThank you for your message. We have noted your inquiry and will review the requested product details, quantity, pricing, and delivery expectations. Could you please confirm any missing specifications or target timeline?\n\nBest regards,` },
+      statusSuggestion: { status: 'replied', reason: '客户已通过邮件回复，建议将状态更新为“已回复”。' },
+      followUpSuggestion: { method: 'email', content: '记录本次邮件需求，并在未收到补充信息时进行一次人工跟进。', result: 'replied', nextFollowUpAt: new Date(Date.now() + 3 * 86400000).toISOString() },
       usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
     };
   }

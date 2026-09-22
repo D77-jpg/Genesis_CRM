@@ -10,6 +10,7 @@ let service: typeof import('../src/services/agent/agent.service');
 let tools: typeof import('../src/services/agent/tool-registry');
 let workflow: typeof import('../src/services/agent/scratchpad-customer.service');
 let analysisWorkflow: typeof import('../src/services/agent/customer-analysis.service');
+let mailWorkflow: typeof import('../src/services/agent/mail-thread-analysis.service');
 
 const projectA = new Types.ObjectId();
 const projectB = new Types.ObjectId();
@@ -28,7 +29,8 @@ before(async () => {
   await Promise.all([
     models.AgentSession.init(), models.AgentMessage.init(), models.AgentRun.init(), models.AgentAction.init(),
     models.AgentCustomerPreview.init(), models.Scratchpad.init(), models.Customer.init(), models.User.init(),
-    models.AgentCustomerAnalysis.init(), models.DevelopmentLetter.init(), models.FollowUp.init(), models.CustomerEvent.init(), models.Quotation.init(),
+    models.AgentCustomerAnalysis.init(), models.AgentMailThreadAnalysis.init(), models.DevelopmentLetter.init(), models.FollowUp.init(), models.CustomerEvent.init(), models.Quotation.init(),
+    (await import('../src/models/MailMessage')).MailMessage.init(),
   ]);
   await models.User.insertMany([
     { _id: userA, username: 'alice', passwordHash: 'test-hash', displayName: 'Alice', role: 'user', projectIds: [projectA] },
@@ -38,6 +40,7 @@ before(async () => {
   tools = await import('../src/services/agent/tool-registry');
   workflow = await import('../src/services/agent/scratchpad-customer.service');
   analysisWorkflow = await import('../src/services/agent/customer-analysis.service');
+  mailWorkflow = await import('../src/services/agent/mail-thread-analysis.service');
 });
 
 after(async () => {
@@ -275,6 +278,82 @@ test('customer analysis separates sourced facts and suggestions, then saves only
   assert.equal(followUpAction?.executionStatus, 'succeeded');
 });
 
+test('mail assistant summarizes and extracts a thread, then applies each editable approval exactly once', async () => {
+  const { AgentAction, Customer, DevelopmentLetter, FollowUp } = await import('../src/models');
+  const { MailMessage } = await import('../src/models/MailMessage');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Daniel Cho', company: 'Everline Imports', email: 'daniel.mail@example.com', status: 'contacted', source: 'manual' });
+  const inbound = await MailMessage.create({
+    projectId: projectA, dedupKey: 'agent-mail-normal-1', customerId: customer._id, threadId: 'agent-thread-normal', messageId: '<normal-1@example.com>',
+    subject: 'Quote for product: Solar lantern', from: 'daniel.mail@example.com', to: ['sales@example.com'],
+    text: 'Product: Solar lantern\nQuantity: 1,200 units\nPrice: Please quote FOB.\nDelivery: before October.\nCan you confirm the warranty?', sentAt: new Date(),
+  });
+  const analysis = await mailWorkflow.createMailThreadAnalysis({ mailId: inbound.id, direction: 'inbound', idempotencyKey: 'mail-v13-normal-create01' }, actorA);
+  assert.equal(analysis.safety.marketingBlocked, false);
+  assert.equal(analysis.intent.category, 'quotation_request');
+  assert.ok(analysis.extracted.products.some((item) => /solar lantern/i.test(item.value)));
+  assert.equal(analysis.extracted.quantity.value, '1,200 units');
+  assert.ok(analysis.extracted.questions.length > 0);
+  assert.ok(analysis.intent.evidenceMessageIds.includes(inbound.id));
+  await assert.rejects(() => mailWorkflow.getMailThreadAnalysis(analysis.id, actorB), (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 404));
+
+  const edited = await mailWorkflow.updateMailThreadAnalysis(analysis.id, {
+    expectedVersion: analysis.version,
+    replyDraft: { subject: 'Solar lantern quotation details', bodyText: 'Dear Daniel,\n\nThank you. Could you confirm the required warranty and destination port?\n\nBest regards,' },
+    statusSuggestion: { status: 'interested', reason: '客户给出明确产品、数量和交期，并请求报价。' },
+    followUpSuggestion: { method: 'email', result: 'interested', content: '已收到 1,200 台太阳能灯询价，等待质保与目的港信息。', nextFollowUpAt: new Date(Date.now() + 4 * 86400000) },
+  }, actorA);
+  const draftSaved = await mailWorkflow.saveMailReplyDraft(analysis.id, { expectedVersion: edited.version, idempotencyKey: 'mail-v13-reply-save001' }, actorA);
+  assert.equal(draftSaved.analysis.replyStatus, 'saved');
+  const draft = await DevelopmentLetter.findById(draftSaved.letterId).lean();
+  assert.equal(draft?.status, 'draft');
+  assert.equal(draft?.sentAt, undefined);
+  assert.equal(draft?.threadId, 'agent-thread-normal');
+  assert.equal(draft?.inReplyTo, '<normal-1@example.com>');
+  assert.equal(draft?.recipientEmail, 'daniel.mail@example.com');
+  assert.equal(draft?.subject, 'Re: Solar lantern quotation details');
+  const repeatedDraft = await mailWorkflow.saveMailReplyDraft(analysis.id, { expectedVersion: edited.version, idempotencyKey: 'mail-v13-reply-save001' }, actorA);
+  assert.equal(repeatedDraft.idempotent, true);
+  assert.equal(await DevelopmentLetter.countDocuments({ projectId: projectA, requestKey: `agent-mail-reply:${analysis.id}` }), 1);
+
+  const statusApplied = await mailWorkflow.applyMailCustomerStatus(analysis.id, { expectedVersion: draftSaved.analysis.version, idempotencyKey: 'mail-v13-status-save01' }, actorA);
+  assert.equal((await Customer.findById(customer._id).lean())?.status, 'interested');
+  const followUpSaved = await mailWorkflow.saveMailFollowUp(analysis.id, { expectedVersion: statusApplied.analysis.version, idempotencyKey: 'mail-v13-follow-save001' }, actorA);
+  assert.equal(followUpSaved.analysis.followUpStatus, 'saved');
+  assert.equal(await FollowUp.countDocuments({ projectId: projectA, customerId: customer._id }), 1);
+  const repeatedFollowUp = await mailWorkflow.saveMailFollowUp(analysis.id, { expectedVersion: statusApplied.analysis.version, idempotencyKey: 'mail-v13-follow-save001' }, actorA);
+  assert.equal(repeatedFollowUp.idempotent, true);
+  assert.equal(await FollowUp.countDocuments({ projectId: projectA, customerId: customer._id }), 1);
+  const actions = await AgentAction.find({ projectId: projectA, userId: userA, workflowId: analysis.id }).lean();
+  assert.ok(['save_mail_reply_draft', 'apply_mail_customer_status', 'save_mail_followup_record'].every((name) => actions.some((item) => item.toolName === name && item.approvalStatus === 'approved' && item.executionStatus === 'succeeded')));
+});
+
+test('unsubscribe, bounce, and rejection are server-detected and cannot produce a reply draft or future marketing follow-up', async () => {
+  const { Customer, DevelopmentLetter, FollowUp } = await import('../src/models');
+  const { MailMessage } = await import('../src/models/MailMessage');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Protected Signals', email: 'signals@example.com', status: 'replied', source: 'manual' });
+  const cases = [
+    { key: 'unsubscribe', from: 'signals@example.com', subject: 'Please remove me', text: 'Please unsubscribe and stop emailing me.', expected: 'unsubscribe' },
+    { key: 'bounce', from: 'mailer-daemon@example.com', subject: 'Mail delivery failed', text: 'This message was undeliverable.', expected: 'bounce' },
+    { key: 'rejection', from: 'signals@example.com', subject: 'Re: offer', text: 'We are not interested and do not need this product.', expected: 'rejection' },
+  ] as const;
+  for (const item of cases) {
+    const mail = await MailMessage.create({ projectId: projectA, dedupKey: `agent-mail-${item.key}`, customerId: customer._id, threadId: `agent-thread-${item.key}`, messageId: `<${item.key}@example.com>`, subject: item.subject, from: item.from, to: ['sales@example.com'], text: item.text, sentAt: new Date() });
+    const analysis = await mailWorkflow.createMailThreadAnalysis({ mailId: mail.id, direction: 'inbound', idempotencyKey: `mail-v13-protected-${item.key}` }, actorA);
+    assert.equal(analysis.safety.classification, item.expected);
+    assert.equal(analysis.safety.marketingBlocked, true);
+    assert.equal(analysis.replyStatus, 'blocked');
+    assert.equal(analysis.replyDraft.bodyText, '');
+    assert.equal(analysis.followUpSuggestion.nextFollowUpAt, null);
+    await assert.rejects(() => mailWorkflow.saveMailReplyDraft(analysis.id, { expectedVersion: analysis.version, idempotencyKey: `mail-v13-block-${item.key}` }, actorA), (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 409));
+    const saved = await mailWorkflow.saveMailFollowUp(analysis.id, { expectedVersion: analysis.version, idempotencyKey: `mail-v13-log-${item.key}` }, actorA);
+    const followUp = await FollowUp.findById(saved.followUpId).lean();
+    assert.equal(followUp?.nextFollowUpAt, undefined);
+    assert.equal(followUp?.result, item.expected === 'bounce' ? 'no_reply' : 'no_need');
+  }
+  assert.equal(await DevelopmentLetter.countDocuments({ projectId: projectA, customerId: customer._id }), 0);
+  assert.equal(mailWorkflow.detectProtectedMailSignal({ text: 'Please stop emailing me' }).classification, 'unsubscribe');
+});
+
 test('OpenAI adapter uses stateless Responses API with strict server-side tools', async () => {
   const { OpenAIResponsesProvider } = await import('../src/services/agent/openai-provider');
   const originalFetch = globalThis.fetch;
@@ -298,6 +377,17 @@ test('OpenAI adapter uses stateless Responses API with strict server-side tools'
         }),
         usage: { input_tokens: 20, output_tokens: 10, total_tokens: 30 },
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if ((capturedBody.text as { format?: { name?: string } } | undefined)?.format?.name === 'mail_thread_assistant') {
+      return new Response(JSON.stringify({ status: 'completed', output_text: JSON.stringify({
+        summary: 'Customer requested a quotation.',
+        intent: { category: 'quotation_request', label: 'Quotation request', confidence: 0.9, evidenceMessageIds: ['m1'] },
+        extracted: { products: [{ value: 'Lantern', evidenceMessageIds: ['m1'] }], quantity: { value: '100', evidenceMessageIds: ['m1'] }, price: { value: '', evidenceMessageIds: [] }, delivery: { value: '', evidenceMessageIds: [] }, questions: [] },
+        safety: { classification: 'normal', reason: '', evidenceMessageIds: ['m1'] },
+        replyDraft: { subject: 'Re: quote', bodyText: 'Dear Customer,\n\nThank you.\n\nBest regards,' },
+        statusSuggestion: { status: 'interested', reason: 'Clear inquiry' },
+        followUpSuggestion: { method: 'email', content: 'Follow up', result: 'interested', nextFollowUpAt: '2030-01-02T03:04:05.000Z' },
+      }), usage: { input_tokens: 30, output_tokens: 20, total_tokens: 50 } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     if (capturedBody.text) {
       return new Response(JSON.stringify({
@@ -351,6 +441,13 @@ test('OpenAI adapter uses stateless Responses API with strict server-side tools'
     assert.equal(analysisFormat?.type, 'json_schema');
     assert.equal(analysisFormat?.strict, true);
     assert.equal(capturedBodies[2]?.store, false);
+    const mailAnalysis = await adapter.analyzeMailThread({ input: { messages: [{ messageId: 'm1', direction: 'inbound', subject: 'Quote', from: 'buyer@example.com', to: ['sales@example.com'], text: 'Please quote 100 lanterns', sentAt: new Date().toISOString() }] }, safetyIdentifier: 'hashed-user' });
+    assert.equal(mailAnalysis.intent.category, 'quotation_request');
+    const mailFormat = (capturedBodies[3]?.text as { format?: { name?: string; type?: string; strict?: boolean; schema?: { additionalProperties?: boolean } } }).format;
+    assert.equal(mailFormat?.name, 'mail_thread_assistant');
+    assert.equal(mailFormat?.strict, true);
+    assert.equal(mailFormat?.schema?.additionalProperties, false);
+    assert.equal(capturedBodies[3]?.store, false);
   } finally {
     globalThis.fetch = originalFetch;
   }

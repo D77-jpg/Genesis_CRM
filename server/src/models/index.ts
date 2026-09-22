@@ -65,3 +65,13 @@ export type {
   AgentAnalysisSourceKind,
   AgentAnalysisClaim,
 } from './AgentCustomerAnalysis';
+
+export { AgentMailThreadAnalysis, AGENT_MAIL_INTENTS, AGENT_MAIL_SAFETY } from './AgentMailThreadAnalysis';
+export type {
+  IAgentMailThreadAnalysis,
+  AgentMailThreadAnalysisDocument,
+  AgentMailIntent,
+  AgentMailSafety,
+  AgentMailEvidenceValue,
+  AgentMailQuestion,
+} from './AgentMailThreadAnalysis';

@@ -30,6 +30,8 @@ export interface IFollowUp {
   nextFollowUpAt?: Date;
   /** 记录人（引用 User）；单用户环境下可留空 */
   createdBy?: Types.ObjectId;
+  /** Agent 确认写入的幂等标识，不对普通跟进记录设置。 */
+  agentActionKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +73,7 @@ const FollowUpSchema = new Schema<IFollowUp>(
     },
     nextFollowUpAt: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    agentActionKey: { type: String, select: false },
   },
   {
     timestamps: true,
@@ -90,6 +93,10 @@ const FollowUpSchema = new Schema<IFollowUp>(
 FollowUpSchema.index({ projectId: 1, customerId: 1, followUpAt: -1 });
 // 「今日 / 逾期」等按下一次跟进时间的聚合查询
 FollowUpSchema.index({ projectId: 1, nextFollowUpAt: 1 });
+FollowUpSchema.index(
+  { projectId: 1, agentActionKey: 1 },
+  { unique: true, partialFilterExpression: { agentActionKey: { $type: 'string' } } },
+);
 
 export const FollowUp = model<IFollowUp, FollowUpModel>('FollowUp', FollowUpSchema);
 

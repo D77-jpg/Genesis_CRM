@@ -124,6 +124,42 @@ export interface AgentCustomerAnalysis {
   updatedAt: string | Date;
 }
 
+/* ---------------------------- Agent V1.3 ---------------------------- */
+
+export type AgentMailSafety = 'normal' | 'unsubscribe' | 'bounce' | 'rejection';
+export type AgentMailIntent = 'inquiry' | 'quotation_request' | 'negotiation' | 'sample_request' | 'order' | 'support' | 'positive' | 'neutral' | 'unsubscribe' | 'bounce' | 'rejection' | 'other';
+export interface AgentMailEvidenceValue { value: string; evidenceMessageIds: string[] }
+export interface AgentMailThreadAnalysis {
+  id: string;
+  rootMailId: string;
+  rootDirection: 'inbound' | 'outbound';
+  threadId: string;
+  customerId?: string;
+  sources: { messageId: string; direction: 'inbound' | 'outbound'; subject: string; sentAt: string | Date; label: string }[];
+  summary: string;
+  intent: { category: AgentMailIntent; label: string; confidence: number; evidenceMessageIds: string[] };
+  extracted: {
+    products: AgentMailEvidenceValue[];
+    quantity: AgentMailEvidenceValue;
+    price: AgentMailEvidenceValue;
+    delivery: AgentMailEvidenceValue;
+    questions: { text: string; evidenceMessageIds: string[] }[];
+  };
+  safety: { classification: AgentMailSafety; marketingBlocked: boolean; reason: string; evidenceMessageIds: string[] };
+  replyDraft: { subject: string; bodyText: string };
+  statusSuggestion: { status: CustomerStatus; reason: string };
+  followUpSuggestion: { method: FollowUpMethod; content: string; result: FollowUpResult; nextFollowUpAt?: string | Date | null };
+  replyStatus: 'editable' | 'saving' | 'saved' | 'blocked' | 'failed';
+  customerStatusUpdate: 'editable' | 'updating' | 'updated' | 'failed';
+  followUpStatus: 'editable' | 'saving' | 'saved' | 'failed';
+  createdLetterId?: string;
+  createdFollowUpId?: string;
+  version: number;
+  lastError?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
 /* ---------------------------- 枚举 ---------------------------- */
 
 /**

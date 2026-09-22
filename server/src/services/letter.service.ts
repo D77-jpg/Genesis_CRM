@@ -307,6 +307,21 @@ async function persistAndSend(options: {
   const mailConfig = await getProjectMailConfig(String(customer.projectId));
   const activeChannel = mailConfig.transport;
 
+  // 回复草稿也必须先解析父邮件，确保收件人、主题和线程引用与正式回复一致。
+  let threadId: string = options.threadId || randomUUID();
+  let inReplyTo = options.inReplyTo;
+  let references: string[] = options.references || [];
+  if (options.replyToId) {
+    const parent = await MailMessage.findOne({ _id: options.replyToId, customerId: customer._id, projectId: customer.projectId });
+    if (!parent) throw ApiError.notFound('邮件不存在或无权访问');
+    threadId = parent.threadId;
+    inReplyTo = parent.messageId || undefined;
+    references = [...parent.references, ...(inReplyTo ? [inReplyTo] : [])].slice(-50);
+    rendered.recipientEmail = parent.from;
+    const replySubject = saveAsDraft ? rendered.subject : parent.subject;
+    rendered.subject = /^re:/i.test(replySubject) ? replySubject : 'Re: ' + replySubject;
+  }
+
   // 1) 草稿：直接落库，不发送、不改客户状态
   if (saveAsDraft) {
     const payload = {
@@ -321,6 +336,9 @@ async function persistAndSend(options: {
       template: contentTemplate,
       status: 'draft',
       channel: activeChannel,
+      threadId,
+      inReplyTo,
+      references,
       sentBy: userId ? new Types.ObjectId(userId) : undefined,
       ...(options.requestKey ? { requestKey: options.requestKey } : {}),
     };
@@ -356,18 +374,6 @@ async function persistAndSend(options: {
     };
   }
 
-  let threadId: string = options.threadId || randomUUID();
-  let inReplyTo = options.inReplyTo;
-  let references: string[] = options.references || [];
-  if (options.replyToId) {
-    const parent = await MailMessage.findOne({ _id: options.replyToId, customerId: customer._id, projectId: customer.projectId });
-    if (!parent) throw ApiError.notFound('邮件不存在或无权访问');
-    threadId = parent.threadId;
-    inReplyTo = parent.messageId || undefined;
-    references = [...parent.references, ...(inReplyTo ? [inReplyTo] : [])].slice(-50);
-    rendered.recipientEmail = parent.from;
-    rendered.subject = /^re:/i.test(parent.subject) ? parent.subject : 'Re: ' + parent.subject;
-  }
   const requestKey = createHash('sha256').update(JSON.stringify([userId, options.requestKey || [customer.id, rendered, options.scheduledAt, Math.floor(Date.now() / 60000)]])).digest('hex');
   if (options.scheduledAt && options.scheduledAt.getTime() <= Date.now() && !await DevelopmentLetter.exists({ requestKey, projectId: customer.projectId })) throw ApiError.badRequest('定时时间必须晚于当前时间');
   const due = options.scheduledAt ?? new Date();

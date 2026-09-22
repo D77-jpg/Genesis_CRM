@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Mail, RefreshCw } from 'lucide-react';
+import { Mail, MailSearch, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
 import { downloadFile } from '@/lib/download';
@@ -18,6 +18,7 @@ import { usePageTitle } from '@/hooks/use-ui';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { MailInteractionSummary } from '@/components/letters/mail-interaction-summary';
 import type { MailTrackingSummary } from '@/types';
+import { useUiStore } from '@/store/ui.store';
 
 interface MailItem {
   id: string; direction: 'inbound' | 'outbound'; customerId?: string;
@@ -38,6 +39,7 @@ type Folder = keyof typeof folderLabels;
 export function MailPage(): React.JSX.Element {
   usePageTitle('邮件中心');
   const admin = useAuthStore(selectIsAdmin);
+  const setAgentOpen = useUiStore((state) => state.setAgentOpen);
   const [params, setParams] = useSearchParams();
   const [folder, setFolder] = React.useState<Folder>('inbox');
   const [page, setPage] = React.useState(1);
@@ -154,6 +156,7 @@ export function MailPage(): React.JSX.Element {
             {detail.customer ? <Link className="text-sm text-primary underline" to={`/customers/${detail.customer.id}`}>客户：{detail.customer.name} · {detail.customer.company}</Link> : <Badge variant="outline">未关联客户</Badge>}
             {detail.mail.direction === 'inbound' && <Button variant="outline" disabled={busy} onClick={() => void action(() => apiPost(`/mail/${detail.mail.id}/read`, { read: !detail.mail.read }))}>{detail.mail.read ? '标记未读' : '标记已读'}</Button>}
             {detail.customer && detail.mail.direction === 'inbound' && <Button onClick={() => setReply(true)}>回复客户</Button>}
+            <Button variant="outline" onClick={() => setAgentOpen(true)}><MailSearch className="mr-2 h-4 w-4" />邮件会话助理</Button>
             {detail.mail.status && ['scheduled', 'queued', 'retrying'].includes(detail.mail.status) && <Button variant="outline" disabled={busy} onClick={() => void action(() => apiPost(`/mail/${detail.mail.id}/cancel`))}>取消任务</Button>}
             {detail.customer && detail.mail.status === 'failed' && !detail.mail.needsReview && <Button disabled={busy} onClick={() => void action(async () => { setResend(await apiGet<DevelopmentLetter>(`/letters/${detail.mail.id}`)); })}>编辑并重新发送</Button>}
             {admin && detail.mail.needsReview && <><Button variant="outline" onClick={() => setResolve('sent')}>已核实投递成功</Button><Button variant="outline" onClick={() => setResolve('not_sent')}>已核实未投递</Button></>}

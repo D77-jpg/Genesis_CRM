@@ -22,6 +22,19 @@ import {
   updateAgentCustomerPreviewSchema,
 } from '../validators/agent.validator';
 import {
+  applyMailCustomerStatus,
+  createMailThreadAnalysis,
+  getMailThreadAnalysis,
+  saveMailFollowUp,
+  saveMailReplyDraft,
+  updateMailThreadAnalysis,
+} from '../services/agent/mail-thread-analysis.service';
+import {
+  agentMailAnalysisParamsSchema,
+  createAgentMailAnalysisSchema,
+  updateAgentMailAnalysisSchema,
+} from '../validators/agent.validator';
+import {
   cancelScratchpadCustomerPreview,
   confirmScratchpadCustomerPreview,
   createScratchpadCustomerPreview,
@@ -97,6 +110,25 @@ router.post('/customer-analyses/:id/save-email-draft', messageLimiter, validate(
 }));
 router.post('/customer-analyses/:id/schedule-followup', messageLimiter, validate({ params: agentCustomerAnalysisParamsSchema, body: confirmAgentAnalysisActionSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await scheduleAnalysisFollowUp(req.params.id, req.body, req.user!), 201);
+}));
+
+router.post('/mail-analyses', messageLimiter, validate({ body: createAgentMailAnalysisSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await createMailThreadAnalysis(req.body, req.user!), 201);
+}));
+router.get('/mail-analyses/:id', validate({ params: agentMailAnalysisParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await getMailThreadAnalysis(req.params.id, req.user!));
+}));
+router.put('/mail-analyses/:id', validate({ params: agentMailAnalysisParamsSchema, body: updateAgentMailAnalysisSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateMailThreadAnalysis(req.params.id, req.body, req.user!));
+}));
+router.post('/mail-analyses/:id/save-reply-draft', messageLimiter, validate({ params: agentMailAnalysisParamsSchema, body: confirmAgentAnalysisActionSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await saveMailReplyDraft(req.params.id, req.body, req.user!), 201);
+}));
+router.post('/mail-analyses/:id/apply-customer-status', messageLimiter, validate({ params: agentMailAnalysisParamsSchema, body: confirmAgentAnalysisActionSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await applyMailCustomerStatus(req.params.id, req.body, req.user!), 201);
+}));
+router.post('/mail-analyses/:id/save-followup', messageLimiter, validate({ params: agentMailAnalysisParamsSchema, body: confirmAgentAnalysisActionSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await saveMailFollowUp(req.params.id, req.body, req.user!), 201);
 }));
 
 export default router;

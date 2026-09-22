@@ -49,6 +49,7 @@ export async function createFollowUp(
   input: CreateFollowUpInput,
   userId?: string,
   projectId?: string,
+  options?: { agentActionKey?: string },
 ): Promise<FollowUpDto> {
   if (!Types.ObjectId.isValid(customerId)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
@@ -60,7 +61,7 @@ export async function createFollowUp(
     throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
   }
 
-  const followUp = await FollowUp.create({
+  const payload = {
     projectId: projectOid,
     customerId: customer._id,
     method: input.method,
@@ -69,7 +70,25 @@ export async function createFollowUp(
     followUpAt: input.followUpAt ?? new Date(),
     nextFollowUpAt: input.nextFollowUpAt,
     createdBy: userId ? new Types.ObjectId(userId) : undefined,
-  });
+    ...(options?.agentActionKey ? { agentActionKey: options.agentActionKey } : {}),
+  };
+  let followUp: FollowUpDocument;
+  if (options?.agentActionKey) {
+    try {
+      followUp = await FollowUp.findOneAndUpdate(
+        { projectId: projectOid, agentActionKey: options.agentActionKey },
+        { $setOnInsert: payload },
+        { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true },
+      ) as FollowUpDocument;
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+      const existing = await FollowUp.findOne({ projectId: projectOid, agentActionKey: options.agentActionKey }).select('+agentActionKey');
+      if (!existing) throw error;
+      followUp = existing;
+    }
+  } else {
+    followUp = await FollowUp.create(payload);
+  }
 
   // 跟进时填了下一次跟进时间，就同步到客户主档（列表 / 详情 / Dashboard 口径一致）
   if (input.nextFollowUpAt) {

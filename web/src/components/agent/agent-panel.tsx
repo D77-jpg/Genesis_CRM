@@ -9,6 +9,7 @@ import {
   Clock3,
   FileClock,
   Loader2,
+  MailSearch,
   Plus,
   Send,
   ShieldCheck,
@@ -30,6 +31,7 @@ import { useUiStore } from '@/store/ui.store';
 import type { AgentAction, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
 import { ScratchpadCustomerPreviewView } from './scratchpad-customer-preview';
 import { CustomerAnalysisView } from './customer-analysis';
+import { MailThreadAnalysisView } from './mail-thread-analysis';
 
 interface SendResult {
   userMessage: AgentMessage;
@@ -87,6 +89,11 @@ function actionLabel(toolName: string): string {
     edit_customer_analysis_draft: '编辑分析草稿',
     save_agent_email_draft: '确认保存开发信草稿',
     schedule_agent_followup: '确认安排跟进',
+    analyze_mail_thread: '分析邮件会话',
+    edit_mail_thread_approval: '编辑邮件审批卡片',
+    save_mail_reply_draft: '确认保存回复草稿',
+    apply_mail_customer_status: '确认更新客户状态',
+    save_mail_followup_record: '确认保存跟进记录',
   };
   return labels[toolName] ?? toolName;
 }
@@ -102,6 +109,11 @@ export function AgentPanel(): React.JSX.Element | null {
   const customerAnalysisCustomerId = useUiStore((state) => state.agentCustomerAnalysisCustomerId);
   const openCustomerAnalysis = useUiStore((state) => state.openAgentCustomerAnalysis);
   const clearCustomerAnalysis = useUiStore((state) => state.clearAgentCustomerAnalysis);
+  const mailAnalysisId = useUiStore((state) => state.agentMailAnalysisId);
+  const mailAnalysisMailId = useUiStore((state) => state.agentMailAnalysisMailId);
+  const mailAnalysisDirection = useUiStore((state) => state.agentMailAnalysisDirection);
+  const openMailAnalysis = useUiStore((state) => state.openAgentMailAnalysis);
+  const clearMailAnalysis = useUiStore((state) => state.clearAgentMailAnalysis);
   const isMobile = useIsMobile();
   const location = useLocation();
   const context = React.useMemo(() => routeContext(location.pathname, location.search), [location.pathname, location.search]);
@@ -173,14 +185,19 @@ export function AgentPanel(): React.JSX.Element | null {
   }, [open, activeSessionId]);
 
   React.useEffect(() => {
-    if (customerAnalysisId) setTab('customer-analysis');
+    if (mailAnalysisId) setTab('mail-analysis');
+    else if (customerAnalysisId) setTab('customer-analysis');
     else if (customerPreviewId) setTab('customer-preview');
-    else if (tab === 'customer-preview' || tab === 'customer-analysis') setTab('chat');
-  }, [customerAnalysisId, customerPreviewId, tab]);
+    else if (tab === 'customer-preview' || tab === 'customer-analysis' || tab === 'mail-analysis') setTab('chat');
+  }, [customerAnalysisId, customerPreviewId, mailAnalysisId, tab]);
 
   React.useEffect(() => {
     if (customerAnalysisId && (context.type !== 'customer' || customerAnalysisCustomerId !== context.resourceId)) clearCustomerAnalysis();
   }, [clearCustomerAnalysis, context, customerAnalysisCustomerId, customerAnalysisId]);
+
+  React.useEffect(() => {
+    if (mailAnalysisId && (context.type !== 'mail' || mailAnalysisMailId !== context.resourceId || mailAnalysisDirection !== context.direction)) clearMailAnalysis();
+  }, [clearMailAnalysis, context, mailAnalysisDirection, mailAnalysisId, mailAnalysisMailId]);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -261,6 +278,19 @@ export function AgentPanel(): React.JSX.Element | null {
     } finally { setAnalyzing(false); }
   }
 
+  async function startMailAnalysis() {
+    if (context.type !== 'mail' || analyzing) return;
+    setAnalyzing(true); setError('');
+    try {
+      const analysis = await apiPost<{ id: string }>('/agent/mail-analyses', {
+        mailId: context.resourceId, direction: context.direction,
+        idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      });
+      openMailAnalysis(analysis.id, context.resourceId, context.direction); await loadRecords();
+    } catch (reason) { setError(toErrorMessage(reason, '邮件会话分析失败，CRM 数据未改动')); }
+    finally { setAnalyzing(false); }
+  }
+
   if (!open || !user || !project) return null;
 
   const activeContext = sessions.find((session) => session.id === activeSessionId)?.context ?? context;
@@ -277,7 +307,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">业务 Agent</h2>
-            <Badge variant="outline" className="text-[10px]">V1.2 · 确认后写入</Badge>
+            <Badge variant="outline" className="text-[10px]">V1.3 · 逐项审批</Badge>
           </div>
           <p className="truncate text-xs text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
         </div>
@@ -292,6 +322,7 @@ export function AgentPanel(): React.JSX.Element | null {
             <TabsTrigger value="chat"><Sparkles className="h-3.5 w-3.5" />对话</TabsTrigger>
             {customerPreviewId && <TabsTrigger value="customer-preview"><UserPlus className="h-3.5 w-3.5" />客户预览</TabsTrigger>}
             {customerAnalysisId && <TabsTrigger value="customer-analysis"><BarChart3 className="h-3.5 w-3.5" />客户分析</TabsTrigger>}
+            {mailAnalysisId && <TabsTrigger value="mail-analysis"><MailSearch className="h-3.5 w-3.5" />邮件助理</TabsTrigger>}
             <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -331,6 +362,7 @@ export function AgentPanel(): React.JSX.Element | null {
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></span>
                 <div><p className="font-medium">从当前工作上下文开始</p><p className="mt-1 text-sm text-muted-foreground">Agent 会通过只读工具获取数据，再给出分析建议。</p></div>
                 {context.type === 'customer' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startCustomerAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}<span><span className="block">分析客户并生成英文邮件草稿</span><span className="mt-0.5 block text-xs font-normal opacity-80">汇总档案、时间线、邮件、跟进与报价</span></span></Button>}
+                {context.type === 'mail' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startMailAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}<span><span className="block">启动邮件会话助理</span><span className="mt-0.5 block text-xs font-normal opacity-80">总结意图、提取需求并生成三张审批卡片</span></span></Button>}
                 <div className="space-y-2">
                   {suggestions(context).filter((item) => context.type !== 'customer' || item !== '分析当前客户并建议下一步').map((item) => <Button key={item} type="button" variant="outline" className="h-auto w-full justify-start whitespace-normal py-2 text-left" onClick={() => void sendMessage(item)}>{item}</Button>)}
                 </div>
@@ -376,6 +408,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
         {customerPreviewId && <TabsContent value="customer-preview" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><ScratchpadCustomerPreviewView previewId={customerPreviewId} onRecordsChanged={loadRecords} /></TabsContent>}
         {customerAnalysisId && <TabsContent value="customer-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><CustomerAnalysisView analysisId={customerAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
+        {mailAnalysisId && <TabsContent value="mail-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><MailThreadAnalysisView analysisId={mailAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-3 gap-2">

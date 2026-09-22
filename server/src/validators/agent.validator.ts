@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AGENT_CUSTOMER_FIELDS } from '../models';
-import { CUSTOMER_PRIORITY } from '../constants';
+import { CUSTOMER_PRIORITY, CUSTOMER_STATUS, FOLLOW_UP_METHOD, FOLLOW_UP_RESULT } from '../constants';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, '资源 ID 格式不正确');
 
@@ -77,6 +77,22 @@ export const confirmAgentAnalysisActionSchema = z.object({
 }).strict();
 export const agentCustomerAnalysisParamsSchema = z.object({ id: objectId }).strict();
 
+export const createAgentMailAnalysisSchema = z.object({
+  mailId: objectId,
+  direction: z.enum(['inbound', 'outbound']),
+  idempotencyKey,
+}).strict();
+export const updateAgentMailAnalysisSchema = z.object({
+  expectedVersion: z.number().int().min(1),
+  replyDraft: z.object({ subject: z.string().trim().max(300), bodyText: z.string().trim().max(20000) }).strict().optional(),
+  statusSuggestion: z.object({ status: z.enum(CUSTOMER_STATUS), reason: z.string().trim().min(1).max(1200) }).strict().optional(),
+  followUpSuggestion: z.object({
+    method: z.enum(FOLLOW_UP_METHOD), content: z.string().trim().min(1).max(5000), result: z.enum(FOLLOW_UP_RESULT),
+    nextFollowUpAt: z.union([z.literal(''), z.null(), z.coerce.date()]).optional(),
+  }).strict().optional(),
+}).strict().refine((value) => Boolean(value.replyDraft || value.statusSuggestion || value.followUpSuggestion), { message: '至少需要更新一项内容' });
+export const agentMailAnalysisParamsSchema = z.object({ id: objectId }).strict();
+
 export type CreateAgentSessionBody = z.infer<typeof createAgentSessionSchema>;
 export type SendAgentMessageBody = z.infer<typeof sendAgentMessageSchema>;
 export type CreateAgentCustomerPreviewBody = z.infer<typeof createAgentCustomerPreviewSchema>;
@@ -85,3 +101,5 @@ export type ConfirmAgentCustomerPreviewBody = z.infer<typeof confirmAgentCustome
 export type CreateAgentCustomerAnalysisBody = z.infer<typeof createAgentCustomerAnalysisSchema>;
 export type UpdateAgentCustomerAnalysisBody = z.infer<typeof updateAgentCustomerAnalysisSchema>;
 export type ConfirmAgentAnalysisActionBody = z.infer<typeof confirmAgentAnalysisActionSchema>;
+export type CreateAgentMailAnalysisBody = z.infer<typeof createAgentMailAnalysisSchema>;
+export type UpdateAgentMailAnalysisBody = z.infer<typeof updateAgentMailAnalysisSchema>;
