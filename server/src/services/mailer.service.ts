@@ -17,11 +17,14 @@ import type { MailChannel } from '../constants';
 import { mailError } from './mail-security';
 import { Project } from '../models';
 import { getProjectMailConfig, smtpConfigured, type ProjectMailConfig } from './project-mail-config.service';
+import { getMailAccountDeliveryConfig } from './mail-account.service';
 
 const logger = createLogger('mailer');
 
 export interface SendMailPayload {
   projectId?: string;
+  mailAccountId?: string;
+  senderUserId?: string;
   from?: string;
   to: string;
   toName?: string;
@@ -121,7 +124,8 @@ async function sendViaSmtp(payload: SendMailPayload, config: ProjectMailConfig):
 
   try {
     const info = await transport.sendMail({
-      from: payload.from || config.mailFrom,
+      // 发件身份由服务端可信配置决定，绝不接受客户端或任务记录伪造 From。
+      from: config.mailFrom,
       to: payload.toName ? { name: payload.toName, address: payload.to } : payload.to,
       subject: payload.subject,
       html: payload.html,
@@ -161,6 +165,23 @@ export async function sendMail(payload: SendMailPayload): Promise<SendMailResult
   if (!payload.to) {
     return { accepted: false, channel: config.transport, error: '收件人邮箱为空', durationMs: 0 };
   }
+  if (payload.mailAccountId) {
+    if (config.transport !== 'smtp') {
+      return { accepted: false, channel: 'smtp', error: '当前项目已关闭真实邮件发送', durationMs: 0 };
+    }
+    if (!payload.projectId || !payload.senderUserId) {
+      return { accepted: false, channel: 'smtp', error: '发送任务缺少邮箱权限信息', durationMs: 0 };
+    }
+    try {
+      const accountConfig = await getMailAccountDeliveryConfig(payload.mailAccountId, payload.projectId, payload.senderUserId);
+      if (!accountConfig) return { accepted: false, channel: 'smtp', error: '个人发件邮箱不可用或无权使用', durationMs: 0 };
+      return sendViaSmtp(payload, accountConfig);
+    } catch {
+      return { accepted: false, channel: 'smtp', error: '个人发件邮箱凭据不可用，请重新配置并验证', durationMs: 0 };
+    }
+  }
+  // 对外发送队列会在进入本层前强制校验 mailAccountId；保留此项目级入口仅供
+  // 启动自检与底层 SMTP 协议测试使用，不能绕过队列创建真实开发信任务。
   return config.transport === 'smtp' ? sendViaSmtp(payload, config) : sendViaMock(payload);
 }
 

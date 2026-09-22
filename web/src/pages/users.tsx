@@ -12,6 +12,7 @@ import {
   Ban,
   CheckCircle2,
   KeyRound,
+  MailCheck,
   MoreHorizontal,
   Pencil,
   ShieldCheck,
@@ -36,6 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserFormDialog } from '@/components/users/user-form-dialog';
 import { ResetPasswordDialog } from '@/components/users/reset-password-dialog';
+import { MailAccountDialog } from '@/components/users/mail-account-dialog';
 import { usePageTitle } from '@/hooks/use-ui';
 import { useUserStore } from '@/store/user.store';
 import { useAuthStore } from '@/store/auth.store';
@@ -52,6 +54,7 @@ import type { UserDto } from '@/types';
 interface RowActionHandlers {
   onEdit: (user: UserDto) => void;
   onResetPassword: (user: UserDto) => void;
+  onConfigureMail: (user: UserDto) => void;
   onToggleStatus: (user: UserDto) => void;
   onDelete: (user: UserDto) => void;
 }
@@ -62,6 +65,7 @@ function RowActions({
   isSelf,
   onEdit,
   onResetPassword,
+  onConfigureMail,
   onToggleStatus,
   onDelete,
 }: { user: UserDto; isSelf: boolean } & RowActionHandlers): React.JSX.Element {
@@ -86,6 +90,10 @@ function RowActions({
         <DropdownMenuItem onClick={() => onResetPassword(user)}>
           <KeyRound className="h-4 w-4" aria-hidden />
           重置密码
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onConfigureMail(user)}>
+          <MailCheck className="h-4 w-4" aria-hidden />
+          配置发件邮箱
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={isSelf} onClick={() => onToggleStatus(user)}>
@@ -173,6 +181,8 @@ export function UsersPage(): React.JSX.Element {
   // 重置密码弹窗
   const [resetOpen, setResetOpen] = React.useState(false);
   const [resetTarget, setResetTarget] = React.useState<UserDto | null>(null);
+  const [mailOpen, setMailOpen] = React.useState(false);
+  const [mailTarget, setMailTarget] = React.useState<UserDto | null>(null);
   // 危险操作二次确认（停用 / 删除）
   const [confirm, setConfirm] = React.useState<{ kind: 'delete' | 'disable'; user: UserDto } | null>(null);
   const [confirmLoading, setConfirmLoading] = React.useState(false);
@@ -197,6 +207,11 @@ export function UsersPage(): React.JSX.Element {
   const openReset = React.useCallback((user: UserDto) => {
     setResetTarget(user);
     setResetOpen(true);
+  }, []);
+
+  const openMailAccount = React.useCallback((user: UserDto) => {
+    setMailTarget(user);
+    setMailOpen(true);
   }, []);
 
   // 启用直接执行；停用需要二次确认
@@ -277,6 +292,7 @@ export function UsersPage(): React.JSX.Element {
             isSelf={currentUserId === user.id}
             onEdit={openEdit}
             onResetPassword={openReset}
+            onConfigureMail={openMailAccount}
             onToggleStatus={(target) => void handleToggleStatus(target)}
             onDelete={handleDelete}
           />
@@ -314,6 +330,7 @@ export function UsersPage(): React.JSX.Element {
 
       <UserFormDialog key={editingUser?.id ?? 'new'} open={formOpen} onOpenChange={setFormOpen} user={editingUser} />
       <ResetPasswordDialog open={resetOpen} onOpenChange={setResetOpen} user={resetTarget} />
+      <MailAccountDialog open={mailOpen} onOpenChange={setMailOpen} user={mailTarget} />
       <ConfirmDialog
         open={confirm !== null}
         onOpenChange={(next) => {

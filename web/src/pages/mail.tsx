@@ -22,6 +22,7 @@ import { useUiStore } from '@/store/ui.store';
 
 interface MailItem {
   id: string; direction: 'inbound' | 'outbound'; customerId?: string;
+  mailboxUserId?: string; mailboxAddress?: string;
   customerName?: string;
   subject: string; from: string; fromName?: string; to: string[]; cc: string[];
   html: string; text: string; sentAt: string; read: boolean;
@@ -32,13 +33,14 @@ interface MailItem {
   attachments: { id: string; name: string; size: number; blocked?: string }[];
 }
 interface Detail { mail: MailItem; thread: MailItem[]; customer: Customer | null }
-interface SyncStatus { enabled: boolean; channel: string; lastSyncAt?: string; lastError?: string; skipped: number }
+interface SyncStatus { enabled: boolean; configured: boolean; source: 'personal' | 'project'; verificationStatus: 'unverified' | 'verified' | 'failed'; mailboxAddress?: string; channel: string; lastSyncAt?: string; lastError?: string; skipped: number }
 const folderLabels = { inbox: '收件箱', sent: '发件记录', tasks: '定时任务', unknown: '未关联邮件' };
 type Folder = keyof typeof folderLabels;
 
 export function MailPage(): React.JSX.Element {
   usePageTitle('邮件中心');
   const admin = useAuthStore(selectIsAdmin);
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const setAgentOpen = useUiStore((state) => state.setAgentOpen);
   const [params, setParams] = useSearchParams();
   const [folder, setFolder] = React.useState<Folder>('inbox');
@@ -69,10 +71,10 @@ export function MailPage(): React.JSX.Element {
       const data = await apiGet<Paginated<MailItem>>('/mail', { params: { folder, page } });
       if (version !== listRequest.current) return;
       setItems(data.items); setTotal(data.total); setError('');
-      if (admin) setStatus(await apiGet<SyncStatus>('/mail/status'));
+      setStatus(await apiGet<SyncStatus>('/mail/status'));
     } catch (e) { setError(toErrorMessage(e)); }
     finally { setLoading(false); }
-  }, [folder, page, admin]);
+  }, [folder, page]);
   React.useEffect(() => { void refresh(); const timer = setInterval(() => void refresh(), 15000); return () => clearInterval(timer); }, [refresh]);
 
   const loadDetail = React.useCallback(async () => {
@@ -128,12 +130,14 @@ export function MailPage(): React.JSX.Element {
       <div className="flex gap-2"><Button variant="outline" disabled={loading} onClick={() => void refresh()}><RefreshCw className="mr-2 h-4 w-4" aria-hidden />刷新</Button>
         <Button onClick={() => { setCompose(!compose); setSelectedCustomer(null); }}><Mail className="mr-2 h-4 w-4" aria-hidden />写邮件</Button></div>
     </div>
-    {status && <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-      <span>{status.enabled ? `后台收件同步 · ${status.lastSyncAt ? formatDateTime(status.lastSyncAt) : '等待首次同步'}` : '收件同步未启用'}</span>
+    {status && <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+      <span>{status.enabled && status.verificationStatus === 'verified'
+        ? `${status.source === 'personal' ? '个人' : '项目统一'}收件同步${status.mailboxAddress ? `：${status.mailboxAddress}` : ''} · ${status.lastSyncAt ? formatDateTime(status.lastSyncAt) : '等待首次同步'}`
+        : status.enabled ? '收件邮箱尚未验证' : `${status.source === 'personal' ? '个人' : '项目统一'}收件同步未启用`}</span>
       <span>发件通道：{status.channel === 'mock' ? '模拟发送' : 'SMTP'}</span>
       {status.lastError && <span className="text-destructive">{status.lastError}</span>}
       {status.skipped > 0 && <span>超大邮件已跳过：{status.skipped}</span>}
-      <Button variant="ghost" disabled={busy || !status.enabled} onClick={() => void action(() => apiPost('/mail/sync'))}>同步收件</Button>
+      <Button variant="ghost" disabled={busy || !status.enabled || !status.configured || status.verificationStatus !== 'verified'} onClick={() => void action(() => apiPost('/mail/sync'))}>同步收件</Button>
     </div>}
     {error && <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">{error}</p>}
     {compose && !selectedCustomer && customerPicker}
@@ -155,7 +159,9 @@ export function MailPage(): React.JSX.Element {
           <div className="flex flex-wrap items-center gap-2">
             {detail.customer ? <Link className="text-sm text-primary underline" to={`/customers/${detail.customer.id}`}>客户：{detail.customer.name} · {detail.customer.company}</Link> : <Badge variant="outline">未关联客户</Badge>}
             {detail.mail.direction === 'inbound' && <Button variant="outline" disabled={busy} onClick={() => void action(() => apiPost(`/mail/${detail.mail.id}/read`, { read: !detail.mail.read }))}>{detail.mail.read ? '标记未读' : '标记已读'}</Button>}
-            {detail.customer && detail.mail.direction === 'inbound' && <Button onClick={() => setReply(true)}>回复客户</Button>}
+            {detail.customer && detail.mail.direction === 'inbound' && (!detail.mail.mailboxUserId || detail.mail.mailboxUserId === currentUserId)
+              ? <Button onClick={() => setReply(true)}>回复客户</Button>
+              : detail.mail.direction === 'inbound' && detail.mail.mailboxUserId ? <Badge variant="outline">请由邮箱所属业务员回复</Badge> : null}
             <Button variant="outline" onClick={() => setAgentOpen(true)}><MailSearch className="mr-2 h-4 w-4" />邮件会话助理</Button>
             {detail.mail.status && ['scheduled', 'queued', 'retrying'].includes(detail.mail.status) && <Button variant="outline" disabled={busy} onClick={() => void action(() => apiPost(`/mail/${detail.mail.id}/cancel`))}>取消任务</Button>}
             {detail.customer && detail.mail.status === 'failed' && !detail.mail.needsReview && <Button disabled={busy} onClick={() => void action(async () => { setResend(await apiGet<DevelopmentLetter>(`/letters/${detail.mail.id}`)); })}>编辑并重新发送</Button>}

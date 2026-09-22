@@ -3,6 +3,7 @@ import { newMessageId, processMailJob } from './mail-queue.service';
 import { safeMailHtml } from './mail-security';
 import { prepareTrackedHtml, trackingSummary, type TrackingSummary } from './mail-tracking.service';
 import { MailMessage } from '../models/MailMessage';
+import { resolveSenderIdentity } from './mail-account.service';
 /**
  * 开发信业务逻辑
  * ------------------------------------------------------------------
@@ -37,7 +38,6 @@ import {
 } from '../utils/text';
 import { getCustomerByIdOrThrow } from './customer.service';
 import { getActiveChannel, getProjectActiveChannel } from './mailer.service';
-import { getProjectMailConfig } from './project-mail-config.service';
 import { assertCustomerAccess, customerRefScope, projectScope, requireProjectId } from '../utils/access';
 import type { AuthUser } from '../types/express';
 import type {
@@ -77,6 +77,8 @@ export interface LetterDto {
   needsReview?: boolean;
   error?: string;
   sentBy?: string;
+  senderAddress?: string;
+  mailAccountId?: string;
   createdAt: Date;
   updatedAt: Date;
   tracking?: TrackingSummary;
@@ -215,6 +217,8 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     ...(doc.messageId ? { messageId: String(doc.messageId) } : {}),
     ...(doc.error ? { error: String(doc.error) } : {}),
     ...(doc.sentBy ? { sentBy: String(doc.sentBy) } : {}),
+    ...(doc.senderAddress ? { senderAddress: String(doc.senderAddress) } : {}),
+    ...(doc.mailAccountId ? { mailAccountId: String(doc.mailAccountId) } : {}),
     ...(tracking ? { tracking } : {}),
     createdAt: doc.createdAt as Date,
     updatedAt: doc.updatedAt as Date,
@@ -304,8 +308,8 @@ async function persistAndSend(options: {
   } = options;
 
   const rendered = await renderLetter(customer, subjectTemplate, contentTemplate, recipientEmailOverride);
-  const mailConfig = await getProjectMailConfig(String(customer.projectId));
-  const activeChannel = mailConfig.transport;
+  const sender = await resolveSenderIdentity(String(customer.projectId), userId, saveAsDraft);
+  const activeChannel = sender.channel;
 
   // 回复草稿也必须先解析父邮件，确保收件人、主题和线程引用与正式回复一致。
   let threadId: string = options.threadId || randomUUID();
@@ -314,6 +318,9 @@ async function persistAndSend(options: {
   if (options.replyToId) {
     const parent = await MailMessage.findOne({ _id: options.replyToId, customerId: customer._id, projectId: customer.projectId });
     if (!parent) throw ApiError.notFound('邮件不存在或无权访问');
+    if (parent.mailboxUserId && String(parent.mailboxUserId) !== userId) {
+      throw ApiError.conflict('该邮件属于其他业务员的个人邮箱，不能以当前账号回复');
+    }
     threadId = parent.threadId;
     inReplyTo = parent.messageId || undefined;
     references = [...parent.references, ...(inReplyTo ? [inReplyTo] : [])].slice(-50);
@@ -330,7 +337,8 @@ async function persistAndSend(options: {
       recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail,
       subject: rendered.subject,
-      senderAddress: mailConfig.mailFrom,
+      senderAddress: sender.senderAddress,
+      mailAccountId: sender.mailAccountId,
       content: rendered.html,
       contentText: rendered.text,
       template: contentTemplate,
@@ -390,7 +398,8 @@ async function persistAndSend(options: {
     letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
       projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail, subject: rendered.subject,
-      senderAddress: mailConfig.mailFrom,
+      senderAddress: sender.senderAddress,
+      mailAccountId: sender.mailAccountId,
       content: rendered.html, deliveryContent: prepared.deliveryHtml,
       contentText: rendered.text, template: contentTemplate,
       status: options.scheduledAt ? 'scheduled' : 'queued', channel: activeChannel,

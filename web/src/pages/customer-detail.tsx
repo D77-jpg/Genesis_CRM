@@ -527,9 +527,7 @@ export function CustomerDetailPage(): React.JSX.Element {
               <User className="h-4 w-4 text-muted-foreground" aria-hidden />
               客户信息
             </CardTitle>
-            <CardDescription>
-              点击任意字段可直接修改，失焦 / 回车自动保存 · 创建于 {formatDateTime(customer.createdAt)}
-            </CardDescription>
+            <CardDescription>关键字段可直接点击修改</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="gap-1.5">
@@ -545,10 +543,11 @@ export function CustomerDetailPage(): React.JSX.Element {
               variant="ghost"
               size="sm"
               aria-expanded={infoExpanded}
+              aria-controls="customer-info-details"
               onClick={toggleInfoExpanded}
             >
               {infoExpanded ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
-              {infoExpanded ? '收起' : '展开全部'}
+              {infoExpanded ? '收起详情' : '更多信息'}
             </Button>
           </div>
         </CardHeader>
@@ -560,8 +559,8 @@ export function CustomerDetailPage(): React.JSX.Element {
               <span>该客户的下一次跟进时间（{formatDate(customer.nextFollowUpAt)}）已逾期，请尽快联系。</span>
             </div>
           ) : null}
-          {/* 常用字段常驻显示；分类与补充信息收进「展开全部」，避免页面被字段占满 */}
-          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* 桌面端保持一行关键摘要；窄屏自然换行，补充信息默认收起。 */}
+          <dl className="grid gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.15fr_1.4fr_1fr_0.85fr_0.7fr_1fr]">
             <EditableInfoRow
               icon={<Building2 className="h-3.5 w-3.5" />}
               label="公司"
@@ -620,33 +619,18 @@ export function CustomerDetailPage(): React.JSX.Element {
                 onSave={saveOwner}
               />
             ) : null}
-            <EditableInfoRow
-              icon={<CalendarClock className="h-3.5 w-3.5" />}
-              label="下一次跟进"
-              kind="date"
-              value={toInputDate(customer.nextFollowUpAt)}
-              displayValue={customer.nextFollowUpAt ? formatDate(customer.nextFollowUpAt) : undefined}
-              onSave={saveFollowUpDate}
-            />
-            <EditableInfoRow
-              icon={<NotebookText className="h-3.5 w-3.5" />}
-              label="备注"
-              kind="textarea"
-              value={customer.notes}
-              placeholder="客户背景、跟进要点、包装需求等"
-              maxLength={5000}
-              className="sm:col-span-2 lg:col-span-3"
-              renderValue={(raw) => (
-                <span className="block whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm font-normal leading-relaxed">
-                  {raw}
-                </span>
-              )}
-              onSave={textSaver('notes')}
-            />
-
-            {/* ---- 展开后显示：客户分类与补充信息 ---- */}
+            {/* ---- 展开后显示：跟进安排、备注、客户分类与补充信息 ---- */}
             {infoExpanded ? (
-              <>
+              <div id="customer-info-details" className="contents">
+                <div className="col-span-full mt-1 border-t pt-3 text-xs font-medium text-muted-foreground">详细资料</div>
+                <EditableInfoRow
+                  icon={<CalendarClock className="h-3.5 w-3.5" />}
+                  label="下一次跟进"
+                  kind="date"
+                  value={toInputDate(customer.nextFollowUpAt)}
+                  displayValue={customer.nextFollowUpAt ? formatDate(customer.nextFollowUpAt) : undefined}
+                  onSave={saveFollowUpDate}
+                />
                 <EditableInfoRow
                   icon={<Star className="h-3.5 w-3.5" />}
                   label="客户等级"
@@ -715,14 +699,30 @@ export function CustomerDetailPage(): React.JSX.Element {
                   currentSelectValue={customer.leadSource?.trim() ? customer.leadSource.trim() : SOURCE_NONE}
                   onSave={saveLeadSource}
                 />
+                <InfoRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="创建时间" value={formatDateTime(customer.createdAt)} />
                 <InfoRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="更新时间" value={formatDateTime(customer.updatedAt)} />
+                <EditableInfoRow
+                  icon={<NotebookText className="h-3.5 w-3.5" />}
+                  label="备注"
+                  kind="textarea"
+                  value={customer.notes}
+                  placeholder="客户背景、跟进要点、包装需求等"
+                  maxLength={5000}
+                  className="sm:col-span-2 lg:col-span-3 xl:col-span-6"
+                  renderValue={(raw) => (
+                    <span className="block whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm font-normal leading-relaxed">
+                      {raw}
+                    </span>
+                  )}
+                  onSave={textSaver('notes')}
+                />
                 <EditableInfoRow
                   icon={<Tags className="h-3.5 w-3.5" />}
                   label="标签"
                   value={customer.tags.join(', ')}
                   placeholder="多个标签用逗号分隔，例如：珠宝, 高优先级"
                   maxLength={600}
-                  className="sm:col-span-2 lg:col-span-3"
+                  className="sm:col-span-2 lg:col-span-3 xl:col-span-6"
                   renderValue={(raw) => (
                     <span className="flex flex-wrap gap-1.5">
                       {parseTagsText(raw).map((tag) => (
@@ -734,7 +734,7 @@ export function CustomerDetailPage(): React.JSX.Element {
                   )}
                   onSave={saveTags}
                 />
-              </>
+              </div>
             ) : null}
           </dl>
 

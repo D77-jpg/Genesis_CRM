@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { useLocation } from 'react-router-dom';
 import {
+  Archive,
   Bot,
   BarChart3,
+  Check,
   CheckCircle2,
   ChevronDown,
   CircleOff,
@@ -10,6 +12,8 @@ import {
   FileClock,
   Loader2,
   MailSearch,
+  MoreHorizontal,
+  Pencil,
   Plus,
   Send,
   ShieldCheck,
@@ -20,11 +24,23 @@ import {
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useEscapeKey, useIsMobile } from '@/hooks/use-ui';
-import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
+import { apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
+import { formatDateTime, formatRelative } from '@/lib/format';
 import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
@@ -61,6 +77,12 @@ function contextLabel(context: AgentContext): string {
   if (context.type === 'customer') return '当前客户';
   if (context.type === 'mail') return '当前邮件线程';
   return '当前项目';
+}
+
+function sessionContextLabel(session: AgentSession): string {
+  if (session.context.type === 'global') return '项目级会话';
+  const type = session.context.type === 'customer' ? '客户' : '邮件';
+  return session.contextName ? `${type} · ${session.contextName}` : `${type}会话`;
 }
 
 function sameContext(left: AgentContext, right: AgentContext): boolean {
@@ -131,6 +153,12 @@ export function AgentPanel(): React.JSX.Element | null {
   const [analyzing, setAnalyzing] = React.useState(false);
   const [error, setError] = React.useState('');
   const [tab, setTab] = React.useState('chat');
+  const [renameOpen, setRenameOpen] = React.useState(false);
+  const [renameTitle, setRenameTitle] = React.useState('');
+  const [archiveOpen, setArchiveOpen] = React.useState(false);
+  const [sessionListOpen, setSessionListOpen] = React.useState(false);
+  const [sessionActionsOpen, setSessionActionsOpen] = React.useState(false);
+  const [sessionSaving, setSessionSaving] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -143,17 +171,23 @@ export function AgentPanel(): React.JSX.Element | null {
     setActions(nextActions);
   }, []);
 
+  const loadSessions = React.useCallback(async () => {
+    const nextSessions = await apiGet<AgentSession[]>('/agent/sessions');
+    const visibleSessions = nextSessions.filter((item) => item.messageCount > 0);
+    setSessions(visibleSessions);
+    return visibleSessions;
+  }, []);
+
   const loadPanel = React.useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const [nextStatus, nextSessions] = await Promise.all([
         apiGet<AgentStatus>('/agent/status'),
-        apiGet<AgentSession[]>('/agent/sessions'),
+        loadSessions(),
         loadRecords(),
       ]);
       setStatus(nextStatus);
-      setSessions(nextSessions);
       const matching = nextSessions.find((item) => sameContext(item.context, context));
       setActiveSessionId(matching?.id ?? '');
     } catch (reason) {
@@ -161,7 +195,7 @@ export function AgentPanel(): React.JSX.Element | null {
     } finally {
       setLoading(false);
     }
-  }, [context, loadRecords]);
+  }, [context, loadRecords, loadSessions]);
 
   React.useEffect(() => {
     if (open && user && project) void loadPanel();
@@ -222,14 +256,23 @@ export function AgentPanel(): React.JSX.Element | null {
     return () => { document.body.style.overflow = previous; };
   }, [isMobile, open]);
 
-  useEscapeKey(() => setOpen(false), open);
+  useEscapeKey(
+    () => setOpen(false),
+    open && !sessionListOpen && !sessionActionsOpen && !renameOpen && !archiveOpen,
+  );
 
   async function createSession(): Promise<AgentSession> {
     const created = await apiPost<AgentSession>('/agent/sessions', { context });
-    setSessions((current) => [created, ...current]);
     setActiveSessionId(created.id);
     setMessages([]);
     return created;
+  }
+
+  function startNewSession() {
+    setActiveSessionId('');
+    setMessages([]);
+    setError('');
+    window.requestAnimationFrame(() => textareaRef.current?.focus());
   }
 
   async function sendMessage(value = draft) {
@@ -255,7 +298,7 @@ export function AgentPanel(): React.JSX.Element | null {
         result.assistantMessage,
       ]);
       if (result.degraded) toast.warning('Agent 暂时不可用，CRM 其他功能不受影响');
-      await loadRecords();
+      await Promise.all([loadRecords(), loadSessions()]);
     } catch (reason) {
       setMessages((current) => current.filter((item) => !item.id.startsWith('pending-')));
       setDraft(content);
@@ -263,6 +306,40 @@ export function AgentPanel(): React.JSX.Element | null {
     } finally {
       setSending(false);
       window.requestAnimationFrame(() => textareaRef.current?.focus());
+    }
+  }
+
+  async function renameActiveSession() {
+    const title = renameTitle.trim();
+    if (!activeSessionId || !title || sessionSaving) return;
+    setSessionSaving(true);
+    setError('');
+    try {
+      await apiPut<AgentSession>(`/agent/sessions/${activeSessionId}`, { title });
+      await loadSessions();
+      setRenameOpen(false);
+      toast.success('会话名称已更新');
+    } catch (reason) {
+      setError(toErrorMessage(reason, '会话重命名失败'));
+    } finally {
+      setSessionSaving(false);
+    }
+  }
+
+  async function archiveActiveSession() {
+    if (!activeSessionId || sessionSaving) return;
+    setSessionSaving(true);
+    setError('');
+    try {
+      await apiPut<AgentSession>(`/agent/sessions/${activeSessionId}`, { status: 'archived' });
+      setSessions((current) => current.filter((item) => item.id !== activeSessionId));
+      setArchiveOpen(false);
+      startNewSession();
+      toast.success('会话已归档');
+    } catch (reason) {
+      setError(toErrorMessage(reason, '会话归档失败'));
+    } finally {
+      setSessionSaving(false);
     }
   }
 
@@ -297,7 +374,8 @@ export function AgentPanel(): React.JSX.Element | null {
 
   if (!open || !user || !project) return null;
 
-  const activeContext = sessions.find((session) => session.id === activeSessionId)?.context ?? context;
+  const activeSession = sessions.find((session) => session.id === activeSessionId);
+  const activeContext = activeSession?.context ?? context;
 
   return (
     <aside
@@ -311,7 +389,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">业务 Agent</h2>
-            <Badge variant="outline" className="text-[10px]">V1.3 · 逐项审批</Badge>
+            <Badge variant="outline" className="text-[10px]">V1.4 · 安全审批</Badge>
           </div>
           <p className="truncate text-xs text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
         </div>
@@ -337,19 +415,58 @@ export function AgentPanel(): React.JSX.Element | null {
 
         <TabsContent value="chat" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0">
           <div className="flex shrink-0 items-center gap-2 border-b px-4 py-2">
-            <div className="relative min-w-0 flex-1">
-              <select
-                aria-label="选择 Agent 会话"
-                className="h-9 w-full appearance-none truncate rounded-md border bg-background px-3 pr-8 text-sm"
-                value={activeSessionId}
-                onChange={(event) => setActiveSessionId(event.target.value)}
-              >
-                <option value="">新会话</option>
-                {sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {contextLabel(session.context)}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            </div>
-            <Button type="button" variant="outline" size="icon" onClick={() => void createSession().catch((reason) => setError(toErrorMessage(reason)))} aria-label="新建 Agent 会话">
+            <DropdownMenu open={sessionListOpen} onOpenChange={setSessionListOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="h-auto min-h-11 min-w-0 flex-1 justify-between gap-3 px-3 text-left" aria-label="选择 Agent 会话">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{activeSession?.title ?? '新会话'}</span>
+                    <span className="mt-0.5 block truncate text-[11px] font-normal text-muted-foreground">
+                      {activeSession ? sessionContextLabel(activeSession) : `${contextLabel(context)} · 输入第一条问题后自动保存`}
+                    </span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-80 w-[min(400px,calc(100vw-2rem))] overflow-y-auto">
+                <DropdownMenuItem className="min-h-11" onSelect={startNewSession}>
+                  <Plus className="h-4 w-4 text-primary" aria-hidden />
+                  <span><span className="block font-medium">开始新会话</span><span className="block text-xs text-muted-foreground">发送第一条问题后才会保存</span></span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>最近会话</DropdownMenuLabel>
+                {sessions.length === 0 && <DropdownMenuItem disabled className="min-h-11">还没有已保存的会话</DropdownMenuItem>}
+                {sessions.map((session) => (
+                  <DropdownMenuItem key={session.id} className="min-h-14 items-start py-2.5" onSelect={() => setActiveSessionId(session.id)}>
+                    {session.id === activeSessionId ? <Check className="mt-0.5 h-4 w-4 text-primary" aria-hidden /> : <span className="h-4 w-4 shrink-0" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium" title={session.title}>{session.title}</span>
+                      <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate">{sessionContextLabel(session)}</span>
+                        <span aria-hidden>·</span>
+                        <span className="shrink-0">{formatRelative(session.lastMessageAt ?? session.updatedAt)}</span>
+                      </span>
+                      {session.lastMessagePreview && <span className="mt-1 block truncate text-xs text-muted-foreground/80" title={session.lastMessagePreview}>{session.lastMessagePreview}</span>}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu open={sessionActionsOpen} onOpenChange={setSessionActionsOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="icon" className="h-11 w-11" disabled={!activeSession} aria-label="当前会话操作">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onSelect={() => { setRenameTitle(activeSession?.title ?? ''); setRenameOpen(true); }}>
+                  <Pencil className="h-4 w-4" aria-hidden />重命名
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setArchiveOpen(true)}>
+                  <Archive className="h-4 w-4" aria-hidden />归档会话
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button type="button" variant="outline" size="icon" className="h-11 w-11" onClick={startNewSession} aria-label="开始新会话">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -433,6 +550,38 @@ export function AgentPanel(): React.JSX.Element | null {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={renameOpen} onOpenChange={(next) => { if (!sessionSaving) setRenameOpen(next); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>重命名会话</DialogTitle>
+            <DialogDescription>使用客户、任务或邮件主题命名，之后会更容易找到。</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(event) => { event.preventDefault(); void renameActiveSession(); }}>
+            <label htmlFor="agent-session-title" className="mb-1.5 block text-sm font-medium">会话名称</label>
+            <Input id="agent-session-title" value={renameTitle} onChange={(event) => setRenameTitle(event.target.value)} maxLength={80} autoFocus disabled={sessionSaving} />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setRenameOpen(false)} disabled={sessionSaving}>取消</Button>
+              <Button type="submit" disabled={!renameTitle.trim() || sessionSaving}>{sessionSaving && <Loader2 className="h-4 w-4 animate-spin" />}保存名称</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={archiveOpen} onOpenChange={(next) => { if (!sessionSaving) setArchiveOpen(next); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>归档这个会话？</AlertDialogTitle>
+            <AlertDialogDescription>“{activeSession?.title ?? '当前会话'}”会从最近会话列表中移除，CRM 客户、邮件和业务数据不会受到影响。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sessionSaving}>取消</AlertDialogCancel>
+            <AlertDialogAction disabled={sessionSaving} onClick={(event) => { event.preventDefault(); void archiveActiveSession(); }}>
+              {sessionSaving && <Loader2 className="h-4 w-4 animate-spin" />}确认归档
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 }

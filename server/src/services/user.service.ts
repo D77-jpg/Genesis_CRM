@@ -6,7 +6,7 @@
  * 涉及「让管理员失去权限」的操作（停用 / 删除 / 降级）受自我保护与「最后一个启用管理员」约束。
  */
 import { Types } from 'mongoose';
-import { Customer, Project, Scratchpad, User, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
+import { Customer, MailQuotaBucket, Project, Scratchpad, User, UserMailAccount, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
 import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator';
@@ -187,7 +187,12 @@ export async function deleteUser(
   // 先把名下客户转为未分配，避免遗留指向已删除用户的悬空归属（否则无法被「未分配」筛选捞回）
   const reassigned = await Customer.updateMany({ ownerId: target._id }, { $set: { ownerId: null } });
   // 个人随手记只属于该账号；硬删除账号时同步清除，避免遗留无法访问的私有数据。
-  await Scratchpad.deleteMany({ userId: target._id });
+  const mailAccounts = await UserMailAccount.find({ userId: target._id }).select('_id');
+  await Promise.all([
+    Scratchpad.deleteMany({ userId: target._id }),
+    MailQuotaBucket.deleteMany({ mailAccountId: { $in: mailAccounts.map((account) => account._id) } }),
+    UserMailAccount.deleteMany({ userId: target._id }),
+  ]);
   await User.deleteOne({ _id: target._id });
   logger.info(`删除用户: ${target.username}（${reassigned.modifiedCount} 个客户转为未分配）`);
 

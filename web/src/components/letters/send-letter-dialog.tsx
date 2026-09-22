@@ -49,7 +49,7 @@ import { LetterEditor, type LetterEditorHandle } from './letter-editor';
 import { PlaceholderBar } from './placeholder-bar';
 import { sendLetterSchema, type SendLetterFormValues } from '@/lib/validators';
 import { buildPlaceholderValues, findMissingPlaceholders, renderTemplate } from '@/lib/placeholder';
-import { toErrorMessage } from '@/lib/api';
+import { apiGet, toErrorMessage } from '@/lib/api';
 import { createClientId, readStorage, writeStorage } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/use-debounce';
 import { useSaveShortcut } from '@/hooks/use-ui';
@@ -63,7 +63,7 @@ import {
   STORAGE_KEYS,
   TEMPLATE_CATEGORY_LABEL,
 } from '@/constants';
-import type { Customer, DevelopmentLetter, SendLetterResult } from '@/types';
+import type { CurrentMailSender, Customer, DevelopmentLetter, SendLetterResult } from '@/types';
 
 export interface SendLetterDialogProps {
   open: boolean;
@@ -156,6 +156,9 @@ export function SendLetterDialog({
   const submitLock = React.useRef(false);
   const [activeTab, setActiveTab] = React.useState<'edit' | 'preview'>('edit');
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [senderStatus, setSenderStatus] = React.useState<CurrentMailSender | null>(null);
+  const [senderLoading, setSenderLoading] = React.useState(false);
+  const [senderError, setSenderError] = React.useState<string | null>(null);
 
   const {
     register,
@@ -206,6 +209,22 @@ export function SendLetterDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在「打开 / 客户 / 原信」变化时重建表单
   }, [open, customerId, letterId, reply?.id, reset]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setSenderLoading(true);
+    setSenderError(null);
+    void apiGet<CurrentMailSender>('/mail-accounts/current')
+      .then((result) => { if (active) setSenderStatus(result); })
+      .catch((error) => {
+        if (!active) return;
+        setSenderStatus(null);
+        setSenderError(toErrorMessage(error, '无法确认当前发件邮箱'));
+      })
+      .finally(() => { if (active) setSenderLoading(false); });
+    return () => { active = false; };
+  }, [open]);
+
   // 打开时确保模板列表已加载（供「从模板导入」选择器使用；已加载则不重复请求）
   React.useEffect(() => {
     if (open && templateItems.length === 0) void fetchTemplates();
@@ -217,6 +236,8 @@ export function SendLetterDialog({
   const content = watch('content');
   const recipientEmail = watch('recipientEmail');
   const markAsDeveloped = watch('markAsDeveloped');
+  const activeChannel = senderStatus?.channel ?? channel;
+  const canSend = senderStatus?.canSend ?? channel === 'mock';
 
   const placeholderValues = React.useMemo(() => buildPlaceholderValues(customer, company), [customer, company]);
 
@@ -259,6 +280,7 @@ export function SendLetterDialog({
         submitLock.current = true;
         setServerError(null);
         try {
+          if (!asDraft && !canSend) throw new Error(senderStatus?.reason || senderError || '当前发件邮箱尚未就绪');
           if (!asDraft && scheduledAt && new Date(scheduledAt).getTime() <= Date.now()) throw new Error('定时时间必须晚于当前时间');
           const result = letter
             ? await resendLetter(letter.id, {
@@ -307,7 +329,7 @@ export function SendLetterDialog({
         } finally { submitLock.current = false; }
       })();
     },
-    [customer, letter, reply, scheduledAt, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
+    [canSend, customer, letter, reply, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
   );
 
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送
@@ -376,6 +398,26 @@ export function SendLetterDialog({
 
         <DialogBody className="space-y-4">
           {customer ? <RecipientCard customer={customer} /> : null}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">本次发件人</p>
+              <p className="truncate text-sm font-medium">
+                {senderLoading ? '正在确认发件邮箱…' : senderStatus?.senderAddress || '尚未配置个人发件邮箱'}
+              </p>
+            </div>
+            <Badge variant={canSend ? 'developed' : 'destructive'}>
+              <Mail className="mr-1 h-3 w-3" aria-hidden />
+              {activeChannel === 'mock' ? '模拟发送' : canSend ? '可发送' : '不可发送'}
+            </Badge>
+          </div>
+          {!senderLoading && (!canSend || senderError) ? (
+            <Alert variant="warning">
+              <TriangleAlert aria-hidden />
+              <AlertDescription>
+                {senderStatus?.reason || senderError || '个人发件邮箱尚未就绪'}；仍可保存草稿，请联系管理员在用户管理中配置并验证邮箱。
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <div className="space-y-1"><Label htmlFor="scheduled-mail-at">定时发送（留空立即发送，使用本地时间）</Label><Input id="scheduled-mail-at" type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} disabled={sending} /></div>
 
           {serverError ? (
@@ -386,7 +428,7 @@ export function SendLetterDialog({
             </Alert>
           ) : null}
 
-          {channel === 'mock' ? (
+          {activeChannel === 'mock' ? (
             <Alert variant="warning">
               <Info aria-hidden />
               <AlertDescription>
@@ -536,7 +578,7 @@ export function SendLetterDialog({
 
                 <Badge variant="muted" className="shrink-0">
                   <FileText className="mr-1 h-3 w-3" aria-hidden />
-                  {MAIL_CHANNEL_LABEL[channel] ?? channel}
+                  {MAIL_CHANNEL_LABEL[activeChannel] ?? activeChannel}
                 </Badge>
               </div>
             </TabsContent>
@@ -581,7 +623,7 @@ export function SendLetterDialog({
             {!sending ? <Save className="h-3.5 w-3.5" aria-hidden /> : null}
             存草稿
           </Button>
-          <Button type="button" onClick={() => void submit(false)} loading={sending} disabled={sending || !customer}>
+          <Button type="button" onClick={() => void submit(false)} loading={sending} disabled={sending || senderLoading || !customer || !canSend}>
             {!sending ? <Send className="h-3.5 w-3.5" aria-hidden /> : null}
             {scheduledAt ? '保存定时任务' : reply ? '发送回复' : letter ? '重新发送' : '发送开发信'}
           </Button>

@@ -14,8 +14,9 @@ import {
   listAgentMessages,
   listAgentSessions,
   sendAgentMessage,
+  updateAgentSession,
 } from '../services/agent/agent.service';
-import { agentDiagnosticsQuerySchema, agentSessionParamsSchema, createAgentSessionSchema, sendAgentMessageSchema } from '../validators/agent.validator';
+import { agentDiagnosticsQuerySchema, agentSessionParamsSchema, createAgentSessionSchema, sendAgentMessageSchema, updateAgentSessionSchema } from '../validators/agent.validator';
 import { getAgentDiagnostics, listAgentEvaluations, runAgentEvaluation } from '../services/agent/diagnostics.service';
 import {
   agentCustomerPreviewParamsSchema,
@@ -71,6 +72,9 @@ router.get('/tools', (_req, res) => sendSuccess(res, getAgentToolCatalog()));
 router.get('/sessions', asyncHandler(async (req, res) => sendSuccess(res, await listAgentSessions(req.user!))));
 router.post('/sessions', validate({ body: createAgentSessionSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await createAgentSession(req.body, req.user!), 201);
+}));
+router.put('/sessions/:id', validate({ params: agentSessionParamsSchema, body: updateAgentSessionSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateAgentSession(req.params.id, req.body, req.user!));
 }));
 router.get('/sessions/:id/messages', validate({ params: agentSessionParamsSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await listAgentMessages(req.params.id, req.user!));

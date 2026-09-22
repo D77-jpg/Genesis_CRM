@@ -3,6 +3,7 @@ import { DevelopmentLetter, Customer, User } from '../models';
 import env from '../config/env';
 import { sendMail, type SendMailPayload, type SendMailResult } from './mailer.service';
 import { createLogger } from '../config/logger';
+import { auditMailResult, reserveMailAttempt } from './mail-account.service';
 
 const logger = createLogger('mail-queue');
 export const newMessageId = () => `<${randomUUID()}@crm.genesis.local>`;
@@ -47,12 +48,25 @@ export async function processMailJob(id?: string, deliver: (payload: SendMailPay
   }
 
   let result: SendMailResult;
-  try {
-    result = await deliver({ projectId: String(job.projectId), from: job.senderAddress, to: job.recipientEmail, toName: job.recipientName, subject: job.subject,
-      html: job.deliveryContent || job.content, text: job.contentText, messageId: job.messageId,
-      inReplyTo: job.inReplyTo, references: job.references });
-  } catch {
-    result = { accepted: false, channel: job.channel, uncertain: true, error: 'SMTP 结果未知，请核实邮箱后处理', durationMs: 0 };
+  const accountId = job.mailAccountId ? String(job.mailAccountId) : undefined;
+  const senderUserId = job.sentBy ? String(job.sentBy) : undefined;
+  if (job.channel === 'smtp' && (!accountId || !senderUserId)) {
+    result = { accepted: false, channel: 'smtp', error: '发送任务未绑定业务员邮箱，已阻止发送', durationMs: 0 };
+  } else {
+    try {
+      if (accountId && senderUserId) await reserveMailAttempt(accountId, String(job.projectId), senderUserId);
+      result = await deliver({ projectId: String(job.projectId), mailAccountId: accountId, senderUserId, from: job.senderAddress,
+        to: job.recipientEmail, toName: job.recipientName, subject: job.subject,
+        html: job.deliveryContent || job.content, text: job.contentText, messageId: job.messageId,
+        inReplyTo: job.inReplyTo, references: job.references });
+    } catch (error) {
+      result = error instanceof Error && error.name === 'ApiError'
+        ? { accepted: false, channel: job.channel, error: error.message, durationMs: 0 }
+        : { accepted: false, channel: job.channel, uncertain: true, error: 'SMTP 结果未知，请核实邮箱后处理', durationMs: 0 };
+    }
+  }
+  if (accountId && senderUserId) {
+    await auditMailResult(accountId, String(job.projectId), senderUserId, result.accepted, result.error).catch(() => undefined);
   }
   const retry = !result.accepted && result.retryable && !result.uncertain && job.attempts < env.MAIL_MAX_ATTEMPTS;
   const status = result.accepted ? 'sent' : retry ? 'retrying' : 'failed';

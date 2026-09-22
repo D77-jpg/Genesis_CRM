@@ -15,6 +15,11 @@ export const createAgentSessionSchema = z.object({
   context: agentContextSchema.default({ type: 'global' }),
 }).strict();
 
+export const updateAgentSessionSchema = z.object({
+  title: z.string().trim().min(1, '会话名称不能为空').max(80, '会话名称不能超过 80 个字符').optional(),
+  status: z.literal('archived').optional(),
+}).strict().refine((value) => Boolean(value.title || value.status), { message: '至少需要更新一项内容' });
+
 export const sendAgentMessageSchema = z.object({
   content: z.string().trim().min(1, '请输入问题').max(8000, '单次消息不能超过 8000 字'),
   idempotencyKey: z.string().trim().min(16).max(128).regex(/^[a-zA-Z0-9._:-]+$/, '幂等键格式不正确').optional(),
@@ -99,6 +104,7 @@ export const updateAgentMailAnalysisSchema = z.object({
 export const agentMailAnalysisParamsSchema = z.object({ id: objectId }).strict();
 
 export type CreateAgentSessionBody = z.infer<typeof createAgentSessionSchema>;
+export type UpdateAgentSessionBody = z.infer<typeof updateAgentSessionSchema>;
 export type SendAgentMessageBody = z.infer<typeof sendAgentMessageSchema>;
 export type CreateAgentCustomerPreviewBody = z.infer<typeof createAgentCustomerPreviewSchema>;
 export type UpdateAgentCustomerPreviewBody = z.infer<typeof updateAgentCustomerPreviewSchema>;

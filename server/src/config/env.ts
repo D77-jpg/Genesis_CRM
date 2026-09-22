@@ -44,6 +44,11 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_REQUIRE_TLS: booleanish.default('true'),
+  /** 用户邮箱授权码的 AES-GCM 主密钥；未配置时兼容使用 JWT_SECRET 派生密钥。 */
+  MAIL_CREDENTIAL_ENCRYPTION_KEY: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().min(32, 'MAIL_CREDENTIAL_ENCRYPTION_KEY 至少需要 32 个字符').optional(),
+  ),
   IMAP_ENABLED: booleanish.default('false'),
   IMAP_HOST: z.string().optional(),
   IMAP_PORT: z.coerce.number().int().min(1).max(65535).default(993),

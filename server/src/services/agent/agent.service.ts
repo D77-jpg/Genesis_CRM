@@ -1,9 +1,10 @@
 import { Types } from 'mongoose';
 import env from '../../config/env';
-import { AgentAction, AgentMessage, AgentRun, AgentSession, type AgentContextType } from '../../models';
+import { AgentAction, AgentMessage, AgentRun, AgentSession, Customer, DevelopmentLetter, type AgentContextType } from '../../models';
+import { MailMessage } from '../../models/MailMessage';
 import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
-import { requireProjectId } from '../../utils/access';
+import { customerRefScope, customerScope, requireProjectId } from '../../utils/access';
 import { agentToolSchemas, executeAgentTool, listAgentTools } from './tool-registry';
 import { MockAgentProvider } from './mock-provider';
 import { OpenAIResponsesProvider } from './openai-provider';
@@ -30,19 +31,80 @@ export interface CreateAgentSessionInput {
   context: AgentContextInput;
 }
 
+export interface UpdateAgentSessionInput {
+  title?: string;
+  status?: 'archived';
+}
+
+interface AgentSessionSummary {
+  messageCount: number;
+  firstUserMessage?: string;
+  lastMessagePreview?: string;
+  lastMessageAt?: Date;
+  contextName?: string;
+}
+
 function scope(actor: AuthUser) {
   return { projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id) };
 }
 
-function sessionDto(doc: InstanceType<typeof AgentSession>) {
+function cleanSummary(value: string, max = 42): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized;
+}
+
+function contextKey(context: AgentContextInput): string {
+  return `${context.type}:${context.type === 'global' ? '' : context.resourceId ?? ''}:${context.type === 'mail' ? context.direction ?? '' : ''}`;
+}
+
+function isGenericSessionTitle(title: string): boolean {
+  return ['业务助手', '客户分析', '邮件分析'].includes(title);
+}
+
+function displaySessionTitle(doc: InstanceType<typeof AgentSession>, summary?: AgentSessionSummary): string {
+  if (!isGenericSessionTitle(doc.title) || !summary?.firstUserMessage) return doc.title;
+  const prompt = cleanSummary(summary.firstUserMessage, 30);
+  if (doc.context.type === 'global') return prompt || doc.title;
+  const prefix = summary.contextName || (doc.context.type === 'customer' ? '客户会话' : '邮件会话');
+  return cleanSummary(`${prefix} · ${prompt}`, 80);
+}
+
+function sessionDto(doc: InstanceType<typeof AgentSession>, summary?: AgentSessionSummary) {
   return {
     id: doc.id,
-    title: doc.title,
+    title: displaySessionTitle(doc, summary),
     context: doc.context,
+    contextName: summary?.contextName,
+    messageCount: summary?.messageCount ?? 0,
+    lastMessagePreview: summary?.lastMessagePreview,
+    lastMessageAt: summary?.lastMessageAt,
     status: doc.status,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+}
+
+async function resolveContextNames(
+  sessions: InstanceType<typeof AgentSession>[],
+  actor: AuthUser,
+): Promise<Map<string, string>> {
+  const customerIds = [...new Set(sessions.filter((item) => item.context.type === 'customer').map((item) => item.context.resourceId).filter(Boolean))];
+  const inboundIds = [...new Set(sessions.filter((item) => item.context.type === 'mail' && item.context.direction === 'inbound').map((item) => item.context.resourceId).filter(Boolean))];
+  const outboundIds = [...new Set(sessions.filter((item) => item.context.type === 'mail' && item.context.direction === 'outbound').map((item) => item.context.resourceId).filter(Boolean))];
+  const mailScope = await customerRefScope(actor);
+  const [customers, inbound, outbound] = await Promise.all([
+    Customer.find({ _id: { $in: customerIds }, ...customerScope(actor) }).select('name company').lean(),
+    MailMessage.find({ _id: { $in: inboundIds }, deleted: { $ne: true }, ...mailScope }).select('subject').lean(),
+    DevelopmentLetter.find({ _id: { $in: outboundIds }, ...mailScope }).select('subject').lean(),
+  ]);
+  const names = new Map<string, string>();
+  for (const customer of customers) {
+    const name = cleanSummary(customer.company || customer.name || '未命名客户', 36);
+    names.set(`customer:${String(customer._id)}:`, name);
+  }
+  for (const mail of inbound) names.set(`mail:${String(mail._id)}:inbound`, cleanSummary(mail.subject || '无主题邮件', 42));
+  for (const mail of outbound) names.set(`mail:${String(mail._id)}:outbound`, cleanSummary(mail.subject || '无主题邮件', 42));
+  return names;
 }
 
 function messageDto(doc: InstanceType<typeof AgentMessage>) {
@@ -84,7 +146,53 @@ export async function createAgentSession(input: CreateAgentSessionInput, actor: 
 
 export async function listAgentSessions(actor: AuthUser) {
   const docs = await AgentSession.find({ ...scope(actor), status: 'active' }).sort({ updatedAt: -1 }).limit(50);
-  return docs.map(sessionDto);
+  if (docs.length === 0) return [];
+  const identifiers = scope(actor);
+  const [messageSummaries, contextNames] = await Promise.all([
+    AgentMessage.aggregate<{
+      _id: Types.ObjectId;
+      messageCount: number;
+      firstUserMessage?: string;
+      lastMessagePreview?: string;
+      lastMessageAt?: Date;
+    }>([
+      { $match: { ...identifiers, sessionId: { $in: docs.map((doc) => doc._id) } } },
+      { $sort: { createdAt: 1 } },
+      { $group: {
+        _id: '$sessionId',
+        messageCount: { $sum: 1 },
+        firstUserMessage: { $first: '$content' },
+        lastMessagePreview: { $last: '$content' },
+        lastMessageAt: { $last: '$createdAt' },
+      } },
+    ]),
+    resolveContextNames(docs, actor),
+  ]);
+  const summaries = new Map(messageSummaries.map((item) => [String(item._id), item]));
+  return docs.map((doc) => {
+    const summary = summaries.get(doc.id);
+    return sessionDto(doc, {
+      messageCount: summary?.messageCount ?? 0,
+      firstUserMessage: summary?.firstUserMessage,
+      lastMessagePreview: summary?.lastMessagePreview ? cleanSummary(summary.lastMessagePreview, 72) : undefined,
+      lastMessageAt: summary?.lastMessageAt,
+      contextName: contextNames.get(contextKey(doc.context)),
+    });
+  });
+}
+
+export async function updateAgentSession(id: string, input: UpdateAgentSessionInput, actor: AuthUser) {
+  if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('会话 ID 格式不正确');
+  const update: Record<string, unknown> = {};
+  if (input.title) update.title = input.title.trim();
+  if (input.status) update.status = input.status;
+  const doc = await AgentSession.findOneAndUpdate(
+    { _id: id, ...scope(actor), status: 'active' },
+    { $set: update },
+    { new: true, runValidators: true },
+  );
+  if (!doc) throw ApiError.notFound('Agent 会话不存在或无权访问');
+  return sessionDto(doc);
 }
 
 async function getSessionOrThrow(id: string, actor: AuthUser) {
