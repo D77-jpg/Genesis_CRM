@@ -5,7 +5,7 @@ import { prepareMailDeletion, purgeCustomerMail } from './mail-cleanup.service';
  * 所有数据库访问都收敛在这里，controller 只做「参数 → 调用 → 响应」。
  */
 import { Types, type AnyKeys, type FilterQuery } from 'mongoose';
-import { Customer, CustomerEvent, DevelopmentLetter, FollowUp, Quotation, User, type CustomerDocument, type ICustomer } from '../models';
+import { AgentCustomerAnalysis, AgentMailThreadAnalysis, Customer, CustomerEvent, DevelopmentLetter, FollowUp, Quotation, User, type CustomerDocument, type ICustomer } from '../models';
 import { CUSTOMER_STATUS, type CustomerStatus, type CustomerSource } from '../constants';
 import { ApiError } from '../utils/ApiError';
 import { buildPaginated, parsePagination, sortableFields, type Paginated } from '../utils/pagination';
@@ -211,12 +211,14 @@ export async function getCustomer(id: string, actor?: AuthUser): Promise<Custome
 export async function createCustomer(
   input: CreateCustomerInput,
   actor?: AuthUser,
+  options?: { agentCreationKey?: string },
 ): Promise<CustomerDto> {
   const payload: Record<string, unknown> = {
     ...input,
     projectId: requireProjectId(actor),
     source: 'manual' as CustomerSource,
     createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
+    ...(options?.agentCreationKey ? { agentCreationKey: options.agentCreationKey } : {}),
   };
   // 严格分配制：业务员新建的客户强制归自己，忽略传入 ownerId；管理员可自由指定
   if (actor && !isAdmin(actor)) {
@@ -278,6 +280,8 @@ export async function deleteCustomer(id: string, actor?: AuthUser): Promise<{ id
     CustomerEvent.deleteMany(childScope),
     // 报价单追加在末尾，letterResult 仍为 index 0
     Quotation.deleteMany(childScope),
+    AgentCustomerAnalysis.deleteMany(childScope),
+    AgentMailThreadAnalysis.deleteMany(childScope),
   ]);
   await Customer.deleteOne({ _id: customer._id, projectId: customer.projectId });
   logger.info(`删除客户: ${customer.name}，级联删除 ${letterResult.deletedCount ?? 0} 封开发信及其跟进记录 / 活动事件 / 报价单 / 附件`);
@@ -328,6 +332,8 @@ export async function bulkDelete(ids: string[], actor?: AuthUser): Promise<{ del
     CustomerEvent.deleteMany(childScope),
     Customer.deleteMany({ _id: { $in: deletableIds }, ...projectScope(actor) }),
     Quotation.deleteMany(childScope),
+    AgentCustomerAnalysis.deleteMany(childScope),
+    AgentMailThreadAnalysis.deleteMany(childScope),
   ]);
   return {
     deleted: customerResult.deletedCount ?? 0,

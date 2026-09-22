@@ -80,6 +80,8 @@ export interface ICustomer {
   letterCount: number;
   /** Idempotent queue side effects; internal, excluded from customer DTOs. */
   mailEffectIds?: Types.ObjectId[];
+  /** Agent 确认创建的幂等键；内部字段，不进入客户 DTO。 */
+  agentCreationKey?: string;
   /** 最近一次发送开发信的时间 */
   lastContactAt?: Date;
   /** 负责人（引用 User）；单用户环境下可留空 */
@@ -174,6 +176,7 @@ const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
     },
     letterCount: { type: Number, default: 0, min: 0 },
     mailEffectIds: { type: [Schema.Types.ObjectId], select: false, default: undefined },
+    agentCreationKey: { type: String, select: false, maxlength: 160 },
     lastContactAt: { type: Date },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     nextFollowUpAt: { type: Date, index: true },
@@ -203,6 +206,10 @@ CustomerSchema.index({ name: 'text', company: 'text', email: 'text', industry: '
 CustomerSchema.index(
   { projectId: 1, email: 1 },
   { unique: true, partialFilterExpression: { email: { $type: 'string', $gt: '' } } },
+);
+CustomerSchema.index(
+  { projectId: 1, agentCreationKey: 1 },
+  { unique: true, partialFilterExpression: { agentCreationKey: { $type: 'string', $gt: '' } } },
 );
 
 CustomerSchema.methods.isDeveloped = function isDeveloped(this: CustomerDocument): boolean {

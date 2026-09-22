@@ -52,6 +52,7 @@ export const ROUTES = {
   templates: '/templates',
   users: '/users',
   projects: '/projects',
+  agentDiagnostics: '/agent-diagnostics',
 } as const;
 
 /** 生成客户详情页路径 */

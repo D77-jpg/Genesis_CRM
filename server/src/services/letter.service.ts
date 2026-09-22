@@ -307,9 +307,24 @@ async function persistAndSend(options: {
   const mailConfig = await getProjectMailConfig(String(customer.projectId));
   const activeChannel = mailConfig.transport;
 
+  // 回复草稿也必须先解析父邮件，确保收件人、主题和线程引用与正式回复一致。
+  let threadId: string = options.threadId || randomUUID();
+  let inReplyTo = options.inReplyTo;
+  let references: string[] = options.references || [];
+  if (options.replyToId) {
+    const parent = await MailMessage.findOne({ _id: options.replyToId, customerId: customer._id, projectId: customer.projectId });
+    if (!parent) throw ApiError.notFound('邮件不存在或无权访问');
+    threadId = parent.threadId;
+    inReplyTo = parent.messageId || undefined;
+    references = [...parent.references, ...(inReplyTo ? [inReplyTo] : [])].slice(-50);
+    rendered.recipientEmail = parent.from;
+    const replySubject = saveAsDraft ? rendered.subject : parent.subject;
+    rendered.subject = /^re:/i.test(replySubject) ? replySubject : 'Re: ' + replySubject;
+  }
+
   // 1) 草稿：直接落库，不发送、不改客户状态
   if (saveAsDraft) {
-    const draft = await DevelopmentLetter.create({
+    const payload = {
       projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
@@ -321,8 +336,34 @@ async function persistAndSend(options: {
       template: contentTemplate,
       status: 'draft',
       channel: activeChannel,
+      threadId,
+      inReplyTo,
+      references,
       sentBy: userId ? new Types.ObjectId(userId) : undefined,
-    });
+      ...(options.requestKey ? { requestKey: options.requestKey } : {}),
+    };
+    let draft;
+    if (options.requestKey) {
+      try {
+        draft = await DevelopmentLetter.findOneAndUpdate(
+          { projectId: customer.projectId, requestKey: options.requestKey },
+          { $setOnInsert: payload },
+          { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true },
+        );
+      } catch (error) {
+        if ((error as { code?: number }).code !== 11000) throw error;
+        draft = await DevelopmentLetter.findOne({ projectId: customer.projectId, requestKey: options.requestKey });
+      }
+      if (!draft) throw ApiError.internal('开发信草稿保存失败');
+      if (String(draft.customerId) !== String(customer._id)
+        || draft.subject !== rendered.subject
+        || draft.contentText !== rendered.text
+        || draft.status !== 'draft') {
+        throw ApiError.conflict('同一请求标识不能用于不同的开发信草稿');
+      }
+    } else {
+      draft = await DevelopmentLetter.create(payload);
+    }
     logger.info(`已保存开发信草稿 -> ${rendered.recipientEmail}`);
     return {
       letter: toLetterDto(draft.toObject({ virtuals: false }) as unknown as Record<string, unknown>),
@@ -333,18 +374,6 @@ async function persistAndSend(options: {
     };
   }
 
-  let threadId: string = options.threadId || randomUUID();
-  let inReplyTo = options.inReplyTo;
-  let references: string[] = options.references || [];
-  if (options.replyToId) {
-    const parent = await MailMessage.findOne({ _id: options.replyToId, customerId: customer._id, projectId: customer.projectId });
-    if (!parent) throw ApiError.notFound('邮件不存在或无权访问');
-    threadId = parent.threadId;
-    inReplyTo = parent.messageId || undefined;
-    references = [...parent.references, ...(inReplyTo ? [inReplyTo] : [])].slice(-50);
-    rendered.recipientEmail = parent.from;
-    rendered.subject = /^re:/i.test(parent.subject) ? parent.subject : 'Re: ' + parent.subject;
-  }
   const requestKey = createHash('sha256').update(JSON.stringify([userId, options.requestKey || [customer.id, rendered, options.scheduledAt, Math.floor(Date.now() / 60000)]])).digest('hex');
   if (options.scheduledAt && options.scheduledAt.getTime() <= Date.now() && !await DevelopmentLetter.exists({ requestKey, projectId: customer.projectId })) throw ApiError.badRequest('定时时间必须晚于当前时间');
   const due = options.scheduledAt ?? new Date();

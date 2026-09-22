@@ -3,6 +3,229 @@
  */
 import type { PaginationParams } from './api';
 
+/* ---------------------------- Agent V1.0 ---------------------------- */
+
+export type AgentContext =
+  | { type: 'global' }
+  | { type: 'customer'; resourceId: string }
+  | { type: 'mail'; resourceId: string; direction: 'inbound' | 'outbound' };
+
+export interface AgentSession {
+  id: string;
+  title: string;
+  context: AgentContext;
+  status: 'active' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentMessage {
+  id: string;
+  sessionId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  status: 'completed' | 'failed';
+  createdAt: string;
+}
+
+export interface AgentStatus {
+  provider: 'mock' | 'openai';
+  model: string;
+  available: boolean;
+  mode: 'mock' | 'live';
+  readOnly: true;
+  toolCount: number;
+}
+
+export interface AgentUsage {
+  runs: number;
+  completed: number;
+  failed: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  toolCalls: number;
+  estimatedCostUsd: number;
+  toolSuccessRate: number;
+  approvals: { approved: number; rejected: number; pending: number };
+}
+
+export interface AgentAction {
+  id: string;
+  sessionId?: string;
+  toolName: string;
+  riskLevel: 'read' | 'write' | 'high';
+  requiresApproval: boolean;
+  approvalStatus: 'not_required' | 'pending' | 'approved' | 'rejected';
+  executionStatus: 'pending' | 'succeeded' | 'failed' | 'rejected';
+  resultSummary?: string;
+  createdAt: string;
+}
+
+export interface AgentEvalCaseResult {
+  caseId: string;
+  name: string;
+  category: 'extraction' | 'safety' | 'injection';
+  passed: boolean;
+  score: number;
+  details: string;
+  durationMs: number;
+}
+
+export interface AgentEvalRun {
+  id: string;
+  provider: 'mock' | 'openai';
+  model: string;
+  datasetVersion: string;
+  status: 'running' | 'completed' | 'failed';
+  totalCases: number;
+  passedCases: number;
+  score: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  durationMs: number;
+  cases: AgentEvalCaseResult[];
+  errorCode?: string;
+  createdAt: string;
+}
+
+export interface AgentDiagnosticUser {
+  userId: string;
+  username: string;
+  displayName: string;
+  role: UserRole;
+  status: UserStatus;
+  runs: number;
+  completed: number;
+  failed: number;
+  successRate: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  averageDurationMs: number;
+  toolCalls: number;
+  toolSuccessRate: number;
+  approvals: { approved: number; rejected: number; pending: number; notRequired: number };
+  truncatedRuns: number;
+  injectionSignals: number;
+  today: { requests: number; tokens: number; reservedTokens: number };
+}
+
+export interface AgentDiagnostics {
+  periodDays: number;
+  totals: { runs: number; completed: number; failed: number; totalTokens: number; estimatedCostUsd: number; toolCalls: number };
+  users: AgentDiagnosticUser[];
+  limits: { dailyRunsPerUser: number; dailyTokensPerUser: number; maxInputCharacters: number; requestTimeoutMs: number };
+  pricing: { configured: boolean; inputUsdPer1M: number; outputUsdPer1M: number };
+  dataset: { version: string; cases: number };
+  evaluations: AgentEvalRun[];
+  recentFailures: { id: string; userId: string; kind: string; provider: string; model: string; errorCode: string; durationMs: number; createdAt: string }[];
+}
+
+/* ---------------------------- Agent V1.1 ---------------------------- */
+
+export type AgentCustomerField = 'company' | 'name' | 'email' | 'phone' | 'country' | 'industry' | 'requirementNotes' | 'leadSource' | 'priority';
+
+export interface AgentCustomerPreviewFields {
+  company: string;
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  industry: string;
+  requirementNotes: string;
+  leadSource: string;
+  priority: CustomerPriority;
+}
+
+export interface AgentCustomerPreview {
+  id: string;
+  sourceVersion: number;
+  fields: AgentCustomerPreviewFields;
+  uncertainties: { field: AgentCustomerField; reason: string; confidence: number }[];
+  duplicates: { customerId: string; name: string; company?: string; email?: string; phone?: string; reasons: string[] }[];
+  status: 'preview' | 'creating' | 'created' | 'cancelled' | 'failed';
+  version: number;
+  createdCustomerId?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ---------------------------- Agent V1.2 ---------------------------- */
+
+export interface AgentAnalysisSource {
+  sourceId: string;
+  kind: 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation';
+  recordId: string;
+  label: string;
+  occurredAt?: string | Date;
+}
+
+export interface AgentAnalysisClaim {
+  text: string;
+  rationale?: string;
+  sourceIds: string[];
+}
+
+export interface AgentCustomerAnalysis {
+  id: string;
+  customerId: string;
+  sources: AgentAnalysisSource[];
+  facts: AgentAnalysisClaim[];
+  gaps: AgentAnalysisClaim[];
+  recommendations: AgentAnalysisClaim[];
+  emailDraft: { subject: string; bodyText: string };
+  followUpPlan: { method: FollowUpMethod; content: string; dueAt: string | Date };
+  emailStatus: 'editable' | 'saving' | 'saved' | 'failed';
+  followUpStatus: 'editable' | 'scheduling' | 'scheduled' | 'failed';
+  createdLetterId?: string;
+  scheduledAt?: string | Date;
+  version: number;
+  lastError?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+/* ---------------------------- Agent V1.3 ---------------------------- */
+
+export type AgentMailSafety = 'normal' | 'unsubscribe' | 'bounce' | 'rejection';
+export type AgentMailIntent = 'inquiry' | 'quotation_request' | 'negotiation' | 'sample_request' | 'order' | 'support' | 'positive' | 'neutral' | 'unsubscribe' | 'bounce' | 'rejection' | 'other';
+export interface AgentMailEvidenceValue { value: string; evidenceMessageIds: string[] }
+export interface AgentMailThreadAnalysis {
+  id: string;
+  rootMailId: string;
+  rootDirection: 'inbound' | 'outbound';
+  threadId: string;
+  customerId?: string;
+  sources: { messageId: string; direction: 'inbound' | 'outbound'; subject: string; sentAt: string | Date; label: string }[];
+  summary: string;
+  intent: { category: AgentMailIntent; label: string; confidence: number; evidenceMessageIds: string[] };
+  extracted: {
+    products: AgentMailEvidenceValue[];
+    quantity: AgentMailEvidenceValue;
+    price: AgentMailEvidenceValue;
+    delivery: AgentMailEvidenceValue;
+    questions: { text: string; evidenceMessageIds: string[] }[];
+  };
+  safety: { classification: AgentMailSafety; marketingBlocked: boolean; reason: string; evidenceMessageIds: string[] };
+  replyDraft: { subject: string; bodyText: string };
+  statusSuggestion: { status: CustomerStatus; reason: string };
+  followUpSuggestion: { method: FollowUpMethod; content: string; result: FollowUpResult; nextFollowUpAt?: string | Date | null };
+  replyStatus: 'editable' | 'saving' | 'saved' | 'blocked' | 'failed';
+  customerStatusUpdate: 'editable' | 'updating' | 'updated' | 'failed';
+  followUpStatus: 'editable' | 'saving' | 'saved' | 'failed';
+  createdLetterId?: string;
+  createdFollowUpId?: string;
+  version: number;
+  lastError?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
 /* ---------------------------- 枚举 ---------------------------- */
 
 /**

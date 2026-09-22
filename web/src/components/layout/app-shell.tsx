@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-ui';
 import { useEscapeKey } from '@/hooks/use-ui';
 import { cn } from '@/lib/utils';
 import { ScratchpadPanel } from '@/components/scratchpad/scratchpad-panel';
+import { AgentPanel } from '@/components/agent/agent-panel';
 
 const SIDEBAR_WIDTH = '15rem';
 const SIDEBAR_WIDTH_COLLAPSED = '4.5rem';
@@ -82,6 +83,7 @@ export function AppShell(): React.JSX.Element {
         </main>
       </div>
       <ScratchpadPanel />
+      <AgentPanel />
     </div>
   );
 }

@@ -57,6 +57,23 @@ const envSchema = z.object({
   MAIL_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
   MAIL_RETRY_DELAY_MS: z.coerce.number().int().min(100).default(30000),
 
+  /** Agent 默认使用 mock，显式切到 openai 后才会读取服务端密钥。 */
+  AI_PROVIDER: z.enum(['mock', 'openai']).default('mock'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().min(1).default('gpt-5.6-luna'),
+  OPENAI_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
+  AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(45000),
+  AI_MAX_TOOL_CALLS: z.coerce.number().int().min(1).max(12).default(6),
+  /** 单次送入模型的字符预算；超长历史会优先保留最新内容并记录截断。 */
+  AI_MAX_INPUT_CHARS: z.coerce.number().int().min(4000).max(500000).default(60000),
+  /** CRM 自身的每用户每日保护额度，不替代 OpenAI 项目级限额。 */
+  AI_DAILY_RUN_LIMIT: z.coerce.number().int().min(1).max(10000).default(100),
+  AI_DAILY_TOKEN_LIMIT: z.coerce.number().int().min(1000).max(100000000).default(500000),
+  AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(10000).default(3000),
+  /** 按每百万 token 的美元成本估算；默认 0 表示尚未配置价格。 */
+  AI_INPUT_USD_PER_1M_TOKENS: z.coerce.number().min(0).default(0),
+  AI_OUTPUT_USD_PER_1M_TOKENS: z.coerce.number().min(0).default(0),
+
   COMPANY_NAME: z.string().default('Genesis (Xiamen) Bags Co., Ltd.'),
   COMPANY_WEBSITE: z.string().default('https://www.genesisbags.com'),
   COMPANY_MOQ: z.string().default('100 pcs'),
@@ -96,6 +113,8 @@ export const env = {
     .filter((value) => Number.isInteger(value) && value > 0 && value <= 65535),
   /** SMTP 配置是否完整（显式 smtp 模式配置不完整时返回失败） */
   smtpConfigured: Boolean(raw.MAIL_TRANSPORT === 'smtp' && raw.SMTP_HOST && raw.SMTP_USER && raw.SMTP_PASS),
+  /** 只用于服务端状态判断；任何 API 都不得返回 OPENAI_API_KEY。 */
+  aiConfigured: raw.AI_PROVIDER === 'mock' || Boolean(raw.OPENAI_API_KEY),
 } as const;
 
 export type Env = typeof env;

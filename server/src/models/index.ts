@@ -32,3 +32,51 @@ export type { IProject, ProjectDocument, ProjectModel, ProjectStatus } from './P
 
 export { Scratchpad } from './Scratchpad';
 export type { IScratchpad, ScratchpadDocument, ScratchpadModel } from './Scratchpad';
+
+export { AgentSession, AgentMessage, AgentRun, AgentAction, AgentQuotaBucket } from './Agent';
+export type {
+  IAgentSession,
+  IAgentMessage,
+  IAgentRun,
+  IAgentAction,
+  IAgentQuotaBucket,
+  AgentContextType,
+  AgentProviderName,
+  AgentSessionDocument,
+  AgentMessageDocument,
+  AgentRunDocument,
+  AgentActionDocument,
+  AgentQuotaBucketDocument,
+} from './Agent';
+
+export { AgentCustomerPreview, AGENT_CUSTOMER_FIELDS } from './AgentCustomerPreview';
+export type {
+  IAgentCustomerPreview,
+  AgentCustomerPreviewDocument,
+  AgentCustomerPreviewFields,
+  AgentCustomerUncertainty,
+  AgentCustomerDuplicate,
+  AgentCustomerField,
+} from './AgentCustomerPreview';
+
+export { AgentCustomerAnalysis } from './AgentCustomerAnalysis';
+export type {
+  IAgentCustomerAnalysis,
+  AgentCustomerAnalysisDocument,
+  AgentAnalysisSource,
+  AgentAnalysisSourceKind,
+  AgentAnalysisClaim,
+} from './AgentCustomerAnalysis';
+
+export { AgentMailThreadAnalysis, AGENT_MAIL_INTENTS, AGENT_MAIL_SAFETY } from './AgentMailThreadAnalysis';
+export type {
+  IAgentMailThreadAnalysis,
+  AgentMailThreadAnalysisDocument,
+  AgentMailIntent,
+  AgentMailSafety,
+  AgentMailEvidenceValue,
+  AgentMailQuestion,
+} from './AgentMailThreadAnalysis';
+
+export { AgentEvalRun } from './AgentEvalRun';
+export type { IAgentEvalRun, AgentEvalRunDocument, AgentEvalCaseResult } from './AgentEvalRun';
