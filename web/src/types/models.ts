@@ -45,6 +45,9 @@ export interface AgentUsage {
   outputTokens: number;
   totalTokens: number;
   toolCalls: number;
+  estimatedCostUsd: number;
+  toolSuccessRate: number;
+  approvals: { approved: number; rejected: number; pending: number };
 }
 
 export interface AgentAction {
@@ -57,6 +60,69 @@ export interface AgentAction {
   executionStatus: 'pending' | 'succeeded' | 'failed' | 'rejected';
   resultSummary?: string;
   createdAt: string;
+}
+
+export interface AgentEvalCaseResult {
+  caseId: string;
+  name: string;
+  category: 'extraction' | 'safety' | 'injection';
+  passed: boolean;
+  score: number;
+  details: string;
+  durationMs: number;
+}
+
+export interface AgentEvalRun {
+  id: string;
+  provider: 'mock' | 'openai';
+  model: string;
+  datasetVersion: string;
+  status: 'running' | 'completed' | 'failed';
+  totalCases: number;
+  passedCases: number;
+  score: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  durationMs: number;
+  cases: AgentEvalCaseResult[];
+  errorCode?: string;
+  createdAt: string;
+}
+
+export interface AgentDiagnosticUser {
+  userId: string;
+  username: string;
+  displayName: string;
+  role: UserRole;
+  status: UserStatus;
+  runs: number;
+  completed: number;
+  failed: number;
+  successRate: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  averageDurationMs: number;
+  toolCalls: number;
+  toolSuccessRate: number;
+  approvals: { approved: number; rejected: number; pending: number; notRequired: number };
+  truncatedRuns: number;
+  injectionSignals: number;
+  today: { requests: number; tokens: number; reservedTokens: number };
+}
+
+export interface AgentDiagnostics {
+  periodDays: number;
+  totals: { runs: number; completed: number; failed: number; totalTokens: number; estimatedCostUsd: number; toolCalls: number };
+  users: AgentDiagnosticUser[];
+  limits: { dailyRunsPerUser: number; dailyTokensPerUser: number; maxInputCharacters: number; requestTimeoutMs: number };
+  pricing: { configured: boolean; inputUsdPer1M: number; outputUsdPer1M: number };
+  dataset: { version: string; cases: number };
+  evaluations: AgentEvalRun[];
+  recentFailures: { id: string; userId: string; kind: string; provider: string; model: string; errorCode: string; durationMs: number; createdAt: string }[];
 }
 
 /* ---------------------------- Agent V1.1 ---------------------------- */

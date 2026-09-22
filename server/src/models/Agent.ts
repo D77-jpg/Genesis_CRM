@@ -20,6 +20,8 @@ export interface IAgentMessage {
   role: 'user' | 'assistant';
   content: string;
   status: 'completed' | 'failed';
+  requestKey?: string;
+  replyToMessageId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,12 +34,30 @@ export interface IAgentRun {
   provider: AgentProviderName;
   model: string;
   status: 'running' | 'completed' | 'failed';
+  kind: 'chat' | 'scratchpad' | 'customer_analysis' | 'mail_analysis' | 'evaluation';
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
   toolCallCount: number;
   durationMs: number;
+  inputCharacters: number;
+  inputTruncated: boolean;
+  promptInjectionDetected: boolean;
+  estimatedCostUsd: number;
   errorCode?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IAgentQuotaBucket {
+  projectId: Types.ObjectId;
+  userId: Types.ObjectId;
+  day: string;
+  requestCount: number;
+  reservedTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -91,10 +111,16 @@ const agentMessageSchema = new Schema<IAgentMessage>(
     role: { type: String, enum: ['user', 'assistant'], required: true },
     content: { type: String, required: true, maxlength: 20000 },
     status: { type: String, enum: ['completed', 'failed'], default: 'completed', required: true },
+    requestKey: { type: String, trim: true, maxlength: 128 },
+    replyToMessageId: { type: Schema.Types.ObjectId, ref: 'AgentMessage' },
   },
   { timestamps: true, versionKey: false },
 );
 agentMessageSchema.index({ projectId: 1, userId: 1, sessionId: 1, createdAt: 1 });
+agentMessageSchema.index(
+  { projectId: 1, userId: 1, sessionId: 1, requestKey: 1 },
+  { unique: true, partialFilterExpression: { requestKey: { $type: 'string' } } },
+);
 
 const agentRunSchema = new Schema<IAgentRun>(
   {
@@ -105,16 +131,22 @@ const agentRunSchema = new Schema<IAgentRun>(
     provider: { type: String, enum: ['mock', 'openai'], required: true },
     model: { type: String, required: true, maxlength: 100 },
     status: { type: String, enum: ['running', 'completed', 'failed'], required: true },
+    kind: { type: String, enum: ['chat', 'scratchpad', 'customer_analysis', 'mail_analysis', 'evaluation'], required: true, default: 'chat' },
     inputTokens: { type: Number, default: 0, min: 0 },
     outputTokens: { type: Number, default: 0, min: 0 },
     totalTokens: { type: Number, default: 0, min: 0 },
     toolCallCount: { type: Number, default: 0, min: 0 },
     durationMs: { type: Number, default: 0, min: 0 },
+    inputCharacters: { type: Number, default: 0, min: 0 },
+    inputTruncated: { type: Boolean, default: false },
+    promptInjectionDetected: { type: Boolean, default: false },
+    estimatedCostUsd: { type: Number, default: 0, min: 0 },
     errorCode: { type: String, maxlength: 80 },
   },
   { timestamps: true, versionKey: false },
 );
 agentRunSchema.index({ projectId: 1, userId: 1, createdAt: -1 });
+agentRunSchema.index({ projectId: 1, createdAt: -1, status: 1 });
 
 const agentActionSchema = new Schema<IAgentAction>(
   {
@@ -139,12 +171,29 @@ const agentActionSchema = new Schema<IAgentAction>(
 agentActionSchema.index({ projectId: 1, userId: 1, createdAt: -1 });
 agentActionSchema.index({ projectId: 1, userId: 1, approvalStatus: 1, createdAt: -1 });
 
+const agentQuotaBucketSchema = new Schema<IAgentQuotaBucket>(
+  {
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    day: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
+    requestCount: { type: Number, default: 0, min: 0 },
+    reservedTokens: { type: Number, default: 0, min: 0 },
+    inputTokens: { type: Number, default: 0, min: 0 },
+    outputTokens: { type: Number, default: 0, min: 0 },
+    totalTokens: { type: Number, default: 0, min: 0 },
+  },
+  { timestamps: true, versionKey: false },
+);
+agentQuotaBucketSchema.index({ projectId: 1, userId: 1, day: 1 }, { unique: true });
+
 export type AgentSessionDocument = HydratedDocument<IAgentSession>;
 export type AgentMessageDocument = HydratedDocument<IAgentMessage>;
 export type AgentRunDocument = HydratedDocument<IAgentRun>;
 export type AgentActionDocument = HydratedDocument<IAgentAction>;
+export type AgentQuotaBucketDocument = HydratedDocument<IAgentQuotaBucket>;
 
 export const AgentSession = model<IAgentSession>('AgentSession', agentSessionSchema);
 export const AgentMessage = model<IAgentMessage>('AgentMessage', agentMessageSchema);
 export const AgentRun = model<IAgentRun>('AgentRun', agentRunSchema);
 export const AgentAction = model<IAgentAction>('AgentAction', agentActionSchema);
+export const AgentQuotaBucket = model<IAgentQuotaBucket>('AgentQuotaBucket', agentQuotaBucketSchema);

@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import env from '../../config/env';
@@ -20,6 +19,15 @@ import { sendLetter } from '../letter.service';
 import { MockAgentProvider } from './mock-provider';
 import { OpenAIResponsesProvider } from './openai-provider';
 import { AgentProviderError, type AgentProvider, type MailThreadAnalysisInput } from './provider';
+import {
+  agentSafetyIdentifier,
+  containsPromptInjection,
+  estimateAgentCostUsd,
+  limitRecentItems,
+  reserveAgentQuota,
+  settleAgentQuota,
+  type AgentQuotaReservation,
+} from './runtime-guard';
 
 function scope(actor: AuthUser) {
   return { projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id) };
@@ -123,18 +131,21 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
   const existing = await AgentMailThreadAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
   if (existing) return dto(existing);
   const activeProvider = provider();
-  const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, status: 'running' });
+  const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'mail_analysis', status: 'running' });
   const startedAt = Date.now();
+  let reservation: AgentQuotaReservation | undefined;
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildThreadInput(input.mailId, input.direction, actor);
     if (!context.messages.length) throw ApiError.badRequest('当前邮件线程没有可分析的内容');
-    const safetyIdentifier = createHash('sha256').update(`${actor.id}:${actor.projectId}`).digest('hex').slice(0, 64);
-    const response = await activeProvider.analyzeMailThread({ input: { customer: context.customer, messages: context.messages }, safetyIdentifier });
+    const limited = limitRecentItems(context.messages, (message) => message.text, (message, text) => ({ ...message, text }));
+    reservation = await reserveAgentQuota(actor, limited.inputCharacters);
+    const safetyIdentifier = agentSafetyIdentifier(actor);
+    const response = await activeProvider.analyzeMailThread({ input: { customer: context.customer, messages: limited.items }, safetyIdentifier });
     const { usage: _usage, ...providerOutput } = response;
     const generated = generatedSchema.parse(providerOutput);
     void _usage;
-    const known = new Set(context.messages.map((item) => item.messageId));
+    const known = new Set(limited.items.map((item) => item.messageId));
     generated.intent.evidenceMessageIds = verifiedIds(generated.intent.evidenceMessageIds, known);
     generated.safety.evidenceMessageIds = verifiedIds(generated.safety.evidenceMessageIds, known);
     generated.extracted.products = generated.extracted.products.map((item) => ({ ...item, evidenceMessageIds: verifiedIds(item.evidenceMessageIds, known) }));
@@ -162,7 +173,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
         customerId: context.customer ? new Types.ObjectId(context.customer.id) : undefined,
         replyToMailId: context.latestInbound ? new Types.ObjectId(context.latestInbound.messageId) : undefined,
         requestKey: input.idempotencyKey,
-        sources: context.messages.map((item) => ({ messageId: item.messageId, direction: item.direction, subject: item.subject, sentAt: new Date(item.sentAt), label: `${item.direction === 'inbound' ? '收件' : '发件'} · ${item.subject || '无主题'}` })),
+        sources: limited.items.map((item) => ({ messageId: item.messageId, direction: item.direction, subject: item.subject, sentAt: new Date(item.sentAt), label: `${item.direction === 'inbound' ? '收件' : '发件'} · ${item.subject || '无主题'}` })),
         summary: generated.summary, intent: generated.intent, extracted: generated.extracted,
         safety: { classification, marketingBlocked, reason: deterministic.reason || generated.safety.reason, evidenceMessageIds },
         replyDraft: generated.replyDraft, statusSuggestion: generated.statusSuggestion,
@@ -176,16 +187,20 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     }
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
       workflowId: analysis._id, status: 'completed', inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens,
-      totalTokens: response.usage.totalTokens, durationMs: Date.now() - startedAt,
+      totalTokens: response.usage.totalTokens, inputCharacters: limited.inputCharacters, inputTruncated: limited.truncated,
+      promptInjectionDetected: limited.items.some((item) => containsPromptInjection(item.text)),
+      estimatedCostUsd: estimateAgentCostUsd(response.usage, activeProvider.name), durationMs: Date.now() - startedAt,
     } });
     await AgentAction.create({
       ...identifiers, runId: run._id, workflowId: analysis._id, toolName: 'analyze_mail_thread', riskLevel: 'read',
-      arguments: { mailId: input.mailId, direction: input.direction, messageCount: context.messages.length }, requiresApproval: false,
-      approvalStatus: 'not_required', executionStatus: 'succeeded', resultSummary: marketingBlocked ? `已识别${classification}信号并阻断营销建议` : `已分析 ${context.messages.length} 封邮件并生成回复草稿`, executedAt: new Date(),
+      arguments: { mailId: input.mailId, direction: input.direction, messageCount: limited.items.length, inputTruncated: limited.truncated }, requiresApproval: false,
+      approvalStatus: 'not_required', executionStatus: 'succeeded', resultSummary: marketingBlocked ? `已识别${classification}信号并阻断营销建议` : `已分析 ${limited.items.length} 封邮件并生成回复草稿`, executedAt: new Date(),
     });
+    await settleAgentQuota(reservation, response.usage);
     return dto(analysis);
   } catch (error) {
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
+    await settleAgentQuota(reservation);
     if (error instanceof ApiError) throw error;
     if (error instanceof AgentProviderError) throw new ApiError(503, 'Agent 邮件分析服务暂时不可用，CRM 数据未改动', 'INTERNAL_ERROR');
     throw error;

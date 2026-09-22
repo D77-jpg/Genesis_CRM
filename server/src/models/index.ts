@@ -33,18 +33,20 @@ export type { IProject, ProjectDocument, ProjectModel, ProjectStatus } from './P
 export { Scratchpad } from './Scratchpad';
 export type { IScratchpad, ScratchpadDocument, ScratchpadModel } from './Scratchpad';
 
-export { AgentSession, AgentMessage, AgentRun, AgentAction } from './Agent';
+export { AgentSession, AgentMessage, AgentRun, AgentAction, AgentQuotaBucket } from './Agent';
 export type {
   IAgentSession,
   IAgentMessage,
   IAgentRun,
   IAgentAction,
+  IAgentQuotaBucket,
   AgentContextType,
   AgentProviderName,
   AgentSessionDocument,
   AgentMessageDocument,
   AgentRunDocument,
   AgentActionDocument,
+  AgentQuotaBucketDocument,
 } from './Agent';
 
 export { AgentCustomerPreview, AGENT_CUSTOMER_FIELDS } from './AgentCustomerPreview';
@@ -75,3 +77,6 @@ export type {
   AgentMailEvidenceValue,
   AgentMailQuestion,
 } from './AgentMailThreadAnalysis';
+
+export { AgentEvalRun } from './AgentEvalRun';
+export type { IAgentEvalRun, AgentEvalRunDocument, AgentEvalCaseResult } from './AgentEvalRun';

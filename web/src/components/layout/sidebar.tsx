@@ -6,7 +6,7 @@
  */
 import * as React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FileText, FolderKanban, LayoutDashboard, Mail, PanelLeftClose, PanelLeftOpen, UserCog, Users, X } from 'lucide-react';
+import { FileText, FolderKanban, LayoutDashboard, Mail, PanelLeftClose, PanelLeftOpen, ShieldCheck, UserCog, Users, X } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useMetaStore } from '@/store/meta.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
@@ -31,6 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.templates, label: '模板中心', icon: FileText, end: false },
   { to: ROUTES.users, label: '用户管理', icon: UserCog, end: false, adminOnly: true },
   { to: ROUTES.projects, label: '项目工作空间', icon: FolderKanban, end: false, adminOnly: true },
+  { to: ROUTES.agentDiagnostics, label: 'Agent 诊断', icon: ShieldCheck, end: false, adminOnly: true },
 ];
 
 interface SidebarProps {

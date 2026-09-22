@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import env from '../../config/env';
@@ -29,6 +28,14 @@ import type {
 import { MockAgentProvider } from './mock-provider';
 import { OpenAIResponsesProvider } from './openai-provider';
 import { AgentProviderError, type AgentProvider, type CustomerAnalysisInput } from './provider';
+import {
+  agentSafetyIdentifier,
+  containsPromptInjection,
+  estimateAgentCostUsd,
+  reserveAgentQuota,
+  settleAgentQuota,
+  type AgentQuotaReservation,
+} from './runtime-guard';
 
 function scope(actor: AuthUser) {
   return { projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id) };
@@ -147,12 +154,16 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
   if (existing) return dto(existing);
   await getCustomerByIdOrThrow(input.customerId, actor);
   const activeProvider = provider();
-  const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, status: 'running' });
+  const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'customer_analysis', status: 'running' });
   const startedAt = Date.now();
+  let reservation: AgentQuotaReservation | undefined;
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildAnalysisInput(input.customerId, actor);
-    const safetyIdentifier = createHash('sha256').update(`${actor.id}:${actor.projectId}`).digest('hex').slice(0, 64);
+    const serializedInput = JSON.stringify(context.input);
+    if (serializedInput.length > env.AI_MAX_INPUT_CHARS) throw new ApiError(413, '客户资料超过 Agent 单次分析上限，请减少历史数据后重试', 'PAYLOAD_TOO_LARGE');
+    reservation = await reserveAgentQuota(actor, serializedInput.length);
+    const safetyIdentifier = agentSafetyIdentifier(actor);
     const generated = await activeProvider.analyzeCustomer({ input: context.input, safetyIdentifier });
     const parsed = outputSchema.parse({
       facts: generated.facts, gaps: generated.gaps, recommendations: generated.recommendations,
@@ -178,16 +189,20 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     }
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
       workflowId: analysis._id, status: 'completed', inputTokens: generated.usage.inputTokens, outputTokens: generated.usage.outputTokens,
-      totalTokens: generated.usage.totalTokens, durationMs: Date.now() - startedAt,
+      totalTokens: generated.usage.totalTokens, inputCharacters: serializedInput.length,
+      promptInjectionDetected: containsPromptInjection(serializedInput), estimatedCostUsd: estimateAgentCostUsd(generated.usage, activeProvider.name),
+      durationMs: Date.now() - startedAt,
     } });
     await AgentAction.create({
       ...identifiers, runId: run._id, workflowId: analysis._id, toolName: 'analyze_customer_and_draft_email', riskLevel: 'read',
       arguments: { customerId: input.customerId, sourceCount: context.sources.length }, requiresApproval: false,
       approvalStatus: 'not_required', executionStatus: 'succeeded', resultSummary: `已生成客户分析与英文邮件草稿（${context.sources.length} 个来源）`, executedAt: new Date(),
     });
+    await settleAgentQuota(reservation, generated.usage);
     return dto(analysis);
   } catch (error) {
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
+    await settleAgentQuota(reservation);
     if (error instanceof ApiError) throw error;
     if (error instanceof AgentProviderError) throw new ApiError(503, 'Agent 分析服务暂时不可用，CRM 数据未改动', 'INTERNAL_ERROR');
     throw error;

@@ -75,7 +75,8 @@ function selectTool(request: AgentProviderRequest): { name: string; arguments: R
 
 function summarize(output: string): string {
   try {
-    const value = JSON.parse(output) as Record<string, unknown>;
+    const parsed = JSON.parse(output) as Record<string, unknown>;
+    const value = parsed.data && typeof parsed.data === 'object' ? parsed.data as Record<string, unknown> : parsed;
     if (Array.isArray(value.items)) return `已完成只读查询，共读取 ${value.items.length} 条记录。`;
     if ('name' in value) return `已读取客户“${String(value.name)}”的当前资料。`;
     if ('followUpToday' in value) {

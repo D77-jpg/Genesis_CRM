@@ -41,6 +41,7 @@ interface SendResult {
 
 const EMPTY_USAGE: AgentUsage = {
   runs: 0, completed: 0, failed: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, toolCalls: 0,
+  estimatedCostUsd: 0, toolSuccessRate: 0, approvals: { approved: 0, rejected: 0, pending: 0 },
 };
 
 function routeContext(pathname: string, search: string): AgentContext {
@@ -244,7 +245,10 @@ export function AgentPanel(): React.JSX.Element | null {
         id: `pending-${Date.now()}`, sessionId: session.id, role: 'user', content, status: 'completed', createdAt: new Date().toISOString(),
       };
       setMessages((current) => [...current, optimistic]);
-      const result = await apiPost<SendResult>(`/agent/sessions/${session.id}/messages`, { content });
+      const result = await apiPost<SendResult>(`/agent/sessions/${session.id}/messages`, {
+        content,
+        idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `agent-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      });
       setMessages((current) => [
         ...current.filter((item) => item.id !== optimistic.id && item.id !== result.userMessage.id && item.id !== result.assistantMessage.id),
         result.userMessage,

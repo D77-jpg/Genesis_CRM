@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/pagination';
 import { ApiError } from '../utils/ApiError';
+import { requireRole } from '../middleware/auth.middleware';
 import {
   createAgentSession,
   getAgentStatus,
@@ -14,7 +15,8 @@ import {
   listAgentSessions,
   sendAgentMessage,
 } from '../services/agent/agent.service';
-import { agentSessionParamsSchema, createAgentSessionSchema, sendAgentMessageSchema } from '../validators/agent.validator';
+import { agentDiagnosticsQuerySchema, agentSessionParamsSchema, createAgentSessionSchema, sendAgentMessageSchema } from '../validators/agent.validator';
+import { getAgentDiagnostics, listAgentEvaluations, runAgentEvaluation } from '../services/agent/diagnostics.service';
 import {
   agentCustomerPreviewParamsSchema,
   confirmAgentCustomerPreviewSchema,
@@ -74,11 +76,21 @@ router.get('/sessions/:id/messages', validate({ params: agentSessionParamsSchema
   sendSuccess(res, await listAgentMessages(req.params.id, req.user!));
 }));
 router.post('/sessions/:id/messages', messageLimiter, validate({ params: agentSessionParamsSchema, body: sendAgentMessageSchema }), asyncHandler(async (req, res) => {
-  sendSuccess(res, await sendAgentMessage(req.params.id, req.body.content, req.user!), 201);
+  sendSuccess(res, await sendAgentMessage(req.params.id, req.body.content, req.user!, req.body.idempotencyKey), 201);
 }));
 router.get('/usage', asyncHandler(async (req, res) => sendSuccess(res, await getAgentUsage(req.user!))));
 router.get('/actions', asyncHandler(async (req, res) => sendSuccess(res, await listAgentActions(req.user!))));
 router.get('/approvals', asyncHandler(async (req, res) => sendSuccess(res, await listAgentActions(req.user!))));
+
+router.get('/admin/diagnostics', requireRole('admin'), validate({ query: agentDiagnosticsQuerySchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await getAgentDiagnostics(req.user!, req.query.days as unknown as number));
+}));
+router.get('/admin/evaluations', requireRole('admin'), asyncHandler(async (req, res) => {
+  sendSuccess(res, await listAgentEvaluations(req.user!));
+}));
+router.post('/admin/evaluations/run', requireRole('admin'), messageLimiter, asyncHandler(async (req, res) => {
+  sendSuccess(res, await runAgentEvaluation(req.user!), 201);
+}));
 
 router.post('/scratchpad-customer/previews', messageLimiter, validate({ body: createAgentCustomerPreviewSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await createScratchpadCustomerPreview(req.body, req.user!), 201);

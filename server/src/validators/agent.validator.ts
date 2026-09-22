@@ -17,10 +17,15 @@ export const createAgentSessionSchema = z.object({
 
 export const sendAgentMessageSchema = z.object({
   content: z.string().trim().min(1, '请输入问题').max(8000, '单次消息不能超过 8000 字'),
+  idempotencyKey: z.string().trim().min(16).max(128).regex(/^[a-zA-Z0-9._:-]+$/, '幂等键格式不正确').optional(),
 }).strict();
 
 export const agentSessionParamsSchema = z.object({
   id: objectId,
+}).strict();
+
+export const agentDiagnosticsQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(90).default(30),
 }).strict();
 
 const idempotencyKey = z.string().trim().min(16).max(128).regex(/^[a-zA-Z0-9._:-]+$/, '幂等键格式不正确');

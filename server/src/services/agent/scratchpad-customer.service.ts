@@ -27,6 +27,15 @@ import {
 import { MockAgentProvider } from './mock-provider';
 import { OpenAIResponsesProvider } from './openai-provider';
 import { AgentProviderError, type AgentProvider } from './provider';
+import {
+  agentSafetyIdentifier,
+  containsPromptInjection,
+  estimateAgentCostUsd,
+  limitRecentItems,
+  reserveAgentQuota,
+  settleAgentQuota,
+  type AgentQuotaReservation,
+} from './runtime-guard';
 
 function scope(actor: AuthUser) {
   return { projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id) };
@@ -108,12 +117,18 @@ export async function createScratchpadCustomerPreview(input: CreateAgentCustomer
   if (!content.trim()) throw ApiError.badRequest('随手记为空，请先填写客户信息');
 
   const activeProvider = provider();
-  const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, status: 'running' });
+  const limited = limitRecentItems([content], (value) => value, (_value, next) => next);
+  const run = await AgentRun.create({
+    ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'scratchpad', status: 'running',
+    inputCharacters: limited.inputCharacters, inputTruncated: limited.truncated, promptInjectionDetected: containsPromptInjection(content),
+  });
   const startedAt = Date.now();
+  let reservation: AgentQuotaReservation | undefined;
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
-    const safetyIdentifier = createHash('sha256').update(`${actor.id}:${actor.projectId}`).digest('hex').slice(0, 64);
-    const extracted = await activeProvider.extractCustomer({ content, safetyIdentifier });
+    reservation = await reserveAgentQuota(actor, limited.inputCharacters);
+    const safetyIdentifier = agentSafetyIdentifier(actor);
+    const extracted = await activeProvider.extractCustomer({ content: limited.items[0] ?? '', safetyIdentifier });
     const fields = agentCustomerFieldsSchema.parse(extracted.fields);
     const uncertainties = extracted.uncertainties.map((item) => agentCustomerUncertaintySchema.parse(item)) as AgentCustomerUncertainty[];
     const duplicates = await findDuplicates(fields, actor);
@@ -135,8 +150,10 @@ export async function createScratchpadCustomerPreview(input: CreateAgentCustomer
         if (raced) {
           await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
             workflowId: raced._id, status: 'completed', inputTokens: extracted.usage.inputTokens,
-            outputTokens: extracted.usage.outputTokens, totalTokens: extracted.usage.totalTokens, durationMs: Date.now() - startedAt,
+            outputTokens: extracted.usage.outputTokens, totalTokens: extracted.usage.totalTokens,
+            estimatedCostUsd: estimateAgentCostUsd(extracted.usage, activeProvider.name), durationMs: Date.now() - startedAt,
           } });
+          await settleAgentQuota(reservation, extracted.usage);
           return dto(raced);
         }
       }
@@ -144,16 +161,19 @@ export async function createScratchpadCustomerPreview(input: CreateAgentCustomer
     }
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
       workflowId: preview._id, status: 'completed', inputTokens: extracted.usage.inputTokens,
-      outputTokens: extracted.usage.outputTokens, totalTokens: extracted.usage.totalTokens, durationMs: Date.now() - startedAt,
+      outputTokens: extracted.usage.outputTokens, totalTokens: extracted.usage.totalTokens,
+      estimatedCostUsd: estimateAgentCostUsd(extracted.usage, activeProvider.name), durationMs: Date.now() - startedAt,
     } });
     await AgentAction.create({
       ...identifiers, runId: run._id, workflowId: preview._id, toolName: 'extract_scratchpad_customer', riskLevel: 'read',
       arguments: { sourceVersion: preview.sourceVersion, sourceHash: preview.sourceHash.slice(0, 12) }, requiresApproval: false,
       approvalStatus: 'not_required', executionStatus: 'succeeded', resultSummary: `已提取客户预览，发现 ${duplicates.length} 个可能重复项`, executedAt: new Date(),
     });
+    await settleAgentQuota(reservation, extracted.usage);
     return dto(preview);
   } catch (error) {
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
+    await settleAgentQuota(reservation);
     if (error instanceof ApiError) throw error;
     if (error instanceof AgentProviderError) throw new ApiError(503, 'Agent 提取服务暂时不可用，随手记和 CRM 数据均未改动', 'INTERNAL_ERROR');
     throw error;
