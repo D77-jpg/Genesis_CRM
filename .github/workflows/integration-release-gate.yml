@@ -1,0 +1,91 @@
+name: integration-release-gate
+
+# Genesis_CRM 阶段 2 发布门禁：Integration API v1 契约冻结保护。
+# 本分支只允许追加 CI 门禁与兼容性记录，不修改契约实现。
+
+on:
+  push:
+    branches: [codex/genesis-integration-release, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server:
+    runs-on: windows-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    defaults:
+      run:
+        working-directory: server
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/cdlm_ci
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        run: npm install
+      - name: Integration API v1 契约测试（13 项）
+        run: npm run test:integration
+      - name: 服务端测试（mail / scratchpad / agent）
+        run: |
+          npm run test:mail
+          npm run test:scratchpad
+          npm run test:agent
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Production build（服务端）
+        run: npm run build
+
+  web:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        run: npm install
+      - name: Production build（含 typecheck）
+        run: npm run build
+
+  hygiene:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 敏感信息检查（不得出现完整 service token）
+        shell: bash
+        run: |
+          if git grep -nE 'gci_[0-9a-f]{20,}' $(git rev-list HEAD) -- . ; then
+            echo "::error::发现疑似 service token 进入提交历史"; exit 1
+          fi
+          echo "OK: 无 service token"
+      - name: 禁止提交 .env / 数据库文件 / 日志
+        shell: bash
+        run: |
+          bad=$(git ls-files | grep -E '(^|/)\.env($|\.)|\.db$|\.sqlite|(^|/)logs?/.*\.log$' | grep -v '\.env\.example' || true)
+          if [ -n "$bad" ]; then echo "::error::禁止提交的文件: $bad"; exit 1; fi
+          echo "OK"
+      - name: OpenAPI 契约存在性与版本检查
+        shell: bash
+        run: |
+          f=docs/integration/integration-v1.openapi.yaml
+          test -f "$f" || { echo "::error::契约文件缺失"; exit 1; }
+          grep -qE "version:\s*['\"]?1\.0" "$f" || { echo "::error::契约版本不是冻结的 1.0"; exit 1; }
+          expected="7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679"
+          actual=$(sha256sum "$f" | cut -d' ' -f1)
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::契约文件哈希漂移（$actual != $expected），冻结契约被修改"
+            exit 1
+          fi
+          echo "OK: 契约文件存在、版本 1.0、哈希与冻结基线一致"
