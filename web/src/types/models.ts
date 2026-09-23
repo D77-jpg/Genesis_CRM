@@ -248,7 +248,7 @@ export type CustomerStatus =
 /** 跟进时间筛选：全部 / 今天 / 已逾期 / 未来 */
 export type FollowUpFilter = 'all' | 'today' | 'overdue' | 'upcoming';
 /** 客户数据来源 */
-export type CustomerSource = 'manual' | 'excel' | 'seed';
+export type CustomerSource = 'manual' | 'excel' | 'seed' | 'integration';
 /**
  * 客户跟进优先级：high 高 / medium 中 / low 低。
  * 与 Grade（客户价值等级 A/B/C）是不同概念，可任意组合（如 A 级 + Low）。

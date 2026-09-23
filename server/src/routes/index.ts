@@ -43,6 +43,7 @@ import projectRoutes from './project.routes';
 import scratchpadRoutes from './scratchpad.routes';
 import agentRoutes from './agent.routes';
 import mailAccountRoutes from './mail-account.routes';
+import integrationRoutes from './integration.routes';
 
 const router = Router();
 
@@ -81,6 +82,8 @@ router.get(
 router.use('/auth', authRoutes);
 // 真实邮件客户端不携带 CRM JWT；该路由只接受随机 token，且不返回 CRM 数据。
 router.use('/tracking', trackingRoutes);
+// Integration API v1：服务凭证认证（与用户 JWT 完全隔离），供 AutoForceAI 等系统集成。
+router.use('/integrations/v1', integrationRoutes);
 router.use('/projects', projectRoutes);
 router.use('/customers', requireAuth, requireProject, customerRoutes);
 router.use('/letters', requireAuth, requireProject, letterRoutes);

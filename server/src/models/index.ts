@@ -88,3 +88,24 @@ export type {
 
 export { AgentEvalRun } from './AgentEvalRun';
 export type { IAgentEvalRun, AgentEvalRunDocument, AgentEvalCaseResult } from './AgentEvalRun';
+
+export { IntegrationCredential } from './IntegrationCredential';
+export type {
+  IIntegrationCredential,
+  IntegrationCredentialDocument,
+  IntegrationCredentialModel,
+} from './IntegrationCredential';
+
+export { IntegrationRequestLog } from './IntegrationRequestLog';
+export type {
+  IIntegrationRequestLog,
+  IntegrationRequestLogDocument,
+  IntegrationRequestLogModel,
+} from './IntegrationRequestLog';
+
+export { IntegrationIdempotency } from './IntegrationIdempotency';
+export type {
+  IIntegrationIdempotency,
+  IntegrationIdempotencyDocument,
+  IntegrationIdempotencyModel,
+} from './IntegrationIdempotency';
