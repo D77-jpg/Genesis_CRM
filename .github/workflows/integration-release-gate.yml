@@ -31,6 +31,9 @@ jobs:
     env:
       MONGODB_URI: mongodb://127.0.0.1:27017/cdlm_ci
       NODE_ENV: test
+      # CI fixture 值（非真实凭证）：agent/mail 测试进程启动时 env 校验需要
+      JWT_SECRET: ci-fixture-jwt-secret-0123456789abcdef
+      ADMIN_PASSWORD: ci-fixture-password
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -102,10 +105,10 @@ jobs:
         run: |
           f=docs/integration/COMPATIBILITY.md
           test -f "$f" || { echo "::error::缺少兼容性记录"; exit 1; }
-          grep -q "契约版本：**1.0**" "$f" || { echo "::error::缺少契约版本 1.0"; exit 1; }
-          grep -q "7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679" "$f" || { echo "::error::契约哈希缺失或不匹配"; exit 1; }
-          grep -q "e2e3486" "$f" || { echo "::error::缺少 Genesis 实现基线 commit"; exit 1; }
-          grep -q "491b1d3" "$f" || { echo "::error::缺少 AutoForceAI 实现基线 commit"; exit 1; }
-          grep -q "genesis-integration-v1.0.0" "$f" || { echo "::error::缺少 Genesis 标签名"; exit 1; }
-          grep -q "autoforce-phase2-core-v1.0.0" "$f" || { echo "::error::缺少 AutoForceAI 标签名"; exit 1; }
+          grep -qF "契约版本：**1.0**" "$f" || { echo "::error::缺少契约版本 1.0"; exit 1; }
+          grep -qF "7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679" "$f" || { echo "::error::契约哈希缺失或不匹配"; exit 1; }
+          grep -qF "e2e3486" "$f" || { echo "::error::缺少 Genesis 实现基线 commit"; exit 1; }
+          grep -qF "491b1d3" "$f" || { echo "::error::缺少 AutoForceAI 实现基线 commit"; exit 1; }
+          grep -qF "genesis-integration-v1.0.0" "$f" || { echo "::error::缺少 Genesis 标签名"; exit 1; }
+          grep -qF "autoforce-phase2-core-v1.0.0" "$f" || { echo "::error::缺少 AutoForceAI 标签名"; exit 1; }
           echo "OK: 兼容性记录校验通过"
