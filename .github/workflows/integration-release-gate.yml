@@ -11,15 +11,23 @@ on:
 
 jobs:
   server:
-    runs-on: windows-latest
+    # GitHub service containers 只能运行在 Linux runner
+    runs-on: ubuntu-latest
     services:
       mongodb:
         image: mongo:7
         ports:
           - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping: 1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 6
+          --health-start-period 10s
     defaults:
       run:
         working-directory: server
+        shell: bash
     env:
       MONGODB_URI: mongodb://127.0.0.1:27017/cdlm_ci
       NODE_ENV: test
@@ -28,9 +36,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Install
-        run: npm install
-      - name: Integration API v1 契约测试（13 项）
+      - name: Install（锁定依赖）
+        run: npm ci
+      - name: Integration API v1 契约测试（13 项，mongodb-memory-server 自举）
         run: npm run test:integration
       - name: 服务端测试（mail / scratchpad / agent）
         run: |
@@ -52,8 +60,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Install
-        run: npm install
+      - name: Install（锁定依赖）
+        run: npm ci
       - name: Production build（含 typecheck）
         run: npm run build
 
@@ -89,3 +97,15 @@ jobs:
             exit 1
           fi
           echo "OK: 契约文件存在、版本 1.0、哈希与冻结基线一致"
+      - name: 兼容性记录校验（版本 + 完整契约哈希 + 双方实现基线）
+        shell: bash
+        run: |
+          f=docs/integration/COMPATIBILITY.md
+          test -f "$f" || { echo "::error::缺少兼容性记录"; exit 1; }
+          grep -q "契约版本：**1.0**" "$f" || { echo "::error::缺少契约版本 1.0"; exit 1; }
+          grep -q "7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679" "$f" || { echo "::error::契约哈希缺失或不匹配"; exit 1; }
+          grep -q "e2e3486" "$f" || { echo "::error::缺少 Genesis 实现基线 commit"; exit 1; }
+          grep -q "491b1d3" "$f" || { echo "::error::缺少 AutoForceAI 实现基线 commit"; exit 1; }
+          grep -q "genesis-integration-v1.0.0" "$f" || { echo "::error::缺少 Genesis 标签名"; exit 1; }
+          grep -q "autoforce-phase2-core-v1.0.0" "$f" || { echo "::error::缺少 AutoForceAI 标签名"; exit 1; }
+          echo "OK: 兼容性记录校验通过"
