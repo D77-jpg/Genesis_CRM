@@ -18,10 +18,12 @@
 
 > CI/文档提交不属于 API 实现基线；基线只记录契约实现 commit，不随门禁提交变化。
 
-## 待创建的正式标签（推送验收通过后由人工创建）
+## 正式标签（合并完成、远程门禁全绿后由人工创建）
 
-- Genesis_CRM：`genesis-integration-v1.0.0` → 打在 `e2e3486`
-- AutoForceAI：`autoforce-phase2-core-v1.0.0` → 打在 `491b1d3`
+实现基线用于契约追踪；正式标签用于复现「最终通过远程门禁的完整发布状态」，两者不同：
+
+- Genesis_CRM：`genesis-integration-v1.0.0` → 指向合并后 `main` 上包含 Integration API、测试修复、CI 门禁与兼容性记录的最终 release commit（**不**固定到 `e2e3486`）
+- AutoForceAI：`autoforce-phase2-core-v1.0.0` → 指向合并后 `main` 上包含阶段 2 核心、worker 保护、migration、运维手册与 CI 门禁的最终 release commit（**不**固定到 `491b1d3`）
 
 ## 对端（AutoForceAI）
 
