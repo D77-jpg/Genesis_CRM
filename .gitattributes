@@ -1,0 +1,2 @@
+# 冻结契约文件必须逐字节稳定（CI 校验 SHA-256），禁止 Windows runner 行尾转换
+docs/integration/*.openapi.yaml text eol=lf

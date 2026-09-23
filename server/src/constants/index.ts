@@ -31,9 +31,33 @@ export type LetterStatus = (typeof LETTER_STATUS)[number];
 export const MAIL_CHANNEL = ['mock', 'smtp'] as const;
 export type MailChannel = (typeof MAIL_CHANNEL)[number];
 
-/** 客户来源（数据溯源：手工 / Excel / 初始化） */
-export const CUSTOMER_SOURCE = ['manual', 'excel', 'seed'] as const;
+/** 客户来源（数据溯源：手工 / Excel / 初始化 / 集成 API 同步） */
+export const CUSTOMER_SOURCE = ['manual', 'excel', 'seed', 'integration'] as const;
 export type CustomerSource = (typeof CUSTOMER_SOURCE)[number];
+
+/* ---------------------------- Integration API v1 ---------------------------- */
+
+/** Integration API 契约版本（与 docs/integration/integration-v1.openapi.yaml 一致） */
+export const INTEGRATION_CONTRACT_VERSION = '1.0';
+
+/**
+ * 集成凭证 scope 全集。签发凭证时只能从此集合中选取（最小权限）。
+ * customers:upsert 同时授权客户状态只读查询（5.2 预留端点复用）。
+ */
+export const INTEGRATION_SCOPES = [
+  'customers:upsert',
+  'outcomes:read',
+  'stats:read',
+  'quotations:read',
+] as const;
+export type IntegrationScope = (typeof INTEGRATION_SCOPES)[number];
+
+/** 集成凭证状态 */
+export const INTEGRATION_CREDENTIAL_STATUS = ['active', 'revoked'] as const;
+export type IntegrationCredentialStatus = (typeof INTEGRATION_CREDENTIAL_STATUS)[number];
+
+/** 成交/流失回流的终止状态集合（outcome feed 只输出这两类） */
+export const OUTCOME_STATUSES = ['won', 'lost'] as const;
 
 /**
  * 客户业务来源（客户从哪个渠道来的），与上面的 CUSTOMER_SOURCE 是不同维度。

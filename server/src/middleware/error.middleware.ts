@@ -77,12 +77,17 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     logger.warn(logLine, { message: apiError.message });
   }
 
+  // 供集成 API 审计日志记录稳定错误码（仅错误码，不含敏感内容）
+  res.locals.apiErrorCode = apiError.code;
+
   res.status(apiError.statusCode).json({
     success: false,
     error: {
       code: apiError.code,
       message: apiError.message,
       ...(apiError.details ? { details: apiError.details } : {}),
+      // 集成请求带 requestId，便于两端对账排查
+      ...(res.locals.requestId ? { requestId: res.locals.requestId } : {}),
       // 仅开发环境返回堆栈，便于调试
       ...(!env.isProd && apiError.statusCode >= 500 && err?.stack ? { stack: String(err.stack) } : {}),
     },

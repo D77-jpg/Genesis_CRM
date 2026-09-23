@@ -243,6 +243,7 @@ export const CUSTOMER_SOURCE_LABEL: Record<string, string> = {
   manual: '手工录入',
   excel: 'Excel 导入',
   seed: '初始化数据',
+  integration: '集成同步',
 };
 
 /* ---------------------------- 报价单（V2 报价管理） ---------------------------- */

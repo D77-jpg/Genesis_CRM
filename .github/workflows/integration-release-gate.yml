@@ -1,0 +1,114 @@
+name: integration-release-gate
+
+# Genesis_CRM 阶段 2 发布门禁：Integration API v1 契约冻结保护。
+# 本分支只允许追加 CI 门禁与兼容性记录，不修改契约实现。
+
+on:
+  push:
+    branches: [codex/genesis-integration-release, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server:
+    # GitHub service containers 只能运行在 Linux runner
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping: 1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 6
+          --health-start-period 10s
+    defaults:
+      run:
+        working-directory: server
+        shell: bash
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/cdlm_ci
+      NODE_ENV: test
+      # CI fixture 值（非真实凭证）：agent/mail 测试进程启动时 env 校验需要
+      JWT_SECRET: ci-fixture-jwt-secret-0123456789abcdef
+      ADMIN_PASSWORD: ci-fixture-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install（锁定依赖）
+        run: npm ci
+      - name: Integration API v1 契约测试（16 项，mongodb-memory-server 自举）
+        run: npm run test:integration
+      - name: 服务端测试（mail / scratchpad / agent）
+        run: |
+          npm run test:mail
+          npm run test:scratchpad
+          npm run test:agent
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Production build（服务端）
+        run: npm run build
+
+  web:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install（锁定依赖）
+        run: npm ci
+      - name: Production build（含 typecheck）
+        run: npm run build
+
+  hygiene:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 敏感信息检查（不得出现完整 service token）
+        shell: bash
+        run: |
+          if git grep -nE 'gci_[0-9a-f]{20,}' $(git rev-list HEAD) -- . ; then
+            echo "::error::发现疑似 service token 进入提交历史"; exit 1
+          fi
+          echo "OK: 无 service token"
+      - name: 禁止提交 .env / 数据库文件 / 日志
+        shell: bash
+        run: |
+          bad=$(git ls-files | grep -E '(^|/)\.env($|\.)|\.db$|\.sqlite|(^|/)logs?/.*\.log$' | grep -v '\.env\.example' || true)
+          if [ -n "$bad" ]; then echo "::error::禁止提交的文件: $bad"; exit 1; fi
+          echo "OK"
+      - name: OpenAPI 契约存在性与版本检查
+        shell: bash
+        run: |
+          f=docs/integration/integration-v1.openapi.yaml
+          test -f "$f" || { echo "::error::契约文件缺失"; exit 1; }
+          grep -qE "version:\s*['\"]?1\.0" "$f" || { echo "::error::契约版本不是冻结的 1.0"; exit 1; }
+          expected="7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679"
+          actual=$(sha256sum "$f" | cut -d' ' -f1)
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::契约文件哈希漂移（$actual != $expected），冻结契约被修改"
+            exit 1
+          fi
+          echo "OK: 契约文件存在、版本 1.0、哈希与冻结基线一致"
+      - name: 兼容性记录校验（版本 + 完整契约哈希 + 双方实现基线）
+        shell: bash
+        run: |
+          f=docs/integration/COMPATIBILITY.md
+          test -f "$f" || { echo "::error::缺少兼容性记录"; exit 1; }
+          grep -qF "契约版本：**1.0**" "$f" || { echo "::error::缺少契约版本 1.0"; exit 1; }
+          grep -qF "7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679" "$f" || { echo "::error::契约哈希缺失或不匹配"; exit 1; }
+          grep -qF "e2e3486" "$f" || { echo "::error::缺少 Genesis 实现基线 commit"; exit 1; }
+          grep -qF "491b1d3" "$f" || { echo "::error::缺少 AutoForceAI 实现基线 commit"; exit 1; }
+          grep -qF "genesis-integration-v1.0.0" "$f" || { echo "::error::缺少 Genesis 标签名"; exit 1; }
+          grep -qF "autoforce-phase2-core-v1.0.0" "$f" || { echo "::error::缺少 AutoForceAI 标签名"; exit 1; }
+          echo "OK: 兼容性记录校验通过"

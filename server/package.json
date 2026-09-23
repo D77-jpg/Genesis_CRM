@@ -14,6 +14,8 @@
     "test:mail": "node --require ./tests/os-user-info.cjs --import tsx --test tests/mail-center.test.ts",
     "test:scratchpad": "node --require ./tests/os-user-info.cjs --import tsx --test tests/scratchpad.test.ts",
     "test:agent": "node --require ./tests/os-user-info.cjs --import tsx --test tests/agent.test.ts",
+    "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts",
+    "integration:credential": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-credential.ts",
     "test:fixture": "node tests/start-fixture.cjs"
   },
   "dependencies": {

@@ -82,6 +82,15 @@ export interface ICustomer {
   mailEffectIds?: Types.ObjectId[];
   /** Agent 确认创建的幂等键；内部字段，不进入客户 DTO。 */
   agentCreationKey?: string;
+  /* ---------- 集成外部引用（Integration API v1） ---------- */
+  /**
+   * 外部来源系统（如 autoforce）。与 externalId 组成业务唯一键
+   * (projectId, externalSystem, externalId)，保证线索交接幂等。
+   * 邮箱只是「可能重复」的辅助条件，不能作为幂等键。
+   */
+  externalSystem?: string;
+  /** 外部稳定主键（如 lead:<id>），由来源系统分配，禁止复用邮箱 */
+  externalId?: string;
   /** 最近一次发送开发信的时间 */
   lastContactAt?: Date;
   /** 负责人（引用 User）；单用户环境下可留空 */
@@ -177,6 +186,9 @@ const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
     letterCount: { type: Number, default: 0, min: 0 },
     mailEffectIds: { type: [Schema.Types.ObjectId], select: false, default: undefined },
     agentCreationKey: { type: String, select: false, maxlength: 160 },
+    // 集成外部引用：与 projectId 组成业务唯一键（下方 partial unique 索引）
+    externalSystem: { type: String, trim: true, maxlength: 60 },
+    externalId: { type: String, trim: true, maxlength: 160 },
     lastContactAt: { type: Date },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     nextFollowUpAt: { type: Date, index: true },
@@ -210,6 +222,18 @@ CustomerSchema.index(
 CustomerSchema.index(
   { projectId: 1, agentCreationKey: 1 },
   { unique: true, partialFilterExpression: { agentCreationKey: { $type: 'string', $gt: '' } } },
+);
+// 集成幂等业务键：(projectId, externalSystem, externalId) 唯一；
+// 仅当两个字段都非空时生效，不影响 CRM 原生手工客户。
+CustomerSchema.index(
+  { projectId: 1, externalSystem: 1, externalId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      externalSystem: { $type: 'string', $gt: '' },
+      externalId: { $type: 'string', $gt: '' },
+    },
+  },
 );
 
 CustomerSchema.methods.isDeveloped = function isDeveloped(this: CustomerDocument): boolean {

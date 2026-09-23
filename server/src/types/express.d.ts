@@ -32,12 +32,23 @@ export interface JwtPayload {
   exp?: number;
 }
 
+/** Integration API v1：服务凭证认证后的上下文（挂载在 req.integration） */
+export interface IntegrationAuthContext {
+  /** 凭证文档 ID */
+  credentialId: string;
+  /** 凭证授权 scope 集合 */
+  scopes: string[];
+  /** 凭证绑定的项目 ID 集合（字符串形式） */
+  projectIds: string[];
+}
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: AuthUser;
       project?: ActiveProject;
+      integration?: IntegrationAuthContext;
     }
   }
 }
