@@ -35,11 +35,13 @@ let Project: typeof import('../src/models').Project;
 let Customer: typeof import('../src/models').Customer;
 let CustomerEvent: typeof import('../src/models').CustomerEvent;
 let IntegrationRequestLog: typeof import('../src/models').IntegrationRequestLog;
+let IntegrationIdempotency: typeof import('../src/models').IntegrationIdempotency;
 let createCredential: typeof import('../src/services/integration-credential.service').createCredential;
 
 let projectA: { _id: unknown };
 let projectB: { _id: unknown };
 let tokenA = '';
+let credentialAId = '';
 let tokenLimited = ''; // 只有 stats:read
 
 const ALL_SCOPES = ['customers:upsert', 'outcomes:read', 'stats:read', 'quotations:read'];
@@ -95,6 +97,7 @@ before(async () => {
   Customer = models.Customer;
   CustomerEvent = models.CustomerEvent;
   IntegrationRequestLog = models.IntegrationRequestLog;
+  IntegrationIdempotency = models.IntegrationIdempotency;
   ({ createCredential } = await import('../src/services/integration-credential.service'));
 
   projectA = await Project.create({
@@ -117,11 +120,13 @@ before(async () => {
   await models.IntegrationCredential.init();
   await models.IntegrationIdempotency.init();
 
-  ({ token: tokenA } = await createCredential({
+  const createdA = await createCredential({
     name: 'AutoForceAI 测试凭证',
     projectIds: [String(projectA._id)],
     scopes: ALL_SCOPES,
-  }));
+  });
+  tokenA = createdA.token;
+  credentialAId = String(createdA.credential._id);
   ({ token: tokenLimited } = await createCredential({
     name: '只读统计凭证',
     projectIds: [String(projectA._id)],
@@ -287,6 +292,126 @@ test('upsert：并发 10 次投递同一线索只产生 1 个客户', async () =
   });
   assert.equal(count, 1);
   assert.ok(results.some((r) => (r.json.data as { action: string }).action === 'created'));
+});
+
+test('upsert：同一幂等键并发相同载荷只执行一次并重放同一响应', async () => {
+  const externalId = 'lead:same-key-race';
+  const body = sampleUpsert(externalId);
+  const key = 'same-key-race-0001';
+  const customerModel = Customer as unknown as {
+    create: (...args: unknown[]) => Promise<unknown>;
+  };
+  const originalCreate = customerModel.create.bind(Customer);
+  let release!: () => void;
+  let entered!: () => void;
+  const enteredPromise = new Promise<void>((resolve) => { entered = resolve; });
+  const releasePromise = new Promise<void>((resolve) => { release = resolve; });
+  customerModel.create = async (...args: unknown[]) => {
+    if ((args[0] as { externalId?: string })?.externalId === externalId) {
+      entered();
+      await releasePromise;
+    }
+    return originalCreate(...args);
+  };
+
+  try {
+    const firstPromise = api('POST', '/customers/upsert', {
+      token: tokenA, projectId: pid(), body, headers: { 'Idempotency-Key': key },
+    });
+    await enteredPromise;
+    const secondPromise = api('POST', '/customers/upsert', {
+      token: tokenA, projectId: pid(), body, headers: { 'Idempotency-Key': key },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    release();
+    const [first, second] = await Promise.all([firstPromise, secondPromise]);
+    assert.equal(first.status, 201);
+    assert.equal(second.status, 201);
+    assert.deepEqual(second.json.data, first.json.data);
+  } finally {
+    release();
+    customerModel.create = originalCreate;
+  }
+
+  assert.equal(await Customer.countDocuments({ projectId: projectA._id, externalId }), 1);
+  const record = await IntegrationIdempotency.findOne({ credentialId: credentialAId, key }).lean();
+  assert.equal(record?.state, 'completed');
+  assert.equal(record?.owner, undefined);
+});
+
+test('upsert：同一幂等键并发不同载荷在业务写入前冲突', async () => {
+  const firstExternalId = 'lead:key-conflict-a';
+  const secondExternalId = 'lead:key-conflict-b';
+  const key = 'same-key-conflict-0001';
+  const customerModel = Customer as unknown as {
+    create: (...args: unknown[]) => Promise<unknown>;
+  };
+  const originalCreate = customerModel.create.bind(Customer);
+  let release!: () => void;
+  let entered!: () => void;
+  const enteredPromise = new Promise<void>((resolve) => { entered = resolve; });
+  const releasePromise = new Promise<void>((resolve) => { release = resolve; });
+  customerModel.create = async (...args: unknown[]) => {
+    if ((args[0] as { externalId?: string })?.externalId === firstExternalId) {
+      entered();
+      await releasePromise;
+    }
+    return originalCreate(...args);
+  };
+
+  try {
+    const firstPromise = api('POST', '/customers/upsert', {
+      token: tokenA,
+      projectId: pid(),
+      body: sampleUpsert(firstExternalId),
+      headers: { 'Idempotency-Key': key },
+    });
+    await enteredPromise;
+    const conflict = await api('POST', '/customers/upsert', {
+      token: tokenA,
+      projectId: pid(),
+      body: sampleUpsert(secondExternalId),
+      headers: { 'Idempotency-Key': key },
+    });
+    assert.equal(conflict.status, 409);
+    assert.equal((conflict.json.error as { code: string }).code, 'CONFLICT');
+    release();
+    assert.equal((await firstPromise).status, 201);
+  } finally {
+    release();
+    customerModel.create = originalCreate;
+  }
+
+  assert.equal(await Customer.countDocuments({ projectId: projectA._id, externalId: firstExternalId }), 1);
+  assert.equal(await Customer.countDocuments({ projectId: projectA._id, externalId: secondExternalId }), 0);
+});
+
+test('upsert：过期 processing 占位可被新请求接管并完成', async () => {
+  const externalId = 'lead:expired-idempotency-lease';
+  const key = 'expired-lease-0001';
+  const body = sampleUpsert(externalId);
+  const { hashUpsertPayload } = await import('../src/services/integration.service');
+  await IntegrationIdempotency.create({
+    credentialId: credentialAId,
+    projectId: pid(),
+    key,
+    requestHash: hashUpsertPayload(body),
+    state: 'processing',
+    owner: 'crashed-worker',
+    leaseExpiresAt: new Date(Date.now() - 1_000),
+  });
+
+  const response = await api('POST', '/customers/upsert', {
+    token: tokenA,
+    projectId: pid(),
+    body,
+    headers: { 'Idempotency-Key': key },
+  });
+  assert.equal(response.status, 201);
+  const record = await IntegrationIdempotency.findOne({ credentialId: credentialAId, key }).lean();
+  assert.equal(record?.state, 'completed');
+  assert.equal(record?.owner, undefined);
+  assert.equal(await Customer.countDocuments({ projectId: projectA._id, externalId }), 1);
 });
 
 test('upsert：邮箱已存在的 CRM 原生客户被 linked，且不覆盖人工字段', async () => {

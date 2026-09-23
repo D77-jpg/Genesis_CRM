@@ -18,11 +18,18 @@ export interface IIntegrationIdempotency {
   key: string;
   /** 规范化请求体的 SHA-256（hex），用于检测同键不同载荷 */
   requestHash: string;
+  /** 原子占位状态：先 processing，业务成功后再 completed */
+  state: 'processing' | 'completed';
+  /** 当前处理者；只在 processing 状态存在 */
+  owner?: string;
+  /** 处理租约，worker 中断后允许安全接管 */
+  leaseExpiresAt?: Date;
   /** 首次成功的响应 data（重放用） */
-  response: Record<string, unknown>;
+  response?: Record<string, unknown>;
   /** 首次响应的 HTTP 状态码（200/201） */
-  statusCode: number;
+  statusCode?: number;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export type IntegrationIdempotencyDocument = HydratedDocument<IIntegrationIdempotency>;
@@ -34,11 +41,14 @@ const IntegrationIdempotencySchema = new Schema<IIntegrationIdempotency>(
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
     key: { type: String, required: true, maxlength: 128 },
     requestHash: { type: String, required: true, maxlength: 64 },
-    response: { type: Schema.Types.Mixed, required: true },
-    statusCode: { type: Number, required: true },
+    state: { type: String, enum: ['processing', 'completed'], required: true, default: 'processing' },
+    owner: { type: String, default: null },
+    leaseExpiresAt: { type: Date, default: null },
+    response: { type: Schema.Types.Mixed, default: null },
+    statusCode: { type: Number, default: null },
   },
   {
-    timestamps: { createdAt: true, updatedAt: false },
+    timestamps: true,
     versionKey: false,
   },
 );

@@ -9,7 +9,7 @@
  * 更新边界：首次交接创建或关联；后续自动同步只补齐空字段，
  * 不覆盖销售人工维护的字段（负责人、阶段、跟进、报价、备注）。
  */
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { Types } from 'mongoose';
 import {
   CUSTOMER_STATUS,
@@ -98,6 +98,121 @@ async function findByExternalRef(
   return Customer.findOne({ projectId, externalSystem: sourceSystem, externalId });
 }
 
+const IDEMPOTENCY_LEASE_MS = 30_000;
+const IDEMPOTENCY_WAIT_MS = 10_000;
+const IDEMPOTENCY_POLL_MS = 20;
+
+type IdempotencyReservation =
+  | { kind: 'replay'; result: UpsertResult; statusCode: number }
+  | { kind: 'owner'; id: Types.ObjectId; owner: string };
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function replayFrom(record: {
+  state?: string;
+  response?: Record<string, unknown> | null;
+  statusCode?: number | null;
+}): IdempotencyReservation | null {
+  // state 缺失兼容 v1 已完成记录；它们原本强制包含 response/statusCode。
+  const completed = record.state === 'completed' || Boolean(record.response && record.statusCode);
+  if (!completed || !record.response || !record.statusCode) return null;
+  return {
+    kind: 'replay',
+    result: record.response as unknown as UpsertResult,
+    statusCode: record.statusCode,
+  };
+}
+
+async function reserveIdempotency(
+  credentialId: string,
+  projectId: string,
+  key: string,
+  requestHash: string,
+): Promise<IdempotencyReservation> {
+  const owner = randomUUID();
+  const credentialObjectId = new Types.ObjectId(credentialId);
+  const projectObjectId = new Types.ObjectId(projectId);
+
+  try {
+    const created = await IntegrationIdempotency.create({
+      credentialId: credentialObjectId,
+      projectId: projectObjectId,
+      key,
+      requestHash,
+      state: 'processing',
+      owner,
+      leaseExpiresAt: new Date(Date.now() + IDEMPOTENCY_LEASE_MS),
+    });
+    return { kind: 'owner', id: created._id, owner };
+  } catch (error) {
+    if ((error as { code?: number })?.code !== 11000) throw error;
+  }
+
+  const deadline = Date.now() + IDEMPOTENCY_WAIT_MS;
+  while (Date.now() < deadline) {
+    const current = await IntegrationIdempotency.findOne({ credentialId: credentialObjectId, key });
+    if (!current) {
+      // 极少数清理竞争：回到调用方重试更安全，不在这里无界循环。
+      throw ApiError.conflict('Idempotency-Key 状态变化，请重试');
+    }
+    if (current.requestHash !== requestHash) {
+      throw ApiError.conflict('Idempotency-Key 已被不同载荷使用');
+    }
+    const replay = replayFrom(current);
+    if (replay) return replay;
+
+    const now = new Date();
+    if (!current.leaseExpiresAt || current.leaseExpiresAt <= now) {
+      const acquired = await IntegrationIdempotency.findOneAndUpdate(
+        {
+          _id: current._id,
+          requestHash,
+          state: 'processing',
+          $or: [{ leaseExpiresAt: { $lte: now } }, { leaseExpiresAt: null }],
+        },
+        {
+          $set: {
+            owner,
+            leaseExpiresAt: new Date(Date.now() + IDEMPOTENCY_LEASE_MS),
+          },
+        },
+        { new: true },
+      );
+      if (acquired) return { kind: 'owner', id: acquired._id, owner };
+    }
+    await wait(IDEMPOTENCY_POLL_MS);
+  }
+  throw ApiError.conflict('同一 Idempotency-Key 的请求仍在处理中，请稍后重试');
+}
+
+async function completeIdempotency(
+  reservation: Extract<IdempotencyReservation, { kind: 'owner' }>,
+  result: UpsertResult,
+  statusCode: number,
+): Promise<{ result: UpsertResult; statusCode: number }> {
+  const completed = await IntegrationIdempotency.findOneAndUpdate(
+    { _id: reservation.id, state: 'processing', owner: reservation.owner },
+    {
+      $set: { state: 'completed', response: result, statusCode },
+      $unset: { owner: 1, leaseExpiresAt: 1 },
+    },
+    { new: true },
+  );
+  if (!completed) {
+    throw ApiError.conflict('幂等处理租约已被接管，请重试原请求');
+  }
+  return { result, statusCode };
+}
+
+async function abandonIdempotency(
+  reservation: Extract<IdempotencyReservation, { kind: 'owner' }>,
+): Promise<void> {
+  await IntegrationIdempotency.updateOne(
+    { _id: reservation.id, state: 'processing', owner: reservation.owner },
+    { $set: { leaseExpiresAt: new Date(0) } },
+  ).catch(() => undefined);
+}
+
 /**
  * 幂等 upsert：
  *  1. 请求级幂等（Idempotency-Key）：同键同载荷重放首次响应；同键不同载荷 409。
@@ -118,107 +233,82 @@ export async function upsertCustomer(input: {
 
   /* ---- 1. 请求级幂等 ---- */
   const requestHash = hashUpsertPayload(body);
-  const existingKey = await IntegrationIdempotency.findOne({ credentialId, key: idempotencyKey });
-  if (existingKey) {
-    if (existingKey.requestHash !== requestHash) {
-      throw ApiError.conflict('Idempotency-Key 已被不同载荷使用');
-    }
-    return {
-      result: existingKey.response as unknown as UpsertResult,
-      statusCode: existingKey.statusCode,
-    };
+  const reservation = await reserveIdempotency(credentialId, projectId, idempotencyKey, requestHash);
+  if (reservation.kind === 'replay') {
+    return { result: reservation.result, statusCode: reservation.statusCode };
   }
 
   /* ---- 2. 业务级幂等 ---- */
-  let statusCode = 200;
-  let result: UpsertResult;
+  try {
+    let statusCode = 200;
+    let result: UpsertResult;
 
-  const linked = await findByExternalRef(projectId, body.sourceSystem, body.externalId);
-  if (linked) {
-    // 已关联：只补齐空字段，不覆盖人工维护字段
-    fillEmptyFields(linked, body);
-    if (linked.isModified()) await linked.save();
-    result = toUpsertResult('unchanged', linked, body.externalId);
-  } else {
-    // 未关联：邮箱辅助判重（仅同项目）
-    let customer: CustomerDocument | null = null;
-    if (body.email) {
-      customer = await Customer.findOne({ projectId, email: body.email });
-    }
-
-    if (customer) {
-      // 关联已有客户：建立外部引用 + 补齐空字段
-      customer.externalSystem = body.sourceSystem;
-      customer.externalId = body.externalId;
-      fillEmptyFields(customer, body);
-      await customer.save();
-      result = toUpsertResult('linked', customer, body.externalId);
+    const linked = await findByExternalRef(projectId, body.sourceSystem, body.externalId);
+    if (linked) {
+      // 已关联：只补齐空字段，不覆盖人工维护字段
+      fillEmptyFields(linked, body);
+      if (linked.isModified()) await linked.save();
+      result = toUpsertResult('unchanged', linked, body.externalId);
     } else {
-      // 创建新客户
-      const fallbackName = body.name || body.company || `未命名询盘 ${body.externalId}`;
-      try {
-        customer = await Customer.create({
-          projectId: new Types.ObjectId(projectId),
-          name: fallbackName,
-          company: body.company,
-          email: body.email,
-          phone: body.phone,
-          country: body.country,
-          interestedProducts: body.interestedProducts,
-          leadSource: body.leadSource,
-          productModel: body.productModel,
-          productCategory: body.productCategory,
-          expectedQuantity: body.expectedQuantity,
-          targetPrice: body.targetPrice,
-          moq: body.moq,
-          requirementNotes: body.requirementNotes,
-          tags: body.tags ?? [],
-          status: (body.initialStatus ?? 'pending') as CustomerStatus,
-          source: 'integration',
-          externalSystem: body.sourceSystem,
-          externalId: body.externalId,
-        });
-      } catch (error) {
-        // 并发双写兜底：唯一索引冲突时按「已关联」路径收敛，保证 10 次并发只产生 1 个客户
-        if ((error as { code?: number })?.code === 11000) {
-          const winner = await findByExternalRef(projectId, body.sourceSystem, body.externalId);
-          if (winner) {
-            result = toUpsertResult('unchanged', winner, body.externalId);
-            await persistIdempotency(credentialId, projectId, idempotencyKey, requestHash, result, 200);
-            return { result, statusCode: 200 };
+      // 未关联：邮箱辅助判重（仅同项目）
+      let customer: CustomerDocument | null = null;
+      if (body.email) {
+        customer = await Customer.findOne({ projectId, email: body.email });
+      }
+
+      if (customer) {
+        // 关联已有客户：建立外部引用 + 补齐空字段
+        customer.externalSystem = body.sourceSystem;
+        customer.externalId = body.externalId;
+        fillEmptyFields(customer, body);
+        await customer.save();
+        result = toUpsertResult('linked', customer, body.externalId);
+      } else {
+        // 创建新客户
+        const fallbackName = body.name || body.company || `未命名询盘 ${body.externalId}`;
+        try {
+          customer = await Customer.create({
+            projectId: new Types.ObjectId(projectId),
+            name: fallbackName,
+            company: body.company,
+            email: body.email,
+            phone: body.phone,
+            country: body.country,
+            interestedProducts: body.interestedProducts,
+            leadSource: body.leadSource,
+            productModel: body.productModel,
+            productCategory: body.productCategory,
+            expectedQuantity: body.expectedQuantity,
+            targetPrice: body.targetPrice,
+            moq: body.moq,
+            requirementNotes: body.requirementNotes,
+            tags: body.tags ?? [],
+            status: (body.initialStatus ?? 'pending') as CustomerStatus,
+            source: 'integration',
+            externalSystem: body.sourceSystem,
+            externalId: body.externalId,
+          });
+          statusCode = 201;
+          result = toUpsertResult('created', customer, body.externalId);
+        } catch (error) {
+          // 不同幂等键并发写同一 externalRef：业务唯一索引仍负责最终收敛。
+          if ((error as { code?: number })?.code === 11000) {
+            const winner = await findByExternalRef(projectId, body.sourceSystem, body.externalId);
+            if (winner) {
+              result = toUpsertResult('unchanged', winner, body.externalId);
+            } else {
+              throw error;
+            }
+          } else {
+            throw error;
           }
         }
-        throw error;
       }
-      statusCode = 201;
-      result = toUpsertResult('created', customer, body.externalId);
     }
-  }
-
-  await persistIdempotency(credentialId, projectId, idempotencyKey, requestHash, result, statusCode);
-  return { result, statusCode };
-}
-
-async function persistIdempotency(
-  credentialId: string,
-  projectId: string,
-  key: string,
-  requestHash: string,
-  result: UpsertResult,
-  statusCode: number,
-): Promise<void> {
-  try {
-    await IntegrationIdempotency.create({
-      credentialId: new Types.ObjectId(credentialId),
-      projectId: new Types.ObjectId(projectId),
-      key,
-      requestHash,
-      response: result as unknown as Record<string, unknown>,
-      statusCode,
-    });
+    return await completeIdempotency(reservation, result, statusCode);
   } catch (error) {
-    // 并发下两个相同 key 同时落库：忽略唯一索引冲突（先到先得，重放由下次请求完成）
-    if ((error as { code?: number })?.code !== 11000) throw error;
+    await abandonIdempotency(reservation);
+    throw error;
   }
 }
 

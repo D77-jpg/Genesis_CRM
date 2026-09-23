@@ -41,7 +41,7 @@ jobs:
           node-version: "20"
       - name: Install（锁定依赖）
         run: npm ci
-      - name: Integration API v1 契约测试（13 项，mongodb-memory-server 自举）
+      - name: Integration API v1 契约测试（16 项，mongodb-memory-server 自举）
         run: npm run test:integration
       - name: 服务端测试（mail / scratchpad / agent）
         run: |
