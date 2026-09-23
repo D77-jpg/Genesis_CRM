@@ -1,12 +1,12 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { ImapFlow } from 'imapflow';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
+import type { MongoMemoryServer } from 'mongodb-memory-server';
 
 // Explicit overrides ensure tests NEVER send mail or access a supplied .env inbox.
 process.env.NODE_ENV = 'test';
@@ -31,6 +31,10 @@ let tracking: typeof import('../src/services/mail-tracking.service');
 let config: Record<string, unknown>;
 let server: Server;
 let base: string;
+// 测试数据库自举：有 MONGODB_URI 用之（CI service container），否则启动 MongoMemoryServer。
+// 绝不读取 tmp/test-db.json（开发 fixture 遗留），绝不连接开发/生产库。
+let mailTestMongoUri: string;
+let memoryServer: MongoMemoryServer | undefined;
 let adminToken: string, salesToken: string, otherToken: string, ironSalesToken: string;
 let adminId: string, salesId: string, otherId: string, ironSalesId: string;
 let projectId: string, ironhueProjectId: string;
@@ -60,9 +64,16 @@ async function due(id: string) { await models.DevelopmentLetter.updateOne({ _id:
 const accepted = async () => ({ accepted: true, channel: 'mock' as const, durationMs: 0 });
 
 before(async () => {
-  const { uri } = JSON.parse(await fs.readFile('tmp/test-db.json', 'utf8')) as { uri: string };
+  if (process.env.MONGODB_URI) {
+    mailTestMongoUri = process.env.MONGODB_URI;
+  } else {
+    const { MongoMemoryServer } = await import('mongodb-memory-server');
+    memoryServer = await MongoMemoryServer.create();
+    mailTestMongoUri = memoryServer.getUri();
+    process.env.MONGODB_URI = mailTestMongoUri; // 保证任何读取 env 的代码路径也指向自举实例
+  }
   db = await import('mongoose');
-  await db.default.connect(uri, { dbName: `v21_mail_tests_${suffix}` });
+  await db.default.connect(mailTestMongoUri, { dbName: `v21_mail_tests_${suffix}` });
   models = await import('../src/models'); mailModels = await import('../src/models/MailMessage');
   sync = await import('../src/services/mail-sync.service'); queue = await import('../src/services/mail-queue.service'); security = await import('../src/services/mail-security'); tracking = await import('../src/services/mail-tracking.service');
   config = (await import('../src/config/env')).default as unknown as Record<string, unknown>;
@@ -91,7 +102,11 @@ before(async () => {
 });
 after(async () => {
   if (server) await new Promise<void>(r => server.close(() => r()));
-  if (db) await db.default.disconnect();
+  if (db) {
+    try { await db.default.connection.dropDatabase(); } catch { /* 尽量清理，不阻断收尾 */ }
+    await db.default.disconnect();
+  }
+  if (memoryServer) await memoryServer.stop();
 });
 
 test('01 JWT is required', async () => { await request('GET', '/mail', '', undefined, 401); });
@@ -187,9 +202,8 @@ test('39 real Nodemailer SMTP protocol preserves headers and classifies 450/550'
 
 test('40 new worker process resumes persisted scheduled task', async () => {
   const id = await scheduled(); await due(id);
-  const { uri } = JSON.parse(await fs.readFile('tmp/test-db.json', 'utf8')) as { uri: string };
   const child = spawn(process.execPath, ['--require', './tests/os-user-info.cjs', '--import', 'tsx', 'tests/resume-worker.ts', id], {
-    cwd: process.cwd(), env: { ...process.env, MONGODB_URI: uri, TEST_DB_NAME: `v21_mail_tests_${suffix}`, MAIL_TRANSPORT: 'mock', IMAP_ENABLED: 'false' }, stdio: 'pipe', windowsHide: true,
+    cwd: process.cwd(), env: { ...process.env, MONGODB_URI: mailTestMongoUri, TEST_DB_NAME: `v21_mail_tests_${suffix}`, MAIL_TRANSPORT: 'mock', IMAP_ENABLED: 'false' }, stdio: 'pipe', windowsHide: true,
   });
   let output = ''; child.stdout.on('data', d => { output += d; }); child.stderr.on('data', d => { output += d; });
   const code = await new Promise<number | null>(r => child.on('exit', r));
