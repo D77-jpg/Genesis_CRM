@@ -12,6 +12,7 @@ import { createLogger } from './config/logger';
 import { bootstrapAdminUser } from './services/auth.service';
 import { bootstrapProjects } from './services/project.service';
 import { migrateLegacyCustomerStatus } from './services/customer.service';
+import { migrateLegacyQuotationVersion } from './services/quotation.service';
 import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
 import { runMailQueue } from './services/mail-queue.service';
@@ -30,6 +31,7 @@ async function bootstrap(): Promise<void> {
     await bootstrapAdminUser();
     await bootstrapProjects();
     await migrateLegacyCustomerStatus();
+    await migrateLegacyQuotationVersion();
     await Promise.all([Project.init(), User.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
       FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),
       AgentSession.init(), AgentMessage.init(), AgentRun.init(), AgentAction.init(), AgentCustomerPreview.init(),

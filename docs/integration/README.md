@@ -45,6 +45,7 @@ Idempotency-Key: <1-128 字符>          # 写端点必填；重试必须复用�
 | `GET /api/integrations/v1/customers/{externalRef}/quotations` | `quotations:read` | （5.2 预留）报价状态查询 |
 | `POST /api/integrations/v1/customers/{externalRef}/quotation-drafts` | `quotations:draft` | 幂等创建一份正式 `draft`，金额由 Genesis 重算 |
 | `GET /api/integrations/v1/quotations/{quotationId}` | `quotations:read` | 读取项目内报价权威详情 |
+| `GET /api/integrations/v1/quotations/{quotationId}/pdf` | `quotations:read` | 下载中英双语权威 PDF；draft 每页带水印 |
 
 ## 幂等与一致性
 
@@ -53,6 +54,7 @@ Idempotency-Key: <1-128 字符>          # 写端点必填；重试必须复用�
 - 报价额外保存不可见的幂等指纹，进程即使在“报价已写入、响应尚未落盘”之间中断，也不会重复建草稿。
 - 邮箱只是「可能重复」的辅助匹配：同项目邮箱已存在时建立外部引用并返回 `linked`。
 - 更新边界：已关联客户的后续同步只补齐空字段，不覆盖销售人工维护字段。
+- 报价 PDF 以 `quotationId + version` 生成稳定字节与 ETag；同版本可用 `If-None-Match` 得到 304，报价内容更新后版本和 ETag 同步失效。
 
 ## 审计与安全
 
@@ -63,8 +65,9 @@ Idempotency-Key: <1-128 字符>          # 写端点必填；重试必须复用�
 ## 测试
 
 ```bash
-npm run test:integration   # node:test + mongodb-memory-server，19 个用例
+npm run test:integration   # node:test + mongodb-memory-server，23 个用例
 ```
 
 覆盖：认证/scope/项目隔离错误码、幂等键重放与冲突、并发 10 次只产生 1 个客户、
-邮箱 linked、游标增量推进、报价金额重算/重放/项目隔离/Timeline、审计日志不含敏感内容。
+邮箱 linked、游标增量推进、报价金额重算/重放/项目隔离/Timeline、PDF 中文字体/水印/ETag/304、
+审计日志不含敏感内容。
