@@ -22,11 +22,16 @@ import { ApiError } from '../utils/ApiError';
 import {
   Customer,
   CustomerEvent,
+  computeQuotationTotals,
   IntegrationIdempotency,
   Quotation,
   type CustomerDocument,
+  type QuotationDocument,
 } from '../models';
-import type { UpsertCustomerBody } from '../validators/integration.validator';
+import type {
+  CreateQuotationDraftBody,
+  UpsertCustomerBody,
+} from '../validators/integration.validator';
 
 /* ------------------------------- customers/upsert ------------------------------- */
 
@@ -102,33 +107,33 @@ const IDEMPOTENCY_LEASE_MS = 30_000;
 const IDEMPOTENCY_WAIT_MS = 10_000;
 const IDEMPOTENCY_POLL_MS = 20;
 
-type IdempotencyReservation =
-  | { kind: 'replay'; result: UpsertResult; statusCode: number }
+type IdempotencyReservation<T> =
+  | { kind: 'replay'; result: T; statusCode: number }
   | { kind: 'owner'; id: Types.ObjectId; owner: string };
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-function replayFrom(record: {
+function replayFrom<T>(record: {
   state?: string;
   response?: Record<string, unknown> | null;
   statusCode?: number | null;
-}): IdempotencyReservation | null {
+}): IdempotencyReservation<T> | null {
   // state 缺失兼容 v1 已完成记录；它们原本强制包含 response/statusCode。
   const completed = record.state === 'completed' || Boolean(record.response && record.statusCode);
   if (!completed || !record.response || !record.statusCode) return null;
   return {
     kind: 'replay',
-    result: record.response as unknown as UpsertResult,
+    result: record.response as unknown as T,
     statusCode: record.statusCode,
   };
 }
 
-async function reserveIdempotency(
+async function reserveIdempotency<T>(
   credentialId: string,
   projectId: string,
   key: string,
   requestHash: string,
-): Promise<IdempotencyReservation> {
+): Promise<IdempotencyReservation<T>> {
   const owner = randomUUID();
   const credentialObjectId = new Types.ObjectId(credentialId);
   const projectObjectId = new Types.ObjectId(projectId);
@@ -158,7 +163,7 @@ async function reserveIdempotency(
     if (current.requestHash !== requestHash) {
       throw ApiError.conflict('Idempotency-Key 已被不同载荷使用');
     }
-    const replay = replayFrom(current);
+    const replay = replayFrom<T>(current);
     if (replay) return replay;
 
     const now = new Date();
@@ -185,11 +190,11 @@ async function reserveIdempotency(
   throw ApiError.conflict('同一 Idempotency-Key 的请求仍在处理中，请稍后重试');
 }
 
-async function completeIdempotency(
-  reservation: Extract<IdempotencyReservation, { kind: 'owner' }>,
-  result: UpsertResult,
+async function completeIdempotency<T extends object>(
+  reservation: Extract<IdempotencyReservation<T>, { kind: 'owner' }>,
+  result: T,
   statusCode: number,
-): Promise<{ result: UpsertResult; statusCode: number }> {
+): Promise<{ result: T; statusCode: number }> {
   const completed = await IntegrationIdempotency.findOneAndUpdate(
     { _id: reservation.id, state: 'processing', owner: reservation.owner },
     {
@@ -205,7 +210,7 @@ async function completeIdempotency(
 }
 
 async function abandonIdempotency(
-  reservation: Extract<IdempotencyReservation, { kind: 'owner' }>,
+  reservation: Extract<IdempotencyReservation<unknown>, { kind: 'owner' }>,
 ): Promise<void> {
   await IntegrationIdempotency.updateOne(
     { _id: reservation.id, state: 'processing', owner: reservation.owner },
@@ -233,7 +238,7 @@ export async function upsertCustomer(input: {
 
   /* ---- 1. 请求级幂等 ---- */
   const requestHash = hashUpsertPayload(body);
-  const reservation = await reserveIdempotency(credentialId, projectId, idempotencyKey, requestHash);
+  const reservation = await reserveIdempotency<UpsertResult>(credentialId, projectId, idempotencyKey, requestHash);
   if (reservation.kind === 'replay') {
     return { result: reservation.result, statusCode: reservation.statusCode };
   }
@@ -310,6 +315,239 @@ export async function upsertCustomer(input: {
     await abandonIdempotency(reservation);
     throw error;
   }
+}
+
+/* -------------------------- quotation-draft.v1 -------------------------- */
+
+export interface IntegrationQuotationResult {
+  quotationId: string;
+  quotationNo: string;
+  customerId: string;
+  externalRef: string;
+  title: string;
+  items: {
+    productName: string;
+    model?: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+  }[];
+  currency: string;
+  totalAmount: number;
+  validityDate: string | null;
+  paymentTerms: string | null;
+  leadTime: string | null;
+  moq: string | null;
+  notes: string | null;
+  status: string;
+  version: number;
+  proposalTrace: NonNullable<CreateQuotationDraftBody['proposalTrace']> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export function hashQuotationDraftPayload(body: CreateQuotationDraftBody): string {
+  return createHash('sha256').update(stableJson(body)).digest('hex');
+}
+
+function toIntegrationQuotation(
+  quotation: QuotationDocument,
+  externalRef: string,
+): IntegrationQuotationResult {
+  return {
+    quotationId: String(quotation._id),
+    quotationNo: quotation.quotationNo,
+    customerId: String(quotation.customerId),
+    externalRef,
+    title: quotation.title,
+    items: quotation.items.map((item) => ({
+      productName: item.productName,
+      ...(item.model ? { model: item.model } : {}),
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+    })),
+    currency: quotation.currency,
+    totalAmount: quotation.totalAmount,
+    validityDate: quotation.validityDate?.toISOString() ?? null,
+    paymentTerms: quotation.paymentTerms ?? null,
+    leadTime: quotation.leadTime ?? null,
+    moq: quotation.moq ?? null,
+    notes: quotation.notes ?? null,
+    status: quotation.status,
+    version: quotation.version ?? 1,
+    proposalTrace: quotation.proposalTrace
+      ? {
+          proposalId: quotation.proposalTrace.proposalId,
+          generatedBy: quotation.proposalTrace.generatedBy,
+          ...(quotation.proposalTrace.model ? { model: quotation.proposalTrace.model } : {}),
+          sources: quotation.proposalTrace.sources.map((source) => ({
+            kind: source.kind,
+            referenceId: source.referenceId,
+            ...(source.title ? { title: source.title } : {}),
+          })),
+        }
+      : null,
+    createdAt: quotation.createdAt.toISOString(),
+    updatedAt: quotation.updatedAt.toISOString(),
+  };
+}
+
+async function generateIntegrationQuotationNo(projectId: Types.ObjectId): Promise<string> {
+  const now = new Date();
+  const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const base = await Quotation.countDocuments({ projectId, createdAt: { $gte: startOfToday } });
+
+  for (let offset = 1; offset <= 500; offset += 1) {
+    const candidate = `QT-${ymd}-${String(base + offset).padStart(3, '0')}`;
+    // eslint-disable-next-line no-await-in-loop
+    if (!(await Quotation.exists({ projectId, quotationNo: candidate }))) return candidate;
+  }
+  return `QT-${ymd}-${now.getTime().toString(36).toUpperCase()}`;
+}
+
+async function markCustomerQuoting(
+  projectId: Types.ObjectId,
+  customerId: Types.ObjectId,
+): Promise<void> {
+  const changed = await Customer.findOneAndUpdate(
+    {
+      _id: customerId,
+      projectId,
+      status: { $in: ['pending', 'contacted', 'replied', 'interested'] },
+    },
+    { $set: { status: 'quoting' } },
+  ).select('status');
+  if (!changed) return;
+  await CustomerEvent.create({
+    projectId,
+    customerId,
+    type: 'status_changed',
+    at: new Date(),
+    fromStatus: changed.status,
+    toStatus: 'quoting',
+  });
+}
+
+/** 用户确认后，为已同步客户幂等创建一份 Genesis 权威 draft。 */
+export async function createQuotationDraft(input: {
+  credentialId: string;
+  projectId: string;
+  externalRef: string;
+  idempotencyKey: string;
+  body: CreateQuotationDraftBody;
+}): Promise<{ result: IntegrationQuotationResult; statusCode: number }> {
+  const { credentialId, externalRef, idempotencyKey, body } = input;
+  const projectId = new Types.ObjectId(input.projectId);
+  // 现有唯一索引是 (credentialId, key)；把 project + operation 纳入摘要，
+  // 在不迁移线上索引的前提下实现契约要求的四维幂等作用域。
+  const internalRequestKey = `qd:${createHash('sha256')
+    .update(`${input.projectId}:${idempotencyKey}`)
+    .digest('hex')}`;
+  const requestHash = hashQuotationDraftPayload(body);
+  const reservation = await reserveIdempotency<IntegrationQuotationResult>(
+    credentialId,
+    input.projectId,
+    internalRequestKey,
+    requestHash,
+  );
+  if (reservation.kind === 'replay') {
+    return { result: reservation.result, statusCode: 200 };
+  }
+
+  try {
+    const customer = await Customer.findOne({
+      projectId,
+      externalSystem: body.sourceSystem,
+      externalId: externalRef,
+    }).select('_id status');
+    if (!customer) throw ApiError.notFound('该外部 ID 尚未关联任何客户');
+
+    const integrationIdempotencyKey = createHash('sha256')
+      .update(`${credentialId}:${input.projectId}:${idempotencyKey}`)
+      .digest('hex');
+    let quotation = await Quotation.findOne({ projectId, integrationIdempotencyKey })
+      .select('+integrationIdempotencyKey');
+    const recovered = Boolean(quotation);
+
+    if (!quotation) {
+      const { items, totalAmount } = computeQuotationTotals(body.items);
+      for (let attempt = 0; attempt < 5 && !quotation; attempt += 1) {
+        const quotationNo = await generateIntegrationQuotationNo(projectId);
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          quotation = await Quotation.create({
+            projectId,
+            quotationNo,
+            customerId: customer._id,
+            title: body.title,
+            items,
+            currency: body.currency,
+            totalAmount,
+            validityDate: body.validityDate ? new Date(body.validityDate) : undefined,
+            paymentTerms: body.paymentTerms,
+            leadTime: body.leadTime,
+            moq: body.moq,
+            notes: body.notes,
+            status: 'draft',
+            version: 1,
+            proposalTrace: body.proposalTrace,
+            integrationIdempotencyKey,
+          });
+        } catch (error) {
+          if ((error as { code?: number })?.code !== 11000) throw error;
+          // 进程在“业务写入成功、幂等记录完成”之间中断时，接管者找回首次结果。
+          // eslint-disable-next-line no-await-in-loop
+          quotation = await Quotation.findOne({ projectId, integrationIdempotencyKey })
+            .select('+integrationIdempotencyKey');
+        }
+      }
+    }
+    if (!quotation) throw ApiError.conflict('报价编号生成冲突，请重试');
+
+    if (body.markCustomerAsQuoting) {
+      await markCustomerQuoting(projectId, customer._id);
+    }
+    const result = toIntegrationQuotation(quotation, externalRef);
+    await completeIdempotency(reservation, result, 201);
+    return { result, statusCode: recovered ? 200 : 201 };
+  } catch (error) {
+    await abandonIdempotency(reservation);
+    throw error;
+  }
+}
+
+/** 按项目隔离读取报价权威详情；原生未关联报价不暴露给跨系统接口。 */
+export async function getIntegrationQuotation(input: {
+  projectId: string;
+  quotationId: string;
+}): Promise<IntegrationQuotationResult> {
+  const quotation = await Quotation.findOne({
+    _id: new Types.ObjectId(input.quotationId),
+    projectId: new Types.ObjectId(input.projectId),
+  });
+  if (!quotation) throw ApiError.notFound('报价不存在或不属于当前项目');
+
+  const customer = await Customer.findOne({
+    _id: quotation.customerId,
+    projectId: new Types.ObjectId(input.projectId),
+  }).select('externalId');
+  if (!customer?.externalId) throw ApiError.notFound('报价未关联外部客户引用');
+  return toIntegrationQuotation(quotation, customer.externalId);
 }
 
 /* ------------------------------- outcomes 游标事件 ------------------------------- */

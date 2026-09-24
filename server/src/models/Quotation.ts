@@ -28,6 +28,19 @@ export interface IQuotationItem {
   amount: number;
 }
 
+export interface IQuotationProposalSource {
+  kind: 'lead' | 'knowledge' | 'customer' | 'quotation';
+  referenceId: string;
+  title?: string;
+}
+
+export interface IQuotationProposalTrace {
+  proposalId: string;
+  generatedBy: 'autoforce_ai';
+  model?: string;
+  sources: IQuotationProposalSource[];
+}
+
 export interface IQuotation {
   projectId: Types.ObjectId;
   /** 报价单编号（唯一） */
@@ -54,6 +67,12 @@ export interface IQuotation {
   notes?: string;
   /** 状态：draft / sent / negotiating / accepted / rejected / expired */
   status: QuotationStatus;
+  /** 内容版本；每次修改递增，供后续稳定 PDF / ETag 使用 */
+  version: number;
+  /** AutoForceAI 建议来源审计（不参与金额计算） */
+  proposalTrace?: IQuotationProposalTrace;
+  /** 集成写入的内部幂等标识，不对外返回 */
+  integrationIdempotencyKey?: string;
   /** 创建人（引用 User）；单用户环境下可留空 */
   createdBy?: Types.ObjectId;
   createdAt: Date;
@@ -115,6 +134,32 @@ const QuotationItemSchema = new Schema<IQuotationItem>(
   { _id: false },
 );
 
+const ProposalSourceSchema = new Schema<IQuotationProposalSource>(
+  {
+    kind: { type: String, enum: ['lead', 'knowledge', 'customer', 'quotation'], required: true },
+    referenceId: { type: String, required: true, trim: true, maxlength: 200 },
+    title: { type: String, trim: true, maxlength: 300 },
+  },
+  { _id: false },
+);
+
+const ProposalTraceSchema = new Schema<IQuotationProposalTrace>(
+  {
+    proposalId: { type: String, required: true, trim: true, maxlength: 128 },
+    generatedBy: { type: String, enum: ['autoforce_ai'], required: true },
+    model: { type: String, trim: true, maxlength: 120 },
+    sources: {
+      type: [ProposalSourceSchema],
+      required: true,
+      validate: {
+        validator: (v: IQuotationProposalSource[]) => Array.isArray(v) && v.length >= 1 && v.length <= 50,
+        message: '建议来源必须为 1-50 条',
+      },
+    },
+  },
+  { _id: false },
+);
+
 const QuotationSchema = new Schema<IQuotation>(
   {
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
@@ -163,6 +208,9 @@ const QuotationSchema = new Schema<IQuotation>(
       default: 'draft',
       index: true,
     },
+    version: { type: Number, default: 1, min: 1 },
+    proposalTrace: { type: ProposalTraceSchema },
+    integrationIdempotencyKey: { type: String, maxlength: 64, select: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   {
@@ -197,6 +245,11 @@ QuotationSchema.index({ projectId: 1, quotationNo: 1 }, { unique: true });
 QuotationSchema.index({ projectId: 1, customerId: 1, createdAt: -1 });
 // 顶层列表按状态 + 时间筛选
 QuotationSchema.index({ projectId: 1, status: 1, createdAt: -1 });
+// 写请求崩溃后接管时仍可找回首次创建的报价，杜绝重复草稿。
+QuotationSchema.index(
+  { projectId: 1, integrationIdempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { integrationIdempotencyKey: { $type: 'string' } } },
+);
 
 export const Quotation = model<IQuotation, QuotationModel>('Quotation', QuotationSchema);
 

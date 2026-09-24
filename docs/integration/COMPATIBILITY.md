@@ -29,6 +29,15 @@
 
 - 发布分支：`codex/phase2-release-ready`
 - 必需 scope（阶段 2 核心）：`customers:upsert, outcomes:read, stats:read`
-  （`quotations:read` 预留给阶段 4.3，签发凭证时按需追加）
+- 阶段 4 报价草稿：`quotations:draft, quotations:read`（按需最小权限签发）
 - 凭证管理：`server/` 下 `npm run integration:credential -- create|list|rotate|revoke`
 - 运维手册：见 AutoForceAI `docs/PHASE2_OPS_RUNBOOK.md`
+
+## 向后兼容扩展：quotation-draft.v1
+
+- 契约文件：`docs/integration/quotation-draft-v1.1.openapi.yaml`
+- 能力标识：`quotation-draft.v1`
+- 契约 SHA-256：`c2b7921dfe076dd1748ca220a2435de26eabc05161264f01514c4a5def397e33`
+- 基础 `contractVersion: 1.0` 与基础契约哈希保持不变
+- Wave A 已实现：报价草稿幂等创建、权威金额重算、报价详情查询
+- Wave B 待实现：服务端 PDF、稳定 ETag 与 draft 水印

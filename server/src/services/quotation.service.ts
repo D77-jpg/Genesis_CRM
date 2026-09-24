@@ -75,6 +75,7 @@ export interface QuotationDto {
   moq?: string;
   notes?: string;
   status: QuotationStatus;
+  version: number;
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -141,6 +142,7 @@ function toQuotationDto(doc: Record<string, unknown>): QuotationDto {
     ...(doc.moq ? { moq: String(doc.moq) } : {}),
     ...(doc.notes ? { notes: String(doc.notes) } : {}),
     status: (doc.status as QuotationStatus) ?? 'draft',
+    version: Number(doc.version ?? 1),
     ...(doc.createdBy ? { createdBy: String(doc.createdBy) } : {}),
     createdAt: doc.createdAt as Date,
     updatedAt: doc.updatedAt as Date,
@@ -382,7 +384,7 @@ export async function updateQuotation(
   try {
     doc = await Quotation.findOneAndUpdate(
       { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId), ...projectScope(actor) },
-      { $set: patch },
+      { $set: patch, $inc: { version: 1 } },
       { new: true, runValidators: true },
     );
   } catch (error) {
@@ -410,7 +412,7 @@ export async function updateQuotationStatus(
 
   const doc = await Quotation.findOneAndUpdate(
     { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId), ...projectScope(actor) },
-    { $set: { status: input.status } },
+    { $set: { status: input.status }, $inc: { version: 1 } },
     { new: true, runValidators: true },
   );
   if (!doc) throw ApiError.notFound('报价单不存在或无权修改');

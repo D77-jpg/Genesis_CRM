@@ -14,16 +14,21 @@ import {
   requireServiceToken,
 } from '../middleware/service-token.middleware';
 import {
+  createQuotationDraftHandler,
   customerQuotationsHandler,
   customerStatusHandler,
   healthHandler,
+  integrationQuotationHandler,
   outcomesHandler,
   statsOverviewHandler,
   upsertCustomerHandler,
 } from '../controllers/integration.controller';
 import {
+  createQuotationDraftBody,
   externalRefParams,
   outcomesQuery,
+  quotationExternalRefParams,
+  quotationIdParams,
   upsertCustomerBody,
 } from '../validators/integration.validator';
 
@@ -63,6 +68,20 @@ router.get(
   requireScope('quotations:read'),
   validate({ params: externalRefParams }),
   customerQuotationsHandler,
+);
+
+router.post(
+  '/customers/:externalRef/quotation-drafts',
+  requireScope('quotations:draft'),
+  validate({ params: quotationExternalRefParams, body: createQuotationDraftBody }),
+  createQuotationDraftHandler,
+);
+
+router.get(
+  '/quotations/:quotationId',
+  requireScope('quotations:read'),
+  validate({ params: quotationIdParams }),
+  integrationQuotationHandler,
 );
 
 export default router;
