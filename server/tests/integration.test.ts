@@ -17,6 +17,8 @@
  */
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { MongoMemoryServer } from 'mongodb-memory-server';
@@ -34,6 +36,7 @@ let baseUrl: string;
 let Project: typeof import('../src/models').Project;
 let Customer: typeof import('../src/models').Customer;
 let CustomerEvent: typeof import('../src/models').CustomerEvent;
+let Quotation: typeof import('../src/models').Quotation;
 let IntegrationRequestLog: typeof import('../src/models').IntegrationRequestLog;
 let IntegrationIdempotency: typeof import('../src/models').IntegrationIdempotency;
 let createCredential: typeof import('../src/services/integration-credential.service').createCredential;
@@ -44,7 +47,13 @@ let tokenA = '';
 let credentialAId = '';
 let tokenLimited = ''; // 只有 stats:read
 
-const ALL_SCOPES = ['customers:upsert', 'outcomes:read', 'stats:read', 'quotations:read'];
+const ALL_SCOPES = [
+  'customers:upsert',
+  'outcomes:read',
+  'stats:read',
+  'quotations:draft',
+  'quotations:read',
+];
 
 function authHeaders(token: string, projectId: string): Record<string, string> {
   return {
@@ -87,6 +96,32 @@ function sampleUpsert(externalId: string, overrides: Record<string, unknown> = {
   };
 }
 
+function sampleQuotationDraft(overrides: Record<string, unknown> = {}) {
+  return {
+    schemaVersion: '1.0',
+    sourceSystem: 'autoforce',
+    title: 'Recycled canvas bags',
+    currency: 'USD',
+    items: [
+      { productName: 'Canvas Bag A', model: 'CB-A', quantity: 3, unitPrice: 1.235 },
+      { productName: 'Canvas Bag B', quantity: 2, unitPrice: 4 },
+    ],
+    validityDate: '2026-10-24T00:00:00.000Z',
+    paymentTerms: '30% deposit, 70% before shipment',
+    leadTime: '30 days',
+    moq: '100 pcs',
+    notes: 'FOB Xiamen',
+    markCustomerAsQuoting: true,
+    proposalTrace: {
+      proposalId: 'quote-proposal:test-001',
+      generatedBy: 'autoforce_ai',
+      model: 'configured-model',
+      sources: [{ kind: 'lead', referenceId: 'lead:quote-test', title: 'Website inquiry' }],
+    },
+    ...overrides,
+  };
+}
+
 before(async () => {
   memory = await MongoMemoryServer.create();
   mongoose = await import('mongoose');
@@ -96,6 +131,7 @@ before(async () => {
   Project = models.Project;
   Customer = models.Customer;
   CustomerEvent = models.CustomerEvent;
+  Quotation = models.Quotation;
   IntegrationRequestLog = models.IntegrationRequestLog;
   IntegrationIdempotency = models.IntegrationIdempotency;
   ({ createCredential } = await import('../src/services/integration-credential.service'));
@@ -117,6 +153,7 @@ before(async () => {
 
   await Customer.init();
   await CustomerEvent.init();
+  await Quotation.init();
   await models.IntegrationCredential.init();
   await models.IntegrationIdempotency.init();
 
@@ -151,6 +188,14 @@ after(async () => {
 const pid = () => String(projectA._id);
 const pidB = () => String(projectB._id);
 
+test('quotation-draft.v1 契约镜像哈希已冻结', () => {
+  const contract = readFileSync('../docs/integration/quotation-draft-v1.1.openapi.yaml');
+  assert.equal(
+    createHash('sha256').update(contract).digest('hex'),
+    'c2b7921dfe076dd1748ca220a2435de26eabc05161264f01514c4a5def397e33',
+  );
+});
+
 test('health：无 token → 401 UNAUTHORIZED', async () => {
   const res = await fetch(`${baseUrl}/health`, { headers: { 'X-Project-Id': pid() } });
   assert.equal(res.status, 401);
@@ -181,6 +226,7 @@ test('health：正确凭证返回契约版本、项目与 scope', async () => {
   const data = res.json.data as Record<string, unknown>;
   assert.equal(data.ok, true);
   assert.equal(data.contractVersion, '1.0');
+  assert.deepEqual(data.capabilities, ['quotation-draft.v1']);
   assert.equal(data.projectId, pid());
   assert.equal(data.projectName, '项目 A');
   assert.deepEqual(data.scopes, ALL_SCOPES);
@@ -467,6 +513,147 @@ test('项目隔离：项目 A 的凭证不能读写项目 B', async () => {
 
   const statsB = await api('GET', '/stats/overview', { token: tokenA, projectId: pidB() });
   assert.equal(statsB.status, 404);
+});
+
+test('quotation draft：缺 scope 与权威字段注入均被拒绝', async () => {
+  const denied = await api('POST', '/customers/lead:quote-scope/quotation-drafts', {
+    token: tokenLimited,
+    projectId: pid(),
+    body: sampleQuotationDraft(),
+    headers: { 'Idempotency-Key': 'quote-scope-0001' },
+  });
+  assert.equal(denied.status, 403);
+  assert.equal((denied.json.error as { code: string }).code, 'FORBIDDEN_SCOPE');
+
+  const injected = await api('POST', '/customers/lead:quote-scope/quotation-drafts', {
+    token: tokenA,
+    projectId: pid(),
+    body: sampleQuotationDraft({ totalAmount: 0, status: 'accepted' }),
+    headers: { 'Idempotency-Key': 'quote-injection-0001' },
+  });
+  assert.equal(injected.status, 422);
+  assert.equal((injected.json.error as { code: string }).code, 'VALIDATION_ERROR');
+  assert.equal(await Quotation.countDocuments({ projectId: projectA._id }), 0);
+});
+
+test('quotation draft：创建、金额重算、Timeline、重放与同键冲突', async () => {
+  const externalRef = 'lead:quote-test';
+  const sharedKey = 'shared-operation-key-0001';
+  const upsert = await api('POST', '/customers/upsert', {
+    token: tokenA,
+    projectId: pid(),
+    body: sampleUpsert(externalRef),
+    headers: { 'Idempotency-Key': sharedKey },
+  });
+  assert.equal(upsert.status, 201);
+
+  // 与 customers/upsert 使用相同外部 key，操作命名空间应避免互相冲突。
+  const body = sampleQuotationDraft();
+  const created = await api('POST', `/customers/${externalRef}/quotation-drafts`, {
+    token: tokenA,
+    projectId: pid(),
+    body,
+    headers: { 'Idempotency-Key': sharedKey },
+  });
+  assert.equal(created.status, 201);
+  const data = created.json.data as Record<string, unknown>;
+  assert.equal(data.externalRef, externalRef);
+  assert.equal(data.status, 'draft');
+  assert.equal(data.version, 1);
+  assert.equal(data.totalAmount, 11.71);
+  assert.equal((data.items as { amount: number }[])[0].amount, 3.71);
+  assert.equal((data.items as { amount: number }[])[1].amount, 8);
+  assert.equal(
+    ((data.proposalTrace as { sources: { referenceId: string }[] }).sources[0]).referenceId,
+    externalRef,
+  );
+
+  const quotationId = String(data.quotationId);
+  const stored = await Quotation.findById(quotationId).select('+integrationIdempotencyKey');
+  assert.ok(stored?.integrationIdempotencyKey);
+  assert.equal(stored?.status, 'draft');
+  assert.equal(stored?.totalAmount, 11.71);
+
+  const customer = await Customer.findOne({ projectId: projectA._id, externalId: externalRef });
+  assert.equal(customer?.status, 'quoting');
+  assert.equal(
+    await CustomerEvent.countDocuments({
+      projectId: projectA._id,
+      customerId: customer?._id,
+      type: 'status_changed',
+      toStatus: 'quoting',
+    }),
+    1,
+  );
+
+  const replay = await api('POST', `/customers/${externalRef}/quotation-drafts`, {
+    token: tokenA,
+    projectId: pid(),
+    body,
+    headers: { 'Idempotency-Key': sharedKey },
+  });
+  assert.equal(replay.status, 200);
+  assert.deepEqual(replay.json.data, created.json.data);
+  assert.equal(await Quotation.countDocuments({ projectId: projectA._id, customerId: customer?._id }), 1);
+
+  // 模拟进程在“报价写入成功、幂等响应落盘前”中断：过期接管必须找回原报价。
+  const idempotency = await IntegrationIdempotency.findOne({
+    credentialId: credentialAId,
+    'response.quotationId': quotationId,
+  });
+  assert.ok(idempotency);
+  await IntegrationIdempotency.updateOne(
+    { _id: idempotency!._id },
+    {
+      $set: { state: 'processing', owner: 'crashed-worker', leaseExpiresAt: new Date(0) },
+      $unset: { response: 1, statusCode: 1 },
+    },
+  );
+  const recovered = await api('POST', `/customers/${externalRef}/quotation-drafts`, {
+    token: tokenA,
+    projectId: pid(),
+    body,
+    headers: { 'Idempotency-Key': sharedKey },
+  });
+  assert.equal(recovered.status, 200);
+  assert.equal((recovered.json.data as { quotationId: string }).quotationId, quotationId);
+  assert.equal(await Quotation.countDocuments({ projectId: projectA._id, customerId: customer?._id }), 1);
+
+  const conflict = await api('POST', `/customers/${externalRef}/quotation-drafts`, {
+    token: tokenA,
+    projectId: pid(),
+    body: sampleQuotationDraft({ title: 'Different payload' }),
+    headers: { 'Idempotency-Key': sharedKey },
+  });
+  assert.equal(conflict.status, 409);
+  assert.equal((conflict.json.error as { code: string }).code, 'CONFLICT');
+});
+
+test('quotation detail：返回权威详情并按项目隔离', async () => {
+  const quotation = await Quotation.findOne({ projectId: projectA._id, title: 'Recycled canvas bags' });
+  assert.ok(quotation);
+
+  const detail = await api('GET', `/quotations/${quotation!._id}`, {
+    token: tokenA,
+    projectId: pid(),
+  });
+  assert.equal(detail.status, 200);
+  const data = detail.json.data as Record<string, unknown>;
+  assert.equal(data.quotationId, String(quotation!._id));
+  assert.equal(data.externalRef, 'lead:quote-test');
+  assert.equal(data.totalAmount, 11.71);
+
+  const { token: crossProjectToken } = await createCredential({
+    name: '跨项目只读测试凭证',
+    projectIds: [pid(), pidB()],
+    scopes: ['quotations:read'],
+  });
+  const hidden = await api('GET', `/quotations/${quotation!._id}`, {
+    token: crossProjectToken,
+    projectId: pidB(),
+  });
+  assert.equal(hidden.status, 404);
+  assert.equal((hidden.json.error as { code: string }).code, 'NOT_FOUND');
 });
 
 test('stats/overview：返回 8 段漏斗与报价摘要', async () => {

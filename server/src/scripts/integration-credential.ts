@@ -4,7 +4,7 @@
  * 用法（在 server/ 目录下）：
  *   npm run integration:credential -- create --name "AutoForceAI 本地" \
  *       --project <projectId> [--project <projectId2>] \
- *       --scopes customers:upsert,outcomes:read,stats:read,quotations:read [--expires 2027-01-01]
+ *       --scopes customers:upsert,outcomes:read,stats:read,quotations:draft,quotations:read [--expires 2027-01-01]
  *   npm run integration:credential -- list
  *   npm run integration:credential -- rotate --id <credentialId>
  *   npm run integration:credential -- revoke --id <credentialId>

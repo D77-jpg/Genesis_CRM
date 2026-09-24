@@ -6,10 +6,12 @@
 
 Genesis_CRM 对外集成接口，供 AutoForceAI 等获客系统以**服务凭证**接入：
 线索交接（幂等 upsert）、成交/流失回流（游标 feed）、门户摘要（stats），
-以及阶段 5.2 预留的客户状态 / 报价只读查询。
+客户状态 / 报价只读查询，以及人工确认后的报价草稿写入。
 
 **权威契约：[`integration-v1.openapi.yaml`](./integration-v1.openapi.yaml)**。
 v1 内只允许向后兼容地新增可选字段；删除/改名/改变语义必须发布 v2。
+报价扩展契约：[`quotation-draft-v1.1.openapi.yaml`](./quotation-draft-v1.1.openapi.yaml)，
+能力标识 `quotation-draft.v1`；基础契约版本仍为 `1.0`。
 
 ## 快速开始（本地联调）
 
@@ -41,11 +43,14 @@ Idempotency-Key: <1-128 字符>          # 写端点必填；重试必须复用�
 | `GET /api/integrations/v1/stats/overview` | `stats:read` | 客户总数 / 8 段漏斗 / 报价状态摘要 |
 | `GET /api/integrations/v1/customers/{externalRef}` | `customers:upsert` | （5.2 预留）客户状态查询 |
 | `GET /api/integrations/v1/customers/{externalRef}/quotations` | `quotations:read` | （5.2 预留）报价状态查询 |
+| `POST /api/integrations/v1/customers/{externalRef}/quotation-drafts` | `quotations:draft` | 幂等创建一份正式 `draft`，金额由 Genesis 重算 |
+| `GET /api/integrations/v1/quotations/{quotationId}` | `quotations:read` | 读取项目内报价权威详情 |
 
 ## 幂等与一致性
 
 - 业务唯一键：`(projectId, sourceSystem, externalId)`（Customer partial unique 索引）。
-- 请求幂等键：`IntegrationIdempotency`（同键同载荷重放首次响应；同键不同载荷 409）。
+- 请求幂等键：`IntegrationIdempotency`（按写操作隔离；同键同载荷重放首次响应；同键不同载荷 409）。
+- 报价额外保存不可见的幂等指纹，进程即使在“报价已写入、响应尚未落盘”之间中断，也不会重复建草稿。
 - 邮箱只是「可能重复」的辅助匹配：同项目邮箱已存在时建立外部引用并返回 `linked`。
 - 更新边界：已关联客户的后续同步只补齐空字段，不覆盖销售人工维护字段。
 
@@ -58,8 +63,8 @@ Idempotency-Key: <1-128 字符>          # 写端点必填；重试必须复用�
 ## 测试
 
 ```bash
-npm run test:integration   # node:test + mongodb-memory-server，13 个用例
+npm run test:integration   # node:test + mongodb-memory-server，19 个用例
 ```
 
 覆盖：认证/scope/项目隔离错误码、幂等键重放与冲突、并发 10 次只产生 1 个客户、
-邮箱 linked、游标增量推进、审计日志不含敏感内容。
+邮箱 linked、游标增量推进、报价金额重算/重放/项目隔离/Timeline、审计日志不含敏感内容。

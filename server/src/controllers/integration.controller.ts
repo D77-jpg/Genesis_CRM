@@ -6,13 +6,19 @@ import { sendSuccess } from '../utils/pagination';
 import { ApiError } from '../utils/ApiError';
 import { INTEGRATION_CONTRACT_VERSION } from '../constants';
 import {
+  createQuotationDraft,
+  getIntegrationQuotation,
   getCustomerQuotationsByExternalRef,
   getCustomerStatusByExternalRef,
   getIntegrationStats,
   listOutcomes,
   upsertCustomer,
 } from '../services/integration.service';
-import type { OutcomesQuery, UpsertCustomerBody } from '../validators/integration.validator';
+import type {
+  CreateQuotationDraftBody,
+  OutcomesQuery,
+  UpsertCustomerBody,
+} from '../validators/integration.validator';
 
 function requireIntegration(req: Parameters<Parameters<typeof asyncHandler>[0]>[0]) {
   if (!req.integration || !req.project) throw ApiError.unauthorized('缺少服务凭证或项目上下文');
@@ -25,6 +31,7 @@ export const healthHandler = asyncHandler(async (req, res) => {
   sendSuccess(res, {
     ok: true,
     contractVersion: INTEGRATION_CONTRACT_VERSION,
+    capabilities: ['quotation-draft.v1'],
     serverTime: new Date().toISOString(),
     projectId: project.id,
     projectName: project.name,
@@ -86,6 +93,36 @@ export const customerQuotationsHandler = asyncHandler(async (req, res) => {
       projectId: project.id,
       externalRef: req.params.externalRef,
       sourceSystem: typeof req.query.sourceSystem === 'string' ? req.query.sourceSystem : undefined,
+    }),
+  );
+});
+
+/** POST /customers/:externalRef/quotation-drafts —— 人工确认后创建正式草稿 */
+export const createQuotationDraftHandler = asyncHandler(async (req, res) => {
+  const { integration, project } = requireIntegration(req);
+  const idempotencyKey = String(req.headers['idempotency-key'] ?? '').trim();
+  if (idempotencyKey.length < 8 || idempotencyKey.length > 128) {
+    throw ApiError.badRequest('缺少或非法的 Idempotency-Key 请求头（8-128 字符）');
+  }
+
+  const { result, statusCode } = await createQuotationDraft({
+    credentialId: integration.credentialId,
+    projectId: project.id,
+    externalRef: req.params.externalRef,
+    idempotencyKey,
+    body: req.body as CreateQuotationDraftBody,
+  });
+  sendSuccess(res, result, statusCode);
+});
+
+/** GET /quotations/:quotationId —— 项目内报价权威详情 */
+export const integrationQuotationHandler = asyncHandler(async (req, res) => {
+  const { project } = requireIntegration(req);
+  sendSuccess(
+    res,
+    await getIntegrationQuotation({
+      projectId: project.id,
+      quotationId: req.params.quotationId,
     }),
   );
 });
