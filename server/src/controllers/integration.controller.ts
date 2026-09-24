@@ -5,6 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/pagination';
 import { ApiError } from '../utils/ApiError';
 import { INTEGRATION_CONTRACT_VERSION } from '../constants';
+import { renderIntegrationQuotationPdf } from '../services/quotation-pdf.service';
 import {
   createQuotationDraft,
   getIntegrationQuotation,
@@ -125,4 +126,39 @@ export const integrationQuotationHandler = asyncHandler(async (req, res) => {
       quotationId: req.params.quotationId,
     }),
   );
+});
+
+function etagMatches(ifNoneMatch: string | undefined, etag: string): boolean {
+  if (!ifNoneMatch) return false;
+  const target = etag.replace(/^W\//, '');
+  return ifNoneMatch
+    .split(',')
+    .map((value) => value.trim())
+    .some((value) => value === '*' || value.replace(/^W\//, '') === target);
+}
+
+/** GET /quotations/:quotationId/pdf —— 下载 Genesis 权威报价 PDF */
+export const integrationQuotationPdfHandler = asyncHandler(async (req, res) => {
+  const { project } = requireIntegration(req);
+  const pdf = await renderIntegrationQuotationPdf({
+    projectId: project.id,
+    quotationId: req.params.quotationId,
+  });
+
+  res.setHeader('ETag', pdf.etag);
+  res.setHeader('X-Quotation-Version', String(pdf.version));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'private, no-cache');
+  if (etagMatches(req.headers['if-none-match'], pdf.etag)) {
+    res.status(304).end();
+    return;
+  }
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${pdf.asciiFilename}"; filename*=UTF-8''${encodeURIComponent(pdf.filename)}`,
+  );
+  res.setHeader('Content-Length', String(pdf.buffer.length));
+  res.status(200).send(pdf.buffer);
 });

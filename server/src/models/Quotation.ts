@@ -67,7 +67,7 @@ export interface IQuotation {
   notes?: string;
   /** 状态：draft / sent / negotiating / accepted / rejected / expired */
   status: QuotationStatus;
-  /** 内容版本；每次修改递增，供后续稳定 PDF / ETag 使用 */
+  /** 内容版本；每次修改递增，供稳定 PDF / ETag 使用 */
   version: number;
   /** AutoForceAI 建议来源审计（不参与金额计算） */
   proposalTrace?: IQuotationProposalTrace;

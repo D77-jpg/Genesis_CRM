@@ -18,6 +18,7 @@ import {
   customerQuotationsHandler,
   customerStatusHandler,
   healthHandler,
+  integrationQuotationPdfHandler,
   integrationQuotationHandler,
   outcomesHandler,
   statsOverviewHandler,
@@ -75,6 +76,13 @@ router.post(
   requireScope('quotations:draft'),
   validate({ params: quotationExternalRefParams, body: createQuotationDraftBody }),
   createQuotationDraftHandler,
+);
+
+router.get(
+  '/quotations/:quotationId/pdf',
+  requireScope('quotations:read'),
+  validate({ params: quotationIdParams }),
+  integrationQuotationPdfHandler,
 );
 
 router.get(

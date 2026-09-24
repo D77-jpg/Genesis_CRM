@@ -20,6 +20,7 @@ export type ErrorCode =
   | 'CONFLICT'
   | 'RATE_LIMITED'
   | 'PAYLOAD_TOO_LARGE'
+  | 'PDF_UNAVAILABLE'
   | 'MAIL_SEND_FAILED'
   | 'IMPORT_FAILED'
   | 'INTERNAL_ERROR';
@@ -102,6 +103,10 @@ export class ApiError extends Error {
 
   static mailFailed(message = '开发信发送失败', details?: ApiErrorDetail[]): ApiError {
     return new ApiError(502, message, 'MAIL_SEND_FAILED', details);
+  }
+
+  static pdfUnavailable(message = 'PDF 暂时无法生成，请稍后重试'): ApiError {
+    return new ApiError(503, message, 'PDF_UNAVAILABLE');
   }
 
   static importFailed(message = 'Excel 导入失败', details?: ApiErrorDetail[]): ApiError {

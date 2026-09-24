@@ -656,6 +656,105 @@ test('quotation detail：返回权威详情并按项目隔离', async () => {
   assert.equal((hidden.json.error as { code: string }).code, 'NOT_FOUND');
 });
 
+test('quotation version migration：历史报价补齐为 1 且可安全递增', async () => {
+  const customer = await Customer.findOne({ projectId: projectA._id, externalId: 'lead:quote-test' });
+  assert.ok(customer);
+  const legacyId = new mongoose.default.Types.ObjectId();
+  const now = new Date('2026-09-24T00:00:00.000Z');
+  await Quotation.collection.insertOne({
+    _id: legacyId,
+    projectId: projectA._id,
+    quotationNo: 'QT-LEGACY-PDF-001',
+    customerId: customer!._id,
+    title: 'Legacy quotation',
+    items: [{ productName: 'Legacy item', quantity: 1, unitPrice: 10, amount: 10 }],
+    currency: 'USD',
+    totalAmount: 10,
+    status: 'draft',
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const { migrateLegacyQuotationVersion } = await import('../src/services/quotation.service');
+  assert.equal(await migrateLegacyQuotationVersion(), 1);
+  assert.equal((await Quotation.findById(legacyId).lean())?.version, 1);
+
+  const updated = await Quotation.findOneAndUpdate(
+    { _id: legacyId },
+    { $set: { title: 'Updated legacy quotation' }, $inc: { version: 1 } },
+    { new: true },
+  );
+  assert.equal(updated?.version, 2);
+  await Quotation.deleteOne({ _id: legacyId });
+});
+
+test('quotation PDF：中文可嵌入、draft 水印、稳定 ETag、304 与版本失效', async () => {
+  const quotation = await Quotation.findOne({ projectId: projectA._id, title: 'Recycled canvas bags' });
+  assert.ok(quotation);
+  const path = `${baseUrl}/quotations/${quotation!._id}/pdf`;
+  const headers = authHeaders(tokenA, pid());
+
+  const first = await fetch(path, { headers });
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('content-type'), 'application/pdf');
+  assert.equal(first.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(first.headers.get('x-quotation-version'), '1');
+  assert.match(first.headers.get('content-disposition') ?? '', /filename="Quotation-/);
+  assert.match(first.headers.get('content-disposition') ?? '', /filename\*=UTF-8''/);
+  const etagV1 = first.headers.get('etag');
+  assert.match(etagV1 ?? '', /^"[a-f\d]{64}"$/);
+  const pdfV1 = Buffer.from(await first.arrayBuffer());
+  assert.equal(pdfV1.subarray(0, 5).toString(), '%PDF-');
+  assert.ok(pdfV1.length > 5_000, 'PDF 应嵌入字体并包含完整报价内容');
+  assert.ok(pdfV1.length < 1_000_000, 'PDF 不应嵌入未经裁剪的超大字体');
+  assert.equal(
+    (pdfV1.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length,
+    1,
+    '单页内容不得因页脚绘制产生额外空白页',
+  );
+  assert.ok(pdfV1.includes(Buffer.from('DRAFT')), 'draft PDF 必须包含 DRAFT 水印文本');
+
+  const repeated = await fetch(path, { headers });
+  const repeatedPdf = Buffer.from(await repeated.arrayBuffer());
+  assert.equal(repeated.headers.get('etag'), etagV1);
+  assert.deepEqual(repeatedPdf, pdfV1, '同一 quotationId + version 的 PDF 字节必须稳定');
+
+  const notModified = await fetch(path, { headers: { ...headers, 'If-None-Match': etagV1! } });
+  assert.equal(notModified.status, 304);
+  assert.equal((await notModified.arrayBuffer()).byteLength, 0);
+
+  quotation!.title = '厦门再生帆布袋报价';
+  quotation!.version = 2;
+  await quotation!.save();
+  const secondVersion = await fetch(path, { headers: { ...headers, 'If-None-Match': etagV1! } });
+  assert.equal(secondVersion.status, 200);
+  assert.equal(secondVersion.headers.get('x-quotation-version'), '2');
+  assert.notEqual(secondVersion.headers.get('etag'), etagV1);
+  assert.notDeepEqual(Buffer.from(await secondVersion.arrayBuffer()), pdfV1);
+});
+
+test('quotation PDF：缺 scope 与跨项目读取均被拒绝', async () => {
+  const quotation = await Quotation.findOne({ projectId: projectA._id, title: '厦门再生帆布袋报价' });
+  assert.ok(quotation);
+
+  const denied = await fetch(`${baseUrl}/quotations/${quotation!._id}/pdf`, {
+    headers: authHeaders(tokenLimited, pid()),
+  });
+  assert.equal(denied.status, 403);
+  assert.equal(((await denied.json()) as { error: { code: string } }).error.code, 'FORBIDDEN_SCOPE');
+
+  const { token: crossProjectToken } = await createCredential({
+    name: 'PDF 跨项目测试凭证',
+    projectIds: [pid(), pidB()],
+    scopes: ['quotations:read'],
+  });
+  const hidden = await fetch(`${baseUrl}/quotations/${quotation!._id}/pdf`, {
+    headers: authHeaders(crossProjectToken, pidB()),
+  });
+  assert.equal(hidden.status, 404);
+  assert.equal(((await hidden.json()) as { error: { code: string } }).error.code, 'NOT_FOUND');
+});
+
 test('stats/overview：返回 8 段漏斗与报价摘要', async () => {
   const res = await api('GET', '/stats/overview', { token: tokenLimited, projectId: pid() });
   assert.equal(res.status, 200);

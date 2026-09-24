@@ -38,6 +38,27 @@ import type {
 
 const logger = createLogger('quotation-service');
 
+/**
+ * Phase 4 引入内容版本前创建的报价没有 version 字段。启动时一次性补齐，
+ * 确保第一次编辑也会从 1 递增到 2，PDF 缓存与 ETag 不会误复用旧内容。
+ */
+export async function migrateLegacyQuotationVersion(): Promise<number> {
+  const result = await Quotation.updateMany(
+    {
+      $or: [
+        { version: { $exists: false } },
+        { version: null },
+        { version: { $lt: 1 } },
+      ],
+    },
+    { $set: { version: 1 } },
+  );
+  if (result.modifiedCount > 0) {
+    logger.info(`已为 ${result.modifiedCount} 份历史报价补齐内容版本号`);
+  }
+  return result.modifiedCount;
+}
+
 /** 只有处于这些阶段的客户，显式联动时才推进到「报价中」（避免降级谈判中 / 成交 / 流失） */
 const QUOTING_LINKABLE_FROM: CustomerStatus[] = ['pending', 'contacted', 'replied', 'interested'];
 

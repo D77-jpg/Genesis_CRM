@@ -40,4 +40,4 @@
 - 契约 SHA-256：`c2b7921dfe076dd1748ca220a2435de26eabc05161264f01514c4a5def397e33`
 - 基础 `contractVersion: 1.0` 与基础契约哈希保持不变
 - Wave A 已实现：报价草稿幂等创建、权威金额重算、报价详情查询
-- Wave B 待实现：服务端 PDF、稳定 ETag 与 draft 水印
+- Wave B 已实现：服务端中英双语 PDF、稳定 ETag / 304、版本失效与 draft 每页水印
