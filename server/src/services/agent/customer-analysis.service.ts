@@ -81,6 +81,7 @@ async function getAnalysisOrThrow(id: string, actor: AuthUser) {
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('客户分析 ID 格式不正确');
   const analysis = await AgentCustomerAnalysis.findOne({ _id: id, ...scope(actor) });
   if (!analysis) throw ApiError.notFound('客户分析不存在或无权访问');
+  await getCustomerByIdOrThrow(String(analysis.customerId), actor);
   return analysis;
 }
 

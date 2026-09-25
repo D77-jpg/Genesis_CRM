@@ -6,6 +6,7 @@ import {
   AgentCustomerPreview,
   AgentRun,
   Customer,
+  AGENT_CUSTOMER_FIELDS,
   Scratchpad,
   type AgentCustomerPreviewDocument,
   type AgentCustomerPreviewFields,
@@ -16,12 +17,15 @@ import { ApiError } from '../../utils/ApiError';
 import { customerScope, requireProjectId } from '../../utils/access';
 import { escapeRegExp } from '../../utils/text';
 import { createCustomer } from '../customer.service';
+import { MailMessage } from '../../models/MailMessage';
+import { detectProtectedMailSignal } from './mail-thread-analysis.service';
 import { createCustomerSchema } from '../../validators/customer.validator';
 import {
   agentCustomerFieldsSchema,
   agentCustomerUncertaintySchema,
   type ConfirmAgentCustomerPreviewBody,
   type CreateAgentCustomerPreviewBody,
+  type CreateAgentMailCustomerPreviewBody,
   type UpdateAgentCustomerPreviewBody,
 } from '../../validators/agent.validator';
 import { MockAgentProvider } from './mock-provider';
@@ -62,6 +66,10 @@ function dto(doc: AgentCustomerPreviewDocument) {
   return {
     id: doc.id,
     sourceVersion: doc.sourceVersion,
+    sourceKind: doc.sourceKind ?? 'scratchpad',
+    sourceMailId: doc.sourceMailId ? String(doc.sourceMailId) : undefined,
+    facts: doc.facts ?? [],
+    inferences: doc.inferences ?? [],
     fields: raw.fields,
     uncertainties: doc.uncertainties.map((item) => ({ field: item.field, reason: item.reason, confidence: item.confidence })),
     duplicates: doc.duplicates.map((item) => ({
@@ -88,12 +96,19 @@ async function findDuplicates(fields: AgentCustomerPreviewFields, actor: AuthUse
     if (digits.length >= 6) conditions.push({ phone: new RegExp(`^\\D*${digits.split('').join('\\D*')}\\D*$`) });
   }
   if (fields.company) conditions.push({ company: new RegExp(`^${escapeRegExp(fields.company)}$`, 'i') });
+  const domain = fields.email.split('@')[1]?.toLowerCase();
+  if (domain && !/^(gmail|yahoo|outlook|hotmail|icloud|qq|163|126|protonmail)\./i.test(domain)) {
+    conditions.push({ email: new RegExp(`@${escapeRegExp(domain)}$`, 'i') });
+    conditions.push({ website: new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?${escapeRegExp(domain)}(?:[\\/:?#]|$)`, 'i') });
+  }
   if (fields.name) conditions.push({ name: new RegExp(`^${escapeRegExp(fields.name)}$`, 'i') });
   if (conditions.length === 0) return [];
-  const docs = await Customer.find({ ...customerScope(actor), $or: conditions }).select('name company email phone').limit(10).lean();
+  const docs = await Customer.find({ ...customerScope(actor), $or: conditions }).select('name company email phone website').limit(10).lean();
   return docs.map((item) => {
     const reasons: string[] = [];
     if (fields.email && item.email?.toLowerCase() === fields.email.toLowerCase()) reasons.push('邮箱相同');
+    if (domain && !/^(gmail|yahoo|outlook|hotmail|icloud|qq|163|126|protonmail)\./i.test(domain) &&
+      (item.email?.toLowerCase().endsWith(`@${domain}`) || new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?${escapeRegExp(domain)}(?:[\\/:?#]|$)`, 'i').test(item.website ?? ''))) reasons.push('企业域名相同');
     if (fields.phone && item.phone && normalizedPhone(item.phone) === normalizedPhone(fields.phone)) reasons.push('电话相同');
     if (fields.company && item.company?.localeCompare(fields.company, undefined, { sensitivity: 'base' }) === 0) reasons.push('公司相同');
     if (fields.name && item.name.localeCompare(fields.name, undefined, { sensitivity: 'base' }) === 0) reasons.push('联系人相同');
@@ -101,17 +116,55 @@ async function findDuplicates(fields: AgentCustomerPreviewFields, actor: AuthUse
   }).filter((item) => item.reasons.length > 0);
 }
 
+function requireMailAdmin(actor: AuthUser): void {
+  if (actor.role !== 'admin') throw ApiError.notFound('邮件不存在或无权访问');
+}
+
+function mailSourceHash(mail: { from: string; fromName?: string | null; subject: string; text: string }): string {
+  return createHash('sha256').update(JSON.stringify([mail.from, mail.fromName ?? '', mail.subject, mail.text])).digest('hex');
+}
+
+function assertSafeMail(mail: { from: string; subject: string; text: string }): void {
+  const content = `${mail.from}\n${mail.subject}\n${mail.text}`;
+  if (detectProtectedMailSignal(mail).classification !== 'normal' ||
+    /\bspam\b|垃圾邮件|广告垃圾|junk mail|unsolicited bulk/i.test(content) || containsPromptInjection(content)) {
+    throw ApiError.conflict('邮件包含退订、退信、拒绝、垃圾邮件或指令注入信号，禁止提议创建客户');
+  }
+}
+
+async function getMailSource(mailId: string, actor: AuthUser) {
+  requireMailAdmin(actor);
+  const mail = await MailMessage.findOne({ _id: mailId, projectId: requireProjectId(actor), deleted: { $ne: true }, customerId: null });
+  if (!mail) throw ApiError.notFound('邮件不存在或无权访问');
+  const thread = await MailMessage.find({ projectId: requireProjectId(actor), threadId: mail.threadId, deleted: { $ne: true } })
+    .select('from subject text').limit(201).lean();
+  if (thread.length > 200) throw ApiError.conflict('邮件会话过长，无法完整复核历史安全信号，请人工处理');
+  // Historical stop-contact signals remain binding even when a newer message looks benign.
+  for (const message of thread) assertSafeMail(message);
+  assertSafeMail(mail);
+  return mail;
+}
+
 async function getPreviewOrThrow(id: string, actor: AuthUser) {
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('预览 ID 格式不正确');
   const preview = await AgentCustomerPreview.findOne({ _id: id, ...scope(actor) });
   if (!preview) throw ApiError.notFound('客户预览不存在或无权访问');
+  if (preview.sourceKind === 'mail') {
+    requireMailAdmin(actor);
+    if (!preview.sourceMailId) throw ApiError.notFound('邮件不存在或无权访问');
+    const mail = await getMailSource(String(preview.sourceMailId), actor);
+    if (preview.sourceHash !== mailSourceHash(mail)) throw ApiError.conflict('来源邮件已更新，请重新提取客户预览');
+  }
   return preview;
 }
 
 export async function createScratchpadCustomerPreview(input: CreateAgentCustomerPreviewBody, actor: AuthUser) {
   const identifiers = scope(actor);
   const existing = await AgentCustomerPreview.findOne({ ...identifiers, requestKey: input.idempotencyKey });
-  if (existing) return dto(existing);
+  if (existing) {
+    if (existing.sourceKind === 'mail') throw ApiError.conflict('幂等键已用于邮件客户预览');
+    return dto(existing);
+  }
   const scratchpad = await Scratchpad.findOne(identifiers).lean();
   const content = scratchpad?.content ?? '';
   if (!content.trim()) throw ApiError.badRequest('随手记为空，请先填写客户信息');
@@ -148,6 +201,7 @@ export async function createScratchpadCustomerPreview(input: CreateAgentCustomer
       if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 11000) {
         const raced = await AgentCustomerPreview.findOne({ ...identifiers, requestKey: input.idempotencyKey });
         if (raced) {
+          if (raced.sourceKind === 'mail') throw ApiError.conflict('幂等键已用于邮件客户预览');
           await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
             workflowId: raced._id, status: 'completed', inputTokens: extracted.usage.inputTokens,
             outputTokens: extracted.usage.outputTokens, totalTokens: extracted.usage.totalTokens,
@@ -176,6 +230,79 @@ export async function createScratchpadCustomerPreview(input: CreateAgentCustomer
     await settleAgentQuota(reservation);
     if (error instanceof ApiError) throw error;
     if (error instanceof AgentProviderError) throw new ApiError(503, 'Agent 提取服务暂时不可用，随手记和 CRM 数据均未改动', 'INTERNAL_ERROR');
+    throw error;
+  }
+}
+
+export async function createMailCustomerPreview(input: CreateAgentMailCustomerPreviewBody, actor: AuthUser) {
+  requireMailAdmin(actor);
+  const identifiers = scope(actor);
+  // Authorize the requested mail before returning an idempotent result: no guessed ID can reveal a preview.
+  const mail = await getMailSource(input.mailId, actor);
+  const existing = await AgentCustomerPreview.findOne({ ...identifiers, requestKey: input.idempotencyKey });
+  if (existing) {
+    if (existing.sourceKind !== 'mail' || String(existing.sourceMailId) !== input.mailId) throw ApiError.conflict('幂等键已用于其他来源');
+    if (existing.sourceHash !== mailSourceHash(mail)) throw ApiError.conflict('来源邮件已更新，请重新提取');
+    return dto(existing);
+  }
+  const header = mail.from.match(/<?([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})>?/i)?.[1]?.toLowerCase() ?? '';
+  if (!header) throw ApiError.badRequest('发件人邮箱无法识别，请人工核对');
+  const fromName = String(mail.fromName ?? '').trim();
+  const content = `发件人: ${mail.from}\n联系人: ${fromName}\n主题: ${mail.subject}\n${mail.text ?? ''}`;
+  const activeProvider = provider();
+  const limited = limitRecentItems([content], (value) => value, (_value, next) => next);
+  const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model,
+    kind: 'scratchpad', status: 'running', inputCharacters: limited.inputCharacters, inputTruncated: limited.truncated,
+    promptInjectionDetected: containsPromptInjection(content) });
+  const startedAt = Date.now();
+  let reservation: AgentQuotaReservation | undefined;
+  try {
+    if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
+    reservation = await reserveAgentQuota(actor, limited.inputCharacters);
+    const extracted = await activeProvider.extractCustomer({ content: limited.items[0] ?? '', safetyIdentifier: agentSafetyIdentifier(actor) });
+    // A provider may hallucinate sender details; the email address comes only from the persisted header.
+    const fields = agentCustomerFieldsSchema.parse({ ...extracted.fields, email: header, leadSource: '邮件' });
+    const facts: NonNullable<AgentCustomerPreviewDocument['facts']> = [
+      { field: 'email', value: header, mailId: input.mailId },
+      ...(fromName && fields.name === fromName
+        ? [{ field: 'name' as const, value: fields.name, mailId: input.mailId }] : []),
+    ];
+    const inferences: NonNullable<AgentCustomerPreviewDocument['inferences']> = AGENT_CUSTOMER_FIELDS
+      .filter((field) => field !== 'email' && field !== 'leadSource' && field !== 'priority' && Boolean(fields[field]) && !(field === 'name' && fromName && fields.name === fromName))
+      .map((field) => ({ field, value: fields[field], reason: '模型根据不可信邮件内容提取，需人工核对', mailId: input.mailId }));
+    const uncertainties = extracted.uncertainties.map((item) => agentCustomerUncertaintySchema.parse(item)) as AgentCustomerUncertainty[];
+    for (const field of AGENT_CUSTOMER_FIELDS) {
+      if (field === 'email' || field === 'leadSource' || uncertainties.some((item) => item.field === field)) continue;
+      uncertainties.push({ field, reason: field === 'priority' ? '优先级为模型建议，需人工确认' : '邮件内容或提取结果需人工核对', confidence: fields[field] ? 0.4 : 0.2 });
+    }
+    const duplicates = await findDuplicates(fields, actor);
+    // Reject if the source was linked, deleted, modified, or marked unsafe during model inference.
+    const fresh = await getMailSource(input.mailId, actor);
+    if (mailSourceHash(fresh) !== mailSourceHash(mail)) throw ApiError.conflict('邮件已更新，请重新提取');
+    let preview: AgentCustomerPreviewDocument;
+    try {
+      preview = await AgentCustomerPreview.create({ ...identifiers, requestKey: input.idempotencyKey,
+        sourceKind: 'mail', sourceMailId: mail._id, sourceHash: mailSourceHash(mail), sourceVersion: 0,
+        facts, inferences, fields, uncertainties, duplicates, status: 'preview' });
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+      const raced = await AgentCustomerPreview.findOne({ ...identifiers, requestKey: input.idempotencyKey });
+      if (!raced || raced.sourceKind !== 'mail' || String(raced.sourceMailId) !== input.mailId || raced.sourceHash !== mailSourceHash(mail)) throw error;
+      preview = raced;
+    }
+    await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { workflowId: preview._id, status: 'completed',
+      inputTokens: extracted.usage.inputTokens, outputTokens: extracted.usage.outputTokens, totalTokens: extracted.usage.totalTokens,
+      estimatedCostUsd: estimateAgentCostUsd(extracted.usage, activeProvider.name), durationMs: Date.now() - startedAt } });
+    await AgentAction.create({ ...identifiers, runId: run._id, workflowId: preview._id, toolName: 'extract_mail_customer',
+      riskLevel: 'read', arguments: { mailId: input.mailId }, requiresApproval: false, approvalStatus: 'not_required',
+      executionStatus: 'succeeded', resultSummary: `已生成邮件客户预览，发现 ${duplicates.length} 个可能重复项`, executedAt: new Date() });
+    await settleAgentQuota(reservation, extracted.usage);
+    return dto(preview);
+  } catch (error) {
+    await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
+    await settleAgentQuota(reservation);
+    if (error instanceof ApiError) throw error;
+    if (error instanceof AgentProviderError) throw new ApiError(503, '邮件提取服务暂时不可用，未创建客户', 'INTERNAL_ERROR');
     throw error;
   }
 }
@@ -247,6 +374,10 @@ export async function confirmScratchpadCustomerPreview(id: string, input: Confir
   try {
     let customerId: string;
     try {
+      if (locked.sourceKind === 'mail' && locked.sourceMailId) {
+        const source = await getMailSource(String(locked.sourceMailId), actor);
+        if (mailSourceHash(source) !== locked.sourceHash) throw ApiError.conflict('来源邮件已变更，禁止创建客户');
+      }
       const customer = await createCustomer(parsed.data, actor, { agentCreationKey: creationKey });
       customerId = customer.id;
     } catch (error) {

@@ -54,6 +54,7 @@ export const agentCustomerUncertaintySchema = z.object({
 }).strict();
 
 export const createAgentCustomerPreviewSchema = z.object({ idempotencyKey }).strict();
+export const createAgentMailCustomerPreviewSchema = z.object({ mailId: objectId, idempotencyKey }).strict();
 export const updateAgentCustomerPreviewSchema = z.object({
   expectedVersion: z.number().int().min(1),
   fields: agentCustomerFieldsSchema,
@@ -107,6 +108,7 @@ export type CreateAgentSessionBody = z.infer<typeof createAgentSessionSchema>;
 export type UpdateAgentSessionBody = z.infer<typeof updateAgentSessionSchema>;
 export type SendAgentMessageBody = z.infer<typeof sendAgentMessageSchema>;
 export type CreateAgentCustomerPreviewBody = z.infer<typeof createAgentCustomerPreviewSchema>;
+export type CreateAgentMailCustomerPreviewBody = z.infer<typeof createAgentMailCustomerPreviewSchema>;
 export type UpdateAgentCustomerPreviewBody = z.infer<typeof updateAgentCustomerPreviewSchema>;
 export type ConfirmAgentCustomerPreviewBody = z.infer<typeof confirmAgentCustomerPreviewSchema>;
 export type CreateAgentCustomerAnalysisBody = z.infer<typeof createAgentCustomerAnalysisSchema>;

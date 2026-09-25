@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {
-  AlertOctagon, CheckCircle2, FileCheck2, Loader2, Mail, MessageSquareReply, Save, ShieldAlert, UserRoundCog,
+  AlertOctagon, CheckCircle2, FileCheck2, Loader2, Mail, MessageSquareReply, Save, ShieldAlert, UserPlus, UserRoundCog,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CUSTOMER_STATUS_OPTIONS, FOLLOW_UP_METHOD_OPTIONS, FOLLOW_UP_RESULT_OPTIONS } from '@/constants';
 import { apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
+import { useAuthStore } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
 import type { AgentMailThreadAnalysis, CustomerStatus, FollowUpMethod, FollowUpResult } from '@/types';
 
@@ -32,9 +33,9 @@ function localDateTime(value?: string | Date | null): string {
 
 const intentLabels: Record<string, string> = {
   inquiry: '产品咨询', quotation_request: '询价/报价', negotiation: '商务谈判', sample_request: '样品请求', order: '订单意向',
-  support: '售后/支持', positive: '积极反馈', neutral: '一般沟通', unsubscribe: '退订', bounce: '退信', rejection: '明确拒绝', other: '其他',
+  support: '售后/支持', positive: '积极反馈', neutral: '一般沟通', unsubscribe: '退订', bounce: '退信', rejection: '明确拒绝', spam: '垃圾邮件', other: '其他',
 };
-const safetyLabels = { normal: '未发现停止营销信号', unsubscribe: '客户退订', bounce: '邮件退信', rejection: '客户明确拒绝' } as const;
+const safetyLabels = { normal: '未发现停止营销信号', unsubscribe: '客户退订', bounce: '邮件退信', rejection: '客户明确拒绝', spam: '垃圾邮件' } as const;
 
 function Evidence({ ids, analysis }: { ids: string[]; analysis: AgentMailThreadAnalysis }) {
   if (!ids.length) return <span className="text-[11px] text-muted-foreground">未提取到明确来源</span>;
@@ -47,6 +48,10 @@ function Evidence({ ids, analysis }: { ids: string[]; analysis: AgentMailThreadA
 
 export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analysisId: string; onRecordsChanged: () => Promise<void> }): React.JSX.Element {
   const clearAnalysis = useUiStore((state) => state.clearAgentMailAnalysis);
+  const openCustomerPreview = useUiStore((state) => state.openAgentCustomerPreview);
+  const isAdmin = useAuthStore((state) => state.user?.role === 'admin');
+  const previewKey = React.useRef(newKey());
+  const [creatingPreview, setCreatingPreview] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<AgentMailThreadAnalysis | null>(null);
   const [subject, setSubject] = React.useState(''); const [bodyText, setBodyText] = React.useState('');
   const [customerStatus, setCustomerStatus] = React.useState<CustomerStatus>('pending'); const [statusReason, setStatusReason] = React.useState('');
@@ -86,6 +91,22 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
       toast.success('审批卡片编辑已保存'); return updated;
     } catch (reason) { setError(toErrorMessage(reason, '编辑保存失败')); return null; }
     finally { setSaving(false); }
+  }
+  async function createCustomerPreview() {
+    if (!analysis || analysis.rootDirection !== 'inbound' || analysis.customerId || !isAdmin || creatingPreview) return;
+    setCreatingPreview(true); setError('');
+    try {
+      const preview = await apiPost<{ id: string; sourceKind: 'mail'; sourceMailId: string }>(
+        '/agent/mail-customer/previews', { mailId: analysis.rootMailId, idempotencyKey: previewKey.current },
+      );
+      if (preview.sourceKind !== 'mail' || preview.sourceMailId !== analysis.rootMailId || !preview.id) {
+        throw new Error('预览来源与当前邮件不匹配，未打开确认页面');
+      }
+      openCustomerPreview(preview.id);
+      toast.success('客户创建预览已生成，请核对并明确确认；尚未创建客户');
+    } catch (reason) {
+      setError(toErrorMessage(reason, '客户预览生成失败，未创建客户'));
+    } finally { setCreatingPreview(false); }
   }
   async function confirm() {
     if (!analysis || !confirmAction || !reviewed) return;
@@ -154,12 +175,12 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
         {!followUpLocked && <div className="mt-3 flex justify-end gap-2"><Button variant="outline" onClick={() => void saveEdits('followup')} disabled={!changed('followup', analysis) || saving}><Save className="h-4 w-4" />保存编辑</Button><Button onClick={() => { setReviewed(false); setConfirmAction('followup'); }} disabled={!analysis.customerId || !followUpContent.trim() || saving}><FileCheck2 className="h-4 w-4" />确认保存记录</Button></div>}
       </section>
 
-      {!analysis.customerId && <p className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-200">当前线程未关联客户。你仍可查看只读分析，但不能执行任何写入动作。</p>}
+      {!analysis.customerId && <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-200"><p>当前线程未关联客户。回复草稿、客户状态和跟进记录写入均不可用。</p>{analysis.rootDirection === 'inbound' && isAdmin && <div className="space-y-2"><p>管理员可基于这封入站邮件生成客户创建预览。提取内容及查重结果需要人工核对；生成预览不会创建客户或发送邮件。</p><Button type="button" variant="outline" onClick={() => void createCustomerPreview()} disabled={creatingPreview || saving}>{creatingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}生成客户创建预览</Button></div>}</div>}
       <Button type="button" variant="ghost" className="w-full" onClick={clearAnalysis}>返回 Agent 对话</Button>
     </div>
 
     <AlertDialog open={confirmAction !== null} onOpenChange={(open) => { if (!open) { setConfirmAction(null); setReviewed(false); } }}>
-      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmAction === 'reply' ? '确认保存回复草稿？' : confirmAction === 'status' ? '确认更新客户状态？' : '确认保存跟进记录？'}</AlertDialogTitle><AlertDialogDescription>{confirmAction === 'reply' ? '将创建一条 draft 状态的线程回复，系统不会发送邮件。' : confirmAction === 'status' ? `将客户状态更新为“${CUSTOMER_STATUS_OPTIONS.find((item) => item.value === customerStatus)?.label ?? customerStatus}”。` : blocked ? '只记录退订、退信或拒绝结果，不会安排未来营销跟进。' : `将保存沟通结果${nextFollowUpAt ? `，并安排 ${formatDateTime(new Date(nextFollowUpAt))} 跟进` : ''}。`}</AlertDialogDescription></AlertDialogHeader>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmAction === 'reply' ? '确认保存回复草稿？' : confirmAction === 'status' ? '确认更新客户状态？' : '确认保存跟进记录？'}</AlertDialogTitle><AlertDialogDescription>{confirmAction === 'reply' ? '将创建一条 draft 状态的线程回复，系统不会发送邮件。' : confirmAction === 'status' ? `将客户状态更新为“${CUSTOMER_STATUS_OPTIONS.find((item) => item.value === customerStatus)?.label ?? customerStatus}”。` : blocked ? '只记录退订、退信、拒绝或垃圾邮件结果，不会安排未来营销跟进。' : `将保存沟通结果${nextFollowUpAt ? `，并安排 ${formatDateTime(new Date(nextFollowUpAt))} 跟进` : ''}。`}</AlertDialogDescription></AlertDialogHeader>
         <label className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm"><Checkbox checked={reviewed} onCheckedChange={(value) => setReviewed(value === true)} /><span>我已核对以上可编辑内容，确认只执行本次审批卡片对应的写入动作。</span></label>
         <p className="text-xs text-muted-foreground">操作会记录审批人、时间和结果，并受项目权限与幂等保护。邮件不会直接发送。</p>
         <AlertDialogFooter><AlertDialogCancel disabled={saving}>返回核对</AlertDialogCancel><AlertDialogAction disabled={!reviewed || saving} onClick={(event) => { event.preventDefault(); void confirm(); }}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}确认写入</AlertDialogAction></AlertDialogFooter>

@@ -136,7 +136,30 @@ export function getAgentToolCatalog() {
   }));
 }
 
+async function assertContextAccess(context: AgentContextInput, actor: AuthUser): Promise<void> {
+  if (context.type === 'global') return;
+  if (!context.resourceId || !Types.ObjectId.isValid(context.resourceId)) throw ApiError.notFound('上下文资源不存在或无权访问');
+  if (context.type === 'customer') {
+    const customer = await Customer.exists({ _id: context.resourceId, ...customerScope(actor) });
+    if (!customer) throw ApiError.notFound('上下文资源不存在或无权访问');
+    return;
+  }
+  // The same customer-reference scope used by mail tools excludes unassigned mail for salespeople.
+  const visible = await customerRefScope(actor);
+  const mail = context.direction === 'inbound'
+    ? await MailMessage.findOne({ _id: context.resourceId, deleted: { $ne: true }, ...visible }).select('customerId').lean()
+    : context.direction === 'outbound'
+      ? await DevelopmentLetter.findOne({ _id: context.resourceId, ...visible }).select('customerId').lean()
+      : null;
+  if (!mail) throw ApiError.notFound('邮件不存在或无权访问');
+  // Recheck the linked customer: a stale customerId must not authorize an orphaned mail.
+  if (mail.customerId && !await Customer.exists({ _id: mail.customerId, ...customerScope(actor) })) {
+    throw ApiError.notFound('邮件不存在或无权访问');
+  }
+}
+
 export async function createAgentSession(input: CreateAgentSessionInput, actor: AuthUser) {
+  await assertContextAccess(input.context, actor);
   const title = input.title?.trim() || (input.context.type === 'customer'
     ? '客户分析'
     : input.context.type === 'mail' ? '邮件分析' : '业务助手');
@@ -145,7 +168,17 @@ export async function createAgentSession(input: CreateAgentSessionInput, actor: 
 }
 
 export async function listAgentSessions(actor: AuthUser) {
-  const docs = await AgentSession.find({ ...scope(actor), status: 'active' }).sort({ updatedAt: -1 }).limit(50);
+  const candidates = await AgentSession.find({ ...scope(actor), status: 'active' }).sort({ updatedAt: -1 }).limit(50);
+  const access = await Promise.all(candidates.map(async (doc) => {
+    try {
+      await assertContextAccess(doc.context, actor);
+      return true;
+    } catch (error) {
+      if (error instanceof ApiError && error.statusCode === 404) return false;
+      throw error;
+    }
+  }));
+  const docs = candidates.filter((_, index) => access[index]);
   if (docs.length === 0) return [];
   const identifiers = scope(actor);
   const [messageSummaries, contextNames] = await Promise.all([
@@ -182,7 +215,7 @@ export async function listAgentSessions(actor: AuthUser) {
 }
 
 export async function updateAgentSession(id: string, input: UpdateAgentSessionInput, actor: AuthUser) {
-  if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('会话 ID 格式不正确');
+  await getSessionOrThrow(id, actor);
   const update: Record<string, unknown> = {};
   if (input.title) update.title = input.title.trim();
   if (input.status) update.status = input.status;
@@ -199,6 +232,7 @@ async function getSessionOrThrow(id: string, actor: AuthUser) {
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('会话 ID 格式不正确');
   const doc = await AgentSession.findOne({ _id: id, ...scope(actor), status: 'active' });
   if (!doc) throw ApiError.notFound('Agent 会话不存在或无权访问');
+  await assertContextAccess(doc.context, actor);
   return doc;
 }
 

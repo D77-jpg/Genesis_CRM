@@ -22,6 +22,7 @@ import {
   agentCustomerPreviewParamsSchema,
   confirmAgentCustomerPreviewSchema,
   createAgentCustomerPreviewSchema,
+  createAgentMailCustomerPreviewSchema,
   updateAgentCustomerPreviewSchema,
 } from '../validators/agent.validator';
 import {
@@ -41,6 +42,7 @@ import {
   cancelScratchpadCustomerPreview,
   confirmScratchpadCustomerPreview,
   createScratchpadCustomerPreview,
+  createMailCustomerPreview,
   getScratchpadCustomerPreview,
   updateScratchpadCustomerPreview,
 } from '../services/agent/scratchpad-customer.service';
@@ -98,6 +100,9 @@ router.post('/admin/evaluations/run', requireRole('admin'), messageLimiter, asyn
 
 router.post('/scratchpad-customer/previews', messageLimiter, validate({ body: createAgentCustomerPreviewSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await createScratchpadCustomerPreview(req.body, req.user!), 201);
+}));
+router.post('/mail-customer/previews', messageLimiter, validate({ body: createAgentMailCustomerPreviewSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await createMailCustomerPreview(req.body, req.user!), 201);
 }));
 router.get('/scratchpad-customer/previews/:id', validate({ params: agentCustomerPreviewParamsSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await getScratchpadCustomerPreview(req.params.id, req.user!));
