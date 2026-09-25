@@ -34,7 +34,7 @@ export interface IAgentMailThreadAnalysis {
   safety: { classification: AgentMailSafety; marketingBlocked: boolean; reason: string; evidenceMessageIds: string[] };
   replyDraft: { subject: string; bodyText: string };
   statusSuggestion: { status: CustomerStatus; reason: string };
-  followUpSuggestion: { method: FollowUpMethod; content: string; result: FollowUpResult; nextFollowUpAt?: Date };
+  followUpSuggestion: { method: FollowUpMethod; content: string; result: FollowUpResult; reason: string; evidenceMessageIds: string[]; nextFollowUpAt?: Date };
   replyStatus: 'editable' | 'saving' | 'saved' | 'blocked' | 'failed';
   customerStatusUpdate: 'editable' | 'updating' | 'updated' | 'failed';
   followUpStatus: 'editable' | 'saving' | 'saved' | 'failed';
@@ -106,6 +106,8 @@ const schema = new Schema<IAgentMailThreadAnalysis>({
     method: { type: String, enum: ['email', 'whatsapp', 'phone', 'chat', 'other'], required: true },
     content: { type: String, required: true, maxlength: 5000 },
     result: { type: String, enum: ['no_reply', 'replied', 'interested', 'quoted', 'negotiating', 'won', 'no_need', 'other'], required: true },
+    reason: { type: String, default: '', maxlength: 1200 },
+    evidenceMessageIds: { type: [String], default: [] },
     nextFollowUpAt: Date,
   }, { _id: false }), required: true },
   replyStatus: { type: String, enum: ['editable', 'saving', 'saved', 'blocked', 'failed'], required: true, default: 'editable' },
