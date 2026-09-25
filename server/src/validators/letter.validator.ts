@@ -25,7 +25,11 @@ export const sendLetterSchema = z.object({
   replyToId: objectIdSchema.optional(),
   /** 目标客户；也可通过 URL /customers/:id/letters 传入 */
   customerId: objectIdSchema.optional(),
-  subject: z.string().trim().min(1, '邮件主题为必填项').max(300, '邮件主题不能超过 300 个字符'),
+  /** 仅在 subject/content 均与同项目模板原文完全一致时接受归因。 */
+  templateId: objectIdSchema.optional(),
+  // 不在校验器中 trim 原始主题：templateId 的原文一致性校验必须能看到请求原值。
+  subject: z.string().min(1, '邮件主题为必填项').max(300, '邮件主题不能超过 300 个字符')
+    .refine((v) => v.trim().length > 0, '邮件主题为必填项'),
   /** 含 {{placeholder}} 的原始 HTML，占位符由后端渲染 */
   content: htmlContentSchema,
   /** 收件人邮箱：不传则使用客户档案里的邮箱 */

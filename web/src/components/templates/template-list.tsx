@@ -5,7 +5,7 @@
  * 并提供编辑、复制、删除三个动作。空态时给出「新建模板」入口。
  */
 import * as React from 'react';
-import { Copy, FilePlus2, Pencil, Trash2 } from 'lucide-react';
+import { Copy, FilePlus2, Pencil, Sparkles, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, InlineLoader, NoResultState } from '@/components/common/empty-state';
@@ -24,6 +24,7 @@ export interface TemplateListProps {
   onCreate: () => void;
   onEdit: (template: LetterTemplate) => void;
   onDuplicate: (template: LetterTemplate) => void;
+  onSuggest: (template: LetterTemplate) => void;
   onDelete: (template: LetterTemplate) => void;
   onResetFilters: () => void;
 }
@@ -38,6 +39,7 @@ export function TemplateList({
   onCreate,
   onEdit,
   onDuplicate,
+  onSuggest,
   onDelete,
   onResetFilters,
 }: TemplateListProps): React.JSX.Element {
@@ -126,6 +128,19 @@ export function TemplateList({
                 onClick={() => onDuplicate(template)}
               >
                 <Copy className="h-3.5 w-3.5" aria-hidden />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                aria-label={`为${template.name}生成建议副本`}
+                title="建议副本（需人工核对确认）"
+                disabled={busy}
+                onClick={() => onSuggest(template)}
+              >
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                建议副本
               </Button>
               <Button
                 type="button"
