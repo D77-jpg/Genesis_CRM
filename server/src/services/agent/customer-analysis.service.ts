@@ -25,6 +25,7 @@ import type {
   CreateAgentCustomerAnalysisBody,
   UpdateAgentCustomerAnalysisBody,
 } from '../../validators/agent.validator';
+import { hasProtectedCustomerMail } from './mail-thread-analysis.service';
 import { MockAgentProvider } from './mock-provider';
 import { OpenAIResponsesProvider } from './openai-provider';
 import { AgentProviderError, type AgentProvider, type CustomerAnalysisInput } from './provider';
@@ -65,7 +66,11 @@ function dto(doc: AgentCustomerAnalysisDocument) {
     gaps: doc.gaps.map((item) => ({ text: item.text, sourceIds: item.sourceIds })),
     recommendations: doc.recommendations.map((item) => ({ text: item.text, rationale: item.rationale ?? '', sourceIds: item.sourceIds })),
     emailDraft: { subject: doc.emailDraft.subject, bodyText: doc.emailDraft.bodyText },
-    followUpPlan: { method: doc.followUpPlan.method, content: doc.followUpPlan.content, dueAt: doc.followUpPlan.dueAt },
+    followUpPlan: {
+      method: doc.followUpPlan.method, content: doc.followUpPlan.content, dueAt: doc.followUpPlan.dueAt,
+      reason: doc.followUpPlan.reason ?? '', sourceIds: doc.followUpPlan.sourceIds ?? [],
+      manuallyEdited: doc.followUpPlan.manuallyEdited ?? false,
+    },
     emailStatus: doc.emailStatus,
     followUpStatus: doc.followUpStatus,
     createdLetterId: doc.createdLetterId ? String(doc.createdLetterId) : undefined,
@@ -149,6 +154,12 @@ function verifiedClaims(items: AgentAnalysisClaim[], known: Set<string>): AgentA
     .filter((item) => item.sourceIds.length > 0);
 }
 
+function recommendationEvidence(recommendations: AgentAnalysisClaim[]): { reason: string; sourceIds: string[] } {
+  const recommendation = recommendations.find((item) => item.rationale?.trim() && item.sourceIds.length > 0);
+  if (!recommendation) throw new AgentProviderError('OPENAI_UNVERIFIED_SOURCES');
+  return { reason: recommendation.rationale!.trim(), sourceIds: recommendation.sourceIds };
+}
+
 export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser) {
   const identifiers = scope(actor);
   const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
@@ -175,12 +186,19 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     const gaps = verifiedClaims(parsed.gaps, known);
     const recommendations = verifiedClaims(parsed.recommendations, known);
     if (!facts.length || !recommendations.length) throw new AgentProviderError('OPENAI_UNVERIFIED_SOURCES');
+    const followUpEvidence = recommendationEvidence(recommendations);
+    if (parsed.followUpPlan.dueAt.getTime() <= Date.now()) {
+      throw ApiError.validation([{ field: 'followUpPlan.dueAt', message: '模型建议时间已过期，请重新生成或人工设置未来时间' }], '跟进建议时间已过期');
+    }
     let analysis: AgentCustomerAnalysisDocument;
     try {
       analysis = await AgentCustomerAnalysis.create({
         ...identifiers, customerId: new Types.ObjectId(input.customerId), requestKey: input.idempotencyKey,
         sources: context.sources, facts, gaps, recommendations, emailDraft: parsed.emailDraft,
-        followUpPlan: { ...parsed.followUpPlan, dueAt: parsed.followUpPlan.dueAt > new Date() ? parsed.followUpPlan.dueAt : new Date(Date.now() + 3 * 86400000) },
+        followUpPlan: {
+          ...parsed.followUpPlan,
+          ...followUpEvidence, manuallyEdited: false,
+        },
       });
     } catch (error) {
       if (!(typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 11000)) throw error;
@@ -221,7 +239,17 @@ export async function updateCustomerAnalysis(id: string, input: UpdateAgentCusto
   if (current.followUpStatus === 'scheduled' && input.followUpPlan) throw ApiError.conflict('跟进已安排，不能继续修改');
   const patch: Record<string, unknown> = {};
   if (input.emailDraft) patch.emailDraft = input.emailDraft;
-  if (input.followUpPlan) patch.followUpPlan = input.followUpPlan;
+  if (input.followUpPlan) {
+    if (input.followUpPlan.dueAt.getTime() <= Date.now()) throw ApiError.badRequest('跟进时间必须晚于当前时间');
+    // The request schema only accepts editable fields. Preserve the original verified evidence
+    // rather than allowing a client to forge source IDs or silently lose provenance on replacement.
+    const known = new Set(current.sources.map((source) => source.sourceId));
+    const retainedIds = [...new Set(current.followUpPlan.sourceIds ?? [])].filter((sourceId) => known.has(sourceId));
+    const evidence = current.followUpPlan.reason?.trim() && retainedIds.length
+      ? { reason: current.followUpPlan.reason.trim(), sourceIds: retainedIds }
+      : recommendationEvidence(verifiedClaims(current.recommendations, known));
+    patch.followUpPlan = { ...input.followUpPlan, ...evidence, manuallyEdited: true };
+  }
   const updated = await AgentCustomerAnalysis.findOneAndUpdate(
     { _id: current._id, ...scope(actor), version: input.expectedVersion },
     { $set: patch, $unset: { lastError: 1 }, $inc: { version: 1 } }, { new: true, runValidators: true },
@@ -279,6 +307,9 @@ export async function scheduleAnalysisFollowUp(id: string, input: ConfirmAgentAn
   if (current.followUpStatus === 'scheduling') throw ApiError.conflict('跟进正在安排，请勿重复提交');
   if (current.version !== input.expectedVersion) throw ApiError.conflict('跟进计划已更新，请核对后再次确认');
   if (current.followUpPlan.dueAt.getTime() <= Date.now()) throw ApiError.badRequest('跟进时间必须晚于当前时间');
+  if (await hasProtectedCustomerMail(String(current.customerId), String(requireProjectId(actor)))) {
+    throw ApiError.conflict('客户存在退订、退信、拒绝或垃圾邮件记录，不能安排未来营销跟进');
+  }
   const locked = await AgentCustomerAnalysis.findOneAndUpdate(
     { _id: current._id, ...identifiers, version: input.expectedVersion, followUpStatus: { $in: ['editable', 'failed'] } },
     { $set: { followUpStatus: 'scheduling', followUpConfirmationKey: input.idempotencyKey }, $inc: { version: 1 } }, { new: true },
@@ -290,6 +321,9 @@ export async function scheduleAnalysisFollowUp(id: string, input: ConfirmAgentAn
     approvalStatus: 'approved', executionStatus: 'pending', approvedBy: new Types.ObjectId(actor.id), approvedAt: new Date(),
   });
   try {
+    if (await hasProtectedCustomerMail(String(locked.customerId), String(requireProjectId(actor)))) {
+      throw ApiError.conflict('客户存在停止营销信号，不能安排未来跟进');
+    }
     await updateCustomer(String(locked.customerId), { nextFollowUpAt: locked.followUpPlan.dueAt }, actor);
     const completed = await AgentCustomerAnalysis.findOneAndUpdate(
       { _id: locked._id, ...identifiers, followUpConfirmationKey: input.idempotencyKey },

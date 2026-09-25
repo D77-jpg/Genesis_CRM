@@ -183,7 +183,15 @@ export interface AgentCustomerAnalysis {
   gaps: AgentAnalysisClaim[];
   recommendations: AgentAnalysisClaim[];
   emailDraft: { subject: string; bodyText: string };
-  followUpPlan: { method: FollowUpMethod; content: string; dueAt: string | Date };
+  followUpPlan: {
+    method: FollowUpMethod;
+    content: string;
+    dueAt: string | Date;
+    /** Evidence from the original verified recommendation, not an explanation of later edits. */
+    reason: string;
+    sourceIds: string[];
+    manuallyEdited: boolean;
+  };
   emailStatus: 'editable' | 'saving' | 'saved' | 'failed';
   followUpStatus: 'editable' | 'scheduling' | 'scheduled' | 'failed';
   createdLetterId?: string;
@@ -218,7 +226,7 @@ export interface AgentMailThreadAnalysis {
   safety: { classification: AgentMailSafety; marketingBlocked: boolean; reason: string; evidenceMessageIds: string[] };
   replyDraft: { subject: string; bodyText: string };
   statusSuggestion: { status: CustomerStatus; reason: string };
-  followUpSuggestion: { method: FollowUpMethod; content: string; result: FollowUpResult; nextFollowUpAt?: string | Date | null };
+  followUpSuggestion: { method: FollowUpMethod; content: string; result: FollowUpResult; reason: string; evidenceMessageIds: string[]; nextFollowUpAt?: string | Date | null };
   replyStatus: 'editable' | 'saving' | 'saved' | 'blocked' | 'failed';
   customerStatusUpdate: 'editable' | 'updating' | 'updated' | 'failed';
   followUpStatus: 'editable' | 'saving' | 'saved' | 'failed';

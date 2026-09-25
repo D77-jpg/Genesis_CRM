@@ -42,6 +42,13 @@ function safeErrorCode(error: unknown): string {
 }
 function clipped(value: unknown, max = 12000): string { return String(value ?? '').trim().slice(0, max); }
 
+export const PROTECTED_MAIL_CONTENT_PATTERN = /undeliverable|delivery status notification|mail delivery failed|returned mail|退信|无法投递|投递失败|unsubscribe|remove me|stop emailing|do not contact|opt[ -]?out|退订|取消订阅|不要再发|停止联系|not interested|no longer interested|do not need|we decline|not a fit|不感兴趣|不需要|拒绝|暂不考虑|\[spam\]|\bspam\b|垃圾邮件|\bjunk mail\b/i;
+
+export async function hasProtectedCustomerMail(customerId: string, projectId: string): Promise<boolean> {
+  return Boolean(await MailMessage.exists({ customerId: new Types.ObjectId(customerId), projectId: new Types.ObjectId(projectId), deleted: { $ne: true },
+    $or: [{ from: /mailer-daemon|postmaster/i }, { subject: PROTECTED_MAIL_CONTENT_PATTERN }, { text: PROTECTED_MAIL_CONTENT_PATTERN }] }));
+}
+
 export function detectProtectedMailSignal(input: { from?: string; subject?: string; text?: string }): { classification: AgentMailSafety; reason: string } {
   const from = `${input.from ?? ''}`.toLowerCase();
   const content = `${input.subject ?? ''}\n${input.text ?? ''}`.toLowerCase();
@@ -92,16 +99,12 @@ async function buildThreadInput(mailId: string, direction: 'inbound' | 'outbound
   // Safety is independent of the bounded model context: an older opt-out cannot
   // disappear when a later neutral message arrives or the thread exceeds 200 items.
   const protectedInbound = await MailMessage.findOne({ ...filter, deleted: { $ne: true },
-    $or: [
-      { from: /mailer-daemon|postmaster/i },
-      { subject: /undeliverable|delivery status notification|mail delivery failed|returned mail|退信|无法投递|投递失败|unsubscribe|remove me|stop emailing|do not contact|opt[ -]?out|退订|取消订阅|不要再发|停止联系|not interested|no longer interested|do not need|we decline|not a fit|不感兴趣|不需要|拒绝|暂不考虑|\[spam\]|\bspam\b|垃圾邮件|\bjunk mail\b/i },
-      { text: /undeliverable|delivery status notification|mail delivery failed|returned mail|退信|无法投递|投递失败|unsubscribe|remove me|stop emailing|do not contact|opt[ -]?out|退订|取消订阅|不要再发|停止联系|not interested|no longer interested|do not need|we decline|not a fit|不感兴趣|不需要|拒绝|暂不考虑|\[spam\]|\bspam\b|垃圾邮件|\bjunk mail\b/i },
-    ],
+    $or: [{ from: /mailer-daemon|postmaster/i }, { subject: PROTECTED_MAIL_CONTENT_PATTERN }, { text: PROTECTED_MAIL_CONTENT_PATTERN }],
   }).sort({ sentAt: -1 });
   return {
     root, threadId, messages, latestInbound, protectedInbound: protectedInbound ? {
       messageId: String(protectedInbound._id), from: protectedInbound.from,
-      subject: protectedInbound.subject, text: protectedInbound.text,
+      subject: protectedInbound.subject, text: protectedInbound.text, sentAt: protectedInbound.sentAt.toISOString(),
     } : undefined,
     customer: customer ? { id: customer.id, name: customer.name, company: customer.company, email: customer.email, status: customer.status } : undefined,
   };
@@ -126,7 +129,7 @@ function dto(doc: AgentMailThreadAnalysisDocument) {
     sources: doc.sources, summary: doc.summary, intent: doc.intent, extracted: doc.extracted, safety: doc.safety,
     replyDraft: { subject: doc.replyDraft.subject, bodyText: doc.replyDraft.bodyText },
     statusSuggestion: { status: doc.statusSuggestion.status, reason: doc.statusSuggestion.reason },
-    followUpSuggestion: { method: doc.followUpSuggestion.method, content: doc.followUpSuggestion.content, result: doc.followUpSuggestion.result, nextFollowUpAt: doc.followUpSuggestion.nextFollowUpAt ?? null },
+    followUpSuggestion: { method: doc.followUpSuggestion.method, content: doc.followUpSuggestion.content, result: doc.followUpSuggestion.result, reason: doc.followUpSuggestion.reason, evidenceMessageIds: doc.followUpSuggestion.evidenceMessageIds, nextFollowUpAt: doc.followUpSuggestion.nextFollowUpAt ?? null },
     replyStatus: doc.replyStatus, customerStatusUpdate: doc.customerStatusUpdate, followUpStatus: doc.followUpStatus,
     createdLetterId: doc.createdLetterId ? String(doc.createdLetterId) : undefined,
     createdFollowUpId: doc.createdFollowUpId ? String(doc.createdFollowUpId) : undefined,
@@ -170,7 +173,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     const deterministic = safetySource ? detectProtectedMailSignal(safetySource) : { classification: 'normal' as const, reason: '' };
     const classification = deterministic.classification !== 'normal' ? deterministic.classification : generated.safety.classification;
     const marketingBlocked = classification !== 'normal';
-    const evidenceMessageIds = marketingBlocked && safetySource ? [safetySource.messageId] : generated.safety.evidenceMessageIds;
+    const evidenceMessageIds = deterministic.classification !== 'normal' && safetySource ? [safetySource.messageId] : generated.safety.evidenceMessageIds;
     const currentStatus = context.customer?.status ?? 'pending';
     if (marketingBlocked) {
       generated.replyDraft = { subject: '', bodyText: '' };
@@ -180,7 +183,29 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
         content: `${classification === 'unsubscribe' ? '客户退订' : classification === 'bounce' ? '邮件退信' : classification === 'spam' ? '垃圾邮件' : '客户明确拒绝'}：${deterministic.reason || generated.safety.reason}`,
       };
     }
-    const nextFollowUpAt = !marketingBlocked && generated.followUpSuggestion.nextFollowUpAt && !Number.isNaN(Date.parse(generated.followUpSuggestion.nextFollowUpAt))
+    // Build follow-up provenance from actual thread mail, without changing either provider's output schema.
+    // Prefer validated intent evidence from customer mail; when the model omitted IDs, use the
+    // latest real inbound mail (or the root thread message for outbound-only conversations).
+    const inboundIds = new Set(limited.items.filter((item) => item.direction === 'inbound').map((item) => item.messageId));
+    const intentInboundIds = generated.intent.evidenceMessageIds.filter((id) => inboundIds.has(id));
+    const followUpEvidenceIds = marketingBlocked && evidenceMessageIds.length
+      ? evidenceMessageIds
+      : intentInboundIds.length ? intentInboundIds
+        : context.latestInbound ? [context.latestInbound.messageId]
+          : generated.intent.evidenceMessageIds.length ? generated.intent.evidenceMessageIds
+            : [context.messages.find((item) => item.messageId === input.mailId)?.messageId ?? limited.items[limited.items.length - 1].messageId];
+    const evidenceMail = context.messages.find((item) => item.messageId === followUpEvidenceIds[0]);
+    const actualMail = marketingBlocked && safetySource?.messageId === followUpEvidenceIds[0] ? safetySource : evidenceMail;
+    const mailExcerpt = clipped(actualMail?.text || actualMail?.subject, 180).replace(/\s+/g, ' ');
+    const followUpReason = marketingBlocked
+      ? (deterministic.reason || generated.safety.reason || generated.statusSuggestion.reason)
+      : `${generated.statusSuggestion.reason}${mailExcerpt ? `（邮件内容：${mailExcerpt}）` : ''}`;
+    if (!marketingBlocked && generated.followUpSuggestion.nextFollowUpAt &&
+      (!Number.isFinite(Date.parse(generated.followUpSuggestion.nextFollowUpAt)) ||
+       Date.parse(generated.followUpSuggestion.nextFollowUpAt) <= Date.now())) {
+      throw ApiError.validation([{ field: 'followUpSuggestion.nextFollowUpAt', message: '建议时间无效或已过期，请重新分析后人工核对' }], '邮件跟进建议时间无效');
+    }
+    const nextFollowUpAt = !marketingBlocked && generated.followUpSuggestion.nextFollowUpAt
       ? new Date(generated.followUpSuggestion.nextFollowUpAt) : undefined;
     let analysis: AgentMailThreadAnalysisDocument;
     try {
@@ -189,11 +214,13 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
         customerId: context.customer ? new Types.ObjectId(context.customer.id) : undefined,
         replyToMailId: context.latestInbound ? new Types.ObjectId(context.latestInbound.messageId) : undefined,
         requestKey: input.idempotencyKey,
-        sources: limited.items.map((item) => ({ messageId: item.messageId, direction: item.direction, subject: item.subject, sentAt: new Date(item.sentAt), label: `${item.direction === 'inbound' ? '收件' : '发件'} · ${item.subject || '无主题'}` })),
+        sources: [...limited.items, ...(marketingBlocked && safetySource && !limited.items.some((item) => item.messageId === safetySource.messageId)
+          ? [{ messageId: safetySource.messageId, direction: 'inbound' as const, subject: clipped(safetySource.subject, 300), sentAt: safetySource.sentAt }] : [])]
+          .map((item) => ({ messageId: item.messageId, direction: item.direction, subject: item.subject, sentAt: new Date(item.sentAt), label: `${item.direction === 'inbound' ? '收件' : '发件'} · ${item.subject || '无主题'}` })),
         summary: generated.summary, intent: generated.intent, extracted: generated.extracted,
         safety: { classification, marketingBlocked, reason: deterministic.reason || generated.safety.reason, evidenceMessageIds },
         replyDraft: generated.replyDraft, statusSuggestion: generated.statusSuggestion,
-        followUpSuggestion: { ...generated.followUpSuggestion, nextFollowUpAt }, replyStatus: marketingBlocked ? 'blocked' : 'editable',
+        followUpSuggestion: { ...generated.followUpSuggestion, reason: clipped(followUpReason, 1200), evidenceMessageIds: followUpEvidenceIds, nextFollowUpAt }, replyStatus: marketingBlocked ? 'blocked' : 'editable',
       });
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error;
@@ -235,8 +262,13 @@ export async function updateMailThreadAnalysis(id: string, input: UpdateAgentMai
   const patch: Record<string, unknown> = {};
   if (input.replyDraft) patch.replyDraft = input.replyDraft;
   if (input.statusSuggestion) patch.statusSuggestion = input.statusSuggestion;
+  if (input.followUpSuggestion?.nextFollowUpAt && input.followUpSuggestion.nextFollowUpAt instanceof Date &&
+    input.followUpSuggestion.nextFollowUpAt.getTime() <= Date.now()) throw ApiError.badRequest('跟进时间必须晚于当前时间');
   if (input.followUpSuggestion) patch.followUpSuggestion = {
     ...input.followUpSuggestion,
+    // An editor changes the proposed record, not the evidence of what was actually received.
+    reason: current.followUpSuggestion.reason ? `${current.followUpSuggestion.reason.replace(/（人工编辑跟进内容）$/, '')}（人工编辑跟进内容）`.slice(0, 1200) : '根据线程邮件，跟进内容经人工编辑。',
+    evidenceMessageIds: current.followUpSuggestion.evidenceMessageIds,
     nextFollowUpAt: current.safety.marketingBlocked ? undefined : (input.followUpSuggestion.nextFollowUpAt || undefined),
   };
   const updated = await AgentMailThreadAnalysis.findOneAndUpdate(
@@ -284,10 +316,18 @@ export async function applyMailCustomerStatus(id: string, input: ConfirmAgentAna
   if (!current.customerId) throw ApiError.badRequest('当前线程未关联客户');
   if (current.customerStatusUpdate === 'updated') return { analysis: dto(current), idempotent: true };
   if (current.version !== input.expectedVersion) throw ApiError.conflict('客户状态建议已更新，请核对后再次确认');
+  const customer = await getCustomerByIdOrThrow(String(current.customerId), actor);
+  if ((customer.status === 'won' || customer.status === 'lost') && current.statusSuggestion.status !== customer.status) {
+    throw ApiError.conflict('已成交或已流失客户不能被旧建议降级，请重新核对客户状态');
+  }
   const locked = await AgentMailThreadAnalysis.findOneAndUpdate({ _id: current._id, ...identifiers, version: input.expectedVersion, customerStatusUpdate: { $in: ['editable', 'failed'] } }, { $set: { customerStatusUpdate: 'updating', statusConfirmationKey: input.idempotencyKey }, $inc: { version: 1 } }, { new: true });
   if (!locked) throw ApiError.conflict('客户状态审批已变化，请重新载入');
   const action = await approvedAction(identifiers, locked._id, 'apply_mail_customer_status', { analysisId: locked.id, customerId: String(locked.customerId), status: locked.statusSuggestion.status });
   try {
+    const fresh = await getCustomerByIdOrThrow(String(locked.customerId), actor);
+    if ((fresh.status === 'won' || fresh.status === 'lost') && locked.statusSuggestion.status !== fresh.status) {
+      throw ApiError.conflict('客户终态已变化，禁止旧状态建议覆盖');
+    }
     await updateCustomer(String(locked.customerId), { status: locked.statusSuggestion.status }, actor);
     const completed = await AgentMailThreadAnalysis.findOneAndUpdate({ _id: locked._id, ...identifiers, statusConfirmationKey: input.idempotencyKey }, { $set: { customerStatusUpdate: 'updated' }, $unset: { lastError: 1 }, $inc: { version: 1 } }, { new: true });
     if (!completed) throw ApiError.conflict('客户状态已更新，但审批状态同步失败，请刷新');
@@ -306,14 +346,23 @@ export async function saveMailFollowUp(id: string, input: ConfirmAgentAnalysisAc
   if (current.followUpStatus === 'saved' && current.createdFollowUpId) return { analysis: dto(current), followUpId: String(current.createdFollowUpId), idempotent: true };
   if (current.version !== input.expectedVersion) throw ApiError.conflict('跟进建议已更新，请核对后再次确认');
   if (current.safety.marketingBlocked && current.followUpSuggestion.nextFollowUpAt) throw ApiError.conflict('受保护邮件不能安排后续营销跟进');
+  if (current.followUpSuggestion.nextFollowUpAt && await hasProtectedCustomerMail(String(current.customerId), String(requireProjectId(actor)))) {
+    throw ApiError.conflict('客户其他邮件已有停止营销信号，不能安排未来跟进');
+  }
   const locked = await AgentMailThreadAnalysis.findOneAndUpdate({ _id: current._id, ...identifiers, version: input.expectedVersion, followUpStatus: { $in: ['editable', 'failed'] } }, { $set: { followUpStatus: 'saving', followUpConfirmationKey: input.idempotencyKey }, $inc: { version: 1 } }, { new: true });
   if (!locked) throw ApiError.conflict('跟进记录审批已变化，请重新载入');
   const action = await approvedAction(identifiers, locked._id, 'save_mail_followup_record', { analysisId: locked.id, customerId: String(locked.customerId), protectedSignal: locked.safety.classification });
   try {
+    if (locked.followUpSuggestion.nextFollowUpAt && await hasProtectedCustomerMail(String(locked.customerId), String(requireProjectId(actor)))) {
+      throw ApiError.conflict('客户出现停止营销信号，不能安排未来跟进');
+    }
     const record = await createFollowUp(String(locked.customerId), {
       method: locked.followUpSuggestion.method, content: locked.followUpSuggestion.content, result: locked.followUpSuggestion.result,
       followUpAt: new Date(), nextFollowUpAt: locked.safety.marketingBlocked ? undefined : locked.followUpSuggestion.nextFollowUpAt,
     }, actor.id, actor.projectId, { agentActionKey: `agent-mail-followup:${locked.id}` });
+    if (locked.safety.marketingBlocked) {
+      await updateCustomer(String(locked.customerId), { nextFollowUpAt: null }, actor);
+    }
     const completed = await AgentMailThreadAnalysis.findOneAndUpdate({ _id: locked._id, ...identifiers, followUpConfirmationKey: input.idempotencyKey }, { $set: { followUpStatus: 'saved', createdFollowUpId: new Types.ObjectId(record.id) }, $unset: { lastError: 1 }, $inc: { version: 1 } }, { new: true });
     if (!completed) throw ApiError.conflict('跟进记录已保存，但审批状态同步失败，请刷新');
     await AgentAction.updateOne({ _id: action._id, ...identifiers }, { $set: { executionStatus: 'succeeded', resultSummary: locked.safety.marketingBlocked ? '已记录退订/退信/拒绝结果，未安排营销跟进' : '已保存邮件跟进记录', executedAt: new Date() } });

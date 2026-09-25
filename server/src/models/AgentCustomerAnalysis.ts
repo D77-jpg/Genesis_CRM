@@ -26,7 +26,15 @@ export interface IAgentCustomerAnalysis {
   gaps: AgentAnalysisClaim[];
   recommendations: AgentAnalysisClaim[];
   emailDraft: { subject: string; bodyText: string };
-  followUpPlan: { method: 'email' | 'whatsapp' | 'phone' | 'chat' | 'other'; content: string; dueAt: Date };
+  followUpPlan: {
+    method: 'email' | 'whatsapp' | 'phone' | 'chat' | 'other';
+    content: string;
+    dueAt: Date;
+    /** Original verified recommendation rationale; retained when the plan is edited. */
+    reason?: string;
+    sourceIds: string[];
+    manuallyEdited?: boolean;
+  };
   emailStatus: 'editable' | 'saving' | 'saved' | 'failed';
   followUpStatus: 'editable' | 'scheduling' | 'scheduled' | 'failed';
   emailConfirmationKey?: string;
@@ -74,6 +82,9 @@ const schema = new Schema<IAgentCustomerAnalysis>({
       method: { type: String, enum: ['email', 'whatsapp', 'phone', 'chat', 'other'], required: true },
       content: { type: String, required: true, trim: true, maxlength: 5000 },
       dueAt: { type: Date, required: true },
+      reason: { type: String, trim: true, maxlength: 1200 },
+      sourceIds: { type: [String], required: true, default: [] },
+      manuallyEdited: { type: Boolean, default: false },
     }, { _id: false }),
     required: true,
   },

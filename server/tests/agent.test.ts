@@ -377,6 +377,9 @@ test('customer analysis separates sourced facts and suggestions, then saves only
   assert.ok(analysis.recommendations.length > 0);
   assert.ok(analysis.facts.every((claim) => claim.sourceIds.length > 0));
   assert.ok(analysis.recommendations.every((claim) => claim.sourceIds.length > 0));
+  assert.ok(analysis.followUpPlan.reason?.trim());
+  assert.ok(analysis.followUpPlan.sourceIds?.length);
+  assert.ok(analysis.followUpPlan.sourceIds?.every((id: string) => analysis.sources.some((source) => source.sourceId === id)));
   const knownSources = new Set(analysis.sources.map((source) => source.sourceId));
   assert.ok(analysis.facts.flatMap((claim) => claim.sourceIds).every((id) => knownSources.has(id)));
   assert.match(analysis.emailDraft.bodyText, /^Dear Olivia Stone,/);
@@ -431,6 +434,142 @@ test('customer analysis separates sourced facts and suggestions, then saves only
   assert.equal(followUpAction?.executionStatus, 'succeeded');
 });
 
+test('H-04 rejects stale suggested follow-up dates instead of silently changing the proposed date', async () => {
+  const { Customer, AgentCustomerAnalysis } = await import('../src/models');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Past Date', email: 'past-date@h04.example', source: 'manual' });
+  const original = analysisWorkflow.createCustomerAnalysis;
+  const { MockAgentProvider } = await import('../src/services/agent/mock-provider');
+  const analyze = MockAgentProvider.prototype.analyzeCustomer;
+  MockAgentProvider.prototype.analyzeCustomer = async function (request) {
+    const output = await analyze.call(this, request);
+    return { ...output, followUpPlan: { ...output.followUpPlan, dueAt: new Date(0).toISOString() } };
+  };
+  try {
+    await assert.rejects(() => original({ customerId: customer.id, idempotencyKey: `h04-past-${new Types.ObjectId()}` }, actorA));
+    assert.equal(await AgentCustomerAnalysis.countDocuments({ customerId: customer._id }), 0);
+  } finally {
+    MockAgentProvider.prototype.analyzeCustomer = analyze;
+  }
+});
+
+test('H-04 stops future customer-analysis follow-up after opt-out without changing customer or timeline', async () => {
+  const { Customer, CustomerEvent } = await import('../src/models');
+  const { MailMessage } = await import('../src/models/MailMessage');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'No Marketing', email: 'no-marketing@h04.example', source: 'manual' });
+  const analysis = await analysisWorkflow.createCustomerAnalysis({ customerId: customer.id, idempotencyKey: `h04-safe-${new Types.ObjectId()}` }, actorA);
+  assert.ok(analysis.followUpPlan.dueAt);
+  const count = await CustomerEvent.countDocuments({ customerId: customer._id, type: 'followup_scheduled' });
+  await MailMessage.create({ projectId: projectA, customerId: customer._id, dedupKey: `h04-optout-${new Types.ObjectId()}`,
+    threadId: 'h04-optout', messageId: '<h04-optout@example.test>', from: customer.email, to: ['sales@example.test'],
+    subject: 'Please unsubscribe', text: 'Do not contact me again.', sentAt: new Date() });
+  await assert.rejects(() => analysisWorkflow.scheduleAnalysisFollowUp(analysis.id, { expectedVersion: analysis.version,
+    idempotencyKey: `h04-block-${new Types.ObjectId()}` }, actorA),
+  (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 409));
+  assert.equal((await Customer.findById(customer._id))?.nextFollowUpAt, undefined);
+  assert.equal(await CustomerEvent.countDocuments({ customerId: customer._id, type: 'followup_scheduled' }), count);
+});
+
+test('H-04 stale normal mail analysis cannot schedule future follow-up after another thread opts out', async () => {
+  const { Customer, FollowUp } = await import('../src/models');
+  const { MailMessage } = await import('../src/models/MailMessage');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Thread Optout',
+    email: 'thread-optout@h04.example', source: 'manual' });
+  const normal = await MailMessage.create({ projectId: projectA, customerId: customer._id,
+    dedupKey: `h04-normal-${new Types.ObjectId()}`, threadId: 'h04-normal', messageId: '<h04-normal@example.test>',
+    from: customer.email, to: ['sales@example.test'], subject: 'Question', text: 'Please send details', sentAt: new Date() });
+  const analysis = await mailWorkflow.createMailThreadAnalysis({ mailId: normal.id, direction: 'inbound',
+    idempotencyKey: `h04-normal-analysis-${new Types.ObjectId()}` }, actorA);
+  const dueAt = new Date(Date.now() + 4 * 86400000);
+  const edited = await mailWorkflow.updateMailThreadAnalysis(analysis.id, { expectedVersion: analysis.version,
+    followUpSuggestion: { method: 'email', result: 'replied', content: 'Ask for product requirements', nextFollowUpAt: dueAt } }, actorA);
+  await MailMessage.create({ projectId: projectA, customerId: customer._id,
+    dedupKey: `h04-other-thread-${new Types.ObjectId()}`, threadId: 'h04-other-thread', messageId: '<h04-other-thread@example.test>',
+    from: customer.email, to: ['sales@example.test'], subject: 'Please unsubscribe', text: 'No more marketing', sentAt: new Date() });
+  await assert.rejects(() => mailWorkflow.saveMailFollowUp(analysis.id, { expectedVersion: edited.version,
+    idempotencyKey: `h04-stale-follow-${new Types.ObjectId()}` }, actorA),
+  (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 409));
+  assert.equal(await FollowUp.countDocuments({ customerId: customer._id }), 0);
+  assert.equal((await Customer.findById(customer._id))?.nextFollowUpAt, undefined);
+});
+
+test('H-04 mail suggestion rejects past time rather than silently dropping the schedule', async () => {
+  const { Customer, AgentMailThreadAnalysis } = await import('../src/models');
+  const { MailMessage } = await import('../src/models/MailMessage');
+  const { MockAgentProvider } = await import('../src/services/agent/mock-provider');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Mail Past Date', email: 'mail-past@h04.example', source: 'manual' });
+  const mail = await MailMessage.create({ projectId: projectA, customerId: customer._id, dedupKey: `h04-mail-past-${new Types.ObjectId()}`,
+    threadId: 'h04-mail-past', messageId: '<h04-mail-past@example.test>', from: customer.email,
+    to: ['sales@example.test'], subject: 'Question', text: 'Please send specifications', sentAt: new Date() });
+  const analyze = MockAgentProvider.prototype.analyzeMailThread;
+  MockAgentProvider.prototype.analyzeMailThread = async function (request) {
+    const output = await analyze.call(this, request);
+    return { ...output, followUpSuggestion: { ...output.followUpSuggestion, nextFollowUpAt: '2001-01-01T00:00:00.000Z' } };
+  };
+  try {
+    await assert.rejects(() => mailWorkflow.createMailThreadAnalysis({ mailId: mail.id, direction: 'inbound',
+      idempotencyKey: `h04-mail-past-analysis-${new Types.ObjectId()}` }, actorA));
+    assert.equal(await AgentMailThreadAnalysis.countDocuments({ rootMailId: mail.id }), 0);
+  } finally {
+    MockAgentProvider.prototype.analyzeMailThread = analyze;
+  }
+});
+
+test('H-04 protected mail result clears an existing marketing follow-up date', async () => {
+  const { Customer, FollowUp } = await import('../src/models');
+  const { MailMessage } = await import('../src/models/MailMessage');
+  const future = new Date(Date.now() + 5 * 86400000);
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Cancel Schedule',
+    email: 'cancel-schedule@h04.example', nextFollowUpAt: future, source: 'manual' });
+  const mail = await MailMessage.create({ projectId: projectA, customerId: customer._id,
+    dedupKey: `h04-cancel-${new Types.ObjectId()}`, threadId: 'h04-cancel', messageId: '<h04-cancel@example.test>',
+    from: customer.email, to: ['sales@example.test'], subject: 'Please unsubscribe', text: 'Stop emailing me', sentAt: new Date() });
+  const analysis = await mailWorkflow.createMailThreadAnalysis({ mailId: mail.id, direction: 'inbound',
+    idempotencyKey: `h04-cancel-analysis-${new Types.ObjectId()}` }, actorA);
+  assert.equal(analysis.safety.marketingBlocked, true);
+  assert.equal((await Customer.findById(customer._id))?.nextFollowUpAt?.getTime(), future.getTime());
+  const saved = await mailWorkflow.saveMailFollowUp(analysis.id, { expectedVersion: analysis.version,
+    idempotencyKey: `h04-cancel-confirm-${new Types.ObjectId()}` }, actorA);
+  assert.equal((await Customer.findById(customer._id))?.nextFollowUpAt, null);
+  assert.equal((await FollowUp.findById(saved.followUpId))?.nextFollowUpAt, undefined);
+  const { CustomerEvent } = await import('../src/models');
+  assert.equal(await CustomerEvent.countDocuments({ customerId: customer._id, type: 'followup_scheduled', nextFollowUpAt: null }), 1);
+});
+
+test('H-04 follow-up confirmation denies transferred customer and cross-project access', async () => {
+  const { Customer, CustomerEvent } = await import('../src/models');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Protected Owner',
+    email: 'protected-owner@h04.example', source: 'manual' });
+  const analysis = await analysisWorkflow.createCustomerAnalysis({ customerId: customer.id,
+    idempotencyKey: `h04-owner-analysis-${new Types.ObjectId()}` }, actorA);
+  const notFound = (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 404);
+  const input = { expectedVersion: analysis.version, idempotencyKey: `h04-owner-approve-${new Types.ObjectId()}` };
+  await assert.rejects(() => analysisWorkflow.scheduleAnalysisFollowUp(analysis.id, input, actorB), notFound);
+  await assert.rejects(() => analysisWorkflow.scheduleAnalysisFollowUp(analysis.id, input, actorOtherProject), notFound);
+  await Customer.updateOne({ _id: customer._id }, { $set: { ownerId: userB } });
+  await assert.rejects(() => analysisWorkflow.scheduleAnalysisFollowUp(analysis.id, input, actorA), notFound);
+  assert.equal((await Customer.findById(customer._id))?.nextFollowUpAt, undefined);
+  assert.equal(await CustomerEvent.countDocuments({ customerId: customer._id, type: 'followup_scheduled' }), 0);
+});
+
+test('H-04 will not downgrade won or lost customers through stale mail status suggestions', async () => {
+  const { Customer } = await import('../src/models');
+  const { MailMessage } = await import('../src/models/MailMessage');
+  for (const status of ['won', 'lost'] as const) {
+    const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: `Terminal ${status}`,
+      email: `terminal-${status}@h04.example`, status: 'contacted', source: 'manual' });
+    const mail = await MailMessage.create({ projectId: projectA, customerId: customer._id, dedupKey: `h04-terminal-${status}`,
+      threadId: `h04-terminal-${status}`, messageId: `<h04-terminal-${status}@example.test>`,
+      from: customer.email, to: ['sales@example.test'], subject: 'Inquiry', text: 'Need information', sentAt: new Date() });
+    const analysis = await mailWorkflow.createMailThreadAnalysis({ mailId: mail.id, direction: 'inbound',
+      idempotencyKey: `h04-terminal-${status}` }, actorA);
+    await Customer.updateOne({ _id: customer._id }, { $set: { status } });
+    await assert.rejects(() => mailWorkflow.applyMailCustomerStatus(analysis.id, { expectedVersion: analysis.version,
+      idempotencyKey: `h04-terminal-apply-${status}` }, actorA),
+    (error: unknown) => Boolean(error && typeof error === 'object' && 'statusCode' in error && (error as { statusCode: number }).statusCode === 409));
+    assert.equal((await Customer.findById(customer._id))?.status, status);
+  }
+});
+
 test('customer analysis denies cached data and draft writes after owner transfer', async () => {
   const { Customer, DevelopmentLetter } = await import('../src/models');
   const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Transfer Buyer',
@@ -458,6 +597,8 @@ test('mail assistant summarizes and extracts a thread, then applies each editabl
   });
   const analysis = await mailWorkflow.createMailThreadAnalysis({ mailId: inbound.id, direction: 'inbound', idempotencyKey: 'mail-v13-normal-create01' }, actorA);
   assert.equal(analysis.safety.marketingBlocked, false);
+  assert.ok(analysis.followUpSuggestion.reason?.trim());
+  assert.ok(analysis.followUpSuggestion.evidenceMessageIds?.includes(inbound.id));
   assert.equal(analysis.intent.category, 'quotation_request');
   assert.ok(analysis.extracted.products.some((item) => /solar lantern/i.test(item.value)));
   assert.equal(analysis.extracted.quantity.value, '1,200 units');
@@ -540,6 +681,8 @@ test('a later neutral reply cannot erase a prior opt-out in the same thread', as
   assert.equal(analysis.safety.marketingBlocked, true);
   assert.equal(analysis.replyStatus, 'blocked');
   assert.equal(analysis.followUpSuggestion.nextFollowUpAt, null);
+  assert.ok(analysis.followUpSuggestion.evidenceMessageIds.includes(analysis.safety.evidenceMessageIds[0]!));
+  assert.ok(analysis.sources.some((source) => source.messageId === analysis.followUpSuggestion.evidenceMessageIds[0]));
   assert.equal(await DevelopmentLetter.countDocuments({ projectId: projectA, customerId: customer._id }), 0);
 });
 
