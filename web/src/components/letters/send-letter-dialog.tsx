@@ -152,6 +152,7 @@ export function SendLetterDialog({
 
   const editorRef = React.useRef<LetterEditorHandle | null>(null);
   const [scheduledAt, setScheduledAt] = React.useState('');
+  const [appliedTemplateId, setAppliedTemplateId] = React.useState<string | null>(null);
   const requestKey = React.useRef(createClientId());
   const submitLock = React.useRef(false);
   const [activeTab, setActiveTab] = React.useState<'edit' | 'preview'>('edit');
@@ -191,6 +192,7 @@ export function SendLetterDialog({
     setActiveTab('edit');
     setServerError(null);
     setScheduledAt('');
+    setAppliedTemplateId(null);
     requestKey.current = createClientId();
 
     // 优先级：重发的原信 > 上次使用的模板 > 内置默认模板
@@ -236,6 +238,11 @@ export function SendLetterDialog({
   const content = watch('content');
   const recipientEmail = watch('recipientEmail');
   const markAsDeveloped = watch('markAsDeveloped');
+  // Attribution is explicit, never reconstructed from matching historical text.
+  // Editing the imported copy or a later template update removes the candidate.
+  const attributedTemplate = !letter && !reply && appliedTemplateId
+    ? templateItems.find((item) => item.id === appliedTemplateId && item.subject === subject && item.content === content)
+    : undefined;
   const activeChannel = senderStatus?.channel ?? channel;
   const canSend = senderStatus?.canSend ?? channel === 'mock';
 
@@ -293,6 +300,8 @@ export function SendLetterDialog({
               })
             : await sendLetter({
                 customerId: customer.id,
+                templateId: attributedTemplate && attributedTemplate.subject === values.subject && attributedTemplate.content === values.content
+                   ? attributedTemplate.id : undefined,
                 requestKey: requestKey.current,
                 scheduledAt: !asDraft && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
                 replyToId: reply?.id,
@@ -329,7 +338,7 @@ export function SendLetterDialog({
         } finally { submitLock.current = false; }
       })();
     },
-    [canSend, customer, letter, reply, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
+    [canSend, customer, letter, reply, attributedTemplate?.id, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
   );
 
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送
@@ -373,10 +382,11 @@ export function SendLetterDialog({
       if (!template) return;
       setValue('subject', reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : template.subject ?? '', { shouldValidate: true, shouldDirty: true });
       setValue('content', template.content ?? '', { shouldValidate: true, shouldDirty: true });
+      setAppliedTemplateId(reply || letter ? null : template.id);
       setActiveTab('edit');
       toast.success('已导入模板', { description: template.name });
     },
-    [templateItems, setValue, reply],
+    [templateItems, setValue, reply, letter],
   );
 
   const contentLength = (content ?? '').replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length;

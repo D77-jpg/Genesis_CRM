@@ -20,6 +20,8 @@ export interface ILetterTemplate {
   category: TemplateCategory;
   /** 创建人（引用 User）；单用户环境下可留空 */
   createdBy?: Types.ObjectId;
+  /** H-05: unique immutable source suggestion for idempotent reviewed copies only. */
+  sourceSuggestionId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +56,7 @@ const LetterTemplateSchema = new Schema<ILetterTemplate>(
       index: true,
     },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    sourceSuggestionId: { type: Schema.Types.ObjectId, ref: 'TemplateSuggestion', immutable: true },
   },
   {
     timestamps: true,
@@ -71,6 +74,8 @@ const LetterTemplateSchema = new Schema<ILetterTemplate>(
 
 // 模板中心按分类浏览 + 按更新时间倒序
 LetterTemplateSchema.index({ projectId: 1, category: 1, updatedAt: -1 });
+LetterTemplateSchema.index({ projectId: 1, sourceSuggestionId: 1 },
+  { unique: true, partialFilterExpression: { sourceSuggestionId: { $type: 'objectId' } } });
 
 export const LetterTemplate = model<ILetterTemplate, LetterTemplateModel>('LetterTemplate', LetterTemplateSchema);
 

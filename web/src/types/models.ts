@@ -434,6 +434,8 @@ export interface MailTrackingSummary {
 }
 
 export interface SendLetterPayload {
+  /** 仅在导入模板原文且未修改时附带；服务端校验并固定归因。 */
+  templateId?: string;
   scheduledAt?: string;
   requestKey?: string;
   replyToId?: string;
@@ -701,6 +703,50 @@ export interface LetterTemplate {
   createdBy?: string;
   createdAt: string | Date;
   updatedAt: string | Date;
+}
+
+export type TemplatePerformanceStage = 'replied' | 'interested' | 'quoted' | 'won' | 'unsubscribed' | 'bounced';
+export type TemplatePerformanceMetric = 'sent' | TemplatePerformanceStage;
+export interface TemplatePerformanceRate { numerator: number; denominator: number; rate: number | null }
+export interface TemplatePerformanceGroup {
+  templateId: string;
+  templateNameSnapshot: string;
+  templateContentHash: string;
+  deleted: boolean;
+  metrics: Record<TemplatePerformanceMetric, number>;
+  rates: Record<TemplatePerformanceStage, TemplatePerformanceRate>;
+  sampleSize: number;
+  insufficientSample: boolean;
+}
+export interface TemplatePerformanceSummary {
+  windowDays: 30 | 90 | 180;
+  windowStart: string;
+  windowEnd: string;
+  sampleThreshold: number;
+  unattributed: number;
+  correlationDisclaimer: string;
+  templates: TemplatePerformanceGroup[];
+}
+export interface TemplateSuggestion {
+  id: string;
+  projectId: string;
+  userId: string;
+  sourceTemplateId: string;
+  sourceTemplateSnapshot: { name: string; subject: string; contentHash: string; updatedAt: string };
+  model: 'rule-based-v1';
+  sourceSummary: {
+    sentCount: number; replyCount: number; interestedCount: number; quoteCount: number;
+    wonCount: number; unsubscribeCount: number; bounceCount: number;
+    minimumSampleSize: number; sampleSufficient: boolean; evidence: string; referenceTemplateId: string;
+  };
+  suggested: TemplateInput;
+  explanation: string[];
+  status: 'preview' | 'copied' | 'cancelled';
+  version: number;
+  createdTemplateId?: string;
+  generatedAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** 新建 / 编辑模板的载荷 */

@@ -27,8 +27,13 @@ export interface IDevelopmentLetter {
   deliveryContent?: string;
   /** 纯文本正文，用于文本邮件客户端 / 预览 */
   contentText: string;
-  /** 发送前的原始模板（保留 {{placeholder}}），便于「重新发送」时回填编辑器 */
+  /** 发送前的原始正文（保留 {{placeholder}}），便于「重新发送」时回填编辑器 */
   template: string;
+  /** 仅在首次创建时确认与同项目 LetterTemplate 原文一致的归因快照；重发不继承。 */
+  templateId?: Types.ObjectId;
+  templateNameSnapshot?: string;
+  /** 原始模板 [subject, content] 的 JSON 编码的 SHA-256，不随模板修改而变化。 */
+  templateContentHash?: string;
   /** 状态：draft / sent / opened / failed 及 V2.1 队列状态 */
   status: LetterStatus;
   /** 发送通道：mock 模拟 / smtp 真实 */
@@ -116,6 +121,9 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
     deliveryContent: { type: String, select: false, maxlength: 120000 },
     contentText: { type: String, default: '' },
     template: { type: String, default: '' },
+    templateId: { type: Schema.Types.ObjectId, ref: 'LetterTemplate', immutable: true },
+    templateNameSnapshot: { type: String, maxlength: 120, immutable: true },
+    templateContentHash: { type: String, match: /^[a-f0-9]{64}$/, immutable: true },
     status: {
       type: String,
       enum: { values: LETTER_STATUS, message: '开发信状态取值非法' },

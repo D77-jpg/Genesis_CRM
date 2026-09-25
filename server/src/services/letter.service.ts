@@ -19,6 +19,7 @@ import { Types, type FilterQuery } from 'mongoose';
 import {
   Customer,
   DevelopmentLetter,
+  LetterTemplate,
   Project,
   type CustomerDocument,
   type ICustomer,
@@ -68,6 +69,9 @@ export interface LetterDto {
   content: string;
   contentText: string;
   template: string;
+  templateId?: string;
+  templateNameSnapshot?: string;
+  templateContentHash?: string;
   status: IDevelopmentLetter['status'];
   channel: IDevelopmentLetter['channel'];
   sentAt?: Date;
@@ -208,6 +212,9 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     content: String(doc.content ?? ''),
     contentText: String(doc.contentText ?? ''),
     template: String(doc.template ?? ''),
+    ...(doc.templateId ? { templateId: String(doc.templateId) } : {}),
+    ...(doc.templateNameSnapshot ? { templateNameSnapshot: String(doc.templateNameSnapshot) } : {}),
+    ...(doc.templateContentHash ? { templateContentHash: String(doc.templateContentHash) } : {}),
     scheduledAt: doc.scheduledAt as Date | undefined,
     threadId: doc.threadId as string | undefined,
     needsReview: Boolean(doc.needsReview),
@@ -272,6 +279,26 @@ export async function getLetter(id: string, actor?: AuthUser): Promise<LetterDto
 /* 发送 / 重发                                                         */
 /* ------------------------------------------------------------------ */
 
+interface TemplateAttribution {
+  templateId: Types.ObjectId;
+  templateNameSnapshot: string;
+  templateContentHash: string;
+}
+
+/** 使用原始主题和 HTML 的 JSON 元组，避免拼接字符串产生边界歧义。 */
+function rawTemplateHash(subject: string, content: string): string {
+  return createHash('sha256').update(JSON.stringify([subject, content]), 'utf8').digest('hex');
+}
+
+/** 对比已落库快照；不得将无模板请求重放到有归因的旧任务（反之亦然）。 */
+function assertSameTemplateAttribution(letter: IDevelopmentLetter, attribution?: TemplateAttribution): void {
+  if (String(letter.templateId ?? '') !== String(attribution?.templateId ?? '')
+    || (letter.templateNameSnapshot ?? '') !== (attribution?.templateNameSnapshot ?? '')
+    || (letter.templateContentHash ?? '') !== (attribution?.templateContentHash ?? '')) {
+    throw ApiError.conflict('同一请求标识不能混用或更改模板归因，请使用新的请求标识');
+  }
+}
+
 export interface SendLetterResult {
   letter: LetterDto;
   customer: ICustomer & { id: string };
@@ -296,6 +323,7 @@ async function persistAndSend(options: {
   threadId?: string;
   inReplyTo?: string;
   references?: string[];
+  templateAttribution?: TemplateAttribution;
 }): Promise<SendLetterResult> {
   const {
     customer,
@@ -342,6 +370,7 @@ async function persistAndSend(options: {
       content: rendered.html,
       contentText: rendered.text,
       template: contentTemplate,
+      ...options.templateAttribution,
       status: 'draft',
       channel: activeChannel,
       threadId,
@@ -366,9 +395,12 @@ async function persistAndSend(options: {
       if (String(draft.customerId) !== String(customer._id)
         || draft.subject !== rendered.subject
         || draft.contentText !== rendered.text
+        || draft.template !== contentTemplate
+        || draft.recipientEmail !== rendered.recipientEmail
         || draft.status !== 'draft') {
         throw ApiError.conflict('同一请求标识不能用于不同的开发信草稿');
       }
+      assertSameTemplateAttribution(draft, options.templateAttribution);
     } else {
       draft = await DevelopmentLetter.create(payload);
     }
@@ -402,6 +434,7 @@ async function persistAndSend(options: {
       mailAccountId: sender.mailAccountId,
       content: rendered.html, deliveryContent: prepared.deliveryHtml,
       contentText: rendered.text, template: contentTemplate,
+      ...options.templateAttribution,
       status: options.scheduledAt ? 'scheduled' : 'queued', channel: activeChannel,
       messageId: newMessageId(), threadId, inReplyTo, references,
       scheduledAt: options.scheduledAt, nextAttemptAt: due, markAsDeveloped,
@@ -415,7 +448,8 @@ async function persistAndSend(options: {
   }
   if (!letter) throw ApiError.internal('发送任务保存失败');
   if (String(letter.customerId) !== String(customer._id)) throw ApiError.conflict('请求标识已用于其他客户');
-  if (letter.subject !== rendered.subject || letter.content !== rendered.html || letter.recipientEmail !== rendered.recipientEmail) throw ApiError.conflict('同一请求标识不能用于不同邮件内容，请重新打开编辑器');
+  if (letter.subject !== rendered.subject || letter.content !== rendered.html || letter.recipientEmail !== rendered.recipientEmail || letter.template !== contentTemplate) throw ApiError.conflict('同一请求标识不能用于不同邮件内容，请重新打开编辑器');
+  assertSameTemplateAttribution(letter, options.templateAttribution);
   if (letter.scheduledAt?.getTime() !== options.scheduledAt?.getTime()) throw ApiError.conflict('同一请求标识不能修改定时时间，请取消原任务后重新创建');
   // Immediate requests use the SAME durable worker path; background polling also
   // picks the task up if this HTTP request disconnects or the process restarts.
@@ -440,10 +474,27 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
   // getCustomerByIdOrThrow 内部做归属校验：业务员不能给别人的客户发信
   const customer = await getCustomerByIdOrThrow(input.customerId, actor);
 
+  let templateAttribution: TemplateAttribution | undefined;
+  if (input.templateId) {
+    if (input.replyToId) throw ApiError.badRequest('回复邮件不能作为模板开发信归因');
+    // 只信任同项目的模板原文，不能由客户端自行声明模板名称或哈希。
+    const template = await LetterTemplate.findOne({ _id: input.templateId, projectId: customer.projectId });
+    if (!template) throw ApiError.badRequest('模板不存在或不属于当前项目');
+    if (input.subject !== template.subject || input.content !== template.content) {
+      throw ApiError.badRequest('主题或正文与模板原文不一致；编辑后请清除 templateId 再发送');
+    }
+    templateAttribution = {
+      templateId: template._id,
+      templateNameSnapshot: template.name,
+      templateContentHash: rawTemplateHash(template.subject, template.content),
+    };
+  }
+
   return persistAndSend({
     customer,
-    subjectTemplate: input.subject,
+    subjectTemplate: input.templateId ? input.subject : input.subject.trim(),
     contentTemplate: input.content,
+    templateAttribution,
     recipientEmailOverride: input.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: input.saveAsDraft,
