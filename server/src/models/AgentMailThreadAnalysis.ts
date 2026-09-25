@@ -3,10 +3,10 @@ import type { CustomerStatus, FollowUpMethod, FollowUpResult } from '../constant
 
 export const AGENT_MAIL_INTENTS = [
   'inquiry', 'quotation_request', 'negotiation', 'sample_request', 'order', 'support',
-  'positive', 'neutral', 'unsubscribe', 'bounce', 'rejection', 'other',
+  'positive', 'neutral', 'unsubscribe', 'bounce', 'rejection', 'spam', 'other',
 ] as const;
 export type AgentMailIntent = (typeof AGENT_MAIL_INTENTS)[number];
-export const AGENT_MAIL_SAFETY = ['normal', 'unsubscribe', 'bounce', 'rejection'] as const;
+export const AGENT_MAIL_SAFETY = ['normal', 'unsubscribe', 'bounce', 'rejection', 'spam'] as const;
 export type AgentMailSafety = (typeof AGENT_MAIL_SAFETY)[number];
 
 export interface AgentMailEvidenceValue { value: string; evidenceMessageIds: string[] }

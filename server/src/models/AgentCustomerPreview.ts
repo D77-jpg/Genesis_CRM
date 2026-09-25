@@ -39,6 +39,10 @@ export interface IAgentCustomerPreview {
   requestKey: string;
   sourceHash: string;
   sourceVersion: number;
+  sourceKind?: 'scratchpad' | 'mail';
+  sourceMailId?: Types.ObjectId;
+  facts?: { field: AgentCustomerField; value: string; mailId: string }[];
+  inferences?: { field: AgentCustomerField; value: string; reason: string; mailId: string }[];
   fields: AgentCustomerPreviewFields;
   uncertainties: AgentCustomerUncertainty[];
   duplicates: AgentCustomerDuplicate[];
@@ -84,6 +88,10 @@ const schema = new Schema<IAgentCustomerPreview>({
   requestKey: { type: String, required: true, maxlength: 128 },
   sourceHash: { type: String, required: true, maxlength: 64 },
   sourceVersion: { type: Number, required: true, min: 0 },
+  sourceKind: { type: String, enum: ['scratchpad', 'mail'], default: 'scratchpad' },
+  sourceMailId: { type: Schema.Types.ObjectId, ref: 'MailMessage' },
+  facts: { type: [new Schema({ field: { type: String, enum: AGENT_CUSTOMER_FIELDS, required: true }, value: { type: String, required: true, maxlength: 1200 }, mailId: { type: String, required: true, maxlength: 24 } }, { _id: false })], default: [] },
+  inferences: { type: [new Schema({ field: { type: String, enum: AGENT_CUSTOMER_FIELDS, required: true }, value: { type: String, required: true, maxlength: 1200 }, reason: { type: String, required: true, maxlength: 300 }, mailId: { type: String, required: true, maxlength: 24 } }, { _id: false })], default: [] },
   fields: { type: fieldsSchema, required: true },
   uncertainties: { type: [uncertaintySchema], default: [] },
   duplicates: { type: [duplicateSchema], default: [] },

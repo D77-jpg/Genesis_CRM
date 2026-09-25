@@ -142,6 +142,9 @@ router.post('/:id/link', validate({ params, body: z.object({ customerId: idSchem
   if (!isAdmin(req.user)) throw ApiError.notFound();
   const doc = await inbound(req.params.id, req.user!);
   const customer = await getCustomerByIdOrThrow(req.body.customerId, req.user);
+  // Personal inbox mail belongs to its mailbox owner even when still unknown.
+  // Linking it to another person's customer would expose private mail through customer scope.
+  if (doc.mailboxUserId && String(doc.mailboxUserId) !== String(customer.ownerId)) throw ApiError.notFound('邮件不存在或无权访问');
   if (doc.customerId) throw ApiError.conflict('邮件已关联客户');
   const threadId = await findThread(customer._id, doc.subject, [...doc.references, doc.inReplyTo || ''], doc.from,
     req.user!.projectId, doc.mailAccountId ? String(doc.mailAccountId) : undefined);

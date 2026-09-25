@@ -141,6 +141,33 @@ test('19 unknown email never creates a customer', async () => { const count = aw
 test('20 unknown mailbox remains admin-only while personal sync status is safe', async () => { await request('GET', '/mail?folder=unknown', salesToken, undefined, 404); await request('GET', `/mail/${unknownId}`, salesToken, undefined, 404); await request('POST', `/mail/${unknownId}/read`, salesToken, { read: true }, 404); await request('POST', `/mail/${unknownId}/link`, salesToken, { customerId }, 404); const status = await request('GET', '/mail/status', salesToken); assert.equal(status.enabled, false); await request('POST', '/mail/sync', salesToken, {}, 404); });
 test('21 administrators see unknown mail; ordinary inbox does not leak', async () => { const unknown = await request('GET', '/mail?folder=unknown'); assert.ok(unknown.items.some((m: { id: string }) => m.id === unknownId)); const own = await request('GET', '/mail', salesToken); assert.ok(!own.items.some((m: { id: string }) => m.id === unknownId)); });
 test('22 manual customer association exposes only to new owner', async () => { await request('POST', `/mail/${unknownId}/link`, adminToken, { customerId }); const d = await request('GET', `/mail/${unknownId}`, salesToken); assert.equal(d.customer.id, customerId); await request('GET', `/mail/${unknownId}`, otherToken, undefined, 404); await request('POST', `/mail/${unknownId}/link`, adminToken, { customerId: otherCustomerId }, 409); });
+test('H-03 HTTP unknown-mail preview requires admin and cannot create customers without approval', async () => {
+  const unknown = await sync.importMail(mime(`h03-agent-unknown-${suffix}`, `h03.${suffix}@safe-unknown.example`, { subject: 'Company: Example Trading' }), 'fixture');
+  const id = String(unknown._id);
+  const count = await models.Customer.countDocuments();
+  const payload = { mailId: id, idempotencyKey: `h03-preview-${randomUUID()}` };
+  await request('POST', '/agent/mail-customer/previews', salesToken, payload, 404);
+  await request('POST', '/agent/mail-customer/previews', ironSalesToken, payload, 404, ironhueProjectId);
+  const preview = await request('POST', '/agent/mail-customer/previews', adminToken, payload, 201);
+  assert.equal(preview.sourceKind, 'mail');
+  assert.equal(preview.sourceMailId, id);
+  assert.ok(preview.facts.some((item: { field: string; mailId: string }) => item.field === 'email' && item.mailId === id));
+  await request('GET', `/agent/scratchpad-customer/previews/${preview.id}`, salesToken, undefined, 404);
+  await request('POST', `/agent/scratchpad-customer/previews/${preview.id}/confirm`, salesToken, {
+    expectedVersion: preview.version, idempotencyKey: `h03-denied-${randomUUID()}`, duplicateAcknowledged: true }, 404);
+  assert.equal(await models.Customer.countDocuments(), count);
+  assert.equal(await models.DevelopmentLetter.countDocuments({ recipientEmail: unknown.from }), 0);
+  assert.equal((await request('POST', '/agent/mail-customer/previews', adminToken, payload, 201)).id, preview.id);
+});
+test('H-03 personal-mailbox unknown message cannot be linked to another owner', async () => {
+  const mail = await mailModels.MailMessage.create({ projectId, dedupKey: `personal-unknown-${randomUUID()}`,
+    customerId: null, mailboxUserId: salesId, threadId: `personal-unknown-${randomUUID()}`,
+    messageId: `<personal-unknown-${randomUUID()}@fixture.test>`, subject: 'Private inbox',
+    from: `personal.${suffix}@private-mailbox.example`, to: ['sales@example.com'], text: 'Hello', sentAt: new Date() });
+  await request('POST', `/mail/${mail._id}/link`, adminToken, { customerId: otherCustomerId }, 404);
+  await request('GET', `/mail/${mail._id}`, otherToken, undefined, 404);
+  assert.equal((await mailModels.MailMessage.findById(mail._id))?.customerId, null);
+});
 test('23 Message-ID and In-Reply-To join outgoing/incoming thread', async () => { const d = await request('GET', `/mail/${incomingId}`, salesToken); assert.equal(d.mail.threadId, threadId); assert.ok(d.thread.some((m: { id: string }) => m.id === sentId)); });
 test('24 reply uses queue, original sender, Re: and reference headers', async () => { const result = await request('POST', `/mail/${incomingId}/reply`, salesToken, { subject: 'ignored', content: '<p>Thank you</p>', recipientEmail: 'wrong@example.com', requestKey: randomUUID() }, 201); const doc = await models.DevelopmentLetter.findById(result.letter.id); assert.equal(doc?.recipientEmail, email); assert.equal(doc?.subject, 'Re: V2.1 proposal'); assert.equal(doc?.attempts, 1); assert.equal(doc?.threadId, threadId); assert.ok(doc?.references.includes(`<received-${suffix}@fixture.test>`)); const next = await sync.importMail(mime(`second-${suffix}`, email, { reply: doc?.messageId }), 'fixture'); assert.equal(next.threadId, threadId); });
 test('25 subject fallback stays within same customer', async () => { const doc = await sync.importMail(mime(`fallback-${suffix}`, email), 'fixture'); assert.equal(doc.threadId, threadId); const other = await sync.importMail(mime(`forged-${suffix}`, `other.${suffix}@example.com`, { reply: sentMessageId }), 'fixture'); assert.notEqual(other.threadId, threadId); });

@@ -54,6 +54,9 @@ export function detectProtectedMailSignal(input: { from?: string; subject?: stri
   if (/not interested|no longer interested|do not need|we decline|not a fit|不感兴趣|不需要|拒绝|暂不考虑/.test(content)) {
     return { classification: 'rejection', reason: '客户明确拒绝或表示不感兴趣，禁止继续建议营销发送。' };
   }
+  if (/\[spam\]|\bspam\b|垃圾邮件|\bjunk mail\b/.test(content)) {
+    return { classification: 'spam', reason: '来信标记为垃圾邮件，禁止继续建议营销发送。' };
+  }
   return { classification: 'normal', reason: '' };
 }
 
@@ -67,8 +70,8 @@ async function buildThreadInput(mailId: string, direction: 'inbound' | 'outbound
   const threadId = root.threadId || String(root._id);
   const filter = { ...visible, customerId: root.customerId || null, threadId };
   const [inbound, outbound] = await Promise.all([
-    MailMessage.find({ ...filter, deleted: { $ne: true } }).sort({ sentAt: 1 }).limit(200),
-    DevelopmentLetter.find({ ...filter, status: { $ne: 'draft' } }).sort({ createdAt: 1 }).limit(200),
+    MailMessage.find({ ...filter, deleted: { $ne: true } }).sort({ sentAt: -1 }).limit(200),
+    DevelopmentLetter.find({ ...filter, status: { $ne: 'draft' } }).sort({ createdAt: -1 }).limit(200),
   ]);
   const messages: ThreadMessage[] = [
     ...inbound.map((item) => ({ messageId: String(item._id), direction: 'inbound' as const, subject: clipped(item.subject, 300), from: clipped(item.from, 300), to: item.to, text: clipped(item.text), sentAt: item.sentAt.toISOString() })),
@@ -86,8 +89,20 @@ async function buildThreadInput(mailId: string, direction: 'inbound' | 'outbound
   }
   const customer = root.customerId ? await getCustomerByIdOrThrow(String(root.customerId), actor) : null;
   const latestInbound = [...messages].reverse().find((item) => item.direction === 'inbound');
+  // Safety is independent of the bounded model context: an older opt-out cannot
+  // disappear when a later neutral message arrives or the thread exceeds 200 items.
+  const protectedInbound = await MailMessage.findOne({ ...filter, deleted: { $ne: true },
+    $or: [
+      { from: /mailer-daemon|postmaster/i },
+      { subject: /undeliverable|delivery status notification|mail delivery failed|returned mail|退信|无法投递|投递失败|unsubscribe|remove me|stop emailing|do not contact|opt[ -]?out|退订|取消订阅|不要再发|停止联系|not interested|no longer interested|do not need|we decline|not a fit|不感兴趣|不需要|拒绝|暂不考虑|\[spam\]|\bspam\b|垃圾邮件|\bjunk mail\b/i },
+      { text: /undeliverable|delivery status notification|mail delivery failed|returned mail|退信|无法投递|投递失败|unsubscribe|remove me|stop emailing|do not contact|opt[ -]?out|退订|取消订阅|不要再发|停止联系|not interested|no longer interested|do not need|we decline|not a fit|不感兴趣|不需要|拒绝|暂不考虑|\[spam\]|\bspam\b|垃圾邮件|\bjunk mail\b/i },
+    ],
+  }).sort({ sentAt: -1 });
   return {
-    root, threadId, messages, latestInbound,
+    root, threadId, messages, latestInbound, protectedInbound: protectedInbound ? {
+      messageId: String(protectedInbound._id), from: protectedInbound.from,
+      subject: protectedInbound.subject, text: protectedInbound.text,
+    } : undefined,
     customer: customer ? { id: customer.id, name: customer.name, company: customer.company, email: customer.email, status: customer.status } : undefined,
   };
 }
@@ -95,9 +110,9 @@ async function buildThreadInput(mailId: string, direction: 'inbound' | 'outbound
 const evidenceValue = z.object({ value: z.string().max(1200), evidenceMessageIds: z.array(z.string()).max(20) }).strict();
 const generatedSchema = z.object({
   summary: z.string().trim().min(1).max(5000),
-  intent: z.object({ category: z.enum(['inquiry', 'quotation_request', 'negotiation', 'sample_request', 'order', 'support', 'positive', 'neutral', 'unsubscribe', 'bounce', 'rejection', 'other']), label: z.string().trim().min(1).max(120), confidence: z.number().min(0).max(1), evidenceMessageIds: z.array(z.string()).max(20) }).strict(),
+  intent: z.object({ category: z.enum(['inquiry', 'quotation_request', 'negotiation', 'sample_request', 'order', 'support', 'positive', 'neutral', 'unsubscribe', 'bounce', 'rejection', 'spam', 'other']), label: z.string().trim().min(1).max(120), confidence: z.number().min(0).max(1), evidenceMessageIds: z.array(z.string()).max(20) }).strict(),
   extracted: z.object({ products: z.array(evidenceValue).max(20), quantity: evidenceValue, price: evidenceValue, delivery: evidenceValue, questions: z.array(z.object({ text: z.string().trim().min(1).max(1200), evidenceMessageIds: z.array(z.string()).max(20) }).strict()).max(20) }).strict(),
-  safety: z.object({ classification: z.enum(['normal', 'unsubscribe', 'bounce', 'rejection']), reason: z.string().max(1200), evidenceMessageIds: z.array(z.string()).max(20) }).strict(),
+  safety: z.object({ classification: z.enum(['normal', 'unsubscribe', 'bounce', 'rejection', 'spam']), reason: z.string().max(1200), evidenceMessageIds: z.array(z.string()).max(20) }).strict(),
   replyDraft: z.object({ subject: z.string().max(300), bodyText: z.string().max(20000) }).strict(),
   statusSuggestion: z.object({ status: z.enum(['pending', 'contacted', 'replied', 'interested', 'quoting', 'negotiating', 'won', 'lost']), reason: z.string().trim().min(1).max(1200) }).strict(),
   followUpSuggestion: z.object({ method: z.enum(['email', 'whatsapp', 'phone', 'chat', 'other']), content: z.string().trim().min(1).max(5000), result: z.enum(['no_reply', 'replied', 'interested', 'quoted', 'negotiating', 'won', 'no_need', 'other']), nextFollowUpAt: z.string() }).strict(),
@@ -151,17 +166,18 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     generated.extracted.products = generated.extracted.products.map((item) => ({ ...item, evidenceMessageIds: verifiedIds(item.evidenceMessageIds, known) }));
     for (const key of ['quantity', 'price', 'delivery'] as const) generated.extracted[key].evidenceMessageIds = verifiedIds(generated.extracted[key].evidenceMessageIds, known);
     generated.extracted.questions = generated.extracted.questions.map((item) => ({ ...item, evidenceMessageIds: verifiedIds(item.evidenceMessageIds, known) }));
-    const deterministic = context.latestInbound ? detectProtectedMailSignal(context.latestInbound) : { classification: 'normal' as const, reason: '' };
+    const safetySource = context.protectedInbound ?? context.latestInbound;
+    const deterministic = safetySource ? detectProtectedMailSignal(safetySource) : { classification: 'normal' as const, reason: '' };
     const classification = deterministic.classification !== 'normal' ? deterministic.classification : generated.safety.classification;
     const marketingBlocked = classification !== 'normal';
-    const evidenceMessageIds = marketingBlocked && context.latestInbound ? [context.latestInbound.messageId] : generated.safety.evidenceMessageIds;
+    const evidenceMessageIds = marketingBlocked && safetySource ? [safetySource.messageId] : generated.safety.evidenceMessageIds;
     const currentStatus = context.customer?.status ?? 'pending';
     if (marketingBlocked) {
       generated.replyDraft = { subject: '', bodyText: '' };
       generated.statusSuggestion = { status: classification === 'bounce' ? currentStatus as typeof generated.statusSuggestion.status : 'lost', reason: deterministic.reason || generated.safety.reason || '检测到受保护信号，建议停止营销。' };
       generated.followUpSuggestion = {
         method: 'email', result: classification === 'bounce' ? 'no_reply' : 'no_need', nextFollowUpAt: '',
-        content: `${classification === 'unsubscribe' ? '客户退订' : classification === 'bounce' ? '邮件退信' : '客户明确拒绝'}：${deterministic.reason || generated.safety.reason}`,
+        content: `${classification === 'unsubscribe' ? '客户退订' : classification === 'bounce' ? '邮件退信' : classification === 'spam' ? '垃圾邮件' : '客户明确拒绝'}：${deterministic.reason || generated.safety.reason}`,
       };
     }
     const nextFollowUpAt = !marketingBlocked && generated.followUpSuggestion.nextFollowUpAt && !Number.isNaN(Date.parse(generated.followUpSuggestion.nextFollowUpAt))

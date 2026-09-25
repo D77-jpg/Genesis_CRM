@@ -119,7 +119,7 @@ const mailThreadAnalysisSchema = {
   properties: {
     summary: { type: 'string' },
     intent: { type: 'object', additionalProperties: false, required: ['category', 'label', 'confidence', 'evidenceMessageIds'], properties: {
-      category: { type: 'string', enum: ['inquiry', 'quotation_request', 'negotiation', 'sample_request', 'order', 'support', 'positive', 'neutral', 'unsubscribe', 'bounce', 'rejection', 'other'] },
+      category: { type: 'string', enum: ['inquiry', 'quotation_request', 'negotiation', 'sample_request', 'order', 'support', 'positive', 'neutral', 'unsubscribe', 'bounce', 'rejection', 'spam', 'other'] },
       label: { type: 'string' }, confidence: { type: 'number', minimum: 0, maximum: 1 },
       evidenceMessageIds: { type: 'array', items: { type: 'string' } },
     } },
@@ -128,7 +128,7 @@ const mailThreadAnalysisSchema = {
       questions: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['text', 'evidenceMessageIds'], properties: { text: { type: 'string' }, evidenceMessageIds: { type: 'array', items: { type: 'string' } } } } },
     } },
     safety: { type: 'object', additionalProperties: false, required: ['classification', 'reason', 'evidenceMessageIds'], properties: {
-      classification: { type: 'string', enum: ['normal', 'unsubscribe', 'bounce', 'rejection'] }, reason: { type: 'string' }, evidenceMessageIds: { type: 'array', items: { type: 'string' } },
+      classification: { type: 'string', enum: ['normal', 'unsubscribe', 'bounce', 'rejection', 'spam'] }, reason: { type: 'string' }, evidenceMessageIds: { type: 'array', items: { type: 'string' } },
     } },
     replyDraft: { type: 'object', additionalProperties: false, required: ['subject', 'bodyText'], properties: { subject: { type: 'string' }, bodyText: { type: 'string' } } },
     statusSuggestion: { type: 'object', additionalProperties: false, required: ['status', 'reason'], properties: {
