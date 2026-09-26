@@ -16,7 +16,8 @@ import env from '../config/env';
 import { CustomerAttachment, type CustomerAttachmentDocument } from '../models';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
-import type { CreateAttachmentInput } from '../validators/attachment.validator';
+import { createAttachmentSchema, type CreateAttachmentInput } from '../validators/attachment.validator';
+import { attachmentAllowed } from './mail-security';
 
 const logger = createLogger('attachment-service');
 
@@ -106,6 +107,16 @@ export async function createAttachment(
   }
   if (!projectId || !Types.ObjectId.isValid(projectId)) throw ApiError.notFound('项目不存在或无权访问');
 
+  const validated = createAttachmentSchema.safeParse(input);
+  if (!validated.success) throw ApiError.badRequest('文件名或内容格式不正确');
+  // Reject oversized base64 before allocating its decoded buffer.
+  const raw = input.dataBase64.startsWith('data:') ? input.dataBase64.slice(input.dataBase64.indexOf(',') + 1) : input.dataBase64;
+  if (raw.length > Math.ceil(env.MAX_ATTACHMENT_SIZE / 3) * 4 + 4) {
+    throw new ApiError(413, '文件大小超过上限', 'PAYLOAD_TOO_LARGE');
+  }
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(raw)) {
+    throw ApiError.badRequest('文件内容不是合法的 base64');
+  }
   const buffer = decodeBase64(input.dataBase64);
   if (buffer.length === 0) {
     throw ApiError.badRequest('文件内容为空或已损坏');
@@ -113,6 +124,10 @@ export async function createAttachment(
   if (buffer.length > env.MAX_ATTACHMENT_SIZE) {
     const limitMb = Math.round(env.MAX_ATTACHMENT_SIZE / (1024 * 1024));
     throw new ApiError(413, `文件大小超过上限（${limitMb}MB）`, 'PAYLOAD_TOO_LARGE');
+  }
+
+  if (!attachmentAllowed(input.originalName, input.mimeType || 'application/octet-stream', buffer, env.MAX_ATTACHMENT_SIZE)) {
+    throw ApiError.badRequest('文件格式、扩展名或文件签名不受支持');
   }
 
   const dir = ensureUploadDir();
@@ -162,9 +177,16 @@ export async function getAttachmentForDownload(
   if (!doc) {
     throw ApiError.notFound('附件不存在或无权访问');
   }
+  // Do not trust the stored path: legacy/corrupt DB records must never read outside uploads.
+  const root = path.resolve(env.UPLOAD_DIR);
+  const filePath = path.resolve(doc.path);
+  if (path.dirname(filePath) !== root || path.basename(filePath) !== doc.filename || !/^\d+-[0-9a-f-]{36}(?:\.[a-z0-9]{1,10})?$/i.test(doc.filename)) {
+    throw ApiError.notFound('附件文件不存在');
+  }
   let buffer: Buffer;
   try {
-    buffer = await fsp.readFile(doc.path);
+    if ((await fsp.lstat(filePath)).isSymbolicLink()) throw new Error('symlink');
+    buffer = await fsp.readFile(filePath);
   } catch {
     throw ApiError.notFound('附件文件已丢失，请重新上传');
   }

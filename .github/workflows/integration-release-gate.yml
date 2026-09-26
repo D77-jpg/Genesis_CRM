@@ -48,6 +48,8 @@ jobs:
           npm run test:mail
           npm run test:scratchpad
           npm run test:agent
+      - name: Security boundary regression tests
+        run: npm run test:security
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Production build（服务端）
@@ -67,6 +69,52 @@ jobs:
         run: npm ci
       - name: Production build（含 typecheck）
         run: npm run build
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install locked server and web dependencies
+        run: |
+          npm ci --prefix server
+          npm ci --prefix web
+      # Existing SheetJS xlsx advisories GHSA-4r6h-8v6p-xvw6 and
+      # GHSA-5pgg-2g8v-p4x9 have no npm fix (review by 2026-10-26).
+      # All other high/critical advisories fail CI; revisit this exception at expiry.
+      - name: Server audit (temporary xlsx exception)
+        run: node scripts/audit-gate.cjs server xlsx
+      - name: Web audit (temporary xlsx exception)
+        run: node scripts/audit-gate.cjs web xlsx
+      - name: Install pinned Gitleaks v8.24.0
+        run: |
+          curl --fail --location --retry 3 --silent --show-error \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.24.0/gitleaks_8.24.0_linux_x64.tar.gz \
+            --output /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks version
+      - name: Secret scan across git history
+        shell: bash
+        run: |
+          set +e
+          /tmp/gitleaks git . --log-opts='--all' --log-level error --no-banner --redact --exit-code 1 \
+            --report-format json --report-path /tmp/gitleaks-redacted.json
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            # Scanner output is redacted; disclose ONLY rule + immutable finding
+            # fingerprint, never Match, Secret, source lines, or request bodies.
+            if [ -f /tmp/gitleaks-redacted.json ]; then
+              node -e 'const fs=require("fs"); const findings=JSON.parse(fs.readFileSync("/tmp/gitleaks-redacted.json", "utf8")); console.log(`Gitleaks finding count: ${findings.length}`); for(const item of findings) console.log(`Rule: ${item.RuleID}; fingerprint: ${item.Fingerprint}`)'
+            else
+              echo 'Gitleaks failed without a report; investigate scanner/setup.'
+            fi
+          fi
+          exit "$status"
 
   hygiene:
     runs-on: windows-latest

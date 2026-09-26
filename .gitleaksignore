@@ -1,0 +1,6 @@
+# Reviewed historical test fixtures only; Gitleaks v8.24.0 exact fingerprints.
+# Do not add wildcard, path or rule exemptions; refer to docs/security/H11_AUDIT.md.
+40dc31d9f3d45c727a2f6821dbc910d01f763d67:server/tests/template-feedback.test.ts:generic-api-key:75
+e027a639c8d6e3fafcaa9a279a51033045e88136:.github/workflows/integration-release-gate.yml:generic-api-key:35
+e4f08faf1b5eb3db07907033b5cae50170b213d6:scripts/smoke-test.ps1:generic-api-key:523
+5ffeed2b9d06e4a413a45e08f34190fb3442f719:scripts/smoke-test.ps1:generic-api-key:523

@@ -25,7 +25,7 @@ export function normalizeSubject(subject: string): string {
 }
 
 export function attachmentAllowed(name: string, mime: string, data: Buffer, limit: number): boolean {
-  if (!data.length || data.length > limit || /[\x00-\x1f]/.test(name)) return false;
+  if (!data.length || data.length > limit || /[\\/\x00-\x1f\x7f]/.test(name) || name === '..') return false;
   const ext = path.extname(name).toLowerCase();
   if (ext === '.txt') return mime === 'text/plain' && !data.includes(0);
   if (ext === '.pdf') return mime === 'application/pdf' && data.subarray(0, 5).toString() === '%PDF-';
