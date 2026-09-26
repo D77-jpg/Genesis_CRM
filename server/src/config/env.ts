@@ -15,7 +15,7 @@ const booleanish = z
   .string()
   .transform((v) => ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase()));
 
-const envSchema = z.object({
+export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(5000),
@@ -90,6 +90,38 @@ const envSchema = z.object({
   MAX_ATTACHMENT_SIZE: z.coerce.number().int().positive().default(15 * 1024 * 1024),
 });
 
+const unsafeSecrets = new Set([
+  'password', 'password123', 'admin123', 'changeme', 'change-me', 'default',
+  'secret', 'jwt-secret', 'your-secret-key', 'your-jwt-secret',
+]);
+
+function strongSecret(value: string, minimum: number): boolean {
+  const trimmed = value.trim();
+  return trimmed.length >= minimum && trimmed === value &&
+    !unsafeSecrets.has(trimmed.toLowerCase()) &&
+    !/(placeholder|example|changeme|password|default|secret-key|123456)/i.test(trimmed) &&
+    new Set(trimmed).size >= 12;
+}
+
+/** Exported separately so production startup policy can be tested without loading process env. */
+export function validateProductionSecrets(input: {
+  NODE_ENV: string;
+  JWT_SECRET: string;
+  ADMIN_PASSWORD: string;
+  MAIL_CREDENTIAL_ENCRYPTION_KEY?: string;
+}): string[] {
+  if (input.NODE_ENV !== 'production') return [];
+  const errors: string[] = [];
+  if (!strongSecret(input.JWT_SECRET, 32)) errors.push('JWT_SECRET 必须是至少 32 字符的非默认随机值');
+  if (!strongSecret(input.ADMIN_PASSWORD, 16)) errors.push('ADMIN_PASSWORD 必须是至少 16 字符的非默认随机值');
+  if (!input.MAIL_CREDENTIAL_ENCRYPTION_KEY || !strongSecret(input.MAIL_CREDENTIAL_ENCRYPTION_KEY, 32)) {
+    errors.push('MAIL_CREDENTIAL_ENCRYPTION_KEY 必须是独立的至少 32 字符的非默认随机值');
+  } else if (input.MAIL_CREDENTIAL_ENCRYPTION_KEY === input.JWT_SECRET || input.MAIL_CREDENTIAL_ENCRYPTION_KEY === input.ADMIN_PASSWORD) {
+    errors.push('MAIL_CREDENTIAL_ENCRYPTION_KEY 不得与其他密钥相同');
+  }
+  return errors;
+}
+
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
@@ -103,6 +135,12 @@ if (!parsed.success) {
 }
 
 const raw = parsed.data;
+const productionErrors = validateProductionSecrets(raw);
+if (productionErrors.length) {
+  // Never include supplied secret values in startup diagnostics.
+  console.error(`[env] 生产环境配置不安全：\n${productionErrors.join('\n')}`);
+  process.exit(1);
+}
 
 export const env = {
   ...raw,

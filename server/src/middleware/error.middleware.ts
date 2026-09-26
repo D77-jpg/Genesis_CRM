@@ -19,9 +19,14 @@ import { ApiError, type ApiErrorDetail } from '../utils/ApiError';
 
 const logger = createLogger('http');
 
+/** Query strings can contain tokens; only log/echo the URL path. */
+function safeRequestPath(req: { originalUrl: string }): string {
+  return req.originalUrl.split('?')[0];
+}
+
 /** 404：路由不存在 */
 export const notFoundHandler: RequestHandler = (req, _res, next) => {
-  next(ApiError.notFound(`接口不存在: ${req.method} ${req.originalUrl}`));
+  next(ApiError.notFound(`接口不存在: ${req.method} ${safeRequestPath(req)}`));
 };
 
 interface MongoServerErrorLike extends Error {
@@ -70,7 +75,9 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   }
 
   // 4xx 记 warn，5xx 记 error 并带堆栈
-  const logLine = `${req.method} ${req.originalUrl} -> ${apiError.statusCode} ${apiError.code}`;
+  // Integration routes contain caller-supplied refs; avoid reflecting raw path segments.
+  const requestPath = req.path.startsWith('/api/integrations/') ? '/api/integrations/[redacted]' : safeRequestPath(req);
+  const logLine = `${req.method} ${requestPath} -> ${apiError.statusCode} ${apiError.code}`;
   if (apiError.statusCode >= 500) {
     logger.error(logLine, { message: err?.message, stack: env.isProd ? undefined : err?.stack });
   } else {

@@ -15,7 +15,8 @@ export const attachmentIdParamsSchema = z.object({
  * 不引入 multipart 依赖）。dataBase64 允许带 dataURL 前缀，服务端会剥离。
  */
 export const createAttachmentSchema = z.object({
-  originalName: z.string().trim().min(1, '文件名为必填项').max(255, '文件名不能超过 255 个字符'),
+  originalName: z.string().trim().min(1, '文件名为必填项').max(255, '文件名不能超过 255 个字符')
+    .refine((name) => !/[\\/\x00-\x1f\x7f]/.test(name) && name !== '.' && name !== '..' && !name.endsWith('.'), '文件名不得包含路径或控制字符'),
   mimeType: z.string().trim().max(160).optional(),
   dataBase64: z.string().min(1, '文件内容为空'),
 });

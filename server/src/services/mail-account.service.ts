@@ -447,13 +447,14 @@ export async function reserveMailAttempt(accountId: string, projectId: string, u
   await audit({ projectId, accountId, actorId: userId, targetUserId: userId, action: 'send_attempt', detail: { used: reserved.attempts, dailyLimit: account.dailyLimit } });
 }
 
-export async function auditMailResult(accountId: string, projectId: string, userId: string, accepted: boolean, error?: string): Promise<void> {
+export async function auditMailResult(accountId: string, projectId: string, userId: string, accepted: boolean, _error?: string): Promise<void> {
   await audit({
     projectId,
     accountId,
     actorId: userId,
     targetUserId: userId,
     action: accepted ? 'send_success' : 'send_failed',
-    detail: accepted ? {} : { error: error || 'SMTP 发送失败' },
+    // Never persist transport-library error strings; they may embed SMTP credentials.
+    detail: accepted ? {} : { error: 'SMTP 发送失败' },
   });
 }

@@ -112,7 +112,11 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
   /* ---------- 访问日志 ---------- */
-  app.use(morgan(env.isProd ? 'combined' : 'dev', {
+  // Morgan's default :url includes the query string (possibly service credentials).
+  morgan.token('safe-url', (req) => req.url?.startsWith('/api/integrations/') ? '/api/integrations/[redacted]' : req.url?.split('?')[0] || '/');
+  app.use(morgan(env.isProd
+    ? ':remote-addr - - [:date[clf]] ":method :safe-url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'
+    : ':method :safe-url :status :response-time ms', {
     // Tracking tokens authorize event writes; do not persist them in access logs.
     skip: (req) => req.path === '/api/health' || req.originalUrl.startsWith('/api/tracking/'),
   }));
