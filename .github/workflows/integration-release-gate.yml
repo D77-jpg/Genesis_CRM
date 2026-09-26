@@ -48,12 +48,27 @@ jobs:
           npm run test:mail
           npm run test:scratchpad
           npm run test:agent
+      - name: Template feedback regression (H-05)
+        run: npm run test:template-feedback
       - name: Security boundary regression tests
         run: npm run test:security
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Production build（服务端）
         run: npm run build
+
+  operations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: H-12 Mongo backup and H-13 container safety tests (skip=0)
+        run: |
+          node --test scripts/mongo-backup.test.cjs scripts/docker-runtime.test.cjs
+      - name: Compose validates using placeholder configuration only
+        run: docker compose --env-file production.env.example config --quiet
 
   web:
     runs-on: windows-latest
