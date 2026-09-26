@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+Dockerfile*
+README*
+*.key
+*.pem
+*.p12
