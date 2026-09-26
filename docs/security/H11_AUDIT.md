@@ -7,8 +7,11 @@ the separate GHCR Docker-image dependency. A failed installation or scan
 must fail the job (never fall back to skipping the scan). On failure, CI
 prints only the finding count, rule IDs and exact historical fingerprints
 from Gitleaks' redacted JSON report; raw matches, secret values and file
-contents remain private. The three exact fingerprints in
-`.gitleaksignore` were reviewed on this branch:
+contents remain private. The four exact fingerprints in
+`.gitleaksignore` were reviewed on this branch. CI's `fetch-depth: 0` exposed
+an additional earlier commit of the same synthetic smoke-test password that
+the initial shallow local clone omitted; the clone was unshallowed and the
+second exact fingerprint was inspected before adding it:
 
 | Historical file | Reason for exact-fingerprint exception |
 | --- | --- |
