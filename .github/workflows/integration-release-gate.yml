@@ -98,7 +98,23 @@ jobs:
           tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
           /tmp/gitleaks version
       - name: Secret scan across git history
-        run: /tmp/gitleaks git . --log-opts='--all' --log-level error --no-banner --redact --exit-code 1
+        shell: bash
+        run: |
+          set +e
+          /tmp/gitleaks git . --log-opts='--all' --log-level error --no-banner --redact --exit-code 1 \
+            --report-format json --report-path /tmp/gitleaks-redacted.json
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            # Scanner output is redacted; disclose ONLY rule + immutable finding
+            # fingerprint, never Match, Secret, source lines, or request bodies.
+            if [ -f /tmp/gitleaks-redacted.json ]; then
+              node -e 'const fs=require("fs"); const findings=JSON.parse(fs.readFileSync("/tmp/gitleaks-redacted.json", "utf8")); console.log(`Gitleaks finding count: ${findings.length}`); for(const item of findings) console.log(`Rule: ${item.RuleID}; fingerprint: ${item.Fingerprint}`)'
+            else
+              echo 'Gitleaks failed without a report; investigate scanner/setup.'
+            fi
+          fi
+          exit "$status"
 
   hygiene:
     runs-on: windows-latest
