@@ -92,7 +92,7 @@ jobs:
         run: node scripts/audit-gate.cjs web xlsx
       - name: Secret scan across git history
         run: |
-          docker run --rm -v "${{ github.workspace }}:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.24.0 git . --redact --exit-code 1
+          docker run --rm -v "${{ github.workspace }}:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.24.0 git . --log-opts='--all' --log-level error --no-banner --redact --exit-code 1
 
   hygiene:
     runs-on: windows-latest
