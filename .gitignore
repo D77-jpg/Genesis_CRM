@@ -27,6 +27,10 @@ pnpm-debug.log*
 # ---- Runtime data ----
 server/uploads/
 server/tmp/
+# Mongo backup artifacts and encryption material must never enter Git.
+genesis-mongo-*.archive.gz*
+genesis-mongo-*.json
+*.key.hex
 coverage/
 .nyc_output/
 
