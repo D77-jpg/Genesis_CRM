@@ -90,9 +90,15 @@ jobs:
         run: node scripts/audit-gate.cjs server xlsx
       - name: Web audit (temporary xlsx exception)
         run: node scripts/audit-gate.cjs web xlsx
-      - name: Secret scan across git history
+      - name: Install pinned Gitleaks v8.24.0
         run: |
-          docker run --rm -v "${{ github.workspace }}:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.24.0 git . --log-opts='--all' --log-level error --no-banner --redact --exit-code 1
+          curl --fail --location --retry 3 --silent --show-error \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.24.0/gitleaks_8.24.0_linux_x64.tar.gz \
+            --output /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks version
+      - name: Secret scan across git history
+        run: /tmp/gitleaks git . --log-opts='--all' --log-level error --no-banner --redact --exit-code 1
 
   hygiene:
     runs-on: windows-latest
