@@ -41,3 +41,9 @@
 - 基础 `contractVersion: 1.0` 与基础契约哈希保持不变
 - Wave A 已实现：报价草稿幂等创建、权威金额重算、报价详情查询
 - Wave B 已实现：服务端中英双语 PDF、稳定 ETag / 304、版本失效与 draft 每页水印
+
+## H-14 候选发布时点（待两仓 PR 合并后重锁）
+
+- Genesis_CRM H-13 合并主线 `origin/main@2213b45`（PR #11）；AutoForceAI H-13 合并主线 `origin/main@7b29a04`（PR #20）。这是 H-14 开工快照，不是将来的候选 tag commit；冻结 Integration v1.0 SHA-256 与 quotation-draft.v1 扩展 SHA-256 均不变。
+- 本地回归（2026-09-26）：Genesis server integration 23、mail 79、template-feedback 3、scratchpad 3、agent 32、security 5 项均 skip=0；server typecheck/build、web build，H-12 Mongo/H-13 Docker 工具测试 7/7、Compose 静态配置通过。AutoForceAI 后端 247 passed、合同/迁移 32 passed，Web 13/13、typecheck/build；备份在 WSL/Linux 10/10 无 skip。上述仅为本地证据，H-14 PR 和合并后 main Actions 仍须复核。
+- 正式 HTTPS、从零双仓容器/登录、跨仓 CRM 与报价 E2E、隔离数据库恢复和 24 小时生产试运行仍无 H-14 实测记录；不得宣称生产就绪。具体发布、远端分支清理、候选 tag 门槛及应急措施见 AutoForceAI `deploy/H14_RELEASE_CHECKLIST.md`。
