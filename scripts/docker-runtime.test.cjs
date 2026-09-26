@@ -33,7 +33,7 @@ test('standalone ingress and healthcheck contract', () => {
 });
 
 test('example contains no production credentials', () => {
-  const example = read('.env.production.example');
+  const example = read('production.env.example');
   for (const key of ['JWT_SECRET', 'ADMIN_PASSWORD', 'MAIL_CREDENTIAL_ENCRYPTION_KEY', 'MONGO_ROOT_PASSWORD']) {
     assert.match(example, new RegExp(`^${key}=REPLACE_WITH_`, 'm'));
   }
