@@ -30,6 +30,9 @@ export default defineConfig({
       '/api': {
         target: API_TARGET,
         changeOrigin: true,
+        // The backend allows this explicit local development origin by default.
+        // Never forward the Vite UI's different-port Origin as an API origin.
+        headers: { origin: 'http://localhost:5173' },
         // 保持路径不变：前端请求 /api/customers → 后端 /api/customers
       },
     },
@@ -38,7 +41,11 @@ export default defineConfig({
     host: true,
     port: 4173,
     proxy: {
-      '/api': { target: API_TARGET, changeOrigin: true },
+      '/api': {
+        target: API_TARGET,
+        changeOrigin: true,
+        headers: { origin: 'http://localhost:5173' },
+      },
     },
   },
   build: {
