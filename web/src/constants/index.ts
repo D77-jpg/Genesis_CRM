@@ -53,6 +53,7 @@ export const ROUTES = {
   users: '/users',
   projects: '/projects',
   agentDiagnostics: '/agent-diagnostics',
+  aiSettings: '/ai-settings',
 } as const;
 
 /** 生成客户详情页路径 */

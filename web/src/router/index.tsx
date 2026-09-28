@@ -32,6 +32,7 @@ const TemplatesPage = React.lazy(() => import('@/pages/templates').then((m) => (
 const UsersPage = React.lazy(() => import('@/pages/users').then((m) => ({ default: m.UsersPage })));
 const ProjectsPage = React.lazy(() => import('@/pages/projects').then((m) => ({ default: m.ProjectsPage })));
 const AgentDiagnosticsPage = React.lazy(() => import('@/pages/agent-diagnostics').then((m) => ({ default: m.AgentDiagnosticsPage })));
+const AiSettingsPage = React.lazy(() => import('@/pages/ai-settings').then((m) => ({ default: m.AiSettingsPage })));
 const NotFoundPage = React.lazy(() => import('@/pages/not-found').then((m) => ({ default: m.NotFoundPage })));
 
 /** 懒加载页面的统一 Suspense 包装（局部工具，不对外导出） */
@@ -74,6 +75,10 @@ export const router = createBrowserRouter([
       {
         path: 'agent-diagnostics',
         element: <AdminRoute>{withSuspense(<AgentDiagnosticsPage />)}</AdminRoute>,
+      },
+      {
+        path: 'ai-settings',
+        element: <AdminRoute>{withSuspense(<AiSettingsPage />)}</AdminRoute>,
       },
       { path: '*', element: withSuspense(<NotFoundPage />) },
     ],

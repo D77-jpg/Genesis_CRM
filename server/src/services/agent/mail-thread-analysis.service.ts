@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
 import { z } from 'zod';
-import env from '../../config/env';
 import {
   AgentAction, AgentMailThreadAnalysis, AgentRun, DevelopmentLetter,
   type AgentMailSafety, type AgentMailThreadAnalysisDocument,
@@ -16,9 +15,8 @@ import type {
 import { getCustomerByIdOrThrow, updateCustomer } from '../customer.service';
 import { createFollowUp } from '../followup.service';
 import { sendLetter } from '../letter.service';
-import { MockAgentProvider } from './mock-provider';
-import { OpenAIResponsesProvider } from './openai-provider';
-import { AgentProviderError, type AgentProvider, type MailThreadAnalysisInput } from './provider';
+import { resolveAgentProvider } from './ai-settings.service';
+import { AgentProviderError, type MailThreadAnalysisInput } from './provider';
 import {
   agentSafetyIdentifier,
   containsPromptInjection,
@@ -31,9 +29,6 @@ import {
 
 function scope(actor: AuthUser) {
   return { projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id) };
-}
-function provider(): AgentProvider {
-  return env.AI_PROVIDER === 'openai' ? new OpenAIResponsesProvider() : new MockAgentProvider();
 }
 function safeErrorCode(error: unknown): string {
   if (error instanceof AgentProviderError || error instanceof ApiError) return error.code.slice(0, 80);
@@ -148,7 +143,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
   const identifiers = scope(actor);
   const existing = await AgentMailThreadAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
   if (existing) return dto(existing);
-  const activeProvider = provider();
+  const activeProvider = await resolveAgentProvider();
   const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'mail_analysis', status: 'running' });
   const startedAt = Date.now();
   let reservation: AgentQuotaReservation | undefined;

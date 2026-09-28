@@ -4,6 +4,9 @@ import { Types } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { AuthUser } from '../src/types/express';
 
+// An ignored developer .env may select a paid provider; regression tests must stay offline.
+process.env.AI_PROVIDER = 'mock';
+
 let memory: MongoMemoryServer;
 let mongoose: typeof import('mongoose');
 let service: typeof import('../src/services/agent/agent.service');
@@ -251,8 +254,8 @@ test('customer tools enforce customer ownership before returning data', async ()
   );
 });
 
-test('status is safe to expose and never contains the API key', () => {
-  const status = service.getAgentStatus();
+test('status is safe to expose and never contains the API key', async () => {
+  const status = await service.getAgentStatus();
   const serialized = JSON.stringify(status);
   assert.equal(status.readOnly, true);
   assert.equal(status.toolCount, 6);
