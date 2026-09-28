@@ -164,6 +164,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     try {
       response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
+        redirect: 'error',
         headers: {
           Authorization: `Bearer ${this.config.apiKey}`,
           'Content-Type': 'application/json',
@@ -223,6 +224,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     try {
       response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
+        redirect: 'error',
         headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(this.config.timeoutMs),
         body: JSON.stringify({
@@ -267,6 +269,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     try {
       response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
+        redirect: 'error',
         headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(this.config.timeoutMs),
         body: JSON.stringify({
@@ -309,6 +312,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     try {
       response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
+        redirect: 'error',
         headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(this.config.timeoutMs),
         body: JSON.stringify({

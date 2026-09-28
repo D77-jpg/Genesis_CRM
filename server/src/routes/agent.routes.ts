@@ -5,6 +5,8 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/pagination';
 import { ApiError } from '../utils/ApiError';
 import { requireRole } from '../middleware/auth.middleware';
+import { aiSettingsSchema } from '../validators/ai-settings.validator';
+import { getAiSettings, saveAiSettings, testAiSettings } from '../services/agent/ai-settings.service';
 import {
   createAgentSession,
   getAgentStatus,
@@ -69,7 +71,7 @@ const messageLimiter = rateLimit({
   handler: (_req, _res, next) => next(ApiError.tooManyRequests('Agent 请求过于频繁，请稍后重试')),
 });
 
-router.get('/status', (_req, res) => sendSuccess(res, getAgentStatus()));
+router.get('/status', asyncHandler(async (_req, res) => sendSuccess(res, await getAgentStatus())));
 router.get('/tools', (_req, res) => sendSuccess(res, getAgentToolCatalog()));
 router.get('/sessions', asyncHandler(async (req, res) => sendSuccess(res, await listAgentSessions(req.user!))));
 router.post('/sessions', validate({ body: createAgentSessionSchema }), asyncHandler(async (req, res) => {
@@ -90,6 +92,15 @@ router.get('/approvals', asyncHandler(async (req, res) => sendSuccess(res, await
 
 router.get('/admin/diagnostics', requireRole('admin'), validate({ query: agentDiagnosticsQuerySchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await getAgentDiagnostics(req.user!, req.query.days as unknown as number));
+}));
+router.get('/admin/ai-settings', requireRole('admin'), asyncHandler(async (req, res) => {
+  sendSuccess(res, await getAiSettings(req.user!));
+}));
+router.post('/admin/ai-settings/test', requireRole('admin'), messageLimiter, validate({ body: aiSettingsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await testAiSettings(req.body, req.user!));
+}));
+router.put('/admin/ai-settings', requireRole('admin'), messageLimiter, validate({ body: aiSettingsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await saveAiSettings(req.body, req.user!));
 }));
 router.get('/admin/evaluations', requireRole('admin'), asyncHandler(async (req, res) => {
   sendSuccess(res, await listAgentEvaluations(req.user!));

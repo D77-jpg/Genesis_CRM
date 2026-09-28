@@ -26,9 +26,8 @@ import type {
   UpdateAgentCustomerAnalysisBody,
 } from '../../validators/agent.validator';
 import { hasProtectedCustomerMail } from './mail-thread-analysis.service';
-import { MockAgentProvider } from './mock-provider';
-import { OpenAIResponsesProvider } from './openai-provider';
-import { AgentProviderError, type AgentProvider, type CustomerAnalysisInput } from './provider';
+import { resolveAgentProvider } from './ai-settings.service';
+import { AgentProviderError, type CustomerAnalysisInput } from './provider';
 import {
   agentSafetyIdentifier,
   containsPromptInjection,
@@ -40,10 +39,6 @@ import {
 
 function scope(actor: AuthUser) {
   return { projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id) };
-}
-
-function provider(): AgentProvider {
-  return env.AI_PROVIDER === 'openai' ? new OpenAIResponsesProvider() : new MockAgentProvider();
 }
 
 function safeErrorCode(error: unknown): string {
@@ -165,7 +160,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
   const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
   if (existing) return dto(existing);
   await getCustomerByIdOrThrow(input.customerId, actor);
-  const activeProvider = provider();
+  const activeProvider = await resolveAgentProvider();
   const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'customer_analysis', status: 'running' });
   const startedAt = Date.now();
   let reservation: AgentQuotaReservation | undefined;

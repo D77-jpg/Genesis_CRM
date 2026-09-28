@@ -5,8 +5,7 @@ import type { AgentEvalCaseResult } from '../../models';
 import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
 import { requireProjectId } from '../../utils/access';
-import { MockAgentProvider } from './mock-provider';
-import { OpenAIResponsesProvider } from './openai-provider';
+import { resolveAgentProvider } from './ai-settings.service';
 import { AgentProviderError, type AgentProvider } from './provider';
 import { AGENT_EVAL_DATASET, AGENT_EVAL_DATASET_VERSION, type AgentEvalCase } from './eval-dataset';
 import { detectProtectedMailSignal } from './mail-thread-analysis.service';
@@ -23,10 +22,6 @@ import {
 function requireAdmin(actor: AuthUser): Types.ObjectId {
   if (actor.role !== 'admin') throw ApiError.forbidden('仅管理员可查看 Agent 诊断');
   return new Types.ObjectId(requireProjectId(actor));
-}
-
-function provider(): AgentProvider {
-  return env.AI_PROVIDER === 'openai' ? new OpenAIResponsesProvider() : new MockAgentProvider();
 }
 
 function safeErrorCode(error: unknown): string {
@@ -88,7 +83,7 @@ async function evaluateCase(item: AgentEvalCase, active: AgentProvider, safetyId
 
 export async function runAgentEvaluation(actor: AuthUser) {
   const projectId = requireAdmin(actor);
-  const active = provider();
+  const active = await resolveAgentProvider();
   const inputCharacters = AGENT_EVAL_DATASET.reduce((sum, item) => sum + JSON.stringify(item.input).length, 0);
   const evalRun = await AgentEvalRun.create({
     projectId, userId: new Types.ObjectId(actor.id), provider: active.name, model: active.model,

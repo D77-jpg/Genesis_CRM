@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import { Types } from 'mongoose';
-import env from '../../config/env';
 import {
   AgentAction,
   AgentCustomerPreview,
@@ -28,9 +27,8 @@ import {
   type CreateAgentMailCustomerPreviewBody,
   type UpdateAgentCustomerPreviewBody,
 } from '../../validators/agent.validator';
-import { MockAgentProvider } from './mock-provider';
-import { OpenAIResponsesProvider } from './openai-provider';
-import { AgentProviderError, type AgentProvider } from './provider';
+import { resolveAgentProvider } from './ai-settings.service';
+import { AgentProviderError } from './provider';
 import {
   agentSafetyIdentifier,
   containsPromptInjection,
@@ -43,10 +41,6 @@ import {
 
 function scope(actor: AuthUser) {
   return { projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id) };
-}
-
-function provider(): AgentProvider {
-  return env.AI_PROVIDER === 'openai' ? new OpenAIResponsesProvider() : new MockAgentProvider();
 }
 
 function safeErrorCode(error: unknown): string {
@@ -169,7 +163,7 @@ export async function createScratchpadCustomerPreview(input: CreateAgentCustomer
   const content = scratchpad?.content ?? '';
   if (!content.trim()) throw ApiError.badRequest('随手记为空，请先填写客户信息');
 
-  const activeProvider = provider();
+  const activeProvider = await resolveAgentProvider();
   const limited = limitRecentItems([content], (value) => value, (_value, next) => next);
   const run = await AgentRun.create({
     ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'scratchpad', status: 'running',
@@ -249,7 +243,7 @@ export async function createMailCustomerPreview(input: CreateAgentMailCustomerPr
   if (!header) throw ApiError.badRequest('发件人邮箱无法识别，请人工核对');
   const fromName = String(mail.fromName ?? '').trim();
   const content = `发件人: ${mail.from}\n联系人: ${fromName}\n主题: ${mail.subject}\n${mail.text ?? ''}`;
-  const activeProvider = provider();
+  const activeProvider = await resolveAgentProvider();
   const limited = limitRecentItems([content], (value) => value, (_value, next) => next);
   const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model,
     kind: 'scratchpad', status: 'running', inputCharacters: limited.inputCharacters, inputTruncated: limited.truncated,

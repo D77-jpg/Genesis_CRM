@@ -48,6 +48,7 @@ jobs:
           npm run test:mail
           npm run test:scratchpad
           npm run test:agent
+          npm run test:ai-settings
       - name: Template feedback regression (H-05)
         run: npm run test:template-feedback
       - name: Security boundary regression tests

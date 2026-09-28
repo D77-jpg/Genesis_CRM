@@ -6,8 +6,7 @@ import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
 import { customerRefScope, customerScope, requireProjectId } from '../../utils/access';
 import { agentToolSchemas, executeAgentTool, listAgentTools } from './tool-registry';
-import { MockAgentProvider } from './mock-provider';
-import { OpenAIResponsesProvider } from './openai-provider';
+import { resolveAgentProvider } from './ai-settings.service';
 import { AgentProviderError, type AgentInputItem, type AgentProvider } from './provider';
 import {
   agentSafetyIdentifier,
@@ -111,12 +110,8 @@ function messageDto(doc: InstanceType<typeof AgentMessage>) {
   return { id: doc.id, sessionId: String(doc.sessionId), role: doc.role, content: doc.content, status: doc.status, createdAt: doc.createdAt };
 }
 
-function provider(): AgentProvider {
-  return env.AI_PROVIDER === 'openai' ? new OpenAIResponsesProvider() : new MockAgentProvider();
-}
-
-export function getAgentStatus() {
-  const active = provider();
+export async function getAgentStatus() {
+  const active = await resolveAgentProvider();
   return {
     provider: active.name,
     model: active.model,
@@ -299,6 +294,8 @@ export async function sendAgentMessage(
       return { userMessage: messageDto(existingUser), assistantMessage: messageDto(existingAssistant), degraded: existingAssistant.status === 'failed', idempotent: true };
     }
   }
+  // Resolve before persisting a new user message, but after checking completed retries.
+  const activeProvider = providerOverride ?? await resolveAgentProvider();
   let userMessage: InstanceType<typeof AgentMessage>;
   try {
     userMessage = await AgentMessage.create({
@@ -314,7 +311,6 @@ export async function sendAgentMessage(
   }
   await AgentSession.updateOne({ _id: session._id, ...identifiers }, { $set: { updatedAt: new Date() } });
 
-  const activeProvider = providerOverride ?? provider();
   const run = await AgentRun.create({
     ...identifiers,
     sessionId: session._id,
