@@ -7,13 +7,25 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const SRC_DIR = fileURLToPath(new URL('./src', import.meta.url));
+const ENV_DIR = fileURLToPath(new URL('.', import.meta.url));
 
-/** 后端地址，可通过环境变量 VITE_API_PROXY_TARGET 覆盖 */
-const API_TARGET = process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:5000';
+/**
+ * 后端地址，优先级：进程环境变量（CI / 临时启动覆盖）→ web/.env 里的
+ * VITE_API_PROXY_TARGET → 默认 http://127.0.0.1:5000。
+ *
+ * 这里必须用 loadEnv()：Vite 只会把 .env 的变量注入前端的 import.meta.env，
+ * 不会注入 vite.config.ts 里的 process.env —— 直接读 process.env 是拿不到
+ * .env 文件的，web/.env.example 里承诺的覆盖方式也就不会生效。
+ * 该值只服务 dev / preview 代理；无 mode 后缀的 .env 对所有 mode 生效。
+ */
+const API_TARGET =
+  process.env.VITE_API_PROXY_TARGET ??
+  loadEnv(process.env.NODE_ENV || 'development', ENV_DIR, 'VITE_').VITE_API_PROXY_TARGET ??
+  'http://127.0.0.1:5000';
 
 export default defineConfig({
   plugins: [react()],
