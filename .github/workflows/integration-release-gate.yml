@@ -83,6 +83,8 @@ jobs:
           node-version: "20"
       - name: Install（锁定依赖）
         run: npm ci
+      - name: Guarded braces recursion and build consumer regression
+        run: npm run test:braces
       - name: Production build（含 typecheck）
         run: npm run build
 
@@ -98,7 +100,9 @@ jobs:
       - name: Install locked server and web dependencies
         run: |
           npm ci --prefix server
-          npm ci --prefix web
+          npm ci --prefix web --install-links=true
+      - name: Guarded braces regression (actual locked web consumers)
+        run: npm run test:braces --prefix web
       # Existing SheetJS xlsx advisories GHSA-4r6h-8v6p-xvw6 and
       # GHSA-5pgg-2g8v-p4x9 have no npm fix (review by 2026-10-26).
       # All other high/critical advisories fail CI; revisit this exception at expiry.
