@@ -1,7 +1,8 @@
 # Build context: ./web. Vite variables are baked into static JS, never pass secrets.
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
+COPY vendor/guarded-braces ./vendor/guarded-braces
 RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY . .
 ARG VITE_API_BASE_URL=/api

@@ -733,6 +733,38 @@ test('quotation PDF：中文可嵌入、draft 水印、稳定 ETag、304 与版�
   assert.notDeepEqual(Buffer.from(await secondVersion.arrayBuffer()), pdfV1);
 });
 
+test('quotation PDF：项目品牌独立，品牌修改使缓存和 ETag 失效', async () => {
+  const quotation = await Quotation.findOne({ projectId: projectA._id, title: '厦门再生帆布袋报价' });
+  assert.ok(quotation);
+  const path = `${baseUrl}/quotations/${quotation!._id}/pdf`;
+  const headers = authHeaders(tokenA, pid());
+  await Project.updateOne({ _id: projectA._id }, { companyName: 'Acceptance Supplier A', website: 'https://supplier-a.example.invalid' });
+  const first = await fetch(path, { headers });
+  assert.equal(first.status, 200);
+  const firstPdf = Buffer.from(await first.arrayBuffer());
+  assert.ok(firstPdf.includes(Buffer.from('(Acceptance Supplier A)')), 'PDF Author must use the owning project');
+  const firstEtag = first.headers.get('etag')!;
+  await Project.updateOne({ _id: projectB._id }, { companyName: 'Unrelated Supplier B' });
+  assert.equal((await fetch(path, { headers: { ...headers, 'If-None-Match': firstEtag } })).status, 304);
+
+  // A website-only edit must invalidate the same quotation version.
+  await Project.updateOne({ _id: projectA._id }, { website: '' });
+  const withoutWebsite = await fetch(path, { headers: { ...headers, 'If-None-Match': firstEtag } });
+  assert.equal(withoutWebsite.status, 200);
+  const noWebsiteEtag = withoutWebsite.headers.get('etag')!;
+  assert.notEqual(noWebsiteEtag, firstEtag);
+  assert.notDeepEqual(Buffer.from(await withoutWebsite.arrayBuffer()), firstPdf);
+  assert.equal(withoutWebsite.headers.get('x-quotation-version'), first.headers.get('x-quotation-version'));
+
+  await Project.updateOne({ _id: projectA._id }, { companyName: 'Renamed Supplier A' });
+  const renamed = await fetch(path, { headers: { ...headers, 'If-None-Match': noWebsiteEtag } });
+  assert.equal(renamed.status, 200);
+  assert.ok(Buffer.from(await renamed.arrayBuffer()).includes(Buffer.from('(Renamed Supplier A)')));
+  assert.notEqual(renamed.headers.get('etag'), noWebsiteEtag);
+  const stable = await fetch(path, { headers: { ...headers, 'If-None-Match': renamed.headers.get('etag')! } });
+  assert.equal(stable.status, 304);
+});
+
 test('quotation PDF：缺 scope 与跨项目读取均被拒绝', async () => {
   const quotation = await Quotation.findOne({ projectId: projectA._id, title: '厦门再生帆布袋报价' });
   assert.ok(quotation);

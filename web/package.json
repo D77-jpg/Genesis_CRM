@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test:braces": "node --test tests/guarded-braces.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -43,7 +44,8 @@
     "tailwindcss-animate": "^1.0.7",
     "xlsx": "^0.18.5",
     "zod": "^3.24.1",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.2",
+    "braces": "file:vendor/guarded-braces"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
@@ -64,5 +66,8 @@
   },
   "engines": {
     "node": ">=20.19.0"
+  },
+  "overrides": {
+    "braces": "$braces"
   }
 }

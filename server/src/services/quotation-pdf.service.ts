@@ -9,8 +9,7 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import PDFDocument from 'pdfkit';
-import env from '../config/env';
-import { Customer, Quotation, type QuotationDocument } from '../models';
+import { Customer, Project, Quotation, type QuotationDocument } from '../models';
 import { ApiError } from '../utils/ApiError';
 
 const PAGE_WIDTH = 595.28;
@@ -22,6 +21,11 @@ const FONT_PATH = path.resolve(
   '../fonts/NotoSansHans-Regular.otf',
 );
 const PDF_CACHE_LIMIT = 64;
+
+interface PdfBranding {
+  companyName: string;
+  website: string;
+}
 
 interface PdfCustomer {
   name: string;
@@ -91,7 +95,7 @@ function drawTableHeader(doc: PDFKit.PDFDocument, y: number): number {
   return y + 24;
 }
 
-function addDocumentChrome(doc: PDFKit.PDFDocument, status: string): void {
+function addDocumentChrome(doc: PDFKit.PDFDocument, status: string, branding: PdfBranding): void {
   const range = doc.bufferedPageRange();
   for (let index = range.start; index < range.start + range.count; index += 1) {
     doc.switchToPage(index);
@@ -107,7 +111,7 @@ function addDocumentChrome(doc: PDFKit.PDFDocument, status: string): void {
     doc.page.margins.bottom = 0;
     doc.fillColor('#94a3b8').fillOpacity(1).fontSize(7);
     doc.text(
-      `${env.COMPANY_NAME}  ·  ${index - range.start + 1} / ${range.count}`,
+      `${branding.companyName}  ·  ${index - range.start + 1} / ${range.count}`,
       MARGIN,
       PAGE_HEIGHT - 42,
       { width: PAGE_WIDTH - MARGIN * 2, align: 'center', lineBreak: false },
@@ -117,7 +121,7 @@ function addDocumentChrome(doc: PDFKit.PDFDocument, status: string): void {
   }
 }
 
-async function buildPdf(quotation: QuotationDocument, customer: PdfCustomer): Promise<Buffer> {
+async function buildPdf(quotation: QuotationDocument, customer: PdfCustomer, branding: PdfBranding): Promise<Buffer> {
   const doc = new PDFDocument({
     autoFirstPage: true,
     bufferPages: true,
@@ -126,7 +130,7 @@ async function buildPdf(quotation: QuotationDocument, customer: PdfCustomer): Pr
     margins: { top: MARGIN, right: MARGIN, bottom: 70, left: MARGIN },
     info: {
       Title: `Quotation ${quotation.quotationNo}`,
-      Author: env.COMPANY_NAME,
+      Author: branding.companyName,
       Subject: `${quotation.status.toUpperCase()} quotation version ${quotation.version ?? 1}`,
       Creator: 'Genesis_CRM',
       Producer: 'Genesis_CRM / PDFKit',
@@ -138,17 +142,23 @@ async function buildPdf(quotation: QuotationDocument, customer: PdfCustomer): Pr
   doc.registerFont('NotoSansSC', FONT_PATH);
   doc.font('NotoSansSC');
 
-  doc.fillColor('#0f172a').fontSize(17).text(env.COMPANY_NAME, MARGIN, MARGIN, {
+  doc.fillColor('#0f172a').fontSize(17).text(branding.companyName, MARGIN, MARGIN, {
     width: PAGE_WIDTH - MARGIN * 2,
   });
-  doc.fillColor('#475569').fontSize(9).text(env.COMPANY_WEBSITE, MARGIN, MARGIN + 24);
-  doc.fillColor('#0f172a').fontSize(24).text('报价单 / QUOTATION', MARGIN, MARGIN + 58, {
+  if (branding.website) {
+    doc.fillColor('#475569').fontSize(9).text(branding.website, MARGIN, doc.y + 6, {
+      width: PAGE_WIDTH - MARGIN * 2,
+    });
+  }
+  const titleY = Math.max(MARGIN + 58, doc.y + 20);
+  doc.fillColor('#0f172a').fontSize(24).text('报价单 / QUOTATION', MARGIN, titleY, {
     width: PAGE_WIDTH - MARGIN * 2,
     align: 'right',
   });
-  doc.moveTo(MARGIN, MARGIN + 92).lineTo(PAGE_WIDTH - MARGIN, MARGIN + 92).strokeColor('#cbd5e1').stroke();
+  const dividerY = doc.y + 12;
+  doc.moveTo(MARGIN, dividerY).lineTo(PAGE_WIDTH - MARGIN, dividerY).strokeColor('#cbd5e1').stroke();
 
-  let y = MARGIN + 108;
+  let y = dividerY + 16;
   drawLabelValue(doc, '报价编号 / No.', quotation.quotationNo, MARGIN, y);
   drawLabelValue(doc, '状态 / Status', quotation.status.toUpperCase(), 310, y);
   y += 22;
@@ -218,7 +228,7 @@ async function buildPdf(quotation: QuotationDocument, customer: PdfCustomer): Pr
     y += height;
   }
 
-  addDocumentChrome(doc, quotation.status);
+  addDocumentChrome(doc, quotation.status, branding);
   doc.end();
   return completed;
 }
@@ -233,8 +243,14 @@ export async function renderIntegrationQuotationPdf(input: {
   });
   if (!quotation) throw ApiError.notFound('报价不存在或不属于当前项目');
 
+  // Resolve the owning project before consulting the cache. Never borrow another
+  // enterprise's global defaults, including when this project's website is empty.
+  const project = await Project.findById(input.projectId).select('companyName website').lean();
+  if (!project) throw ApiError.notFound('报价所属项目不存在');
+  const branding: PdfBranding = { companyName: project.companyName, website: project.website || '' };
+  const brandingDigest = createHash('sha256').update(JSON.stringify(branding)).digest('hex');
   const version = quotation.version ?? 1;
-  const cacheKey = `${input.projectId}:${input.quotationId}:${version}`;
+  const cacheKey = `${input.projectId}:${input.quotationId}:${version}:${brandingDigest}`;
   const cached = getCachedPdf(cacheKey);
   if (cached) return cached;
 
@@ -252,7 +268,7 @@ export async function renderIntegrationQuotationPdf(input: {
       phone: customer.phone,
       country: customer.country,
       externalId: customer.externalId,
-    });
+    }, branding);
     const digest = createHash('sha256')
       .update(`${String(quotation._id)}:${version}:`)
       .update(buffer)
