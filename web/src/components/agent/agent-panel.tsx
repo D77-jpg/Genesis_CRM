@@ -410,7 +410,7 @@ export function AgentPanel(): React.JSX.Element | null {
           </TabsList>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {status?.available ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <CircleOff className="h-3.5 w-3.5 text-amber-600" />}
-            {status?.mode === 'mock' ? 'Mock' : status?.available ? 'OpenAI' : '未配置'}
+            {status?.mode === 'mock' ? '演示模式' : status?.available ? '模型已配置' : '未配置'}
           </div>
         </div>
 

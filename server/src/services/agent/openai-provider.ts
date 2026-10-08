@@ -158,6 +158,15 @@ export class OpenAIResponsesProvider implements AgentProvider {
     return Boolean(this.config.apiKey);
   }
 
+  private structuredOutputOptions(): { reasoning?: { effort: 'none' } } {
+    // DeepSeek reasoning shares the output budget with the required JSON payload.
+    // Keep chat reasoning and other providers unchanged.
+    if (new URL(this.config.baseUrl).hostname === 'api.deepseek.com' && /^deepseek-/i.test(this.model)) {
+      return { reasoning: { effort: 'none' } };
+    }
+    return {};
+  }
+
   async createTurn(request: AgentProviderRequest): Promise<AgentProviderTurn> {
     if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
     let response: Response;
@@ -237,6 +246,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
             'requirementNotes 保留对采购需求有用的关键细节；leadSource 表示获客渠道。',
           ].join('\n'),
           input: request.content,
+          ...this.structuredOutputOptions(),
           text: { format: { type: 'json_schema', name: 'scratchpad_customer_preview', strict: true, schema: customerExtractionSchema } },
           max_output_tokens: env.AI_MAX_OUTPUT_TOKENS,
           safety_identifier: request.safetyIdentifier,
@@ -248,6 +258,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     let body: OpenAIResponse;
     try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
     if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+    if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
     try {
       const parsed = JSON.parse(outputText(body)) as Omit<CustomerExtractionResult, 'usage'>;
       const usage = body.usage ?? {};
@@ -281,9 +292,11 @@ export class OpenAIResponsesProvider implements AgentProvider {
             '事实摘要只能陈述来源明确支持的内容；信息缺口必须说明尚缺什么；建议必须与事实分开。',
             '每条事实、信息缺口和建议都必须使用输入中存在的 sourceId。不得虚构来源或业务事实。',
             '英文邮件草稿必须专业、简洁、可编辑，不承诺来源中没有的价格、交期或能力，也不得表达已经发送。',
-            '跟进日期使用 ISO 8601，建议安排在未来。',
+            `当前服务器时间是 ${new Date().toISOString()}。跟进日期使用 ISO 8601，必须晚于当前时间。`,
+            '简洁输出：事实最多 8 条，缺口最多 5 条，建议最多 5 条；每条最多引用 4 个来源。不要逐项重复同一事实。',
           ].join('\n'),
           input: JSON.stringify(request.input),
+          ...this.structuredOutputOptions(),
           text: { format: { type: 'json_schema', name: 'customer_analysis_and_email_draft', strict: true, schema: customerAnalysisSchema } },
           max_output_tokens: env.AI_MAX_OUTPUT_TOKENS,
           safety_identifier: request.safetyIdentifier,
@@ -295,6 +308,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     let body: OpenAIResponse;
     try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
     if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+    if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
     try {
       const parsed = JSON.parse(outputText(body)) as Omit<CustomerAnalysisResult, 'usage'>;
       const usage = body.usage ?? {};
@@ -325,8 +339,10 @@ export class OpenAIResponsesProvider implements AgentProvider {
             '生成专业、简洁、可编辑的英文回复草稿；不得承诺邮件中没有的价格、交期、库存或能力，也不得表示已经发送。',
             '若最新客户来信包含退订、退信或明确拒绝，safety 必须分类为对应类型，回复草稿必须为空，不得建议继续营销或设置未来营销跟进。',
             '客户状态和跟进记录只是建议，不能声称已写入。nextFollowUpAt 使用 ISO 8601；不应继续跟进时输出空字符串。',
+            `当前服务器时间是 ${new Date().toISOString()}。需要跟进时，nextFollowUpAt 必须晚于当前时间。`,
           ].join('\n'),
           input: JSON.stringify(request.input),
+          ...this.structuredOutputOptions(),
           text: { format: { type: 'json_schema', name: 'mail_thread_assistant', strict: true, schema: mailThreadAnalysisSchema } },
           max_output_tokens: env.AI_MAX_OUTPUT_TOKENS,
           safety_identifier: request.safetyIdentifier,
@@ -338,6 +354,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     let body: OpenAIResponse;
     try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
     if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+    if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
     try {
       const parsed = JSON.parse(outputText(body)) as Omit<MailThreadAnalysisResult, 'usage'>;
       const usage = body.usage ?? {};

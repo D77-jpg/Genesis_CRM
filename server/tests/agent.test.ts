@@ -908,3 +908,46 @@ test('fixed eval dataset and diagnostics are admin-only and expose no automatic 
   assert.equal(tools.listAgentTools().every((tool) => tool.riskLevel === 'read'), true);
   assert.equal(JSON.stringify(report).includes('OPENAI_API_KEY'), false);
 });
+
+test('DeepSeek structured tasks reserve output for JSON and include the current clock', async () => {
+  const { OpenAIResponsesProvider } = await import('../src/services/agent/openai-provider');
+  const originalFetch = globalThis.fetch;
+  const bodies: Record<string, unknown>[] = [];
+  globalThis.fetch = async (_url, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return new Response(JSON.stringify({ status: 'completed', output_text: '{}', usage: {} }), { status: 200 });
+  };
+  try {
+    const adapter = new OpenAIResponsesProvider({ apiKey: 'fixture-key', model: 'deepseek-flash', baseUrl: 'https://api.deepseek.com', timeoutMs: 5000 });
+    await adapter.extractCustomer({ content: 'Fictional MOQ 73', safetyIdentifier: 'fixture' });
+    await adapter.analyzeCustomer({ input: { customerName: 'Fixture', sourceCatalog: [] }, safetyIdentifier: 'fixture' });
+    await adapter.analyzeMailThread({ input: { messages: [] }, safetyIdentifier: 'fixture' });
+    for (const body of bodies) {
+      assert.deepEqual(body.reasoning, { effort: 'none' });
+      assert.ok(Number(body.max_output_tokens) <= 10000);
+      assert.equal((body.text as { format: { strict: boolean } }).format.strict, true);
+    }
+    for (const body of bodies.slice(1)) {
+      const clock = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/.exec(String(body.instructions));
+      assert.ok(clock && Math.abs(Date.parse(clock[0]) - Date.now()) < 10000);
+    }
+    const other = new OpenAIResponsesProvider({ apiKey: 'fixture-key', model: 'gpt-test', baseUrl: 'https://api.openai.test/v1', timeoutMs: 5000 });
+    await other.analyzeCustomer({ input: { customerName: 'Fixture', sourceCatalog: [] }, safetyIdentifier: 'fixture' });
+    assert.equal(bodies[3].reasoning, undefined);
+    await adapter.createTurn({ instructions: 'Read only', input: [], tools: [], context: { type: 'global' }, userPrompt: 'Hi', safetyIdentifier: 'fixture' });
+    assert.equal(bodies[4].reasoning, undefined);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('incomplete structured responses are rejected even when their JSON happens to parse', async () => {
+  const { OpenAIResponsesProvider } = await import('../src/services/agent/openai-provider');
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output_text: '{}' }), { status: 200 });
+  try {
+    const adapter = new OpenAIResponsesProvider({ apiKey: 'fixture-key', model: 'deepseek-flash', baseUrl: 'https://api.deepseek.com', timeoutMs: 5000 });
+    const expected = { code: 'OPENAI_INCOMPLETE_RESPONSE' };
+    await assert.rejects(adapter.extractCustomer({ content: 'Fixture', safetyIdentifier: 'fixture' }), expected);
+    await assert.rejects(adapter.analyzeCustomer({ input: { customerName: 'Fixture', sourceCatalog: [] }, safetyIdentifier: 'fixture' }), expected);
+    await assert.rejects(adapter.analyzeMailThread({ input: { messages: [] }, safetyIdentifier: 'fixture' }), expected);
+  } finally { globalThis.fetch = originalFetch; }
+});
