@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive,
   Bot,
@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   CircleOff,
   Clock3,
   FileClock,
@@ -44,8 +45,9 @@ import { formatDateTime, formatRelative } from '@/lib/format';
 import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
-import type { AgentAction, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
+import type { AgentAction, AgentRecordedWorkflow, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
 import { AgentMessageContent } from './agent-message-content';
+import { AgentActionDetail } from './agent-action-detail';
 import { ScratchpadCustomerPreviewView } from './scratchpad-customer-preview';
 import { CustomerAnalysisView } from './customer-analysis';
 import { MailThreadAnalysisView } from './mail-thread-analysis';
@@ -107,6 +109,7 @@ function actionLabel(toolName: string): string {
     get_customer_quotations: '读取报价记录',
     get_dashboard_summary: '读取仪表盘',
     extract_scratchpad_customer: '提取随手记客户',
+    extract_mail_customer: '从邮件提取客户',
     update_scratchpad_customer_preview: '编辑客户预览',
     create_customer_from_scratchpad: '确认创建客户',
     analyze_customer_and_draft_email: '分析客户并生成邮件草稿',
@@ -140,6 +143,9 @@ export function AgentPanel(): React.JSX.Element | null {
   const clearMailAnalysis = useUiStore((state) => state.clearAgentMailAnalysis);
   const isMobile = useIsMobile();
   const location = useLocation();
+  const navigate = useNavigate();
+  const openCustomerPreview = useUiStore((state) => state.openAgentCustomerPreview);
+  const [selectedActionId, setSelectedActionId] = React.useState<string | null>(null);
   const context = React.useMemo(() => routeContext(location.pathname, location.search), [location.pathname, location.search]);
 
   const [status, setStatus] = React.useState<AgentStatus | null>(null);
@@ -154,6 +160,7 @@ export function AgentPanel(): React.JSX.Element | null {
   const [analyzing, setAnalyzing] = React.useState(false);
   const [error, setError] = React.useState('');
   const [tab, setTab] = React.useState('chat');
+  const [recordsError, setRecordsError] = React.useState('');
   const [renameOpen, setRenameOpen] = React.useState(false);
   const [renameTitle, setRenameTitle] = React.useState('');
   const [archiveOpen, setArchiveOpen] = React.useState(false);
@@ -171,6 +178,14 @@ export function AgentPanel(): React.JSX.Element | null {
     setUsage(nextUsage);
     setActions(nextActions);
   }, []);
+
+  React.useEffect(() => {
+    if (tab !== 'records' || !open) return;
+    setRecordsError('');
+    void loadRecords().catch((reason) => setRecordsError(toErrorMessage(reason, '运行记录加载失败')));
+  }, [tab, open, loadRecords]);
+
+  React.useEffect(() => { setSelectedActionId(null); }, [project?.id, user?.id]);
 
   const loadSessions = React.useCallback(async () => {
     const nextSessions = await apiGet<AgentSession[]>('/agent/sessions');
@@ -221,11 +236,14 @@ export function AgentPanel(): React.JSX.Element | null {
   }, [open, activeSessionId]);
 
   React.useEffect(() => {
-    if (mailAnalysisId) setTab('mail-analysis');
-    else if (customerAnalysisId) setTab('customer-analysis');
-    else if (customerPreviewId) setTab('customer-preview');
-    else if (tab === 'customer-preview' || tab === 'customer-analysis' || tab === 'mail-analysis') setTab('chat');
-  }, [customerAnalysisId, customerPreviewId, mailAnalysisId, tab]);
+    // Select a newly opened result once; manual tab changes must remain selected.
+    setTab((current) => {
+      if (mailAnalysisId) return 'mail-analysis';
+      if (customerAnalysisId) return 'customer-analysis';
+      if (customerPreviewId) return 'customer-preview';
+      return ['customer-preview', 'customer-analysis', 'mail-analysis'].includes(current) ? 'chat' : current;
+    });
+  }, [customerAnalysisId, customerPreviewId, mailAnalysisId]);
 
   React.useEffect(() => {
     if (customerAnalysisId && (context.type !== 'customer' || customerAnalysisCustomerId !== context.resourceId)) clearCustomerAnalysis();
@@ -259,7 +277,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
   useEscapeKey(
     () => setOpen(false),
-    open && !sessionListOpen && !sessionActionsOpen && !renameOpen && !archiveOpen,
+    open && !selectedActionId && !sessionListOpen && !sessionActionsOpen && !renameOpen && !archiveOpen,
   );
 
   async function createSession(): Promise<AgentSession> {
@@ -267,6 +285,22 @@ export function AgentPanel(): React.JSX.Element | null {
     setActiveSessionId(created.id);
     setMessages([]);
     return created;
+  }
+
+  function openRecordedWorkflow(workflow: AgentRecordedWorkflow) {
+    setSelectedActionId(null);
+    if (workflow.kind === 'customer-analysis' && workflow.context?.type === 'customer') {
+      navigate(`/customers/${workflow.context.resourceId}`);
+      openCustomerAnalysis(workflow.id, workflow.context.resourceId);
+    } else if (workflow.kind === 'mail-analysis' && workflow.context?.type === 'mail') {
+      const direction = workflow.context.direction ?? 'inbound';
+      navigate(`/mail?id=${workflow.context.resourceId}&direction=${direction}`);
+      openMailAnalysis(workflow.id, workflow.context.resourceId, direction);
+    } else if (workflow.kind === 'customer-preview') {
+      openCustomerPreview(workflow.id);
+    }
+    // Reopening the same saved result does not change its ID, so select it explicitly.
+    setTab(workflow.kind);
   }
 
   function startNewSession() {
@@ -528,9 +562,9 @@ export function AgentPanel(): React.JSX.Element | null {
           </form>
         </TabsContent>
 
-        {customerPreviewId && <TabsContent value="customer-preview" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><ScratchpadCustomerPreviewView previewId={customerPreviewId} onRecordsChanged={loadRecords} /></TabsContent>}
-        {customerAnalysisId && <TabsContent value="customer-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><CustomerAnalysisView analysisId={customerAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
-        {mailAnalysisId && <TabsContent value="mail-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><MailThreadAnalysisView analysisId={mailAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
+        {customerPreviewId && <TabsContent forceMount value="customer-preview" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><ScratchpadCustomerPreviewView previewId={customerPreviewId} onRecordsChanged={loadRecords} /></TabsContent>}
+        {customerAnalysisId && <TabsContent forceMount value="customer-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><CustomerAnalysisView analysisId={customerAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
+        {mailAnalysisId && <TabsContent forceMount value="mail-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><MailThreadAnalysisView analysisId={mailAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-3 gap-2">
@@ -538,19 +572,22 @@ export function AgentPanel(): React.JSX.Element | null {
             <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">工具调用</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.toolCalls}</p></div>
             <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Token</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.totalTokens.toLocaleString()}</p></div>
           </div>
-          <div className="mt-5 flex items-center justify-between"><h3 className="text-sm font-semibold">工具与审批记录</h3><Badge variant="muted">写入需确认</Badge></div>
+          <div className="mt-5 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold">工具与审批记录</h3><Button type="button" variant="outline" size="sm" onClick={() => { setRecordsError(''); void loadRecords().catch((reason) => setRecordsError(toErrorMessage(reason, '运行记录加载失败'))); }}>刷新记录</Button></div>
+          {recordsError && <p role="alert" className="mt-3 text-sm text-destructive">{recordsError}</p>}
           <div className="mt-3 space-y-2">
             {actions.length === 0 && <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">暂无工具调用记录</div>}
             {actions.map((action) => (
-              <div key={action.id} className="rounded-lg border p-3">
+              <button key={action.id} type="button" onClick={() => setSelectedActionId(action.id)} aria-label={`查看记录：${actionLabel(action.toolName)}`} className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{actionLabel(action.toolName)}</p><Badge variant={action.executionStatus === 'succeeded' ? 'developed' : action.executionStatus === 'failed' ? 'failed' : 'muted'}>{action.executionStatus === 'succeeded' ? '成功' : action.executionStatus === 'failed' ? '失败' : action.executionStatus === 'rejected' ? '已取消' : '处理中'}</Badge></div>
                 <p className="mt-1 text-xs text-muted-foreground">{action.resultSummary || '等待执行'} · {action.approvalStatus === 'not_required' ? '只读免审批' : action.approvalStatus === 'approved' ? '用户已确认' : '用户已取消'}</p>
-                <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3" />{formatDateTime(action.createdAt)}</p>
-              </div>
+                <p className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground"><span className="flex items-center gap-1"><Clock3 className="h-3 w-3" />{formatDateTime(action.createdAt)}</span><span className="flex items-center gap-1">查看详情<ChevronRight className="h-3 w-3" /></span></p>
+              </button>
             ))}
           </div>
         </TabsContent>
       </Tabs>
+
+      <AgentActionDetail actionId={selectedActionId} label={actionLabel(actions.find((action) => action.id === selectedActionId)?.toolName ?? '')} onClose={() => setSelectedActionId(null)} onOpenWorkflow={openRecordedWorkflow} />
 
       <Dialog open={renameOpen} onOpenChange={(next) => { if (!sessionSaving) setRenameOpen(next); }}>
         <DialogContent>

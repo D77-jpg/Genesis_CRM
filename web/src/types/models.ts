@@ -66,6 +66,21 @@ export interface AgentAction {
   createdAt: string;
 }
 
+export interface AgentRecordedWorkflow {
+  kind: 'customer-analysis' | 'mail-analysis' | 'customer-preview';
+  id: string;
+  context?: { type: 'customer' | 'mail'; resourceId: string; direction?: 'inbound' | 'outbound' };
+}
+
+export interface AgentActionDetail extends AgentAction {
+  executedAt?: string;
+  approvedAt?: string;
+  inputs: Record<string, string | number | boolean | string[]>;
+  hasWorkflow: boolean;
+  workflow: AgentRecordedWorkflow | null;
+  run: { model: string; provider: 'mock' | 'openai'; status: 'running' | 'completed' | 'failed'; durationMs: number; inputTokens: number; outputTokens: number; totalTokens: number; errorCode?: string } | null;
+}
+
 export interface AgentEvalCaseResult {
   caseId: string;
   name: string;
