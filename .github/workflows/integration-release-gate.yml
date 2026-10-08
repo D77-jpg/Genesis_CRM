@@ -85,6 +85,8 @@ jobs:
         run: npm ci
       - name: Guarded braces recursion and build consumer regression
         run: npm run test:braces
+      - name: Agent reply Markdown and security regression
+        run: npm run test:agent-content
       - name: Production build（含 typecheck）
         run: npm run build
 

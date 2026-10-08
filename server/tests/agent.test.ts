@@ -281,6 +281,9 @@ test('scratchpad customer workflow extracts, isolates, updates, confirms once, a
 
   const preview = await workflow.createScratchpadCustomerPreview({ idempotencyKey: 'extract-v11-00000001' }, actorA);
   assert.equal(preview.fields.company, 'Northstar Trading Ltd');
+  const previewAction = await AgentAction.findOne({ workflowId: preview.id, toolName: 'extract_scratchpad_customer', userId: userA, projectId: projectA }).orFail();
+  const previewReceipt = await (await import('../src/services/agent/action-detail.service')).getAgentActionDetail(previewAction.id, actorA);
+  assert.deepEqual(previewReceipt.workflow, { kind: 'customer-preview', id: preview.id });
   assert.equal(preview.fields.name, 'Mia Chen');
   assert.equal(preview.fields.priority, 'high');
   assert.equal(preview.duplicates.length, 0);
@@ -599,6 +602,9 @@ test('mail assistant summarizes and extracts a thread, then applies each editabl
     text: 'Product: Solar lantern\nQuantity: 1,200 units\nPrice: Please quote FOB.\nDelivery: before October.\nCan you confirm the warranty?', sentAt: new Date(),
   });
   const analysis = await mailWorkflow.createMailThreadAnalysis({ mailId: inbound.id, direction: 'inbound', idempotencyKey: 'mail-v13-normal-create01' }, actorA);
+  const analysisAction = await AgentAction.findOne({ workflowId: analysis.id, toolName: 'analyze_mail_thread', userId: userA, projectId: projectA }).orFail();
+  const mailReceipt = await (await import('../src/services/agent/action-detail.service')).getAgentActionDetail(analysisAction.id, actorA);
+  assert.deepEqual(mailReceipt.workflow, { kind: 'mail-analysis', id: analysis.id, context: { type: 'mail', resourceId: inbound.id, direction: 'inbound' } });
   assert.equal(analysis.safety.marketingBlocked, false);
   assert.ok(analysis.followUpSuggestion.reason?.trim());
   assert.ok(analysis.followUpSuggestion.evidenceMessageIds?.includes(inbound.id));
@@ -907,4 +913,88 @@ test('fixed eval dataset and diagnostics are admin-only and expose no automatic 
   assert.ok(report.users.some((item) => item.userId === userA.toString()));
   assert.equal(tools.listAgentTools().every((tool) => tool.riskLevel === 'read'), true);
   assert.equal(JSON.stringify(report).includes('OPENAI_API_KEY'), false);
+});
+
+test('DeepSeek structured tasks reserve output for JSON and include the current clock', async () => {
+  const { OpenAIResponsesProvider } = await import('../src/services/agent/openai-provider');
+  const originalFetch = globalThis.fetch;
+  const bodies: Record<string, unknown>[] = [];
+  globalThis.fetch = async (_url, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return new Response(JSON.stringify({ status: 'completed', output_text: '{}', usage: {} }), { status: 200 });
+  };
+  try {
+    const adapter = new OpenAIResponsesProvider({ apiKey: 'fixture-key', model: 'deepseek-flash', baseUrl: 'https://api.deepseek.com', timeoutMs: 5000 });
+    await adapter.extractCustomer({ content: 'Fictional MOQ 73', safetyIdentifier: 'fixture' });
+    await adapter.analyzeCustomer({ input: { customerName: 'Fixture', sourceCatalog: [] }, safetyIdentifier: 'fixture' });
+    await adapter.analyzeMailThread({ input: { messages: [] }, safetyIdentifier: 'fixture' });
+    for (const body of bodies) {
+      assert.deepEqual(body.reasoning, { effort: 'none' });
+      assert.ok(Number(body.max_output_tokens) <= 10000);
+      assert.equal((body.text as { format: { strict: boolean } }).format.strict, true);
+    }
+    for (const body of bodies.slice(1)) {
+      const clock = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/.exec(String(body.instructions));
+      assert.ok(clock && Math.abs(Date.parse(clock[0]) - Date.now()) < 10000);
+    }
+    const other = new OpenAIResponsesProvider({ apiKey: 'fixture-key', model: 'gpt-test', baseUrl: 'https://api.openai.test/v1', timeoutMs: 5000 });
+    await other.analyzeCustomer({ input: { customerName: 'Fixture', sourceCatalog: [] }, safetyIdentifier: 'fixture' });
+    assert.equal(bodies[3].reasoning, undefined);
+    await adapter.createTurn({ instructions: 'Read only', input: [], tools: [], context: { type: 'global' }, userPrompt: 'Hi', safetyIdentifier: 'fixture' });
+    assert.equal(bodies[4].reasoning, undefined);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('incomplete structured responses are rejected even when their JSON happens to parse', async () => {
+  const { OpenAIResponsesProvider } = await import('../src/services/agent/openai-provider');
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output_text: '{}' }), { status: 200 });
+  try {
+    const adapter = new OpenAIResponsesProvider({ apiKey: 'fixture-key', model: 'deepseek-flash', baseUrl: 'https://api.deepseek.com', timeoutMs: 5000 });
+    const expected = { code: 'OPENAI_INCOMPLETE_RESPONSE' };
+    await assert.rejects(adapter.extractCustomer({ content: 'Fixture', safetyIdentifier: 'fixture' }), expected);
+    await assert.rejects(adapter.analyzeCustomer({ input: { customerName: 'Fixture', sourceCatalog: [] }, safetyIdentifier: 'fixture' }), expected);
+    await assert.rejects(adapter.analyzeMailThread({ input: { messages: [] }, safetyIdentifier: 'fixture' }), expected);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('action details are scoped and expose a bounded receipt without arbitrary stored arguments', async () => {
+  const { AgentAction, AgentRun } = await import('../src/models');
+  const { getAgentActionDetail } = await import('../src/services/agent/action-detail.service');
+  const run = await AgentRun.create({ projectId: projectA, userId: userA, provider: 'mock', model: 'receipt-model', status: 'completed', durationMs: 321, inputTokens: 12, outputTokens: 8, totalTokens: 20 });
+  const action = await AgentAction.create({ projectId: projectA, userId: userA, runId: run._id, toolName: 'get_dashboard_summary', riskLevel: 'read', arguments: { sourceCount: 3, apiKey: 'never-expose', prompt: 'never-expose', fields: { apiKey: 'never-expose' } }, requiresApproval: false, approvalStatus: 'not_required', executionStatus: 'succeeded', resultSummary: '已读取仪表盘', executedAt: new Date() });
+  const detail = await getAgentActionDetail(action.id, actorA);
+  assert.equal(detail.resultSummary, '已读取仪表盘');
+  assert.equal(detail.run?.durationMs, 321);
+  assert.equal(detail.run?.totalTokens, 20);
+  assert.deepEqual(detail.inputs, { sourceCount: 3 });
+  assert.equal(detail.workflow, null);
+  assert.equal(JSON.stringify(detail).includes('never-expose'), false);
+  await assert.rejects(getAgentActionDetail(action.id, actorB), { statusCode: 404 });
+  await assert.rejects(getAgentActionDetail(action.id, actorOtherProject), { statusCode: 404 });
+  await assert.rejects(getAgentActionDetail('invalid', actorA), { statusCode: 400 });
+  // Even a bad persisted reference cannot expose another user's model run.
+  await AgentRun.updateOne({ _id: run._id }, { $set: { userId: userB } });
+  assert.equal((await getAgentActionDetail(action.id, actorA)).run, null);
+});
+
+test('saved analysis receipt restores the existing result and denies it after customer ownership changes', async () => {
+  const { AgentAction, AgentCustomerAnalysis, Customer, DevelopmentLetter, FollowUp, AgentRun } = await import('../src/models');
+  const { getAgentActionDetail } = await import('../src/services/agent/action-detail.service');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Fictional Receipt Customer', company: 'Fictional MOQ 73', email: 'receipt@example.test', notes: '虚构交期 19 天' });
+  const analysis = await analysisWorkflow.createCustomerAnalysis({ customerId: customer.id, idempotencyKey: `receipt-${new Types.ObjectId()}` }, actorA);
+  const action = await AgentAction.findOne({ projectId: projectA, userId: userA, workflowId: analysis.id, toolName: 'analyze_customer_and_draft_email' }).orFail();
+  const before = [await AgentRun.countDocuments(), await DevelopmentLetter.countDocuments(), await FollowUp.countDocuments()];
+  const detail = await getAgentActionDetail(action.id, actorA);
+  assert.deepEqual(detail.workflow, { kind: 'customer-analysis', id: analysis.id, context: { type: 'customer', resourceId: customer.id } });
+  const restored = await analysisWorkflow.getCustomerAnalysis(detail.workflow!.id, actorA);
+  assert.equal(restored.id, analysis.id);
+  assert.equal(restored.emailDraft.bodyText, analysis.emailDraft.bodyText);
+  assert.deepEqual([await AgentRun.countDocuments(), await DevelopmentLetter.countDocuments(), await FollowUp.countDocuments()], before);
+  await Customer.updateOne({ _id: customer._id }, { $set: { ownerId: userB } });
+  const unavailable = await getAgentActionDetail(action.id, actorA);
+  assert.equal(unavailable.workflow, null);
+  assert.equal(unavailable.hasWorkflow, true);
+  await AgentCustomerAnalysis.deleteOne({ _id: analysis.id });
+  assert.equal((await getAgentActionDetail(action.id, actorA)).workflow, null);
 });

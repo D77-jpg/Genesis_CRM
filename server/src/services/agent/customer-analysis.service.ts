@@ -218,7 +218,14 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
     await settleAgentQuota(reservation);
     if (error instanceof ApiError) throw error;
-    if (error instanceof AgentProviderError) throw new ApiError(503, 'Agent 分析服务暂时不可用，CRM 数据未改动', 'INTERNAL_ERROR');
+    if (error instanceof AgentProviderError) {
+      const message = error.code === 'OPENAI_INCOMPLETE_RESPONSE'
+        ? 'AI 分析内容未完整返回，请重试；CRM 数据未改动'
+        : error.code === 'OPENAI_INVALID_STRUCTURED_OUTPUT'
+          ? 'AI 返回的分析格式无效，请重试；CRM 数据未改动'
+          : 'Agent 分析服务暂时不可用，CRM 数据未改动';
+      throw new ApiError(503, message, 'INTERNAL_ERROR');
+    }
     throw error;
   }
 }

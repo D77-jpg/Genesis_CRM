@@ -62,6 +62,8 @@ import {
   updateAgentCustomerAnalysisSchema,
 } from '../validators/agent.validator';
 
+import { getAgentActionDetail } from '../services/agent/action-detail.service';
+
 const router = Router();
 const messageLimiter = rateLimit({
   windowMs: 60_000,
@@ -88,6 +90,9 @@ router.post('/sessions/:id/messages', messageLimiter, validate({ params: agentSe
 }));
 router.get('/usage', asyncHandler(async (req, res) => sendSuccess(res, await getAgentUsage(req.user!))));
 router.get('/actions', asyncHandler(async (req, res) => sendSuccess(res, await listAgentActions(req.user!))));
+router.get('/actions/:id', validate({ params: agentSessionParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await getAgentActionDetail(req.params.id, req.user!));
+}));
 router.get('/approvals', asyncHandler(async (req, res) => sendSuccess(res, await listAgentActions(req.user!))));
 
 router.get('/admin/diagnostics', requireRole('admin'), validate({ query: agentDiagnosticsQuerySchema }), asyncHandler(async (req, res) => {
