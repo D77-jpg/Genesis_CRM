@@ -45,6 +45,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
 import type { AgentAction, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
+import { AgentMessageContent } from './agent-message-content';
 import { ScratchpadCustomerPreviewView } from './scratchpad-customer-preview';
 import { CustomerAnalysisView } from './customer-analysis';
 import { MailThreadAnalysisView } from './mail-thread-analysis';
@@ -379,7 +380,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
   return (
     <aside
-      className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-background shadow-2xl sm:top-14 sm:w-[440px]"
+      className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-background shadow-2xl sm:top-14 sm:w-[min(520px,100vw)] lg:w-[560px]"
       aria-label="业务 Agent"
     >
       <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">
@@ -471,12 +472,12 @@ export function AgentPanel(): React.JSX.Element | null {
             </Button>
           </div>
 
-          <div className="flex items-start gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground">
+          <div className="flex shrink-0 items-start gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-            Agent 对话与分析数据读取保持只读；保存开发信草稿或安排跟进都需要你明确确认，Agent 不能直接发送邮件。
+            读取与分析保持只读；保存草稿、安排跟进需确认，不会直接发送邮件。
           </div>
 
-          <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
+          <div ref={scrollRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
             {loading && messages.length === 0 && <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在加载会话…</div>}
             {!loading && messages.length === 0 && (
               <div className="space-y-5 py-8 text-center">
@@ -490,9 +491,9 @@ export function AgentPanel(): React.JSX.Element | null {
               </div>
             )}
             {messages.map((message) => (
-              <article key={message.id} className={message.role === 'user' ? 'ml-10 rounded-xl rounded-br-sm bg-primary px-3 py-2.5 text-sm text-primary-foreground' : `mr-5 rounded-xl rounded-bl-sm border bg-card px-3 py-3 text-sm ${message.status === 'failed' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
-                {message.role === 'assistant' && <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">AI 生成 · 请核对关键信息</p>}
-                <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
+              <article key={message.id} className={message.role === 'user' ? 'ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-3 text-sm text-primary-foreground' : `min-w-0 rounded-2xl rounded-bl-sm border bg-card px-4 py-4 text-sm shadow-sm ${message.status === 'failed' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
+                {message.role === 'assistant' && <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">AI 生成 · 请核对关键信息</p>}
+                {message.role === 'assistant' ? <AgentMessageContent content={message.content} /> : <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>}
               </article>
             ))}
             {sending && <div className="mr-20 flex items-center gap-2 rounded-xl border bg-card px-3 py-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在读取 CRM 数据并分析…</div>}

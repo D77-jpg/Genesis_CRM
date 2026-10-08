@@ -289,3 +289,49 @@
     @apply bg-white text-black;
   }
 }
+
+/* Scoped to assistant replies; plain user messages retain their original text. */
+.agent-message-content {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  color: hsl(var(--foreground));
+}
+.agent-message-content > :first-child { margin-top: 0; }
+.agent-message-content > :last-child { margin-bottom: 0; }
+.agent-message-content p { margin: 0.75rem 0; white-space: pre-line; }
+.agent-message-content :is(h1, h2, h3, h4, h5, h6) {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 650;
+}
+.agent-message-content h1 { font-size: 1.125rem; }
+.agent-message-content strong { font-weight: 650; }
+.agent-message-content :is(ul, ol) { margin: 0.75rem 0; padding-left: 1.5rem; }
+.agent-message-content ul { list-style-type: disc; }
+.agent-message-content ol { list-style-type: decimal; }
+.agent-message-content li { margin: 0.375rem 0; padding-left: 0.125rem; }
+.agent-message-content li > p { margin: 0.25rem 0; }
+.agent-message-content li :is(ul, ol) { margin: 0.25rem 0; }
+.agent-message-content blockquote {
+  margin: 1rem 0; padding: 0.5rem 0.875rem;
+  border-left: 3px solid hsl(var(--primary) / 0.5);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
+}
+.agent-message-content blockquote p { margin: 0; }
+.agent-message-content a { color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 3px; }
+.agent-message-content code { border-radius: 0.25rem; background: hsl(var(--muted)); padding: 0.125rem 0.3rem; font-size: 0.9em; }
+.agent-message-content pre { max-width: 100%; overflow-x: auto; margin: 1rem 0; border: 1px solid hsl(var(--border)); border-radius: 0.5rem; background: hsl(var(--muted) / 0.6); padding: 0.75rem; line-height: 1.6; }
+.agent-message-content pre code { padding: 0; background: transparent; white-space: pre; }
+.agent-message-content hr { margin: 1.25rem 0; border-color: hsl(var(--border)); }
+.agent-message-table { max-width: 100%; overflow-x: auto; margin: 1rem 0; border: 1px solid hsl(var(--border)); border-radius: 0.625rem; }
+.agent-message-table table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.65; }
+.agent-message-table th { background: hsl(var(--muted)); font-weight: 600; text-align: left; }
+.agent-message-table :is(th, td) { padding: 0.625rem 0.75rem; vertical-align: top; border-bottom: 1px solid hsl(var(--border)); }
+.agent-message-table th:first-child, .agent-message-table td:first-child { min-width: 6rem; }
+.agent-message-table tr:last-child td { border-bottom: 0; }
+.agent-message-table tbody tr:nth-child(even) { background: hsl(var(--muted) / 0.3); }
