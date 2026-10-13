@@ -70,19 +70,21 @@ router.get('/status', asyncHandler(async (req, res) => {
   const personal = Boolean(account?.imapEnabled);
   const useLegacyProjectInbox = !personal && isAdmin(req.user);
   const stateKey = personal && account?.imapUsername
-    ? personalMailboxKey({ projectId, accountId: account.id, username: account.imapUsername, mailbox: 'INBOX' })
+    ? personalMailboxKey({ projectId, accountId: account.id, username: account.imapUsername, mailbox: 'INBOX',
+        protocol: account.inboxProtocol, host: account.imapHost, port: account.imapPort })
     : useLegacyProjectInbox ? await mailboxKey(projectId) : null;
-  const state = stateKey ? await MailSyncState.findById(stateKey).select('lastSyncAt lastError skipped failedUids') : null;
+  const state = stateKey ? await MailSyncState.findById(stateKey).select('lastSyncAt lastError skipped failedUids popFailedCount') : null;
   const enabled = personal ? account?.status === 'active' : useLegacyProjectInbox && config.imap.enabled;
   const configured = personal
     ? Boolean(account?.imapHost && account?.imapUsername && account?.credentialSet)
     : useLegacyProjectInbox && imapConfigured(config);
   sendSuccess(res, { enabled: Boolean(enabled), configured, source: personal || !useLegacyProjectInbox ? 'personal' : 'project',
+    protocol: personal ? account?.inboxProtocol || 'imap' : 'imap',
     verificationStatus: personal ? account?.imapVerificationStatus : configured ? 'verified' : 'unverified',
     mailboxAddress: personal ? account?.email : undefined,
     smtpConfigured: personal ? account?.verificationStatus === 'verified' : smtpConfigured(config), channel: config.transport,
     lastSyncAt: state?.lastSyncAt, lastError: state?.lastError || (personal ? account?.lastImapVerificationError : undefined),
-    skipped: state?.skipped || 0, failedCount: state?.failedUids.length || 0 });
+    skipped: state?.skipped || 0, failedCount: account?.inboxProtocol === 'pop3' ? state?.popFailedCount || 0 : state?.failedUids.length || 0 });
 }));
 router.post('/sync', asyncHandler(async (req, res) => {
   const projectId = req.user!.projectId!;

@@ -931,6 +931,7 @@ export interface UserMailAccount {
   smtpSecure: boolean;
   smtpRequireTls: boolean;
   smtpUsername: string;
+  inboxProtocol: 'imap' | 'pop3';
   imapEnabled: boolean;
   imapHost?: string;
   imapPort: number;
@@ -958,6 +959,7 @@ export interface MailAccountInput {
   smtpSecure: boolean;
   smtpRequireTls: boolean;
   smtpUsername: string;
+  inboxProtocol: 'imap' | 'pop3';
   imapEnabled: boolean;
   imapHost?: string;
   imapPort: number;

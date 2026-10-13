@@ -21,7 +21,7 @@ import type { MailAccountInput, MailAccountVerificationResult, UserDto, UserMail
 
 const EMPTY_FORM: MailAccountInput = {
   email: '', displayName: '', smtpHost: '', smtpPort: 465, smtpSecure: true,
-  smtpRequireTls: true, smtpUsername: '', imapEnabled: false, imapHost: '', imapPort: 993,
+  smtpRequireTls: true, smtpUsername: '', inboxProtocol: 'pop3', imapEnabled: false, imapHost: '', imapPort: 995,
   imapSecure: true, imapUsername: '', password: '', status: 'active', dailyLimit: 100,
 };
 
@@ -30,6 +30,7 @@ function toForm(account: UserMailAccount | null, user: UserDto): MailAccountInpu
   return {
     email: account.email, displayName: account.displayName, smtpHost: account.smtpHost,
     smtpPort: account.smtpPort, smtpSecure: account.smtpSecure, smtpRequireTls: account.smtpRequireTls,
+    inboxProtocol: account.inboxProtocol || 'imap',
     smtpUsername: account.smtpUsername, imapEnabled: account.imapEnabled, imapHost: account.imapHost || '',
     imapPort: account.imapPort, imapSecure: account.imapSecure, imapUsername: account.imapUsername || '',
     password: '', status: account.status, dailyLimit: account.dailyLimit,
@@ -63,6 +64,11 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
     return () => { active = false; };
   }, [open, user]);
 
+  const inboxLabel = form.inboxProtocol === 'pop3' ? 'POP3' : 'IMAP';
+  const setProtocol = (protocol: 'imap' | 'pop3') => setForm(current => ({ ...current, inboxProtocol: protocol,
+    imapPort: protocol === 'pop3' ? 995 : 993, imapSecure: true,
+    imapHost: current.imapHost?.replace(/^(imap|pop|pop3)\./, protocol === 'pop3' ? 'pop.' : 'imap.') }));
+
   const setField = <K extends keyof MailAccountInput>(key: K, value: MailAccountInput[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
@@ -74,11 +80,11 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
       return;
     }
     if (form.imapEnabled && (!form.imapHost?.trim() || !form.imapUsername?.trim())) {
-      setError('启用收件同步后，请填写 IMAP 服务器和用户名');
+      setError('启用收件同步后，请填写收件服务器和用户名');
       return;
     }
     if (!account && !form.password) {
-      setError('首次配置必须填写邮箱授权码');
+      setError('首次配置必须填写邮箱密码／授权码');
       return;
     }
     setSaving(true);
@@ -118,10 +124,10 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
   const imapBadge = !form.imapEnabled
     ? <Badge variant="outline">未启用收件</Badge>
     : account?.imapVerificationStatus === 'verified'
-      ? <Badge variant="developed"><CheckCircle2 className="mr-1 h-3 w-3" aria-hidden />IMAP 已验证</Badge>
+      ? <Badge variant="developed"><CheckCircle2 className="mr-1 h-3 w-3" aria-hidden />{inboxLabel} 已验证</Badge>
       : account?.imapVerificationStatus === 'failed'
-        ? <Badge variant="destructive"><TriangleAlert className="mr-1 h-3 w-3" aria-hidden />IMAP 失败</Badge>
-        : <Badge variant="muted">IMAP 未验证</Badge>;
+        ? <Badge variant="destructive"><TriangleAlert className="mr-1 h-3 w-3" aria-hidden />{inboxLabel} 失败</Badge>
+        : <Badge variant="muted">{inboxLabel} 未验证</Badge>;
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next); }}>
@@ -168,9 +174,9 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
                 <div><Label htmlFor="mail-account-port">SMTP 端口</Label><Input id="mail-account-port" type="number" min={1} max={65535} className="mt-1.5" value={form.smtpPort} onChange={(e) => setField('smtpPort', Number(e.target.value))} disabled={saving} /></div>
                 <div><Label htmlFor="mail-account-username">SMTP 用户名</Label><Input id="mail-account-username" className="mt-1.5" value={form.smtpUsername} onChange={(e) => setField('smtpUsername', e.target.value)} placeholder="通常与发件邮箱相同" disabled={saving} /></div>
                 <div>
-                  <Label htmlFor="mail-account-password">邮箱授权码</Label>
-                  <Input id="mail-account-password" type="password" autoComplete="new-password" className="mt-1.5" value={form.password ?? ''} onChange={(e) => setField('password', e.target.value)} placeholder={account?.credentialSet ? '留空则保留原授权码' : '首次配置必须填写'} disabled={saving} />
-                  <p className="mt-1 text-2xs text-muted-foreground">仅加密保存在服务端，页面不会回显。</p>
+                  <Label htmlFor="mail-account-password">邮箱密码／授权码</Label>
+                  <Input id="mail-account-password" type="password" autoComplete="new-password" className="mt-1.5" value={form.password ?? ''} onChange={(e) => setField('password', e.target.value)} placeholder={account?.credentialSet ? '留空则保留已保存的密码' : '首次配置必须填写'} disabled={saving} />
+                  <p className="mt-1 text-2xs text-muted-foreground">未启用客户端安全密码的邮箱可填写邮箱登录密码；已启用则填写授权码／客户端安全密码。仅加密保存在服务端，页面不会回显。</p>
                 </div>
                 <div><Label htmlFor="mail-account-limit">每日发送额度</Label><Input id="mail-account-limit" type="number" min={1} max={5000} className="mt-1.5" value={form.dailyLimit} onChange={(e) => setField('dailyLimit', Number(e.target.value))} disabled={saving} /></div>
               </div>
@@ -187,14 +193,15 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
                   {imapBadge}
                 </summary>
                 <div className="space-y-3 border-t p-3">
-                  <label className="flex items-start gap-2.5"><Switch checked={form.imapEnabled} onCheckedChange={(v) => setField('imapEnabled', v)} disabled={saving} /><span><span className="block text-sm font-medium">启用 IMAP 收件</span><span className="block text-xs text-muted-foreground">只读拉取 INBOX，不会删除或移动原邮箱邮件</span></span></label>
+                  <label className="flex items-start gap-2.5"><Switch checked={form.imapEnabled} onCheckedChange={(v) => setField('imapEnabled', v)} disabled={saving} /><span><span className="block text-sm font-medium">启用收件同步</span><span className="block text-xs text-muted-foreground">下载新邮件并保留服务器上的原邮件</span></span></label>
                   {form.imapEnabled ? <div className="grid gap-3 sm:grid-cols-2">
-                    <div><Label htmlFor="mail-account-imap-host">IMAP 服务器</Label><Input id="mail-account-imap-host" className="mt-1.5" value={form.imapHost || ''} onChange={(e) => setField('imapHost', e.target.value)} placeholder="imap.example.com" disabled={saving} /></div>
-                    <div><Label htmlFor="mail-account-imap-port">IMAP 端口</Label><Input id="mail-account-imap-port" type="number" min={1} max={65535} className="mt-1.5" value={form.imapPort} onChange={(e) => setField('imapPort', Number(e.target.value))} disabled={saving} /></div>
-                    <div><Label htmlFor="mail-account-imap-user">IMAP 用户名</Label><Input id="mail-account-imap-user" className="mt-1.5" value={form.imapUsername || ''} onChange={(e) => setField('imapUsername', e.target.value)} placeholder="通常与发件邮箱相同" disabled={saving} /></div>
-                    <label className="flex items-center gap-2.5 self-end rounded-md border px-3 py-2.5"><Switch checked={form.imapSecure} onCheckedChange={(v) => setField('imapSecure', v)} disabled={saving} /><span><span className="block text-sm font-medium">IMAP SSL/TLS</span><span className="block text-xs text-muted-foreground">通常用于 993 端口</span></span></label>
+                    <div className="sm:col-span-2"><Label htmlFor="mail-account-protocol">收件协议</Label><select id="mail-account-protocol" className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.inboxProtocol} onChange={e => setProtocol(e.target.value as 'imap' | 'pop3')} disabled={saving}><option value="pop3">POP3（保留服务器邮件）</option><option value="imap">IMAP</option></select></div>
+                    <div><Label htmlFor="mail-account-imap-host">{inboxLabel} 服务器</Label><Input id="mail-account-imap-host" className="mt-1.5" value={form.imapHost || ''} onChange={(e) => setField('imapHost', e.target.value)} placeholder={form.inboxProtocol === 'pop3' ? 'pop.alibaba.com' : 'imap.example.com'} disabled={saving} /></div>
+                    <div><Label htmlFor="mail-account-imap-port">{inboxLabel} 端口</Label><Input id="mail-account-imap-port" type="number" min={1} max={65535} className="mt-1.5" value={form.imapPort} onChange={(e) => setField('imapPort', Number(e.target.value))} disabled={saving} /></div>
+                    <div><Label htmlFor="mail-account-imap-user">{inboxLabel} 用户名</Label><Input id="mail-account-imap-user" className="mt-1.5" value={form.imapUsername || ''} onChange={(e) => setField('imapUsername', e.target.value)} placeholder="通常与发件邮箱相同" disabled={saving} /></div>
+                    <label className="flex items-center gap-2.5 self-end rounded-md border px-3 py-2.5"><Switch checked={form.imapSecure} onCheckedChange={(v) => setField('imapSecure', v)} disabled={saving} /><span><span className="block text-sm font-medium">{inboxLabel} SSL/TLS</span><span className="block text-xs text-muted-foreground">{form.inboxProtocol === 'pop3' ? '通常用于 995 端口；关闭时要求 STLS 加密' : '通常用于 993 端口'}</span></span></label>
                   </div> : null}
-                  <p className="text-xs text-muted-foreground">IMAP 与 SMTP 共用上方的邮箱授权码；修改任何连接信息后需重新验证。</p>
+                  <p className="text-xs text-muted-foreground">{inboxLabel} 与 SMTP 共用上方的邮箱密码／授权码；修改任何连接信息后需重新验证。</p>
                 </div>
               </details>
 

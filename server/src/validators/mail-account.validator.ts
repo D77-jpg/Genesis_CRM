@@ -11,18 +11,22 @@ export const upsertMailAccountSchema = z.object({
   smtpSecure: z.boolean().default(true),
   smtpRequireTls: z.boolean().default(true),
   smtpUsername: z.string().trim().min(1, 'SMTP 用户名不能为空').max(300),
+  inboxProtocol: z.enum(['imap', 'pop3']).default('imap'),
   imapEnabled: z.boolean().default(false),
   imapHost: smtpHostSchema.optional().or(z.literal('')),
   imapPort: z.coerce.number().int().min(1).max(65535).default(993),
   imapSecure: z.boolean().default(true),
   imapUsername: z.string().trim().max(300).optional().or(z.literal('')),
-  password: z.string().min(1, '授权码不能为空').max(1000).optional(),
+  password: z.string().min(1, '邮箱密码或授权码不能为空').max(1000).optional(),
   status: z.enum(['active', 'disabled']).default('active'),
   dailyLimit: z.coerce.number().int().min(1, '每日额度至少为 1').max(5000, '每日额度不能超过 5000').default(100),
 }).superRefine((value, context) => {
+  if (/[\r\n\x00]/.test(value.smtpUsername) || /[\r\n\x00]/.test(value.imapUsername || '') || /[\r\n\x00]/.test(value.password || '')) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: '账号和密码不能包含换行或空字符' });
+  }
   if (!value.imapEnabled) return;
-  if (!value.imapHost) context.addIssue({ code: z.ZodIssueCode.custom, path: ['imapHost'], message: 'IMAP 服务器不能为空' });
-  if (!value.imapUsername) context.addIssue({ code: z.ZodIssueCode.custom, path: ['imapUsername'], message: 'IMAP 用户名不能为空' });
+  if (!value.imapHost) context.addIssue({ code: z.ZodIssueCode.custom, path: ['imapHost'], message: '收件服务器不能为空' });
+  if (!value.imapUsername) context.addIssue({ code: z.ZodIssueCode.custom, path: ['imapUsername'], message: '收件用户名不能为空' });
 });
 
 export type UpsertMailAccountInput = z.infer<typeof upsertMailAccountSchema>;
