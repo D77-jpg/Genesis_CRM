@@ -1,3 +1,4 @@
+import { customerTextPatch } from '@/lib/customer-payload';
 /**
  * 客户详情页
  * ------------------------------------------------------------------
@@ -296,8 +297,8 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   /* ---------------------------- 行内编辑保存 ---------------------------- */
 
-  // 后端把文本字段的空串归一化为「跳过」，因此文本字段传空 = 保持原值；
-  // 日期 / 负责人 / 标签的清除显式传 null / []。保存后重拉档案，
+  // 文本字段显式传空串表示清空，未传字段保持原值；
+  // 日期 / 负责人 / 标签的清除传 null / []。保存后重拉档案，
   // 以同步负责人摘要、更新时间、状态徽章与页头姓名。
   const saveField = React.useCallback(
     async (patch: Partial<CustomerInput>) => {
@@ -315,11 +316,10 @@ export function CustomerDetailPage(): React.JSX.Element {
     [id, updateCustomer, reloadCustomer],
   );
 
-  /** 普通文本字段：清空 = 不修改（与编辑弹窗语义一致） */
+  /** 普通文本字段：清空后保存空串，避免旧内容恢复 */
   const textSaver = React.useCallback(
     (field: keyof CustomerInput) => async (raw: string) => {
-      const trimmed = raw.trim();
-      await saveField(trimmed ? { [field]: trimmed } : {});
+      await saveField(customerTextPatch(field, raw));
     },
     [saveField],
   );
@@ -327,7 +327,7 @@ export function CustomerDetailPage(): React.JSX.Element {
   const saveEmail = React.useCallback(
     async (raw: string) => {
       const trimmed = raw.trim().toLowerCase();
-      await saveField(trimmed ? { email: trimmed } : {});
+      await saveField({ email: trimmed });
     },
     [saveField],
   );
@@ -350,7 +350,7 @@ export function CustomerDetailPage(): React.JSX.Element {
   );
 
   const saveLeadSource = React.useCallback(
-    async (raw: string) => saveField(raw === SOURCE_NONE ? {} : { leadSource: raw }),
+    async (raw: string) => saveField({ leadSource: raw === SOURCE_NONE ? '' : raw }),
     [saveField],
   );
 

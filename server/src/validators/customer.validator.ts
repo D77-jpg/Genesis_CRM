@@ -124,9 +124,35 @@ export const createCustomerSchema = z.object({
   source: z.literal('manual').optional(),
 });
 
+// Creation/import still normalize empty text. Updates distinguish omitted from explicitly cleared.
+const clearableText = <T extends z.ZodTypeAny>(schema: T) => z.union([z.string().trim().length(0), schema]);
+
 export const updateCustomerSchema = z
   .object({
     ...customerFields,
+    company: clearableText(customerFields.company),
+    email: clearableText(customerFields.email),
+    phone: clearableText(customerFields.phone),
+    title: clearableText(customerFields.title),
+    industry: clearableText(customerFields.industry),
+    address: clearableText(customerFields.address),
+    country: clearableText(customerFields.country),
+    website: clearableText(customerFields.website),
+    grade: clearableText(customerFields.grade),
+    notes: clearableText(customerFields.notes),
+    whatsapp: clearableText(customerFields.whatsapp),
+    skype: clearableText(customerFields.skype),
+    linkedin: clearableText(customerFields.linkedin),
+    facebook: clearableText(customerFields.facebook),
+    instagram: clearableText(customerFields.instagram),
+    interestedProducts: clearableText(customerFields.interestedProducts),
+    productModel: clearableText(customerFields.productModel),
+    productCategory: clearableText(customerFields.productCategory),
+    expectedQuantity: clearableText(customerFields.expectedQuantity),
+    targetPrice: clearableText(customerFields.targetPrice),
+    moq: clearableText(customerFields.moq),
+    requirementNotes: clearableText(customerFields.requirementNotes),
+    leadSource: clearableText(customerFields.leadSource),
     source: customerSourceSchema,
     letterCount: z.number().int().min(0),
     lastContactAt: isoDateSchema,

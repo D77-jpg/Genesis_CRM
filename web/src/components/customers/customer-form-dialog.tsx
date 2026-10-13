@@ -25,13 +25,14 @@ import { Label, FieldMessage, RequiredMark } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ApiClientError } from '@/lib/api';
-import { defaultCustomerFormValues, customerFormSchema, parseTagsText, type CustomerFormValues } from '@/lib/validators';
+import { defaultCustomerFormValues, customerFormSchema, type CustomerFormValues } from '@/lib/validators';
+import { toCustomerPayload } from '@/lib/customer-payload';
 import { toInputDate } from '@/lib/format';
 import { CUSTOMER_LEAD_SOURCE_OPTIONS, CUSTOMER_PRIORITY_OPTIONS, CUSTOMER_STATUS_OPTIONS } from '@/constants';
 import { useCustomerStore } from '@/store/customer.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { useSaveShortcut } from '@/hooks/use-ui';
-import type { Customer, CustomerInput, CustomerPriority, CustomerStatus, OwnerOption } from '@/types';
+import type { Customer, CustomerPriority, CustomerStatus, OwnerOption } from '@/types';
 
 /** 负责人 Select 里表示「未分配」的哨兵值（Radix 不允许 value=""） */
 const OWNER_NONE = '__none__';
@@ -84,47 +85,6 @@ function toFormValues(customer: Customer | null | undefined): CustomerFormValues
     ownerId: customer.ownerId ?? '',
     nextFollowUpAt: toInputDate(customer.nextFollowUpAt),
     tagsText: (customer.tags ?? []).join(', '),
-  };
-}
-
-/** 表单值 → 接口载荷（空字符串统一转 undefined，避免把已有值清空） */
-function toPayload(values: CustomerFormValues): CustomerInput {
-  const text = (value?: string): string | undefined => {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : undefined;
-  };
-
-  return {
-    name: values.name.trim(),
-    company: text(values.company),
-    email: text(values.email)?.toLowerCase(),
-    phone: text(values.phone),
-    title: text(values.title),
-    industry: text(values.industry),
-    address: text(values.address),
-    country: text(values.country),
-    website: text(values.website),
-    grade: text(values.grade),
-    notes: text(values.notes),
-    whatsapp: text(values.whatsapp),
-    skype: text(values.skype),
-    linkedin: text(values.linkedin),
-    facebook: text(values.facebook),
-    instagram: text(values.instagram),
-    interestedProducts: text(values.interestedProducts),
-    productModel: text(values.productModel),
-    productCategory: text(values.productCategory),
-    expectedQuantity: text(values.expectedQuantity),
-    targetPrice: text(values.targetPrice),
-    moq: text(values.moq),
-    requirementNotes: text(values.requirementNotes),
-    leadSource: text(values.leadSource),
-    priority: values.priority,
-    status: values.status,
-    // 负责人 / 下次跟进：空值统一传 null（编辑时表示清除，后端会保留 null 而不跳过）
-    ownerId: values.ownerId?.trim() ? values.ownerId.trim() : null,
-    nextFollowUpAt: values.nextFollowUpAt?.trim() ? values.nextFollowUpAt.trim() : null,
-    tags: parseTagsText(values.tagsText),
   };
 }
 
@@ -218,7 +178,7 @@ export function CustomerFormDialog({
       setSubmitting(true);
       setServerError(null);
       try {
-        const payload = toPayload(values);
+        const payload = toCustomerPayload(values);
         if (isEdit && customer) {
           const saved = await updateCustomer(customer.id, payload);
           toast.success('客户信息已保存', { description: payload.name });
