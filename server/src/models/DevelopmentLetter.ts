@@ -42,6 +42,7 @@ export interface IDevelopmentLetter {
   sentAt?: Date;
   /** 邮件服务器返回的 messageId */
   messageId?: string;
+  agentOutreachId?: Types.ObjectId;
   requestKey?: string;
   threadId?: string;
   inReplyTo?: string;
@@ -137,6 +138,7 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
     },
     sentAt: { type: Date },
     messageId: { type: String, trim: true },
+    agentOutreachId: { type: Schema.Types.ObjectId, ref: 'AgentCustomerAnalysis' },
     requestKey: { type: String },
     threadId: { type: String, index: true },
     inReplyTo: String,

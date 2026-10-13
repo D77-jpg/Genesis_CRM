@@ -13,7 +13,7 @@
     "lint:fix": "eslint . --fix",
     "test:braces": "node --test tests/guarded-braces.test.cjs",
     "test:agent-content": "node --test tests/agent-message-content.test.cjs",
-    "test:customer-fields": "node --test tests/customer-payload.test.cjs"
+    "test:customer-fields": "node --test tests/customer-payload.test.cjs tests/outreach-composer.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createFollowUp } from './followup.service';
 import { DevelopmentLetter, Customer, User } from '../models';
 import env from '../config/env';
 import { sendMail, type SendMailPayload, type SendMailResult } from './mailer.service';
@@ -17,6 +18,12 @@ async function reconcile(id: string): Promise<void> {
     $inc: { letterCount: 1 }, $addToSet: { mailEffectIds: letter._id },
     $max: { lastContactAt: letter.sentAt || letter.createdAt },
   });
+  if (letter.agentOutreachId && letter.channel === 'smtp' && letter.sentBy) {
+    await createFollowUp(String(letter.customerId), { method: 'email', result: 'no_reply',
+      content: `首封开发信已发送（SMTP 已接受，等待客户回复）。主题：${letter.subject}；收件人：${letter.recipientEmail}。`,
+      followUpAt: letter.sentAt || letter.createdAt }, String(letter.sentBy), String(letter.projectId),
+      { agentActionKey: `first-outreach-sent:${letter.agentOutreachId}` });
+  }
   if (letter.markAsDeveloped) await Customer.updateOne({ _id: letter.customerId, projectId: letter.projectId, status: 'pending' }, { $set: { status: 'contacted' } });
   await DevelopmentLetter.updateOne({ _id: id, projectId: letter.projectId, status: { $in: ['sent', 'opened'] } }, { $set: { effectsPending: false } });
 }

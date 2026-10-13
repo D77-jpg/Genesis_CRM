@@ -22,6 +22,7 @@ export interface IAgentMessage {
   status: 'completed' | 'failed';
   requestKey?: string;
   replyToMessageId?: Types.ObjectId;
+  uiAction?: { kind: 'compose-first-outreach'; customerId: string; analysisId: string };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -113,6 +114,8 @@ const agentMessageSchema = new Schema<IAgentMessage>(
     status: { type: String, enum: ['completed', 'failed'], default: 'completed', required: true },
     requestKey: { type: String, trim: true, maxlength: 128 },
     replyToMessageId: { type: Schema.Types.ObjectId, ref: 'AgentMessage' },
+    uiAction: { type: new Schema({ kind: { type: String, enum: ['compose-first-outreach'], required: true },
+      customerId: { type: String, required: true }, analysisId: { type: String, required: true } }, { _id: false }) },
   },
   { timestamps: true, versionKey: false },
 );

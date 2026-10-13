@@ -6,8 +6,11 @@ import { customerTextPatch } from '@/lib/customer-payload';
  * URL 带 #letters 时自动滚动到历史区（从列表页「开发信数」徽章点进来）。
  */
 import * as React from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { apiGet, toErrorMessage } from '@/lib/api';
+import { outreachComposerDraft } from '@/lib/outreach-composer';
+import type { AgentCustomerAnalysis } from '@/types';
 import {
   Activity,
   BadgeDollarSign,
@@ -61,6 +64,7 @@ import { LetterViewDialog } from '@/components/letters/letter-view-dialog';
 import { LetterHistoryTable } from '@/components/letters/letter-history-table';
 import { useCustomer, useCustomerLetters, useIndustries, useOwners } from '@/hooks/use-queries';
 import { usePageTitle } from '@/hooks/use-ui';
+import { useFollowUpStore } from '@/store/followup.store';
 import { useCustomerStore } from '@/store/customer.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { useLetterStore } from '@/store/letter.store';
@@ -264,6 +268,21 @@ export function CustomerDetailPage(): React.JSX.Element {
   /* ---------------------------- 弹窗状态 ---------------------------- */
 
   const [sendOpen, setSendOpen] = React.useState(false);
+  const [composeDraft, setComposeDraft] = React.useState<{ analysisId: string; subject: string; content: string } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const composeAnalysisId = searchParams.get('composeAnalysis');
+  React.useEffect(() => { setComposeDraft(null); setSendOpen(false); }, [id]);
+  React.useEffect(() => {
+    if (!customer?.id || !composeAnalysisId || !/^[a-f\d]{24}$/i.test(composeAnalysisId)) return;
+    let active = true;
+    void apiGet<AgentCustomerAnalysis>(`/agent/customer-analyses/${composeAnalysisId}`).then(analysis => {
+      if (!active) return;
+      setComposeDraft(outreachComposerDraft(analysis, customer.id));
+      setResendTarget(null); setSendOpen(true);
+      setSearchParams(current => { const next = new URLSearchParams(current); next.delete('composeAnalysis'); return next; }, { replace: true });
+    }).catch(error => { if (active) toast.error('草稿无法打开', { description: toErrorMessage(error, '请重新生成或检查客户权限') }); });
+    return () => { active = false; };
+  }, [customer?.id, composeAnalysisId, setSearchParams]);
   const [resendTarget, setResendTarget] = React.useState<DevelopmentLetter | null>(null);
   const [viewTarget, setViewTarget] = React.useState<DevelopmentLetter | null>(null);
   const [viewOpen, setViewOpen] = React.useState(false);
@@ -290,7 +309,8 @@ export function CustomerDetailPage(): React.JSX.Element {
   const handleSent = React.useCallback(
     (result: { customer: Customer }) => {
       if (id && result.customer) patchLocal(id, result.customer);
-      void refreshAll();
+      void Promise.all([refreshAll(),
+        ...(id ? [useFollowUpStore.getState().fetchFollowUps(id), useFollowUpStore.getState().fetchTimeline(id)] : [])]);
     },
     [id, patchLocal, refreshAll],
   );
@@ -962,10 +982,11 @@ export function CustomerDetailPage(): React.JSX.Element {
         open={sendOpen}
         onOpenChange={(open) => {
           setSendOpen(open);
-          if (!open) setResendTarget(null);
+          if (!open) { setResendTarget(null); setComposeDraft(null); }
         }}
         customer={customer}
         letter={resendTarget}
+        initialDraft={composeDraft}
         onSent={handleSent}
       />
 

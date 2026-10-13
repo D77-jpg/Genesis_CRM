@@ -149,8 +149,19 @@ export class MockAgentProvider implements AgentProvider {
       gaps,
       recommendations: [{ text: '发送一封简短英文邮件，确认当前采购优先级、规格和目标时间。', rationale: '先补齐关键需求，再决定是否准备正式报价。', sourceIds: evidence.length ? evidence : profile ? [profile.sourceId] : [] }],
       emailDraft: {
+        ...(request.input.firstOutreach ? {
+          subject: `Packaging ideas for ${String(profileData.company || request.input.customerName)}`,
+          bodyText: `Dear ${request.input.customerName},
+
+I am ${request.input.seller?.senderName || 'the sales team'} from ${request.input.seller?.companyName || 'our company'}. Would it be useful to compare packaging options for your current range?
+
+Best regards,
+${request.input.seller?.senderName || 'Sales team'}
+${request.input.seller?.companyName || ''}${request.input.seller?.senderEmail ? '\n' + request.input.seller.senderEmail : ''}`,
+        } : {
         subject: `Next steps for ${String(profileData.company || request.input.customerName)}`,
         bodyText: `Dear ${request.input.customerName},\n\nThank you for your interest. To make sure we prepare the most relevant information, could you please confirm your preferred product specifications, estimated quantity, and target timeline?\n\nOnce we have these details, we will review the next steps with you.\n\nBest regards,`,
+        }),
       },
       followUpPlan: { method: 'email', content: '确认客户规格、预计数量和目标采购时间，并根据回复准备下一步资料。', dueAt },
       usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },

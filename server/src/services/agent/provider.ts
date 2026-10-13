@@ -43,6 +43,9 @@ export interface CustomerExtractionResult {
 }
 
 export interface CustomerAnalysisInput {
+  firstOutreach?: boolean;
+  userRequest?: string;
+  seller?: { companyName: string; website?: string; moq?: string; senderName: string; senderEmail?: string };
   customerName: string;
   customerEmail?: string;
   sourceCatalog: { sourceId: string; kind: string; label: string; content: unknown }[];

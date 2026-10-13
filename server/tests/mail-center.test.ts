@@ -795,3 +795,45 @@ test('84 clearable fields retain length, required-name, owner, and project valid
   await request('PUT', `/customers/${customer.id}`, ironSalesToken, { requirementNotes: '' }, 404, ironhueProjectId);
   assert.equal((await request('GET', `/customers/${customer.id}`, salesToken)).requirementNotes, 'Retain until owner clears');
 });
+
+
+test('85 an Agent first-outreach draft records a follow-up only on SMTP acceptance, exactly once across reconciliation', async () => {
+  const { createCustomerAnalysis } = await import('../src/services/agent/customer-analysis.service');
+  const actor = { id: salesId, username: 'sales', displayName: 'Sales Fixture', role: 'user' as const, projectId };
+  const analysis = await createCustomerAnalysis({ customerId, idempotencyKey: `outreach-${suffix}` }, actor, { firstOutreach: true });
+  const draft = await request('POST', '/letters', salesToken, { customerId, subject: analysis.emailDraft.subject,
+    content: '<p>First outreach fixture</p>', agentAnalysisId: analysis.id, saveAsDraft: true, requestKey: `outreach-draft-${suffix}` }, 201);
+  assert.equal(draft.letter.status, 'draft');
+  const initialCount = await models.FollowUp.countDocuments({ customerId });
+  const sent = await request('POST', `/letters/${draft.letter.id}/resend`, salesToken, { scheduledAt: new Date(Date.now()+3600000).toISOString(), requestKey: `outreach-send-${suffix}` }, 201);
+  let job = await models.DevelopmentLetter.findById(sent.letter.id);
+  assert.equal(String(job?.agentOutreachId), analysis.id);
+  await due(sent.letter.id);
+  await queue.processMailJob(sent.letter.id, async () => ({ accepted: false, channel: 'smtp', durationMs: 0, retryable: true, error: 'fixture failure' }));
+  assert.equal(await models.FollowUp.countDocuments({ customerId }), initialCount);
+  // Restore the fixture job channel to mock before the second attempt so it never requires a real account.
+  await models.DevelopmentLetter.updateOne({ _id: sent.letter.id }, { $set: { channel: 'mock' } });
+  await due(sent.letter.id);
+  await queue.processMailJob(sent.letter.id, async () => ({ accepted: true, channel: 'smtp', durationMs: 0 }));
+  assert.equal(await models.FollowUp.countDocuments({ customerId }), initialCount+1);
+  const followup = await models.FollowUp.findOne({ customerId, content: /首封开发信已发送/ }).sort({ createdAt: -1 });
+  assert.equal(followup?.method, 'email'); assert.equal(String(followup?.createdBy), salesId); assert.equal(followup?.result, 'no_reply');
+  job = await models.DevelopmentLetter.findById(sent.letter.id);
+  assert.equal(followup?.followUpAt.toISOString(), job?.sentAt?.toISOString());
+  await models.DevelopmentLetter.updateOne({ _id: sent.letter.id }, { $set: { effectsPending: true } });
+  await Promise.all([queue.runMailQueue(), queue.runMailQueue()]);
+  assert.equal(await models.FollowUp.countDocuments({ customerId }), initialCount+1);
+});
+
+test('86 Agent draft association is scoped to its user/customer/project, and mock delivery never creates a real sent follow-up', async () => {
+  const { createCustomerAnalysis } = await import('../src/services/agent/customer-analysis.service');
+  const actor = { id: salesId, username: 'sales', displayName: 'Sales Fixture', role: 'user' as const, projectId };
+  const analysis = await createCustomerAnalysis({ customerId, idempotencyKey: `outreach-scope-${suffix}` }, actor, { firstOutreach: true });
+  const base = { subject: 'Fixture only', content: '<p>Fixture</p>', agentAnalysisId: analysis.id, saveAsDraft: true };
+  await request('POST', '/letters', otherToken, { ...base, customerId: otherCustomerId }, 404);
+  await request('POST', '/letters', adminToken, { ...base, customerId }, 404);
+  await request('POST', '/letters', ironSalesToken, { ...base, customerId }, 404, ironhueProjectId);
+  const count = await models.FollowUp.countDocuments({ customerId });
+  const sent = await request('POST', '/letters', salesToken, { ...base, customerId, saveAsDraft: false, requestKey: `outreach-mock-${suffix}` }, 201);
+  assert.equal(sent.channel, 'mock'); assert.equal(await models.FollowUp.countDocuments({ customerId }), count);
+});
