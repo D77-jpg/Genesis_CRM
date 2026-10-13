@@ -1,4 +1,4 @@
-import { test, before, after } from 'node:test';
+import { test, before, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -6,11 +6,13 @@ import type { Server } from 'node:http';
 import type { ImapFlow } from 'imapflow';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
 import type { MongoMemoryServer } from 'mongodb-memory-server';
 
 // Explicit overrides ensure tests NEVER send mail or access a supplied .env inbox.
 process.env.NODE_ENV = 'test';
 process.env.MAIL_TRANSPORT = 'mock';
+process.env.AI_PROVIDER = 'mock';
 process.env.IMAP_ENABLED = 'false';
 process.env.JWT_SECRET = randomUUID();
 process.env.ADMIN_PASSWORD = `fixture-${randomUUID()}`;
@@ -689,4 +691,74 @@ test('77 disabled or unverified mailboxes block real sending while drafts remain
   } finally {
     config.MAIL_TRANSPORT = 'mock';
   }
+});
+
+
+const popInput = () => ({ email: personalMailbox, displayName: 'Sales Fixture', smtpHost: 'smtp.example.com', smtpPort: 25,
+  smtpSecure: false, smtpRequireTls: false, smtpUsername: personalMailbox, status: 'active', dailyLimit: 100,
+  inboxProtocol: 'pop3', imapEnabled: true, imapHost: 'pop.example.com', imapPort: 995, imapSecure: true, imapUsername: personalMailbox });
+
+test('78 POP3 selection persists and resets only inbox verification, retaining the encrypted password when blank', async () => {
+  const before = await models.UserMailAccount.findById(personalMailAccountId).select('+credentialCiphertext');
+  const saved = await request('PUT', `/mail-accounts/users/${salesId}`, adminToken, popInput());
+  assert.equal(saved.inboxProtocol, 'pop3'); assert.equal(saved.imapPort, 995); assert.equal(saved.imapVerificationStatus, 'unverified');
+  const stored = await models.UserMailAccount.findById(personalMailAccountId).select('+credentialCiphertext');
+  assert.equal(stored?.credentialCiphertext, before?.credentialCiphertext);
+  assert.equal(saved.password, undefined); assert.equal(saved.credentialCiphertext, undefined);
+  await request('POST', '/mail/sync', salesToken, {}, 409);
+});
+
+test('79 SMTP accepts the same mailbox password and POP3 verification authenticates and checks UIDL without retrieving or sending', async () => {
+  const localRequire = createRequire(import.meta.url);
+  const mailer = localRequire('nodemailer');
+  const { Pop3Client } = localRequire('../src/services/pop3-client.ts');
+  let smtpVerified = 0, popVerified = 0, popListed = 0, retrieved = 0;
+  const mocks = [mock.method(mailer, 'createTransport', (options: any) => {
+    assert.equal(options.port, 25); assert.equal(options.secure, false); assert.equal(options.requireTLS, false);
+    assert.equal(options.auth.pass, 'fixture-authorization-code');
+    return { async verify() { smtpVerified++; }, close() {} };
+  }), mock.method(Pop3Client.prototype, 'connect', async () => { popVerified++; }),
+  mock.method(Pop3Client.prototype, 'list', async () => { popListed++; return []; }),
+  mock.method(Pop3Client.prototype, 'retrieve', async () => { retrieved++; return Buffer.alloc(0); }),
+  mock.method(Pop3Client.prototype, 'quit', async () => {})];
+  try {
+    const result = await request('POST', `/mail-accounts/users/${salesId}/verify`);
+    assert.equal(result.success, true, JSON.stringify({ message: result.message, smtpVerified, popVerified, popListed })); assert.match(result.message, /POP3/);
+    assert.equal(result.account.imapVerificationStatus, 'verified');
+    assert.equal(smtpVerified, 1); assert.equal(popVerified, 1); assert.equal(popListed, 1); assert.equal(retrieved, 0);
+  } finally { mocks.forEach(method => method.mock.restore()); }
+});
+
+test('80 POP3 UIDL receipts survive renumbering, isolate failed mail, skip oversized messages, and keep owner scope', async () => {
+  const { getPersonalImapConfig } = await import('../src/services/mail-account.service');
+  let numbers = [1, 2, 3]; let bad = true; let fetched = 0;
+  const factory = () => ({ async connect() {}, close() {}, async quit() {},
+    async list() { return [{ number: numbers[0], uid: 'uid-owned', size: 1024 }, { number: numbers[1], uid: 'uid-bad', size: 1024 },
+      { number: numbers[2], uid: 'uid-too-large', size: 99 * 1024 * 1024 }]; },
+    async retrieve(number: number) { fetched++; if (number === numbers[1] && bad) return Buffer.from('Subject: Missing sender\r\n\r\n');
+      return mime(`pop-${suffix}-${number === numbers[0] ? 'owned' : 'retry'}`); } });
+  await sync.syncPersonalInbox(projectId, salesId, undefined, factory);
+  const account = (await getPersonalImapConfig(projectId, salesId))!;
+  const key = sync.personalMailboxKey(account);
+  let state = await mailModels.MailSyncState.findById(key);
+  assert.equal(state?.popSeenUids.length, 2); assert.equal(state?.popFailedCount, 1); assert.equal(state?.skipped, 1);
+  const imported = await mailModels.MailMessage.findOne({ messageId: `<pop-${suffix}-owned@fixture.test>` });
+  assert.equal(String(imported?.customerId), customerId); assert.equal(String(imported?.mailboxUserId), salesId);
+  await request('GET', `/mail/${imported?._id}`, otherToken, undefined, 404);
+  numbers = [7, 8, 9]; bad = false;
+  await sync.syncPersonalInbox(projectId, salesId, undefined, factory);
+  assert.equal(fetched, 3); // Only the failed UIDL was retrieved again after number changes.
+  state = await mailModels.MailSyncState.findById(key);
+  assert.equal(state?.popFailedCount, 0); assert.equal(state?.popSeenUids.length, 3); assert.ok(!state?.leaseOwner);
+  await sync.syncPersonalInbox(projectId, salesId, undefined, factory); assert.equal(fetched, 3);
+  const status = await request('GET', '/mail/status', salesToken); assert.equal(status.protocol, 'pop3'); assert.ok(status.lastSyncAt);
+});
+
+test('81 POP3 connection failure is sanitized, releases the lease, and protocol change invalidates inbox verification', async () => {
+  await sync.syncPersonalInbox(projectId, salesId, undefined, () => ({ async connect() { throw { code: 'EAUTH', message: 'PRIVATE' }; },
+    async list() { return []; }, async retrieve() { return Buffer.alloc(0); }, async quit() {}, close() {} }));
+  const status = await request('GET', '/mail/status', salesToken);
+  assert.match(status.lastError, /POP3 身份验证失败/); assert.ok(!status.lastError.includes('PRIVATE'));
+  const saved = await request('PUT', `/mail-accounts/users/${salesId}`, adminToken, { ...popInput(), inboxProtocol: 'imap', imapPort: 993 });
+  assert.equal(saved.imapVerificationStatus, 'unverified'); assert.equal(saved.verificationStatus, 'verified');
 });

@@ -36,9 +36,11 @@ export function attachmentAllowed(name: string, mime: string, data: Buffer, limi
 
 // Error messages from network libraries may contain credentials/server responses.
 // Only allow a fixed vocabulary to reach persistence, APIs or logs.
-export function mailError(error: unknown, protocol: 'SMTP' | 'IMAP'): string {
+export function mailError(error: unknown, protocol: 'SMTP' | 'IMAP' | 'POP3'): string {
   const e = error as { code?: string; authenticationFailed?: boolean };
-  if (e?.code === 'EAUTH' || e?.authenticationFailed) return `${protocol} 身份验证失败，请检查账号和授权码`;
+  if (e?.code === 'POP3_UIDL_UNSUPPORTED') return 'POP3 服务器不支持 UIDL，无法可靠地去重同步';
+  if (e?.code === 'POP3_RESPONSE_TOO_LARGE') return 'POP3 响应或邮件过大，已停止本轮同步';
+  if (e?.code === 'EAUTH' || e?.authenticationFailed) return `${protocol} 身份验证失败，请检查账号和邮箱密码／授权码`;
   if (e?.code === 'ECONNREFUSED' || e?.code === 'ENOTFOUND' || e?.code === 'EDNS') return `${protocol} 无法连接，请检查服务器和端口`;
   if (e?.code === 'ETIMEDOUT' || e?.code === 'ESOCKET') return `${protocol} 连接中断或超时`;
   return `${protocol} 操作失败，请检查配置或稍后重试`;

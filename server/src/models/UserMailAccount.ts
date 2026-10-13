@@ -13,6 +13,7 @@ export interface IUserMailAccount {
   smtpSecure: boolean;
   smtpRequireTls: boolean;
   smtpUsername: string;
+  inboxProtocol: 'imap' | 'pop3';
   imapEnabled: boolean;
   imapHost?: string;
   imapPort: number;
@@ -49,6 +50,7 @@ const UserMailAccountSchema = new Schema<IUserMailAccount>(
     smtpSecure: { type: Boolean, default: true },
     smtpRequireTls: { type: Boolean, default: true },
     smtpUsername: { type: String, required: true, trim: true, maxlength: 300 },
+    inboxProtocol: { type: String, enum: ['imap', 'pop3'], default: 'imap' },
     imapEnabled: { type: Boolean, default: false, index: true },
     imapHost: { type: String, trim: true, lowercase: true, maxlength: 253 },
     imapPort: { type: Number, default: 993, min: 1, max: 65535 },

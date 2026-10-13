@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ImapFlow } from 'imapflow';
+import { Pop3Client, type Pop3Connection, type Pop3Options } from './pop3-client';
 import { simpleParser, type AddressObject } from 'mailparser';
 import env from '../config/env';
 import { MailMessage, MailSyncState } from '../models/MailMessage';
@@ -138,8 +139,10 @@ interface MailboxSyncConfig {
   personal?: { mailAccountId: string; userId: string; address: string };
 }
 
-export const personalMailboxKey = (config: Pick<PersonalImapConfig, 'projectId' | 'accountId' | 'username' | 'mailbox'>) => createHash('sha256')
-  .update(`${config.projectId}|${config.accountId}|${config.username}|${config.mailbox}`)
+export const personalMailboxKey = (config: Pick<PersonalImapConfig, 'projectId' | 'accountId' | 'username' | 'mailbox'> & { protocol?: 'imap' | 'pop3'; host?: string; port?: number }) => createHash('sha256')
+  .update(config.protocol === 'pop3'
+    ? `${config.projectId}|${config.accountId}|${config.username}|pop3|${config.host}|${config.port}`
+    : `${config.projectId}|${config.accountId}|${config.username}|${config.mailbox}`)
   .digest('hex');
 
 async function syncMailbox(config: MailboxSyncConfig, makeClient: ClientFactory): Promise<void> {
@@ -230,7 +233,76 @@ async function syncProject(projectId: string, makeClient: ClientFactory): Promis
   }, makeClient);
 }
 
+export type Pop3ClientFactory = (options: Pop3Options) => Pop3Connection;
+
+export async function syncPopMailbox(config: PersonalImapConfig, makeClient: Pop3ClientFactory = options => new Pop3Client(options)): Promise<void> {
+  const syncId = `account:${config.accountId}`;
+  if (syncing.has(syncId)) return;
+  syncing.add(syncId);
+  const key = personalMailboxKey(config);
+  const token = randomUUID();
+  let client: Pop3Connection | undefined;
+  let renew: NodeJS.Timeout | undefined;
+  let leaseLost = false;
+  try {
+    await MailSyncState.updateOne({ _id: key }, { $setOnInsert: { projectId: config.projectId } }, { upsert: true });
+    const state = await MailSyncState.findOneAndUpdate({ _id: key, $or: [{ leaseUntil: { $lt: new Date() } }, { leaseUntil: null }] },
+      { $set: { leaseOwner: token, leaseUntil: new Date(Date.now() + 120000) } }, { new: true });
+    if (!state) return;
+    client = makeClient({ host: config.host, port: config.port, secure: config.secure,
+      username: config.username, password: config.password, maxMessageSize: env.IMAP_MAX_MESSAGE_SIZE });
+    renew = setInterval(() => {
+      void MailSyncState.updateOne({ _id: key, leaseOwner: token }, { $set: { leaseUntil: new Date(Date.now() + 120000) } })
+        .then(r => { if (!r.matchedCount) { leaseLost = true; client?.close(); } })
+        .catch(() => { leaseLost = true; client?.close(); });
+    }, 30000);
+    await client.connect();
+    const messages = await client.list();
+    const uidHash = (uid: string) => createHash('sha256').update(uid).digest('hex');
+    const current = new Set(messages.map(message => uidHash(message.uid)));
+    // Retain receipts only for UIDLs still on this server; credentials and content are never stored here.
+    const seen = new Set((state.popSeenUids || []).filter(uid => current.has(uid)));
+    const pending = messages.filter(message => !seen.has(uidHash(message.uid)));
+    const failed = new Set((state.popFailedUids || []).filter(uid => current.has(uid)));
+    const candidates = [...pending.filter(message => !failed.has(uidHash(message.uid))).reverse().slice(0, 80),
+      ...pending.filter(message => failed.has(uidHash(message.uid))).slice(0, 20)];
+    for (const message of candidates) {
+      if (leaseLost) break;
+      try {
+        if (message.size > env.IMAP_MAX_MESSAGE_SIZE) {
+          await MailSyncState.updateOne({ _id: key, leaseOwner: token }, { $inc: { skipped: 1 } });
+        } else {
+          const source = await client.retrieve(message.number);
+          if (leaseLost) break;
+          await importMail(source, key, config.projectId,
+            { mailAccountId: config.accountId, userId: config.userId, address: config.mailboxAddress });
+        }
+        seen.add(uidHash(message.uid));
+        failed.delete(uidHash(message.uid));
+        await MailSyncState.updateOne({ _id: key, leaseOwner: token }, { $addToSet: { popSeenUids: uidHash(message.uid) } });
+      } catch {
+        failed.add(uidHash(message.uid));
+        logger.warn('POP3 单封邮件同步失败，保留服务器邮件并在下轮重试');
+      }
+    }
+    if (!leaseLost) await MailSyncState.updateOne({ _id: key, leaseOwner: token }, { $set: {
+      popSeenUids: [...seen], popFailedUids: [...failed], popFailedCount: failed.size, lastSyncAt: new Date(),
+      lastError: failed.size ? `${failed.size} 封邮件待重试` : '',
+    } });
+  } catch (error) {
+    logger.warn(mailError(error, 'POP3'));
+    await MailSyncState.updateOne({ _id: key, leaseOwner: token }, { $set: { lastError: mailError(error, 'POP3') } }).catch(() => undefined);
+  } finally {
+    if (renew) clearInterval(renew);
+    await client?.quit().catch(() => undefined);
+    client?.close();
+    await MailSyncState.updateOne({ _id: key, leaseOwner: token }, { $unset: { leaseOwner: 1, leaseUntil: 1 } }).catch(() => undefined);
+    syncing.delete(syncId);
+  }
+}
+
 async function syncPersonal(config: PersonalImapConfig, makeClient: ClientFactory): Promise<void> {
+  if (config.protocol === 'pop3') { await syncPopMailbox(config); return; }
   await syncMailbox({
     syncId: `account:${config.accountId}`,
     key: personalMailboxKey(config),
@@ -245,10 +317,11 @@ async function syncPersonal(config: PersonalImapConfig, makeClient: ClientFactor
   }, makeClient);
 }
 
-export async function syncPersonalInbox(projectId: string, userId: string, clientFactory?: ClientFactory): Promise<boolean> {
+export async function syncPersonalInbox(projectId: string, userId: string, clientFactory?: ClientFactory, popFactory?: Pop3ClientFactory): Promise<boolean> {
   const config = await getPersonalImapConfig(projectId, userId);
   if (!config) return false;
-  await syncPersonal(config, clientFactory ?? (options => new ImapFlow(options)));
+  if (config.protocol === 'pop3') await syncPopMailbox(config, popFactory);
+  else await syncPersonal(config, clientFactory ?? (options => new ImapFlow(options)));
   return true;
 }
 

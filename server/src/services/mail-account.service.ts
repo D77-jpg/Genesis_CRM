@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
+import { Pop3Client } from './pop3-client';
+import env from '../config/env';
 import { Types } from 'mongoose';
 import { MailAccountAudit, MailQuotaBucket, User, UserMailAccount, type UserMailAccountDocument } from '../models';
 import { ApiError } from '../utils/ApiError';
@@ -19,6 +21,7 @@ export interface MailAccountDto {
   smtpSecure: boolean;
   smtpRequireTls: boolean;
   smtpUsername: string;
+  inboxProtocol: 'imap' | 'pop3';
   imapEnabled: boolean;
   imapHost?: string;
   imapPort: number;
@@ -83,6 +86,7 @@ async function toDto(account: UserMailAccountDocument): Promise<MailAccountDto> 
     smtpSecure: account.smtpSecure,
     smtpRequireTls: account.smtpRequireTls,
     smtpUsername: account.smtpUsername,
+    inboxProtocol: account.inboxProtocol || 'imap',
     imapEnabled: Boolean(account.imapEnabled),
     ...(account.imapHost ? { imapHost: account.imapHost } : {}),
     imapPort: account.imapPort || 993,
@@ -161,7 +165,7 @@ export async function upsertMailAccount(
   await assertTargetUser(projectId, targetUserId);
   let account = await UserMailAccount.findOne({ projectId, userId: targetUserId })
     .select('+credentialCiphertext +credentialIv +credentialTag');
-  if (!account && !input.password) throw ApiError.badRequest('首次配置必须填写邮箱授权码');
+  if (!account && !input.password) throw ApiError.badRequest('首次配置必须填写邮箱密码或授权码');
 
   const connectionChanged = !account
     || account.email !== input.email
@@ -172,6 +176,7 @@ export async function upsertMailAccount(
     || account.smtpUsername !== input.smtpUsername
     || Boolean(input.password);
   const imapChanged = !account
+    || (account.inboxProtocol || 'imap') !== input.inboxProtocol
     || account.imapEnabled !== input.imapEnabled
     || account.imapHost !== (input.imapHost || undefined)
     || account.imapPort !== input.imapPort
@@ -191,6 +196,7 @@ export async function upsertMailAccount(
       smtpSecure: input.smtpSecure,
       smtpRequireTls: input.smtpRequireTls,
       smtpUsername: input.smtpUsername,
+      inboxProtocol: input.inboxProtocol,
       imapEnabled: input.imapEnabled,
       imapHost: input.imapHost || undefined,
       imapPort: input.imapPort,
@@ -218,6 +224,7 @@ export async function upsertMailAccount(
   account.smtpSecure = input.smtpSecure;
   account.smtpRequireTls = input.smtpRequireTls;
   account.smtpUsername = input.smtpUsername;
+  account.inboxProtocol = input.inboxProtocol;
   account.imapEnabled = input.imapEnabled;
   account.imapHost = input.imapHost || undefined;
   account.imapPort = input.imapPort;
@@ -257,6 +264,8 @@ export async function verifyMailAccount(projectId: string, targetUserId: string,
   if (!account) throw ApiError.notFound('尚未配置个人发件邮箱');
   let transporter: ReturnType<typeof nodemailer.createTransport> | undefined;
   let imapClient: ImapFlow | undefined;
+  let popClient: Pop3Client | undefined;
+  const inboxProtocol = account.inboxProtocol === 'pop3' ? 'POP3' : 'IMAP';
   try {
     const password = decryptCredential({ ciphertext: account.credentialCiphertext, iv: account.credentialIv, tag: account.credentialTag });
     transporter = nodemailer.createTransport({
@@ -300,30 +309,37 @@ export async function verifyMailAccount(projectId: string, targetUserId: string,
   try {
     if (!account.imapHost || !account.imapUsername) throw new Error('IMAP_CONFIG_MISSING');
     const password = decryptCredential({ ciphertext: account.credentialCiphertext, iv: account.credentialIv, tag: account.credentialTag });
-    imapClient = new ImapFlow({
-      host: account.imapHost,
-      port: account.imapPort,
-      secure: account.imapSecure,
-      doSTARTTLS: account.imapSecure ? undefined : true,
-      auth: { user: account.imapUsername, pass: password },
-      logger: false,
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000,
-      disableAutoIdle: true,
-    });
-    imapClient.on('error', () => undefined);
-    await imapClient.connect();
+    if (account.inboxProtocol === 'pop3') {
+      popClient = new Pop3Client({ host: account.imapHost, port: account.imapPort, secure: account.imapSecure,
+        username: account.imapUsername, password, maxMessageSize: env.IMAP_MAX_MESSAGE_SIZE, timeoutMs: 20000 });
+      await popClient.connect();
+      await popClient.list(); // Also verify UIDL support, without downloading any mail.
+    } else {
+      imapClient = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: account.imapSecure,
+        doSTARTTLS: account.imapSecure ? undefined : true,
+        auth: { user: account.imapUsername, pass: password },
+        logger: false,
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000,
+        disableAutoIdle: true,
+      });
+      imapClient.on('error', () => undefined);
+      await imapClient.connect();
+    }
     account.imapVerificationStatus = 'verified';
     account.imapVerifiedAt = new Date();
     account.lastImapVerificationError = undefined;
     await account.save();
     await audit({ projectId, accountId: String(account._id), actorId, targetUserId, action: 'imap_verified' });
-    return { success: true, message: 'SMTP 与 IMAP 连接验证通过', account: await toDto(account) };
+    return { success: true, message: `SMTP 与 ${inboxProtocol} 连接验证通过`, account: await toDto(account) };
   } catch (error) {
     const message = error instanceof Error && error.message === 'IMAP_CONFIG_MISSING'
-      ? 'IMAP 配置不完整'
-      : mailError(error, 'IMAP');
+      ? `${inboxProtocol} 配置不完整`
+      : mailError(error, inboxProtocol);
     account.imapVerificationStatus = 'failed';
     account.imapVerifiedAt = undefined;
     account.lastImapVerificationError = message;
@@ -331,12 +347,15 @@ export async function verifyMailAccount(projectId: string, targetUserId: string,
     await audit({ projectId, accountId: String(account._id), actorId, targetUserId, action: 'imap_verification_failed', detail: { message } });
     return { success: false, message: `SMTP 已验证，${message}`, account: await toDto(account) };
   } finally {
+    await popClient?.quit().catch(() => undefined);
     if (imapClient?.usable) await imapClient.logout().catch(() => undefined);
     else imapClient?.close();
   }
 }
 
+// Legacy IMAP field names are retained for existing accounts; protocol selects the receiver.
 export interface PersonalImapConfig {
+  protocol: 'imap' | 'pop3';
   accountId: string;
   projectId: string;
   userId: string;
@@ -354,11 +373,12 @@ function toPersonalImapConfig(account: UserMailAccountDocument): PersonalImapCon
   if (account.status !== 'active' || !account.imapEnabled || account.imapVerificationStatus !== 'verified'
     || !account.imapHost || !account.imapUsername) return null;
   return {
+    protocol: account.inboxProtocol || 'imap',
     accountId: String(account._id),
     projectId: String(account.projectId),
     userId: String(account.userId),
     mailboxAddress: account.email,
-    profileKey: `user-imap-${account.id}-v${account.credentialVersion}`,
+    profileKey: `user-${account.inboxProtocol || 'imap'}-${account.id}-v${account.credentialVersion}`,
     host: account.imapHost,
     port: account.imapPort,
     secure: account.imapSecure,
