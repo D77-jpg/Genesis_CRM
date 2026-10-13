@@ -762,3 +762,36 @@ test('81 POP3 connection failure is sanitized, releases the lease, and protocol 
   const saved = await request('PUT', `/mail-accounts/users/${salesId}`, adminToken, { ...popInput(), inboxProtocol: 'imap', imapPort: 993 });
   assert.equal(saved.imapVerificationStatus, 'unverified'); assert.equal(saved.verificationStatus, 'verified');
 });
+
+
+test('82 customer requirement notes clear through PUT and stay empty after reloading while omitted fields remain intact', async () => {
+  const customer = await request('POST', '/customers', salesToken, { name: 'Clearable fields fixture', company: 'Fixture Company',
+    notes: 'Keep this note', requirementNotes: 'Old requirement', country: '德国' }, 201);
+  const saved = await request('PUT', `/customers/${customer.id}`, salesToken, { requirementNotes: '  \n ' });
+  assert.equal(saved.requirementNotes, ''); assert.equal(saved.notes, 'Keep this note');
+  const reloaded = await request('GET', `/customers/${customer.id}`, salesToken);
+  assert.equal(reloaded.requirementNotes, ''); assert.equal(reloaded.company, 'Fixture Company'); assert.equal(reloaded.country, '德国');
+  await request('PUT', `/customers/${customer.id}`, salesToken, { title: 'Buyer' });
+  assert.equal((await request('GET', `/customers/${customer.id}`, salesToken)).notes, 'Keep this note');
+});
+
+test('83 clearing email and optional text works for multiple customers without violating the email unique index', async () => {
+  for (let i = 0; i < 2; i++) {
+    const customer = await request('POST', '/customers', salesToken, { name: `Clear email fixture ${i}`,
+      email: `clear-${suffix}-${i}@example.test`, phone: '+123', notes: 'Old note', website: 'https://example.test',
+      interestedProducts: 'Box', requirementNotes: 'Old requirement' }, 201);
+    const cleared = await request('PUT', `/customers/${customer.id}`, salesToken,
+      { email: '', phone: '', notes: '', website: '', interestedProducts: '', requirementNotes: '' });
+    for (const field of ['email','phone','notes','website','interestedProducts','requirementNotes']) assert.equal(cleared[field], '');
+    assert.equal((await request('GET', `/customers/${customer.id}`, salesToken)).email, '');
+  }
+});
+
+test('84 clearable fields retain length, required-name, owner, and project validation', async () => {
+  const customer = await request('POST', '/customers', salesToken, { name: 'Scoped clear fixture', requirementNotes: 'Retain until owner clears' }, 201);
+  await request('PUT', `/customers/${customer.id}`, salesToken, { name: '' }, 422);
+  await request('PUT', `/customers/${customer.id}`, salesToken, { requirementNotes: 'x'.repeat(5001) }, 422);
+  await request('PUT', `/customers/${customer.id}`, otherToken, { requirementNotes: '' }, 404);
+  await request('PUT', `/customers/${customer.id}`, ironSalesToken, { requirementNotes: '' }, 404, ironhueProjectId);
+  assert.equal((await request('GET', `/customers/${customer.id}`, salesToken)).requirementNotes, 'Retain until owner clears');
+});

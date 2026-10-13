@@ -245,7 +245,7 @@ export async function updateCustomer(
   // 业务员只能改自己名下客户
   assertCustomerAccess(actor, (before as { ownerId?: unknown }).ownerId, (before as { projectId?: unknown }).projectId);
 
-  // 过滤掉 undefined，避免 $set 把字段清空；null 保留（用于清除负责人 / 跟进时间）
+  // 未传字段保持原值；显式空串清空文本；null 保留用于清除负责人 / 跟进时间。
   const patch = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined));
   // 严格分配制：业务员不能转移客户归属（负责人仅管理员可调整）
   if (actor && !isAdmin(actor)) delete patch.ownerId;
