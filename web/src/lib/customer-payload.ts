@@ -43,4 +43,3 @@ export function toCustomerPayload(values: CustomerFormValues): CustomerInput {
     tags: parseTagsText(values.tagsText),
   };
 }
-
