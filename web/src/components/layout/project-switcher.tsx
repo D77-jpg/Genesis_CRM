@@ -20,7 +20,7 @@ export function ProjectSwitcher(): React.JSX.Element {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="min-w-0 max-w-[11rem] gap-2 sm:max-w-[15rem]" aria-label={`切换项目，当前为 ${active.name}`}>
+        <Button type="button" variant="outline" size="sm" className="workspace-project-switcher min-w-0 max-w-[11rem] gap-2 sm:max-w-[18rem]" aria-label={`切换项目，当前为 ${active.name}`}>
           <Building2 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
           <span className="truncate">{active.name}</span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />

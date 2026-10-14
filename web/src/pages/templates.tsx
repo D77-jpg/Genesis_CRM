@@ -9,6 +9,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 import { FilePlus2, FilterX } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
+import { WorkspaceToolbar } from '@/components/common/workspace';
 import { SearchInput } from '@/components/common/search-input';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Card } from '@/components/ui/card';
@@ -116,7 +117,7 @@ export function TemplatesPage(): React.JSX.Element {
   }, [deleteTarget, deleteTemplate]);
 
   return (
-    <div className="space-y-4">
+    <div className="workspace-page">
       <PageHeader
         title="模板中心"
         description={
@@ -147,7 +148,7 @@ export function TemplatesPage(): React.JSX.Element {
 
       {/* ---------------------------- 筛选栏 ---------------------------- */}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <WorkspaceToolbar>
         <SearchInput
           value={keyword}
           onChange={(value) => setFilters({ keyword: value })}
@@ -168,7 +169,7 @@ export function TemplatesPage(): React.JSX.Element {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </WorkspaceToolbar>
 
       <Card className="space-y-4 p-4" aria-label="模板效果">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -199,7 +200,7 @@ export function TemplatesPage(): React.JSX.Element {
 
       {/* ---------------------------- 模板卡片 ---------------------------- */}
 
-      <Card className="p-4">
+      <section aria-label="开发信模板列表">
         <TemplateList
           templates={templates}
           loading={loading}
@@ -214,7 +215,7 @@ export function TemplatesPage(): React.JSX.Element {
           onDelete={setDeleteTarget}
           onResetFilters={resetFilters}
         />
-      </Card>
+      </section>
 
       {/* ---------------------------- 弹窗 ---------------------------- */}
 

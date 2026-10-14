@@ -305,7 +305,7 @@ export function UsersPage(): React.JSX.Element {
   const confirmName = confirm ? confirm.user.displayName || confirm.user.username : '';
 
   return (
-    <div className="space-y-4">
+    <div className="workspace-page">
       <PageHeader
         title="用户管理"
         description={

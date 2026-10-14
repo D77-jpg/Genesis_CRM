@@ -6,6 +6,7 @@
  * Radix Select 不接受空字符串 value，「不限」统一用 'all' 或独立的 NONE 值。
  */
 import * as React from 'react';
+import { WorkspaceToolbar } from '@/components/common/workspace';
 import { FilterX } from 'lucide-react';
 import { SearchInput } from '@/components/common/search-input';
 import { Button } from '@/components/ui/button';
@@ -182,7 +183,7 @@ export function CustomerFilters({
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <WorkspaceToolbar label="客户搜索与筛选">
       <SearchInput
         value={values.search}
         onChange={(search) => onChange({ search })}
@@ -274,6 +275,6 @@ export function CustomerFilters({
           清空筛选
         </Button>
       ) : null}
-    </div>
+    </WorkspaceToolbar>
   );
 }

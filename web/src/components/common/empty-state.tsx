@@ -16,8 +16,8 @@ interface StateBlockProps {
 
 function StateBlock({ icon, title, description, action, className }: StateBlockProps): React.JSX.Element {
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-2 px-6 py-14 text-center', className)}>
-      {icon ? <div className="mb-1 text-muted-foreground/70">{icon}</div> : null}
+    <div className={cn('flex flex-col items-center justify-center gap-2.5 px-5 py-14 text-center', className)}>
+      {icon ? <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/70 text-muted-foreground">{icon}</div> : null}
       <p className="text-sm font-medium">{title}</p>
       {description ? <p className="max-w-md text-xs leading-relaxed text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-3">{action}</div> : null}
@@ -27,14 +27,15 @@ function StateBlock({ icon, title, description, action, className }: StateBlockP
 
 /** 数据为空（还没有任何记录） */
 export function EmptyState({
+  icon = <Inbox className="h-6 w-6" strokeWidth={1.5} aria-hidden />,
   title = '暂无数据',
   description,
   action,
   className,
-}: Omit<StateBlockProps, 'icon'>): React.JSX.Element {
+}: Omit<StateBlockProps, 'icon'> & { icon?: React.ReactNode }): React.JSX.Element {
   return (
     <StateBlock
-      icon={<Inbox className="h-9 w-9" strokeWidth={1.4} aria-hidden />}
+      icon={icon}
       title={title}
       description={description}
       action={action}

@@ -79,13 +79,13 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
     finally { setRunning(false); }
   }
 
-  if (loading && !data) return <div className="space-y-5"><PageHeader title="Agent 诊断" /><TableSkeleton rows={8} /></div>;
+  if (loading && !data) return <div className="workspace-page"><PageHeader title="Agent 诊断" /><TableSkeleton rows={8} /></div>;
   if (error && !data) return <ErrorState description={error} onRetry={() => void load()} />;
   if (!data) return <></>;
 
   const latestEval = data.evaluations[0];
   return (
-    <div className="space-y-5">
+    <div className="workspace-page">
       <PageHeader
         title="Agent 诊断"
         description={`近 ${data.periodDays} 天的使用、安全和审批运行状态。此页面只提供诊断，不增加 Agent 执行权限。`}

@@ -18,7 +18,7 @@ export function NotFoundPage(): React.JSX.Element {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="workspace-page flex min-h-[65vh] items-center justify-center bg-background p-4">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>

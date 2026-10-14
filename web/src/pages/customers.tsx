@@ -265,7 +265,7 @@ export function CustomersPage(): React.JSX.Element {
   /* ---------------------------- 渲染 ---------------------------- */
 
   return (
-    <div className="space-y-4">
+    <div className="workspace-page">
       <PageHeader
         title="客户管理"
         description={

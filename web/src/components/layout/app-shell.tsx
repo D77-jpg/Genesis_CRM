@@ -15,8 +15,9 @@ import { useEscapeKey } from '@/hooks/use-ui';
 import { cn } from '@/lib/utils';
 import { ScratchpadPanel } from '@/components/scratchpad/scratchpad-panel';
 import { AgentPanel } from '@/components/agent/agent-panel';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
-const SIDEBAR_WIDTH = '15rem';
+const SIDEBAR_WIDTH = '14.5rem';
 const SIDEBAR_WIDTH_COLLAPSED = '4.5rem';
 
 export function AppShell(): React.JSX.Element {
@@ -46,7 +47,8 @@ export function AppShell(): React.JSX.Element {
   const sidebarWidth = collapsed && !isMobile ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH;
 
   return (
-    <div className="min-h-screen bg-background" style={{ ['--sidebar-width' as string]: sidebarWidth }}>
+    <div className="workspace-shell min-h-screen bg-background" style={{ ['--sidebar-width' as string]: sidebarWidth }}>
+      <a href="#workspace-main" className="workspace-skip-link">跳转到主要内容</a>
       {/* 桌面端固定侧栏 */}
       <aside
         className="fixed inset-y-0 left-0 z-30 hidden border-r border-sidebar-border transition-[width] duration-200 ease-out lg:block"
@@ -56,28 +58,21 @@ export function AppShell(): React.JSX.Element {
       </aside>
 
       {/* 移动端抽屉 */}
-      {mobileNavOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-in fade-in-0"
-            onClick={() => setMobileNavOpen(false)}
-            aria-hidden
-          />
-          <aside
-            className={cn(
-              'absolute inset-y-0 left-0 w-[16rem] max-w-[85vw] border-r border-sidebar-border shadow-xl',
-              'animate-in slide-in-from-left duration-200',
-            )}
+      <Dialog open={mobileNavOpen && isMobile} onOpenChange={setMobileNavOpen}>
+          <DialogContent
+            hideClose
+            aria-describedby={undefined}
+            className={cn('left-0 top-0 h-dvh max-h-none w-[16rem] max-w-[85vw] translate-x-0 translate-y-0 gap-0 rounded-none border-0 p-0 sm:p-0')}
           >
+            <DialogTitle className="sr-only">主导航</DialogTitle>
             <Sidebar collapsed={false} onToggleCollapse={toggleSidebar} mobile onNavigate={() => setMobileNavOpen(false)} />
-          </aside>
-        </div>
-      )}
+          </DialogContent>
+      </Dialog>
 
-      <div className="flex min-h-screen flex-col transition-[padding] duration-200 ease-out lg:pl-[var(--sidebar-width)]">
+      <div className="flex min-h-screen min-w-0 flex-col transition-[padding] duration-200 ease-out lg:pl-[var(--sidebar-width)]">
         <Header onOpenMobileNav={() => setMobileNavOpen(true)} />
-        <main className="no-print flex-1 p-3 sm:p-5">
-          <div className="container mx-auto w-full max-w-[1400px]">
+        <main id="workspace-main" tabIndex={-1} className="workspace-main no-print min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-6">
+          <div className="mx-auto min-w-0 w-full max-w-[var(--workspace-content-width)]">
             <Outlet />
           </div>
         </main>

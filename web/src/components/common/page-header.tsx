@@ -31,8 +31,8 @@ export function PageHeader({
   const navigate = useNavigate();
 
   return (
-    <header className={cn('flex flex-col gap-3', className)}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <header className={cn('workspace-page-header flex flex-col gap-3', className)}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           {backTo ? (
             <Button
@@ -46,10 +46,10 @@ export function PageHeader({
               {backLabel}
             </Button>
           ) : null}
-          <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
-          {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+          <h1 className="break-words text-xl font-semibold leading-tight tracking-tight sm:text-2xl">{title}</h1>
+          {description ? <p className="mt-1.5 max-w-4xl text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
         </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+        {actions ? <div className="workspace-page-actions flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
       {children}
     </header>

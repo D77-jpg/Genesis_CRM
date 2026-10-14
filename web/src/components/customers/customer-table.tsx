@@ -67,7 +67,7 @@ export interface CustomerTableProps {
 /** 姓名 + 公司的组合单元格，公司缺失时显示来源 */
 function CustomerIdentity({ customer }: { customer: Customer }): React.JSX.Element {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex w-[13rem] max-w-full items-center gap-2.5">
       <span
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
         aria-hidden
@@ -75,8 +75,8 @@ function CustomerIdentity({ customer }: { customer: Customer }): React.JSX.Eleme
         {initials(customer.name)}
       </span>
       <span className="min-w-0">
-        <span className="block truncate font-medium text-foreground">{customer.name}</span>
-        <span className="block truncate text-xs text-muted-foreground">
+        <span className="block truncate font-medium text-foreground" title={customer.name}>{customer.name}</span>
+        <span className="block truncate text-xs text-muted-foreground" title={[customer.company, customer.title].filter(Boolean).join(' · ')}>
           {customer.company || CUSTOMER_SOURCE_LABEL[customer.source] || '未填写公司'}
           {customer.title ? ` · ${customer.title}` : ''}
         </span>
@@ -359,7 +359,7 @@ export function CustomerTable({
               <SortableHeader field="name" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)}>
                 客户
               </SortableHeader>
-              <TableHead className="min-w-[14rem]">联系方式</TableHead>
+              <TableHead className="min-w-[12rem]">联系方式</TableHead>
               <SortableHeader field="industry" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)}>
                 行业 / 地区
               </SortableHeader>

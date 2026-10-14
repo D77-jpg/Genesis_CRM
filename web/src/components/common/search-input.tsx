@@ -106,7 +106,7 @@ export function SearchInput({
           }
         }}
         placeholder={placeholder}
-        className={cn('h-8 pl-8 pr-8 text-sm', keyword && 'pr-8')}
+        className={cn('h-9 pl-9 pr-9 text-sm', keyword && 'pr-9')}
       />
       {keyword ? (
         <button
@@ -114,7 +114,7 @@ export function SearchInput({
           onClick={clear}
           disabled={disabled}
           aria-label="清空搜索"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         >
           <X className="h-3.5 w-3.5" />
         </button>

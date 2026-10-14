@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="table-scroll relative w-full">
+    <div className="table-scroll workspace-table relative w-full" role="region" aria-label={`${props['aria-label'] || '数据表格'}，可横向滚动`} tabIndex={0}>
       <table ref={ref} className={cn('w-full caption-bottom border-collapse text-sm', className)} {...props} />
     </div>
   ),
@@ -19,7 +19,7 @@ Table.displayName = 'Table';
 
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <thead ref={ref} className={cn('sticky top-0 z-10 bg-muted/70 backdrop-blur [&_tr]:border-b', className)} {...props} />
+    <thead ref={ref} className={cn('sticky top-0 z-10 bg-muted/55 [&_tr]:border-b', className)} {...props} />
   ),
 );
 TableHeader.displayName = 'TableHeader';
@@ -43,7 +43,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-primary/5 data-[disabled]:opacity-60',
+        'border-b transition-colors hover:bg-accent/55 data-[state=selected]:bg-primary/5 data-[disabled]:opacity-60',
         className,
       )}
       {...props}
@@ -57,7 +57,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        'h-10 whitespace-nowrap px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+        'h-10 whitespace-nowrap px-3 text-left align-middle text-xs font-semibold tracking-normal text-muted-foreground',
         className,
       )}
       {...props}
@@ -68,7 +68,7 @@ TableHead.displayName = 'TableHead';
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn('px-3 py-2.5 align-middle', className)} {...props} />
+    <td ref={ref} className={cn('px-3 py-3 align-middle', className)} {...props} />
   ),
 );
 TableCell.displayName = 'TableCell';
@@ -108,7 +108,7 @@ function SortableHeader({
         type="button"
         onClick={() => onSort(field)}
         className={cn(
-          'flex h-10 w-full items-center gap-1 px-3 text-left text-xs font-semibold uppercase tracking-wide transition-colors',
+          'flex h-10 w-full items-center gap-1 px-3 text-left text-xs font-semibold tracking-normal transition-colors',
           'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           active ? 'text-foreground' : 'text-muted-foreground',
         )}

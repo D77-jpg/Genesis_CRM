@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/common/page-header';
+import { WorkspaceToolbar } from '@/components/common/workspace';
+import { EmptyState } from '@/components/common/empty-state';
 import { SendLetterDialog } from '@/components/letters/send-letter-dialog';
 import { useAuthStore, selectIsAdmin } from '@/store/auth.store';
 import { LETTER_STATUS_LABEL } from '@/constants';
@@ -120,17 +122,17 @@ export function MailPage(): React.JSX.Element {
     </div>
   </div>;
 
-  return <div className="space-y-5">
+  return <div className="workspace-page">
     <PageHeader title="邮件中心" description="客户往来、发送记录与定时任务" />
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <WorkspaceToolbar label="邮件文件夹与操作" className="justify-between">
       <div className="flex flex-wrap gap-2" aria-label="邮件文件夹">
         {(Object.keys(folderLabels) as Folder[]).filter(f => admin || f !== 'unknown').map(f =>
-          <Button key={f} variant={folder === f ? 'default' : 'outline'} aria-pressed={folder === f} onClick={() => { setFolder(f); setPage(1); setParams({}); }}>{folderLabels[f]}</Button>)}
+          <Button key={f} variant={folder === f ? 'secondary' : 'ghost'} aria-pressed={folder === f} onClick={() => { setFolder(f); setPage(1); setParams({}); }}>{folderLabels[f]}</Button>)}
       </div>
       <div className="flex gap-2"><Button variant="outline" disabled={loading} onClick={() => void refresh()}><RefreshCw className="mr-2 h-4 w-4" aria-hidden />刷新</Button>
         <Button onClick={() => { setCompose(!compose); setSelectedCustomer(null); }}><Mail className="mr-2 h-4 w-4" aria-hidden />写邮件</Button></div>
-    </div>
-    {status && <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+    </WorkspaceToolbar>
+    {status && <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground">
       <span>{status.enabled && status.verificationStatus === 'verified'
         ? `${status.source === 'personal' ? '个人' : '项目统一'}收件同步${status.mailboxAddress ? `：${status.mailboxAddress}` : ''} · ${status.lastSyncAt ? formatDateTime(status.lastSyncAt) : '等待首次同步'}`
         : status.enabled ? '收件邮箱尚未验证' : `${status.source === 'personal' ? '个人' : '项目统一'}收件同步未启用`}</span>
@@ -141,11 +143,11 @@ export function MailPage(): React.JSX.Element {
     </div>}
     {error && <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">{error}</p>}
     {compose && !selectedCustomer && customerPicker}
-    <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.5fr)]">
-      <section className="min-w-0 rounded-lg border bg-card" aria-label={folderLabels[folder]} aria-busy={loading}>
+    <div className="mail-workspace grid gap-4 xl:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.5fr)]">
+      <section className="workspace-surface min-w-0 rounded-lg border bg-card" aria-label={folderLabels[folder]} aria-busy={loading}>
         <div className="border-b p-3 text-sm text-muted-foreground">{folderLabels[folder]} · {total} 封{loading ? ' · 加载中…' : ''}</div>
         {!items.length && <p className="p-8 text-center text-sm text-muted-foreground">{loading ? '正在加载邮件…' : '此文件夹暂无邮件'}</p>}
-        {items.map(item => <button key={item.id} onClick={() => open(item)} className={`block w-full space-y-1 border-b p-4 text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selectedId === item.id ? 'bg-muted' : ''}`}>
+        {items.map(item => <button key={item.id} onClick={() => open(item)} className={`block w-full space-y-1 border-b p-4 text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selectedId === item.id ? 'bg-primary/5 shadow-[inset_3px_0_0_hsl(var(--primary))]' : ''}`}>
           <div className="flex items-start justify-between gap-2"><span className="min-w-0 break-all text-sm">{item.direction === 'inbound' ? item.fromName || item.from : item.to.join(', ')}</span><span className="shrink-0 text-xs text-muted-foreground">{formatDateTime(item.scheduledAt || item.sentAt)}</span></div>
           <p className={`line-clamp-2 break-words text-sm ${!item.read ? 'font-bold' : ''}`}>{item.subject || '（无主题）'}</p>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">{item.direction === 'inbound' && <span>{item.read ? '已读' : '未读'}</span>}{item.status && <Badge variant="outline">{LETTER_STATUS_LABEL[item.status]}</Badge>}<span>{item.customerId ? (item.customerName || '已关联客户') : '未关联客户'}</span>{item.attachments.length > 0 && <span>附件 {item.attachments.length}</span>}</div>
@@ -153,8 +155,8 @@ export function MailPage(): React.JSX.Element {
         </button>)}
         <div className="flex items-center justify-between p-3"><Button variant="ghost" disabled={page === 1 || loading} onClick={() => setPage(p => p - 1)}>上一页</Button><span className="text-xs">{page} / {Math.max(1, Math.ceil(total / 25))}</span><Button variant="ghost" disabled={page * 25 >= total || loading} onClick={() => setPage(p => p + 1)}>下一页</Button></div>
       </section>
-      <section className="min-w-0 rounded-lg border bg-card p-4 sm:p-5" aria-label="邮件会话详情">
-        {!detail ? <div className="py-20 text-center text-sm text-muted-foreground">{selectedId ? '正在加载邮件详情…' : '选择一封邮件，查看客户往来会话'}</div> : <div className="space-y-4">
+      <section className="workspace-surface min-w-0 rounded-lg border bg-card p-4 sm:p-5" aria-label="邮件会话详情">
+        {!detail ? <EmptyState icon={<MailSearch className="h-6 w-6" aria-hidden />} title={selectedId ? '正在加载邮件详情…' : '选择一封邮件'} description="在左侧查看邮件，客户资料和往来会话会显示在这里。" /> : <div className="space-y-4">
           <h2 className="break-words text-lg font-semibold">{detail.mail.subject || '（无主题）'}</h2>
           <div className="flex flex-wrap items-center gap-2">
             {detail.customer ? <Link className="text-sm text-primary underline" to={`/customers/${detail.customer.id}`}>客户：{detail.customer.name} · {detail.customer.company}</Link> : <Badge variant="outline">未关联客户</Badge>}

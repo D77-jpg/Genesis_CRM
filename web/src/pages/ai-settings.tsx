@@ -108,14 +108,15 @@ export function AiSettingsPage(): React.JSX.Element {
     } finally { setBusy(null); }
   }
 
-  if (loading && !settings) return <div className="space-y-5"><PageHeader title="AI 配置" /><p className="text-sm text-muted-foreground">正在加载配置…</p></div>;
+  if (loading && !settings) return <div className="workspace-page"><PageHeader title="AI 配置" /><p className="text-sm text-muted-foreground">正在加载配置…</p></div>;
   if (loadError && !settings) return <ErrorState description={loadError} onRetry={() => void load()} />;
 
   const live = form.provider === 'openai';
   const insecureHttp = live && form.baseUrl.trim().toLowerCase().startsWith('http://');
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="workspace-page">
       <PageHeader title="AI 配置" description="管理员设置全系统 Agent 使用的模型。所有项目共用这一配置，保存后立即生效。" />
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(250px,0.7fr)_minmax(0,1.6fr)]">
       <Card>
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -183,6 +184,7 @@ export function AiSettingsPage(): React.JSX.Element {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

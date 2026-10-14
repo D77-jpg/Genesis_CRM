@@ -91,16 +91,6 @@ export function LoginPage(): React.JSX.Element {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      {/* 背景装饰：柔和的径向渐变，深色模式下同样成立 */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-        style={{
-          background:
-            'radial-gradient(60rem 40rem at 15% 10%, hsl(var(--primary) / 0.10), transparent 60%),' +
-            'radial-gradient(50rem 35rem at 85% 90%, hsl(var(--status-developed) / 0.10), transparent 60%)',
-        }}
-        aria-hidden
-      />
 
       <div className="absolute right-4 top-4">
         <ThemeToggle />
@@ -112,12 +102,12 @@ export function LoginPage(): React.JSX.Element {
             <Mail className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">客户开发信管理工具</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Customer Dev Letter Manager</p>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">登录工作空间</h1>
+            <p className="mt-1 text-sm text-muted-foreground">客户管理 · 销售跟进 · 邮件开发</p>
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-5 shadow-sm sm:p-6">
+        <div className="workspace-surface rounded-xl border bg-card p-6 sm:p-8">
           <form
             className="space-y-4"
             noValidate

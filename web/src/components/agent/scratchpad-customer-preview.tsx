@@ -100,7 +100,7 @@ export function ScratchpadCustomerPreviewView({ previewId, onRecordsChanged }: {
   }
 
   async function confirmCreate() {
-    let current = preview;
+    const current = preview;
     if (!current || !fields) return;
     // Never confirm an edited preview against stale duplicate results; save and re-review first.
     if (JSON.stringify(fields) !== JSON.stringify(current.fields) || saving) return;

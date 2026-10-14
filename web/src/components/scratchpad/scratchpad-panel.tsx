@@ -331,7 +331,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
   return (
     <>
       <aside
-        className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-background shadow-2xl sm:top-14 sm:w-[420px]"
+        className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[420px]"
         aria-label="个人随手记"
       >
         <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">

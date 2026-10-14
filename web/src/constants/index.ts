@@ -94,13 +94,13 @@ export const CUSTOMER_STATUS_OPTIONS: { value: CustomerStatus; label: string }[]
  */
 export const CUSTOMER_STATUS_BADGE_CLASS: Record<CustomerStatus, string> = {
   pending: 'border-slate-400/40 bg-slate-400/10 text-slate-600 dark:text-slate-300',
-  contacted: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300',
-  replied: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-300',
-  interested: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  quoting: 'border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400',
-  negotiating: 'border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-300',
-  won: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  lost: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400',
+  contacted: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  replied: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
+  interested: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  quoting: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
+  negotiating: 'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300',
+  won: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  lost: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
 };
 
 /**
@@ -109,13 +109,13 @@ export const CUSTOMER_STATUS_BADGE_CLASS: Record<CustomerStatus, string> = {
  */
 export const CUSTOMER_STATUS_BAR_CLASS: Record<CustomerStatus, string> = {
   pending: 'bg-slate-400',
-  contacted: 'bg-blue-500',
-  replied: 'bg-cyan-500',
-  interested: 'bg-amber-500',
-  quoting: 'bg-orange-500',
-  negotiating: 'bg-violet-500',
-  won: 'bg-emerald-500',
-  lost: 'bg-rose-500',
+  contacted: 'bg-primary/40',
+  replied: 'bg-primary/50',
+  interested: 'bg-primary/60',
+  quoting: 'bg-primary/70',
+  negotiating: 'bg-primary/80',
+  won: 'bg-primary',
+  lost: 'bg-slate-400',
 };
 
 /** 跟进时间筛选项 */
@@ -283,11 +283,11 @@ export const QUOTATION_STATUS_FILTER_OPTIONS: { value: QuotationStatus | 'all'; 
  */
 export const QUOTATION_STATUS_BADGE_CLASS: Record<QuotationStatus, string> = {
   draft: 'border-slate-400/40 bg-slate-400/10 text-slate-600 dark:text-slate-300',
-  sent: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300',
-  negotiating: 'border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-300',
-  accepted: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  rejected: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400',
-  expired: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  sent: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  negotiating: 'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300',
+  accepted: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  rejected: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
+  expired: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
 };
 
 /** 报价币种取值顺序（与后端 QUOTATION_CURRENCY 一致），默认 USD */
@@ -361,8 +361,8 @@ export const CUSTOMER_PRIORITY_FILTER_OPTIONS: { value: CustomerPriority | 'all'
 
 /** 优先级徽章配色：高=玫红 / 中=琥珀 / 低=石板灰 */
 export const CUSTOMER_PRIORITY_BADGE_CLASS: Record<CustomerPriority, string> = {
-  high: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400',
-  medium: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  high: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
+  medium: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
   low: 'border-slate-400/40 bg-slate-400/10 text-slate-600 dark:text-slate-300',
 };
 
@@ -399,8 +399,8 @@ export const USER_ROLE_OPTIONS: { value: UserRole; label: string }[] =
 
 /** 角色徽章配色：管理员=紫 / 业务员=蓝 */
 export const USER_ROLE_BADGE_CLASS: Record<UserRole, string> = {
-  admin: 'border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-300',
-  user: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300',
+  admin: 'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300',
+  user: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300',
 };
 
 /* ---------------------------- 用户账号状态 ---------------------------- */
@@ -415,7 +415,7 @@ export const USER_STATUS_LABEL: Record<UserStatus, string> = {
 
 /** 账号状态徽章配色：启用=翠绿 / 停用=石板灰 */
 export const USER_STATUS_BADGE_CLASS: Record<UserStatus, string> = {
-  active: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+  active: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   disabled: 'border-slate-500/30 bg-slate-500/10 text-slate-500 dark:text-slate-300',
 };
 

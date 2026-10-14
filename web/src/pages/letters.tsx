@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Download, FilterX } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
+import { WorkspaceToolbar } from '@/components/common/workspace';
 import { SearchInput } from '@/components/common/search-input';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Card } from '@/components/ui/card';
@@ -161,7 +162,7 @@ export function LettersPage(): React.JSX.Element {
   /* ---------------------------- 渲染 ---------------------------- */
 
   return (
-    <div className="space-y-4">
+    <div className="workspace-page">
       <PageHeader
         title="开发信记录"
         description={
@@ -207,7 +208,7 @@ export function LettersPage(): React.JSX.Element {
 
       {/* ---------------------------- 筛选栏 ---------------------------- */}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <WorkspaceToolbar>
         <SearchInput
           value={search}
           onChange={(value) => setFilters({ search: value })}
@@ -243,7 +244,7 @@ export function LettersPage(): React.JSX.Element {
         </Select>
 
         {preparing ? <span className="text-xs text-muted-foreground">正在准备重新发送…</span> : null}
-      </div>
+      </WorkspaceToolbar>
 
       {/* ---------------------------- 表格 ---------------------------- */}
 
