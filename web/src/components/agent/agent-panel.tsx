@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { WorkspaceDrawer } from '@/components/common/workspace';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive,
@@ -413,9 +414,10 @@ export function AgentPanel(): React.JSX.Element | null {
   const activeContext = activeSession?.context ?? context;
 
   return (
-    <aside
-      className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-background shadow-2xl sm:top-14 sm:w-[min(520px,100vw)] lg:w-[560px]"
-      aria-label="业务 Agent"
+    <WorkspaceDrawer
+      title="业务 Agent"
+      onClose={() => setOpen(false)}
+      className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[min(520px,100vw)] lg:w-[560px]"
     >
       <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -442,7 +444,7 @@ export function AgentPanel(): React.JSX.Element | null {
             {mailAnalysisId && <TabsTrigger value="mail-analysis"><MailSearch className="h-3.5 w-3.5" />邮件助理</TabsTrigger>}
             <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
             {status?.available ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <CircleOff className="h-3.5 w-3.5 text-amber-600" />}
             {status?.mode === 'mock' ? '演示模式' : status?.available ? '模型已配置' : '未配置'}
           </div>
@@ -525,7 +527,7 @@ export function AgentPanel(): React.JSX.Element | null {
               </div>
             )}
             {messages.map((message) => (
-              <article key={message.id} className={message.role === 'user' ? 'ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-3 text-sm text-primary-foreground' : `min-w-0 rounded-2xl rounded-bl-sm border bg-card px-4 py-4 text-sm shadow-sm ${message.status === 'failed' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
+              <article key={message.id} className={message.role === 'user' ? 'ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-primary/10 text-foreground px-4 py-3 text-sm text-foreground' : `min-w-0 rounded-xl rounded-bl-sm border bg-card px-4 py-4 text-sm shadow-sm ${message.status === 'failed' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
                 {message.role === 'assistant' && <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">AI 生成 · 请核对关键信息</p>}
                 {message.role === 'assistant' ? <AgentMessageContent content={message.content} /> : <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>}
               </article>
@@ -620,6 +622,6 @@ export function AgentPanel(): React.JSX.Element | null {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </aside>
+    </WorkspaceDrawer>
   );
 }

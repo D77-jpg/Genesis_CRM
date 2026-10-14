@@ -249,11 +249,11 @@ export function CustomerFormDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="姓名" required htmlFor="cf-name" error={fieldError('name')}>
-                <Input id="cf-name" placeholder="例如 Ella Drake" invalid={Boolean(errors.name)} autoComplete="off" {...register('name')} />
+                <Input id="cf-name" placeholder="输入客户联系人姓名" invalid={Boolean(errors.name)} autoComplete="off" {...register('name')} />
               </Field>
 
               <Field label="公司" htmlFor="cf-company" error={fieldError('company')}>
-                <Input id="cf-company" placeholder="例如 Monarc Jewellery" autoComplete="off" {...register('company')} />
+                <Input id="cf-company" placeholder="输入客户公司名称" autoComplete="off" {...register('company')} />
               </Field>
 
               <Field
@@ -283,7 +283,7 @@ export function CustomerFormDialog({
               <Field label="行业" htmlFor="cf-industry" error={fieldError('industry')}>
                 <Input
                   id="cf-industry"
-                  placeholder="例如 Fine Jewellery"
+                  placeholder="输入客户所属行业"
                   list="cf-industry-options"
                   autoComplete="off"
                   {...register('industry')}

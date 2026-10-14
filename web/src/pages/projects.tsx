@@ -71,7 +71,7 @@ export function ProjectsPage(): React.JSX.Element {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="workspace-page">
       <PageHeader title="项目工作空间" description="每个项目拥有独立的客户、邮件、模板、报价、Timeline 与统计数据。"
         actions={<Button type="button" onClick={openCreate}><Plus className="h-4 w-4" aria-hidden />新建项目</Button>} />
 
@@ -91,14 +91,14 @@ export function ProjectsPage(): React.JSX.Element {
             <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary" aria-hidden>{project.code.slice(0, 2)}</span>
-                <div className="min-w-0"><CardTitle className="truncate text-base">{project.name}</CardTitle><p className="truncate text-xs text-muted-foreground">{project.code} · {project.industry || '未设置行业'}</p></div>
+                <div className="min-w-0"><CardTitle className="truncate text-base" title={project.name}>{project.name}</CardTitle><p className="truncate text-xs text-muted-foreground">{project.code} · {project.industry || '未设置行业'}</p></div>
               </div>
               <Badge variant={project.status === 'archived' ? 'muted' : isCurrent ? 'developed' : 'outline'}>
                 {project.status === 'archived' ? '已归档' : isCurrent ? '当前使用' : '可切换'}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div><p className="text-xs text-muted-foreground">公司主体</p><p className="truncate">{project.companyName}</p></div>
+              <div><p className="text-xs text-muted-foreground">公司主体</p><p className="truncate" title={project.companyName}>{project.companyName}</p></div>
               <div className="flex flex-wrap gap-2"><Badge variant="outline">{project.mailChannel === 'smtp' ? 'SMTP 实际发送' : 'Mock 模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
               <div className="flex flex-wrap gap-2">
                 {project.status === 'active' && !isCurrent ? (

@@ -8,26 +8,26 @@
    ========================================================================== */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 216 33% 97%;
+    --foreground: 222 36% 17%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 36% 17%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 36% 17%;
 
     /* 主色：天空蓝，呼应「待开发」的状态色 */
-    --primary: 199 89% 48%;
+    --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 19% 42%;
 
-    --accent: 210 40% 94%;
+    --accent: 218 75% 96%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 72% 51%;
@@ -35,20 +35,24 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 199 89% 48%;
+    --ring: 221 83% 53%;
 
     --radius: 0.625rem;
+    --workspace-content-width: 1600px;
+    --workspace-shadow: 0 1px 2px hsl(222 36% 17% / 0.035);
+    --workspace-panel-shadow: 0 8px 30px hsl(222 36% 17% / 0.10);
+    --workspace-motion: 160ms;
 
     /* 侧边栏 */
-    --sidebar: 210 40% 98%;
+    --sidebar: 0 0% 100%;
     --sidebar-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 214.3 31.8% 91.4%;
+    --sidebar-accent: 218 90% 96%;
     --sidebar-border: 214.3 31.8% 91.4%;
 
     /* 业务状态色 */
-    --status-pending: 217 91% 60%;
-    --status-developed: 142 71% 45%;
-    --status-failed: 0 72% 51%;
+    --status-pending: 217 76% 46%;
+    --status-developed: 142 70% 30%;
+    --status-failed: 0 65% 43%;
   }
 
   .dark {
@@ -61,7 +65,7 @@
     --popover: 222.2 47% 9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 199 89% 55%;
+    --primary: 217 91% 66%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -78,7 +82,7 @@
 
     --border: 217.2 32.6% 20%;
     --input: 217.2 32.6% 22%;
-    --ring: 199 89% 55%;
+    --ring: 217 91% 66%;
 
     --sidebar: 222.2 47% 7%;
     --sidebar-foreground: 210 40% 98%;
@@ -100,6 +104,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    line-height: 1.6;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     /* 避免模态框滚动穿透时的布局抖动 */
     scrollbar-gutter: stable;
@@ -148,6 +153,69 @@
   }
 }
 
+/* Shared workspace rhythm. Business pages keep their own data and actions. */
+@layer components {
+  .workspace-page { @apply min-w-0 space-y-5; }
+  .workspace-surface { box-shadow: var(--workspace-shadow); }
+  .workspace-toolbar {
+    @apply flex min-w-0 flex-wrap items-center gap-2 rounded-lg border bg-card p-3 sm:p-4;
+  }
+  .workspace-toolbar > :first-child { flex-shrink: 0; }
+  [data-ui="field"] { min-height: 36px; }
+  .workspace-main:focus { outline: none; box-shadow: none; }
+  .workspace-skip-link {
+    @apply sr-only;
+  }
+  .workspace-skip-link:focus {
+    @apply fixed left-4 top-3 z-[100] h-auto w-auto rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground;
+    clip: auto;
+    clip-path: none;
+  }
+  .workspace-topbar { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .workspace-table {
+    max-height: min(65vh, 740px);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .workspace-table :is(td, th) { overflow-wrap: anywhere; }
+  .workspace-table th { color: hsl(var(--muted-foreground)); }
+  .workspace-table td { line-height: 1.5; }
+  .workspace-drawer { overscroll-behavior: contain; }
+  .workspace-drawer .workspace-tabs { min-width: 0; width: auto; flex: 1; }
+  .workspace-shell button { touch-action: manipulation; }
+  .workspace-page :is(dl, article, section) { min-width: 0; }
+  .workspace-page :is(dd, article p) { overflow-wrap: anywhere; }
+  .workspace-page select:not([aria-hidden="true"]) {
+    @apply min-h-9 rounded-md border border-input bg-card px-3 py-1 text-sm;
+  }
+  .workspace-page details > summary {
+    @apply rounded-md transition-colors hover:text-foreground;
+  }
+  .workspace-page-actions > button { flex-shrink: 0; }
+}
+
+@media (max-width: 639px) {
+  [data-ui="button"], [data-ui="field"] { min-height: 44px; }
+  [data-ui="button"][aria-label]:not(:has(span)):not(:has(a)) { min-width: 44px; }
+  [data-ui="field"] { font-size: 16px; }
+  .workspace-topbar button[aria-label] { min-width: 44px; min-height: 44px; }
+  .workspace-toolbar > * { max-width: 100%; }
+  .workspace-toolbar > [role="combobox"] { flex: 1 1 8rem; }
+  .workspace-page-header h1 { font-size: 1.25rem; }
+  .workspace-project-switcher { margin-right: auto; max-width: 6rem; }
+  .workspace-topbar { gap: 0.25rem; }
+  .workspace-tabs { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ==========================================================================
    React Quill 适配
    quill.snow.css 自带白底 + 深色文字，深色模式下必须覆盖。
@@ -165,8 +233,20 @@
   @apply rounded-t-md border-b bg-muted/40 px-2 py-1.5;
 }
 
+.ql-toolbar.ql-snow button {
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 4px;
+}
+.ql-toolbar.ql-snow button:hover { background: hsl(var(--accent)); }
+@media (max-width: 639px) {
+  .ql-toolbar.ql-snow button { width: 44px; height: 44px; padding: 12px; }
+  .ql-toolbar.ql-snow .ql-picker-label { min-height: 36px; }
+}
+
 .ql-container.ql-snow {
-  @apply rounded-b-md bg-background;
+  @apply rounded-b-md bg-card;
 }
 
 .ql-editor {

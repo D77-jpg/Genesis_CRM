@@ -79,6 +79,33 @@ export const LetterEditor = React.forwardRef<LetterEditorHandle, LetterEditorPro
   const quillRef = React.useRef<ReactQuill | null>(null);
   const wrapRef = React.useRef<HTMLDivElement | null>(null);
 
+  // Quill's generated icon controls do not supply descriptive names by default.
+  // Only accessibility attributes are added; formats, clipboard and change handlers stay intact.
+  React.useEffect(() => {
+    const root = wrapRef.current;
+    if (!root) return;
+    const editor = root.querySelector('.ql-editor');
+    editor?.setAttribute('role', 'textbox');
+    editor?.setAttribute('aria-label', '正文编辑器');
+    editor?.setAttribute('aria-multiline', 'true');
+    editor?.setAttribute('aria-readonly', String(readOnly));
+    editor?.setAttribute('aria-invalid', String(invalid));
+    const labels: Record<string, string> = {
+      '.ql-bold': '加粗', '.ql-italic': '斜体', '.ql-underline': '下划线',
+      '.ql-strike': '删除线', '.ql-list[value="ordered"]': '编号列表',
+      '.ql-list[value="bullet"]': '项目列表', '.ql-blockquote': '引用',
+      '.ql-link': '插入链接', '.ql-clean': '清除格式',
+      '.ql-header .ql-picker-label': '段落样式', '.ql-color .ql-picker-label': '文字颜色',
+      '.ql-background .ql-picker-label': '文字背景色', '.ql-align .ql-picker-label': '文字对齐',
+    };
+    for (const [selector, label] of Object.entries(labels)) {
+      root.querySelectorAll(`.ql-toolbar ${selector}`).forEach((control) => {
+        control.setAttribute('aria-label', label);
+        control.setAttribute('title', label);
+      });
+    }
+  }, [readOnly, invalid]);
+
   // modules / formats 引用必须稳定
   const modules = React.useMemo(
     () => ({

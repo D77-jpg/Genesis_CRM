@@ -5,27 +5,27 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('rounded-lg border bg-card text-card-foreground shadow-sm', className)} {...props} />
+  <div ref={ref} className={cn('workspace-surface min-w-0 rounded-lg border bg-card text-card-foreground', className)} {...props} />
 ));
 Card.displayName = 'Card';
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex flex-col gap-1 p-4 sm:p-5', className)} {...props} />
+    <div ref={ref} className={cn('flex min-w-0 flex-col gap-1.5 p-4 sm:p-5', className)} {...props} />
   ),
 );
 CardHeader.displayName = 'CardHeader';
 
 const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn('text-sm font-semibold leading-none tracking-tight sm:text-base', className)} {...props} />
+    <h3 ref={ref} className={cn('text-sm font-semibold leading-snug tracking-tight sm:text-base', className)} {...props} />
   ),
 );
 CardTitle.displayName = 'CardTitle';
 
 const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn('text-xs text-muted-foreground sm:text-sm', className)} {...props} />
+    <p ref={ref} className={cn('text-xs leading-relaxed text-muted-foreground sm:text-sm', className)} {...props} />
   ),
 );
 CardDescription.displayName = 'CardDescription';
@@ -37,7 +37,7 @@ CardContent.displayName = 'CardContent';
 
 const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex items-center gap-2 border-t p-4 sm:p-5', className)} {...props} />
+    <div ref={ref} className={cn('flex flex-wrap items-center gap-2 border-t p-4 sm:p-5', className)} {...props} />
   ),
 );
 CardFooter.displayName = 'CardFooter';
@@ -63,21 +63,19 @@ export function StatCard({
   const toneClass = {
     default: 'bg-muted text-muted-foreground',
     primary: 'bg-primary/10 text-primary',
-    pending: 'bg-status-pending/10 text-status-pending',
-    developed: 'bg-status-developed/10 text-status-developed',
+    pending: 'bg-primary/10 text-primary',
+    developed: 'bg-primary/10 text-primary',
     failed: 'bg-status-failed/10 text-status-failed',
   }[tone];
 
   return (
-    <Card className={cn('p-4', className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-          {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
-        </div>
-        {icon ? <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-md', toneClass)}>{icon}</div> : null}
+    <Card className={cn('p-4 sm:p-5', className)}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 break-words text-xs font-medium text-muted-foreground">{label}</p>
+        {icon ? <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md sm:h-8 sm:w-8', toneClass)}>{icon}</div> : null}
       </div>
+      <p className="mt-2 break-all text-2xl font-semibold tabular-nums tracking-tight sm:text-[1.75rem]">{value}</p>
+      {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
     </Card>
   );
 }

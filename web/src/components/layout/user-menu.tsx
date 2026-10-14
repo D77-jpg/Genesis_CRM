@@ -26,7 +26,7 @@ export function UserMenu({ className }: { className?: string }): React.JSX.Eleme
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          'flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-sm outline-none transition-colors',
+          'flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-md py-1 pl-1 pr-2 text-sm outline-none transition-colors',
           'hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
           className,
         )}

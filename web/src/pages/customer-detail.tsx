@@ -433,7 +433,7 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   if (loading && !customer) {
     return (
-      <div className="space-y-4">
+      <div className="workspace-page">
         <Skeleton className="h-9 w-56" />
         <Card>
           <CardContent className="p-5">
@@ -446,7 +446,7 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   if (error || !customer) {
     return (
-      <div className="space-y-4">
+      <div className="workspace-page">
         <PageHeader title="客户详情" backTo={ROUTES.customers} backLabel="返回客户列表" />
         <Card>
           <ErrorState
@@ -468,7 +468,7 @@ export function CustomerDetailPage(): React.JSX.Element {
   const letterTotalPages = lettersQuery.data?.totalPages ?? 0;
 
   return (
-    <div className="space-y-4">
+    <div className="workspace-page">
       <PageHeader
         backTo={ROUTES.customers}
         backLabel="返回客户列表"
@@ -560,7 +560,7 @@ export function CustomerDetailPage(): React.JSX.Element {
             </div>
           ) : null}
           {/* 桌面端保持一行关键摘要；窄屏自然换行，补充信息默认收起。 */}
-          <dl className="grid gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.15fr_1.4fr_1fr_0.85fr_0.7fr_1fr]">
+          <dl className="grid gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
             <EditableInfoRow
               icon={<Building2 className="h-3.5 w-3.5" />}
               label="公司"

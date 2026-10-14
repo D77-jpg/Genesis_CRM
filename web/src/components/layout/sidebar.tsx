@@ -48,14 +48,14 @@ function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
   const project = useProjectStore((state) => state.activeProject);
 
   return (
-    <div className={cn('flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-3', collapsed && 'justify-center px-0')}>
+    <div className={cn('flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border px-4', collapsed && 'justify-center px-0')}>
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
         <Mail className="h-4 w-4" aria-hidden />
       </span>
       {!collapsed && (
         <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold leading-tight">{project?.name || '外贸 CRM'}</span>
-          <span className="block truncate text-2xs text-muted-foreground">
+          <span className="block truncate text-sm font-semibold leading-tight" title={project?.name}>{project?.name || '外贸 CRM'}</span>
+          <span className="mt-1 block truncate text-xs text-muted-foreground" title={project?.companyName || fallbackCompanyName}>
             {project?.companyName || fallbackCompanyName || 'Customer Dev Letter Manager'}
           </span>
         </span>
@@ -70,8 +70,11 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
   const items = React.useMemo(() => NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin), [isAdmin]);
 
   return (
-    <nav className="flex-1 space-y-1 overflow-y-auto p-2" aria-label="主导航">
-      {items.map((item) => (
+    <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5" aria-label="主导航">
+      {[{ label: '业务工作台', items: items.filter((item) => !item.adminOnly) }, { label: '管理与配置', items: items.filter((item) => item.adminOnly) }].filter((group) => group.items.length > 0).map((group) => (
+        <div key={group.label} className="space-y-1">
+          {!collapsed ? <p className="mb-2 px-3 text-xs font-medium text-muted-foreground">{group.label}</p> : null}
+          {group.items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -80,11 +83,11 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
           title={collapsed ? item.label : undefined}
           className={({ isActive }) =>
             cn(
-              'group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors',
+              'group flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors lg:min-h-10',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               collapsed && 'justify-center px-0',
               isActive
-                ? 'bg-sidebar-accent text-foreground shadow-sm'
+                ? 'bg-sidebar-accent text-primary'
                 : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground',
             )
           }
@@ -92,6 +95,8 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
           <item.icon className="h-4 w-4 shrink-0" aria-hidden />
           {!collapsed && <span className="truncate">{item.label}</span>}
         </NavLink>
+          ))}
+        </div>
       ))}
     </nav>
   );
@@ -112,7 +117,7 @@ export function Sidebar({ collapsed, onToggleCollapse, mobile = false, onNavigat
             type="button"
             onClick={onNavigate}
             aria-label="关闭导航"
-            className="mr-2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            className="mr-2 flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>

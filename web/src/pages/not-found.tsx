@@ -1,15 +1,13 @@
 /**
  * 404 页面
  * ------------------------------------------------------------------
- * 既作为受保护区里的兜底路由，也可能在未登录时被访问，
- * 因此不依赖 AppShell，自带最小布局与主题切换。
+ * 在工作空间内展示清晰的兜底状态，保留返回与仪表盘入口。
  */
 import type * as React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Compass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { usePageTitle } from '@/hooks/use-ui';
 import { ROUTES } from '@/constants';
 
@@ -18,10 +16,7 @@ export function NotFoundPage(): React.JSX.Element {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
+    <div className="workspace-page flex min-h-[65vh] items-center justify-center bg-background p-4">
 
       <Card className="w-full max-w-md">
         <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
@@ -29,7 +24,7 @@ export function NotFoundPage(): React.JSX.Element {
             <Compass className="h-6 w-6" />
           </span>
           <p className="text-4xl font-semibold tracking-tight">404</p>
-          <p className="text-sm font-medium">找不到这个页面</p>
+          <h1 className="text-xl font-semibold tracking-tight">找不到这个页面</h1>
           <p className="text-xs leading-relaxed text-muted-foreground">
             链接可能已失效，或者该客户 / 开发信记录已经被删除。
           </p>

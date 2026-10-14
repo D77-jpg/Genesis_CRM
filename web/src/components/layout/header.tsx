@@ -16,6 +16,7 @@ import { useUiStore } from '@/store/ui.store';
 
 /** 根据当前路径推断标题（客户详情页会带上「客户详情」） */
 function resolveTitle(pathname: string): string {
+  if (pathname.startsWith(`${ROUTES.customers}/`)) return '客户详情';
   const exact = NAV_ITEMS.find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)));
   if (exact) return exact.label;
   if (pathname.startsWith(ROUTES.customers)) return '客户详情';
@@ -33,7 +34,7 @@ export function Header({ onOpenMobileNav }: { onOpenMobileNav: () => void }): Re
   const toggleAgent = useUiStore((state) => state.toggleAgent);
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-5">
+    <header className="workspace-topbar sticky top-0 z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-2 border-b bg-card px-4 sm:px-6">
       <Button
         type="button"
         variant="ghost"
@@ -45,7 +46,7 @@ export function Header({ onOpenMobileNav }: { onOpenMobileNav: () => void }): Re
         <Menu className="h-4 w-4" />
       </Button>
 
-      <h2 className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-base">{title}</h2>
+      <h2 className="hidden min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground lg:block">{title}</h2>
 
       <ProjectSwitcher />
 

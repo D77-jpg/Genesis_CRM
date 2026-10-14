@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
+import { SectionHeading } from '@/components/common/workspace';
 import { ErrorState, InlineLoader } from '@/components/common/empty-state';
 import { LetterStatusBadge } from '@/components/common/status-badge';
 import { SalesFunnel } from '@/components/dashboard/sales-funnel';
@@ -175,7 +176,7 @@ export function DashboardPage(): React.JSX.Element {
 
   if (error && !data) {
     return (
-      <div className="space-y-4">
+      <div className="workspace-page">
         <PageHeader title="仪表盘" />
         <Card>
           <ErrorState title="统计数据加载失败" description={error} onRetry={() => void run()} retrying={loading} />
@@ -188,7 +189,7 @@ export function DashboardPage(): React.JSX.Element {
   const letter = data?.letter;
 
   return (
-    <div className="space-y-4">
+    <div className="workspace-page">
       <PageHeader
         title="仪表盘"
         description={
@@ -226,9 +227,9 @@ export function DashboardPage(): React.JSX.Element {
         </Card>
       ) : (
         <>
-          {/* ---------------------------- 指标卡 ---------------------------- */}
+          <SectionHeading title="客户概况" description="当前项目的客户覆盖与开发进度" />
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <StatCard
               label="客户总数"
               value={customer?.total.toLocaleString('zh-CN') ?? '—'}
@@ -265,7 +266,8 @@ export function DashboardPage(): React.JSX.Element {
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SectionHeading title="邮件触达" description="发送量、处理状态与近期活动" />
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <StatCard
               label="开发信总数"
               value={letter?.total.toLocaleString('zh-CN') ?? '—'}

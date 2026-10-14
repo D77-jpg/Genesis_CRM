@@ -244,7 +244,7 @@ export function UserFormDialog({
               <Input
                 id="user-displayName"
                 className="mt-1.5"
-                placeholder="例如 Ella Drake（留空则用用户名）"
+                placeholder="输入显示姓名（留空则用用户名）"
                 autoComplete="off"
                 invalid={Boolean(errors.displayName)}
                 {...register('displayName')}
@@ -279,18 +279,18 @@ export function UserFormDialog({
             </div>
 
             {roleValue === 'user' ? (
-              <fieldset>
+              <fieldset className="min-w-0">
                 <legend className="text-sm font-medium">可访问项目 <span className="text-destructive">*</span></legend>
                 <div className="mt-2 space-y-2 rounded-md border p-3">
                   {projects.map((project) => {
                     const checked = selectedProjects.includes(project.id);
                     return (
-                      <label key={project.id} className="flex min-h-9 cursor-pointer items-center gap-3 rounded-sm px-1 text-sm hover:bg-muted/50">
+                      <label key={project.id} className="flex min-h-11 min-w-0 cursor-pointer items-start gap-3 rounded-md px-1 py-2 text-sm hover:bg-muted/50">
                         <Checkbox checked={checked} onCheckedChange={(next) => setValue('projectIds', next
                           ? [...new Set([...selectedProjects, project.id])]
                           : selectedProjects.filter((id) => id !== project.id), { shouldValidate: true })} />
-                        <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                        <span className="text-xs text-muted-foreground">{project.code}</span>
+                        <span className="min-w-0 flex-1 break-words leading-relaxed">{project.name}</span>
+                        <span className="shrink-0 text-xs leading-relaxed text-muted-foreground">{project.code}</span>
                       </label>
                     );
                   })}
