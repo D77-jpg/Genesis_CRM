@@ -7,7 +7,7 @@
  */
 import * as React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CalendarClock, Mail, MailOpen, MoreHorizontal, Pencil, Phone, Send, Trash2, TriangleAlert, User, Users } from 'lucide-react';
+import { CalendarClock, Mail, MailOpen, MoreHorizontal, Pencil, Phone, Send, Trash2, TriangleAlert, Users } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -30,13 +30,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/popover';
-import { CustomerStatusBadge } from '@/components/common/status-badge';
 import { EmptyState, ErrorState, NoResultState } from '@/components/common/empty-state';
 import { CUSTOMER_SOURCE_LABEL, customerDetailPath } from '@/constants';
 import { formatDate, formatDateTime, formatRelative, getFollowUpState, initials } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CustomerSortField } from '@/store/customer.store';
-import type { Customer } from '@/types';
+import type { Customer, OwnerOption } from '@/types';
+import { CustomerQuickEdit, type CustomerQuickEditPatch } from './customer-quick-edit';
 
 export interface CustomerTableProps {
   customers: Customer[];
@@ -49,6 +49,9 @@ export interface CustomerTableProps {
   hasFilters: boolean;
   /** 是否展示「负责人」列 / 徽章（仅管理员；业务员的客户都归自己，无需展示） */
   showOwner?: boolean;
+  owners: OwnerOption[];
+  quickEditDisabled: boolean;
+  onQuickEdit: (customer: Customer, patch: CustomerQuickEditPatch) => Promise<void>;
   onSort: (field: CustomerSortField) => void;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
@@ -198,6 +201,9 @@ export function CustomerTable({
   sortOrder,
   hasFilters,
   showOwner = true,
+  owners,
+  quickEditDisabled,
+  onQuickEdit,
   onSort,
   onToggleSelect,
   onToggleSelectAll,
@@ -293,14 +299,11 @@ export function CustomerTable({
                 <CustomerIdentity customer={customer} />
               </Link>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <CustomerStatusBadge status={customer.status} />
+                <CustomerQuickEdit customer={customer} field="status" disabled={quickEditDisabled} onSave={onQuickEdit} />
                 {customer.grade ? <Badge variant="secondary">{customer.grade} 级</Badge> : null}
                 {customer.industry ? <Badge variant="muted">{customer.industry}</Badge> : null}
-                {showOwner && customer.owner ? (
-                  <Badge variant="outline" className="gap-1 font-normal">
-                    <User className="h-3 w-3" aria-hidden />
-                    {customer.owner.name}
-                  </Badge>
+                {showOwner ? (
+                  <CustomerQuickEdit customer={customer} field="ownerId" owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
                 ) : null}
               </div>
               <div className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -445,21 +448,14 @@ export function CustomerTable({
 
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
-                    <CustomerStatusBadge status={customer.status} />
+                    <CustomerQuickEdit customer={customer} field="status" disabled={quickEditDisabled} onSave={onQuickEdit} />
                     {customer.grade ? <Badge variant="secondary">{customer.grade} 级</Badge> : null}
                   </div>
                 </TableCell>
 
                 {showOwner ? (
                   <TableCell className="whitespace-nowrap text-xs">
-                    {customer.owner ? (
-                      <span className="inline-flex items-center gap-1.5 text-foreground">
-                        <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                        <span className="max-w-[8rem] truncate">{customer.owner.name}</span>
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">未分配</span>
-                    )}
+                    <CustomerQuickEdit customer={customer} field="ownerId" owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
                   </TableCell>
                 ) : null}
 
