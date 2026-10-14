@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CustomerTable } from '@/components/customers/customer-table';
+import type { CustomerQuickEditPatch } from '@/components/customers/customer-quick-edit';
 import { CustomerFilters, type CustomerFilterValues } from '@/components/customers/customer-filters';
 import { BulkActionsBar } from '@/components/customers/bulk-actions-bar';
 import {
@@ -75,6 +76,7 @@ export function CustomersPage(): React.JSX.Element {
   const toggleSelect = useCustomerStore((state) => state.toggleSelect);
   const toggleSelectAll = useCustomerStore((state) => state.toggleSelectAll);
   const clearSelection = useCustomerStore((state) => state.clearSelection);
+  const updateCustomer = useCustomerStore((state) => state.updateCustomer);
   const deleteCustomer = useCustomerStore((state) => state.deleteCustomer);
   const bulkUpdateStatus = useCustomerStore((state) => state.bulkUpdateStatus);
   const bulkDelete = useCustomerStore((state) => state.bulkDelete);
@@ -103,6 +105,8 @@ export function CustomersPage(): React.JSX.Element {
   /** 当前打开的批量动作弹窗（标签 / 负责人 / 跟进时间）；null 表示未打开 */
   const [bulkKind, setBulkKind] = React.useState<BulkActionKind | null>(null);
   const [exporting, setExporting] = React.useState(false);
+  const [quickSaving, setQuickSaving] = React.useState(false);
+  const quickSavingRef = React.useRef(false);
 
   /* ---------------------------- 派生数据 ---------------------------- */
 
@@ -126,6 +130,23 @@ export function CustomersPage(): React.JSX.Element {
   );
 
   /* ---------------------------- 动作 ---------------------------- */
+
+  const handleQuickEdit = React.useCallback(async (customer: Customer, patch: CustomerQuickEditPatch) => {
+    if (quickSavingRef.current || useCustomerStore.getState().mutating) throw new Error('正在保存，请稍候再试');
+    if ('ownerId' in patch && !isAdmin) throw new Error('只有管理员可以修改负责人');
+    quickSavingRef.current = true;
+    setQuickSaving(true);
+    try {
+      const saved = await updateCustomer(customer.id, patch);
+      if (!saved) throw new Error('保存失败，请重试');
+      toast.success('status' in patch ? '状态已更新' : '负责人已更新');
+      // Status/owner changes can move a row out of the current filter or change its sort position.
+      await fetchList();
+    } finally {
+      quickSavingRef.current = false;
+      setQuickSaving(false);
+    }
+  }, [isAdmin, updateCustomer, fetchList]);
 
   const openCreate = React.useCallback(() => {
     setEditing(null);
@@ -305,6 +326,9 @@ export function CustomersPage(): React.JSX.Element {
           sortOrder={sortOrder}
           hasFilters={hasActiveFilters}
           showOwner={isAdmin}
+          owners={owners}
+          quickEditDisabled={loading || mutating || quickSaving}
+          onQuickEdit={handleQuickEdit}
           onSort={setSorting}
           onToggleSelect={toggleSelect}
           onToggleSelectAll={toggleSelectAll}
@@ -337,7 +361,7 @@ export function CustomersPage(): React.JSX.Element {
 
       <BulkActionsBar
         selectedCount={selectedIds.length}
-        busy={mutating}
+        busy={mutating || quickSaving}
         disabled={loading}
         canAssignOwner={isAdmin}
         onStatusChange={(next) => void handleBulkStatus(next)}
@@ -354,7 +378,7 @@ export function CustomersPage(): React.JSX.Element {
         selectedCount={selectedIds.length}
         tags={tags}
         owners={owners}
-        busy={mutating}
+        busy={mutating || quickSaving}
         onOpenChange={(open) => {
           if (!open) setBulkKind(null);
         }}
