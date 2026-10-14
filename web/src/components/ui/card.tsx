@@ -70,14 +70,12 @@ export function StatCard({
 
   return (
     <Card className={cn('p-4 sm:p-5', className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-2 text-[1.75rem] font-semibold tabular-nums tracking-tight">{value}</p>
-          {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
-        </div>
-        {icon ? <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', toneClass)}>{icon}</div> : null}
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 break-words text-xs font-medium text-muted-foreground">{label}</p>
+        {icon ? <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md sm:h-8 sm:w-8', toneClass)}>{icon}</div> : null}
       </div>
+      <p className="mt-2 break-all text-2xl font-semibold tabular-nums tracking-tight sm:text-[1.75rem]">{value}</p>
+      {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
     </Card>
   );
 }

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { WorkspaceDrawer } from '@/components/common/workspace';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive,
@@ -413,9 +414,10 @@ export function AgentPanel(): React.JSX.Element | null {
   const activeContext = activeSession?.context ?? context;
 
   return (
-    <aside
+    <WorkspaceDrawer
+      title="业务 Agent"
+      onClose={() => setOpen(false)}
       className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[min(520px,100vw)] lg:w-[560px]"
-      aria-label="业务 Agent"
     >
       <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -442,7 +444,7 @@ export function AgentPanel(): React.JSX.Element | null {
             {mailAnalysisId && <TabsTrigger value="mail-analysis"><MailSearch className="h-3.5 w-3.5" />邮件助理</TabsTrigger>}
             <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
             {status?.available ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <CircleOff className="h-3.5 w-3.5 text-amber-600" />}
             {status?.mode === 'mock' ? '演示模式' : status?.available ? '模型已配置' : '未配置'}
           </div>
@@ -620,6 +622,6 @@ export function AgentPanel(): React.JSX.Element | null {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </aside>
+    </WorkspaceDrawer>
   );
 }

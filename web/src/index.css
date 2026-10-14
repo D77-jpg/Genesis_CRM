@@ -172,11 +172,16 @@
     clip-path: none;
   }
   .workspace-topbar { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-  .workspace-table { overscroll-behavior-x: contain; }
+  .workspace-table {
+    max-height: min(65vh, 740px);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
   .workspace-table :is(td, th) { overflow-wrap: anywhere; }
   .workspace-table th { color: hsl(var(--muted-foreground)); }
   .workspace-table td { line-height: 1.5; }
   .workspace-drawer { overscroll-behavior: contain; }
+  .workspace-drawer .workspace-tabs { min-width: 0; width: auto; flex: 1; }
   .workspace-shell button { touch-action: manipulation; }
   .workspace-page :is(dl, article, section) { min-width: 0; }
   .workspace-page :is(dd, article p) { overflow-wrap: anywhere; }
@@ -226,6 +231,18 @@
 
 .ql-toolbar.ql-snow {
   @apply rounded-t-md border-b bg-muted/40 px-2 py-1.5;
+}
+
+.ql-toolbar.ql-snow button {
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 4px;
+}
+.ql-toolbar.ql-snow button:hover { background: hsl(var(--accent)); }
+@media (max-width: 639px) {
+  .ql-toolbar.ql-snow button { width: 44px; height: 44px; padding: 12px; }
+  .ql-toolbar.ql-snow .ql-picker-label { min-height: 36px; }
 }
 
 .ql-container.ql-snow {

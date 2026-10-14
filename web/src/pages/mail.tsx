@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/common/page-header';
 import { WorkspaceToolbar } from '@/components/common/workspace';
-import { EmptyState } from '@/components/common/empty-state';
+import { EmptyState, ErrorState } from '@/components/common/empty-state';
 import { SendLetterDialog } from '@/components/letters/send-letter-dialog';
 import { useAuthStore, selectIsAdmin } from '@/store/auth.store';
 import { LETTER_STATUS_LABEL } from '@/constants';
@@ -50,6 +50,8 @@ export function MailPage(): React.JSX.Element {
   const [items, setItems] = React.useState<MailItem[]>([]);
   const [total, setTotal] = React.useState(0);
   const [detail, setDetail] = React.useState<Detail | null>(null);
+  const [detailError, setDetailError] = React.useState('');
+  const [detailLoading, setDetailLoading] = React.useState(false);
   const [status, setStatus] = React.useState<SyncStatus | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -81,9 +83,12 @@ export function MailPage(): React.JSX.Element {
 
   const loadDetail = React.useCallback(async () => {
     const version = ++detailRequest.current;
+    setDetailError('');
+    setDetailLoading(Boolean(selectedId));
     if (!selectedId) { setDetail(null); return; }
     try { const data = await apiGet<Detail>(`/mail/${selectedId}`, { params: { direction } }); if (version === detailRequest.current) setDetail(data); }
-    catch (e) { if (version === detailRequest.current) { setDetail(null); setError(toErrorMessage(e)); } }
+    catch (e) { if (version === detailRequest.current) { setDetail(null); setDetailError(toErrorMessage(e)); } }
+    finally { if (version === detailRequest.current) setDetailLoading(false); }
   }, [selectedId, direction]);
   React.useEffect(() => { setDetail(null); void loadDetail(); }, [loadDetail]);
   React.useEffect(() => {
@@ -156,7 +161,7 @@ export function MailPage(): React.JSX.Element {
         <div className="flex items-center justify-between p-3"><Button variant="ghost" disabled={page === 1 || loading} onClick={() => setPage(p => p - 1)}>上一页</Button><span className="text-xs">{page} / {Math.max(1, Math.ceil(total / 25))}</span><Button variant="ghost" disabled={page * 25 >= total || loading} onClick={() => setPage(p => p + 1)}>下一页</Button></div>
       </section>
       <section className="workspace-surface min-w-0 rounded-lg border bg-card p-4 sm:p-5" aria-label="邮件会话详情">
-        {!detail ? <EmptyState icon={<MailSearch className="h-6 w-6" aria-hidden />} title={selectedId ? '正在加载邮件详情…' : '选择一封邮件'} description="在左侧查看邮件，客户资料和往来会话会显示在这里。" /> : <div className="space-y-4">
+        {!detail ? detailError ? <ErrorState title="无法读取这封邮件" description={detailError} onRetry={() => void loadDetail()} retrying={detailLoading} /> : <EmptyState icon={<MailSearch className="h-6 w-6" aria-hidden />} title={detailLoading ? '正在加载邮件详情…' : '选择一封邮件'} description="在左侧查看邮件，客户资料和往来会话会显示在这里。" /> : <div className="space-y-4">
           <h2 className="break-words text-lg font-semibold">{detail.mail.subject || '（无主题）'}</h2>
           <div className="flex flex-wrap items-center gap-2">
             {detail.customer ? <Link className="text-sm text-primary underline" to={`/customers/${detail.customer.id}`}>客户：{detail.customer.name} · {detail.customer.company}</Link> : <Badge variant="outline">未关联客户</Badge>}

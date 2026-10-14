@@ -521,7 +521,7 @@ export function SendLetterDialog({
                     {...register('subject')}
                     readOnly={!!reply}
                   />
-                  <FieldMessage error={errors.subject?.message} hint="主题同样支持占位符" />
+                  <FieldMessage error={errors.subject?.message} hint={reply ? '回复主题沿用原邮件会话，不能修改' : '主题同样支持占位符'} />
                 </div>
               </div>
 
@@ -629,10 +629,11 @@ export function SendLetterDialog({
           <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={sending}>
             取消
           </Button>
-          <Button type="button" variant="outline" onClick={() => void submit(true)} loading={sending} disabled={sending || !!reply}>
+          <Button type="button" variant="outline" onClick={() => void submit(true)} loading={sending} disabled={sending || !!reply} title={reply ? '回复邮件暂不支持存草稿' : undefined} aria-describedby={reply ? 'reply-draft-help' : undefined}>
             {!sending ? <Save className="h-3.5 w-3.5" aria-hidden /> : null}
             存草稿
           </Button>
+          {reply ? <span id="reply-draft-help" className="sr-only">回复邮件暂不支持存草稿。</span> : null}
           <Button type="button" onClick={() => void submit(false)} loading={sending} disabled={sending || senderLoading || !customer || !canSend}>
             {!sending ? <Send className="h-3.5 w-3.5" aria-hidden /> : null}
             {scheduledAt ? '保存定时任务' : reply ? '发送回复' : letter ? '重新发送' : '发送开发信'}

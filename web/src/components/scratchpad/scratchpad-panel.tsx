@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { WorkspaceDrawer } from '@/components/common/workspace';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -330,9 +331,10 @@ export function ScratchpadPanel(): React.JSX.Element | null {
 
   return (
     <>
-      <aside
+      <WorkspaceDrawer
+        title="个人随手记"
+        onClose={closePanel}
         className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[420px]"
-        aria-label="个人随手记"
       >
         <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -419,7 +421,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
             </div>
           </div>
         </div>
-      </aside>
+      </WorkspaceDrawer>
 
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
         <AlertDialogContent>

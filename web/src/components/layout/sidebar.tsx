@@ -83,7 +83,7 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
           title={collapsed ? item.label : undefined}
           className={({ isActive }) =>
             cn(
-              'group flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              'group flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors lg:min-h-10',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               collapsed && 'justify-center px-0',
               isActive

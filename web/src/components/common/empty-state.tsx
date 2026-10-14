@@ -12,11 +12,12 @@ interface StateBlockProps {
   description?: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
+  role?: React.AriaRole;
 }
 
-function StateBlock({ icon, title, description, action, className }: StateBlockProps): React.JSX.Element {
+function StateBlock({ icon, title, description, action, className, role }: StateBlockProps): React.JSX.Element {
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-2.5 px-5 py-14 text-center', className)}>
+    <div role={role} className={cn('flex flex-col items-center justify-center gap-2.5 px-5 py-14 text-center', className)}>
       {icon ? <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/70 text-muted-foreground">{icon}</div> : null}
       <p className="text-sm font-medium">{title}</p>
       {description ? <p className="max-w-md text-xs leading-relaxed text-muted-foreground">{description}</p> : null}
@@ -78,6 +79,7 @@ export function ErrorState({
 }): React.JSX.Element {
   return (
     <StateBlock
+      role="alert"
       icon={<AlertTriangle className="h-9 w-9 text-status-failed" strokeWidth={1.4} aria-hidden />}
       title={title}
       description={description}
