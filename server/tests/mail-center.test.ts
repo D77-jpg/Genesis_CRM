@@ -843,3 +843,25 @@ test('86 Agent draft association is scoped to its user/customer/project, and moc
   const sent = await request('POST', '/letters', salesToken, { ...base, customerId, saveAsDraft: false, requestKey: `outreach-mock-${suffix}` }, 201);
   assert.equal(sent.channel, 'mock'); assert.equal(await models.FollowUp.countDocuments({ customerId }), count);
 });
+
+
+test('P3 a real accepted reply completes its task and creates one follow-up; failed/mock receipts do not',async()=>{
+ const {AgentTask}=await import('../src/models/AgentTask');
+ const task=await AgentTask.create({projectId,userId:salesId,sessionId:new db.Types.ObjectId(),actorRole:'user',requestKey:`p3-reply-${suffix}`,goal:'Prepare inquiry reply',customerId,kind:'inquiry_reply',status:'awaiting_review'});
+ const count=await models.FollowUp.countDocuments({customerId});
+ const draft=await request('POST','/letters',salesToken,{customerId,agentTaskId:task.id,subject:'P3 fixture reply',content:'<p>Fictional reply</p>',saveAsDraft:true,requestKey:`p3-reply-draft-${suffix}`},201);
+ const sent=await request('POST',`/letters/${draft.letter.id}/resend`,salesToken,{scheduledAt:new Date(Date.now()+3600000).toISOString(),requestKey:`p3-reply-send-${suffix}`},201);
+ await due(sent.letter.id);await queue.processMailJob(sent.letter.id,async()=>({accepted:false,channel:'smtp',durationMs:0,retryable:true,error:'fixture'}));assert.equal(await models.FollowUp.countDocuments({customerId}),count);assert.equal((await AgentTask.findById(task.id))?.status,'awaiting_review');
+ await models.DevelopmentLetter.updateOne({_id:sent.letter.id},{$set:{channel:'mock'}});await due(sent.letter.id);await queue.processMailJob(sent.letter.id,async()=>({accepted:true,channel:'smtp',durationMs:0}));assert.equal(await models.FollowUp.countDocuments({customerId}),count+1);assert.equal((await AgentTask.findById(task.id))?.status,'completed');
+ await models.DevelopmentLetter.updateOne({_id:sent.letter.id},{$set:{effectsPending:true}});await Promise.all([queue.runMailQueue(),queue.runMailQueue()]);assert.equal(await models.FollowUp.countDocuments({customerId}),count+1);
+});
+
+
+test('P3 a later opt-out stops an already scheduled Agent delivery before the SMTP adapter runs',async()=>{
+ const customer=await request('POST','/customers',salesToken,{name:'Scheduled opt-out fixture',email:`p3-scheduled-${suffix}@example.test`},201);
+ const {createCustomerAnalysis}=await import('../src/services/agent/customer-analysis.service');const actor={id:salesId,username:'sales',displayName:'Sales Fixture',role:'user' as const,projectId};
+ const analysis=await createCustomerAnalysis({customerId:customer.id,idempotencyKey:`p3-scheduled-analysis-${suffix}`},actor,{firstOutreach:true});
+ const scheduled=await request('POST','/letters',salesToken,{customerId:customer.id,agentAnalysisId:analysis.id,subject:'Scheduled agent fixture',content:'<p>Fixture</p>',scheduledAt:new Date(Date.now()+3600000).toISOString(),requestKey:`p3-scheduled-send-${suffix}`},201);
+ await mailModels.MailMessage.create({projectId,customerId:customer.id,mailboxUserId:salesId,dedupKey:`p3-scheduled-stop-${suffix}`,threadId:`p3-scheduled-stop-${suffix}`,from:customer.email,subject:'Unsubscribe',text:'Do not contact us again',sentAt:new Date()});
+ await due(scheduled.letter.id);let called=false;await queue.processMailJob(scheduled.letter.id,async()=>{called=true;return {accepted:true,channel:'smtp',durationMs:0};});assert.equal(called,false);assert.equal((await models.DevelopmentLetter.findById(scheduled.letter.id))?.status,'cancelled');assert.equal(await models.FollowUp.countDocuments({customerId:customer.id}),0);
+});

@@ -66,6 +66,8 @@ export interface CustomerAnalysisRequest {
 }
 
 export interface MailThreadAnalysisInput {
+  seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
+  productKnowledge?:{sourceId:string;title:string;content:string;version:number;approved:boolean}[];
   customer?: { id: string; name: string; company?: string; email?: string; status: string };
   messages: {
     messageId: string;

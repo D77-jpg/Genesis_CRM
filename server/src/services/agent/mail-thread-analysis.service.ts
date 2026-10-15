@@ -1,3 +1,10 @@
+import {Project} from '../../models';
+import {getCurrentMailSender} from '../mail-account.service';
+import {agentMailOrThrow,inboundAgentScope} from './mail-access';
+import {chargeTaskBudget} from './task-budget';
+import {searchProductKnowledge} from './knowledge.service';
+import type {AgentProvider} from './provider';
+import env from '../../config/env';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import {
@@ -66,11 +73,11 @@ type ThreadMessage = MailThreadAnalysisInput['messages'][number];
 async function buildThreadInput(mailId: string, direction: 'inbound' | 'outbound', actor: AuthUser) {
   const visible = await customerRefScope(actor);
   const root = direction === 'inbound'
-    ? await MailMessage.findOne({ _id: mailId, deleted: { $ne: true }, ...visible })
+    ? await agentMailOrThrow(mailId,actor)
     : await DevelopmentLetter.findOne({ _id: mailId, ...visible });
   if (!root) throw ApiError.notFound('邮件不存在或无权访问');
   const threadId = root.threadId || String(root._id);
-  const filter = { ...visible, customerId: root.customerId || null, threadId };
+  const filter = { ...(direction==='inbound'?await inboundAgentScope(actor):visible), customerId: root.customerId || null, threadId };
   const [inbound, outbound] = await Promise.all([
     MailMessage.find({ ...filter, deleted: { $ne: true } }).sort({ sentAt: -1 }).limit(200),
     DevelopmentLetter.find({ ...filter, status: { $ne: 'draft' } }).sort({ createdAt: -1 }).limit(200),
@@ -121,7 +128,7 @@ function dto(doc: AgentMailThreadAnalysisDocument) {
   return {
     id: doc.id, rootMailId: doc.rootMailId, rootDirection: doc.rootDirection, threadId: doc.threadId,
     customerId: doc.customerId ? String(doc.customerId) : undefined,
-    sources: doc.sources, summary: doc.summary, intent: doc.intent, extracted: doc.extracted, safety: doc.safety,
+    productSources:doc.productSources??[],sources: doc.sources, summary: doc.summary, intent: doc.intent, extracted: doc.extracted, safety: doc.safety,
     replyDraft: { subject: doc.replyDraft.subject, bodyText: doc.replyDraft.bodyText },
     statusSuggestion: { status: doc.statusSuggestion.status, reason: doc.statusSuggestion.reason },
     followUpSuggestion: { method: doc.followUpSuggestion.method, content: doc.followUpSuggestion.content, result: doc.followUpSuggestion.result, reason: doc.followUpSuggestion.reason, evidenceMessageIds: doc.followUpSuggestion.evidenceMessageIds, nextFollowUpAt: doc.followUpSuggestion.nextFollowUpAt ?? null },
@@ -136,14 +143,15 @@ async function getOrThrow(id: string, actor: AuthUser) {
   const doc = await AgentMailThreadAnalysis.findOne({ _id: id, ...scope(actor) });
   if (!doc) throw ApiError.notFound('邮件分析不存在或无权访问');
   if (doc.customerId) await getCustomerByIdOrThrow(String(doc.customerId), actor);
+  if(doc.rootDirection==='inbound')await agentMailOrThrow(doc.rootMailId,actor);
   return doc;
 }
 
-export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBody, actor: AuthUser) {
+export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBody, actor: AuthUser, options?:{provider?:AgentProvider;taskId?:string}) {
   const identifiers = scope(actor);
   const existing = await AgentMailThreadAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
-  if (existing) return dto(existing);
-  const activeProvider = await resolveAgentProvider();
+  if(existing){if(existing.rootMailId!==input.mailId||existing.rootDirection!==input.direction)throw ApiError.conflict('请求标识已用于其他邮件');return dto(await getOrThrow(existing.id,actor));}
+  const activeProvider = options?.provider??await resolveAgentProvider();
   const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'mail_analysis', status: 'running' });
   const startedAt = Date.now();
   let reservation: AgentQuotaReservation | undefined;
@@ -151,18 +159,40 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildThreadInput(input.mailId, input.direction, actor);
     if (!context.messages.length) throw ApiError.badRequest('当前邮件线程没有可分析的内容');
-    const limited = limitRecentItems(context.messages, (message) => message.text, (message, text) => ({ ...message, text }));
-    reservation = await reserveAgentQuota(actor, limited.inputCharacters);
+    const knowledge=(await searchProductKnowledge(actor,context.latestInbound?.text??'')).map(k=>({...k,content:k.content.slice(0,3000)}));
+    const project=await Project.findById(requireProjectId(actor)).select('companyName website senderName');
+    const sender=await getCurrentMailSender(actor.projectId!,actor.id);
+    const seller={companyName:project?.companyName??env.COMPANY_NAME,senderName:sender.account?.displayName||actor.displayName||project?.senderName||env.SENDER_NAME,senderEmail:sender.account?.email,website:project?.website};
+    const overhead=JSON.stringify({knowledge,seller,customer:context.customer}).length+500;
+    const limited=limitRecentItems(context.messages,m=>m.text,(m,text)=>({...m,text}),Math.max(1000,env.AI_MAX_INPUT_CHARS-overhead));
+    const inputChars=limited.inputCharacters+overhead;
+    if(inputChars>env.AI_MAX_INPUT_CHARS)throw new ApiError(413,'来信及知识超出单次处理范围','PAYLOAD_TOO_LARGE');
+    reservation = await reserveAgentQuota(actor, inputChars);
+    await chargeTaskBudget(options?.taskId,inputChars,env.AI_MAX_OUTPUT_TOKENS);
     const safetyIdentifier = agentSafetyIdentifier(actor);
-    const response = await activeProvider.analyzeMailThread({ input: { customer: context.customer, messages: limited.items }, safetyIdentifier });
+    const response = await activeProvider.analyzeMailThread({ input: { customer: context.customer, messages: limited.items,productKnowledge:knowledge,seller }, safetyIdentifier });
     const { usage: _usage, ...providerOutput } = response;
+    // Some compatible gateways ignore strict schema and nest the last sibling under statusSuggestion.
+    // Only relocate this exact known field; preserve every other key for strict validation to reject.
+    const statusShape=providerOutput.statusSuggestion as unknown as Record<string,unknown>|undefined;
+    if(!Object.prototype.hasOwnProperty.call(providerOutput,'followUpSuggestion')&&statusShape&&Object.prototype.hasOwnProperty.call(statusShape,'followUpSuggestion')){
+      const {followUpSuggestion,...statusSuggestion}=statusShape;
+      Object.assign(providerOutput,{statusSuggestion,followUpSuggestion});
+    }
     const generated = generatedSchema.parse(providerOutput);
+    if(!generated.replyDraft.bodyText.includes('\n')&&generated.replyDraft.bodyText.includes('\\n'))generated.replyDraft.bodyText=generated.replyDraft.bodyText.replace(/\\r\\n|\\n/g,'\n');
     void _usage;
     const known = new Set(limited.items.map((item) => item.messageId));
     generated.intent.evidenceMessageIds = verifiedIds(generated.intent.evidenceMessageIds, known);
     generated.safety.evidenceMessageIds = verifiedIds(generated.safety.evidenceMessageIds, known);
     generated.extracted.products = generated.extracted.products.map((item) => ({ ...item, evidenceMessageIds: verifiedIds(item.evidenceMessageIds, known) }));
-    for (const key of ['quantity', 'price', 'delivery'] as const) generated.extracted[key].evidenceMessageIds = verifiedIds(generated.extracted[key].evidenceMessageIds, known);
+    for (const key of ['quantity', 'price', 'delivery'] as const) {
+      const item=generated.extracted[key];item.evidenceMessageIds=verifiedIds(item.evidenceMessageIds,known);
+      // Supplier terms cannot masquerade as buyer requirements merely by citing an unrelated real mail.
+      const numbers=(text:string)=>(text.match(/\d[\d,]*(?:\.\d+)?/g)??[]).map(n=>Number(n.replace(/,/g,'')));
+      const evidenceNumbers=new Set(limited.items.filter(m=>item.evidenceMessageIds.includes(m.messageId)).flatMap(m=>numbers(m.subject+' '+m.text)));
+      if(numbers(item.value).some(n=>!evidenceNumbers.has(n)))generated.extracted[key]={value:({quantity:'来信未提供可核实的采购数量，请确认。',price:'来信未提供可核实的目标价格，请确认。',delivery:'来信未提供可核实的具体交期，请确认。'} as const)[key],evidenceMessageIds:[]};
+    }
     generated.extracted.questions = generated.extracted.questions.map((item) => ({ ...item, evidenceMessageIds: verifiedIds(item.evidenceMessageIds, known) }));
     const safetySource = context.protectedInbound ?? context.latestInbound;
     const deterministic = safetySource ? detectProtectedMailSignal(safetySource) : { classification: 'normal' as const, reason: '' };
@@ -206,6 +236,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     try {
       analysis = await AgentMailThreadAnalysis.create({
         ...identifiers, rootMailId: input.mailId, rootDirection: input.direction, threadId: context.threadId,
+        productSources:knowledge.map(k=>({sourceId:k.sourceId,title:k.title,version:k.version,source:k.source})),
         customerId: context.customer ? new Types.ObjectId(context.customer.id) : undefined,
         replyToMailId: context.latestInbound ? new Types.ObjectId(context.latestInbound.messageId) : undefined,
         requestKey: input.idempotencyKey,
@@ -225,7 +256,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     }
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
       workflowId: analysis._id, status: 'completed', inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens,
-      totalTokens: response.usage.totalTokens, inputCharacters: limited.inputCharacters, inputTruncated: limited.truncated,
+      totalTokens: response.usage.totalTokens, inputCharacters: inputChars, inputTruncated: limited.truncated,
       promptInjectionDetected: limited.items.some((item) => containsPromptInjection(item.text)),
       estimatedCostUsd: estimateAgentCostUsd(response.usage, activeProvider.name), durationMs: Date.now() - startedAt,
     } });
@@ -240,7 +271,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
     await settleAgentQuota(reservation);
     if (error instanceof ApiError) throw error;
-    if (error instanceof AgentProviderError) throw new ApiError(503, 'Agent 邮件分析服务暂时不可用，CRM 数据未改动', 'INTERNAL_ERROR');
+    if(error instanceof AgentProviderError)throw new ApiError(503,'邮件分析暂时不可用','INTERNAL_ERROR',[{field:'agent',message:error.code}]);
     throw error;
   }
 }
@@ -281,7 +312,7 @@ async function approvedAction(identifiers: ReturnType<typeof scope>, workflowId:
 
 export async function saveMailReplyDraft(id: string, input: ConfirmAgentAnalysisActionBody, actor: AuthUser) {
   const identifiers = scope(actor); const current = await getOrThrow(id, actor);
-  if (current.safety.marketingBlocked || current.replyStatus === 'blocked') throw ApiError.conflict('检测到退订、退信或拒绝信号，禁止继续营销发送或保存回复草稿');
+  if (current.safety.marketingBlocked || current.replyStatus === 'blocked'||(current.customerId&&await hasProtectedCustomerMail(String(current.customerId),actor.projectId!))) throw ApiError.conflict('检测到退订、退信或拒绝信号，禁止继续营销发送或保存回复草稿');
   if (!current.customerId || !current.replyToMailId) throw ApiError.badRequest('当前线程未关联客户或没有可回复的客户来信');
   if (!current.replyDraft.subject.trim() || !current.replyDraft.bodyText.trim()) throw ApiError.badRequest('请先完善回复主题和正文');
   if (current.replyStatus === 'saved' && current.createdLetterId) return { analysis: dto(current), letterId: String(current.createdLetterId), idempotent: true };
