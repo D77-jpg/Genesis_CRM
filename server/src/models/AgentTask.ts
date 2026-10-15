@@ -4,6 +4,7 @@ export type TaskStep = typeof taskStepKeys[number];
 export type TaskStatus = 'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
 export interface IAgentTask {
  projectId: Types.ObjectId; userId: Types.ObjectId; sessionId: Types.ObjectId; actorRole: 'admin'|'user';
+ parentBatchId?:Types.ObjectId; skillVersion?:number; knowledgeIds:Types.ObjectId[]; tokenBudget:number; budgetCharged:number; contextSummary?:string;
  requestKey: string; goal: string; customerId?: Types.ObjectId; query?: string;
  candidates: {id: string; name: string; company?: string}[];
  analysisId?: Types.ObjectId; draftId?: Types.ObjectId; sentLetterId?: Types.ObjectId;
@@ -15,6 +16,7 @@ export interface IAgentTask {
 const schema = new Schema<IAgentTask>({
  projectId: {type: Schema.Types.ObjectId, required: true}, userId: {type: Schema.Types.ObjectId, required: true},
  sessionId: {type: Schema.Types.ObjectId, required: true}, actorRole: {type: String, enum: ['admin','user'], required: true},
+ parentBatchId:Schema.Types.ObjectId,skillVersion:{type:Number,default:2},knowledgeIds:[Schema.Types.ObjectId],tokenBudget:{type:Number,default:60000},budgetCharged:{type:Number,default:0},contextSummary:{type:String,maxlength:2000},
  requestKey: {type: String, required: true, maxlength: 128}, goal: {type: String, required: true, maxlength: 8000},
  customerId: Schema.Types.ObjectId, query: {type: String, maxlength: 120},
  candidates: [{_id: false, id: String, name: String, company: String}],

@@ -5,6 +5,7 @@
  * 数据与条件全部托管在 useCustomerStore，页面只负责「组装」与「交互反馈」。
  */
 import * as React from 'react';
+import {useUiStore} from '@/store/ui.store';
 import { toast } from 'sonner';
 import { Download, FileSpreadsheet, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
@@ -360,6 +361,7 @@ export function CustomersPage(): React.JSX.Element {
       </Card>
 
       <BulkActionsBar
+        onPrepareDrafts={()=>useUiStore.getState().openAgentBatch(selectedIds)}
         selectedCount={selectedIds.length}
         busy={mutating || quickSaving}
         disabled={loading}

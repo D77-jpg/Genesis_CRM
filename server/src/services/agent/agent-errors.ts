@@ -5,6 +5,8 @@ export function agentFailure(error: unknown): { code: string; message: string; r
   const marker = error instanceof ApiError ? error.details?.find(item => item.field === 'agent')?.message : undefined;
   const code = error instanceof AgentProviderError ? error.code : marker
     ?? (error instanceof ApiError ? error.code : (error as { name?: string })?.name === 'ZodError' ? 'OPENAI_INVALID_STRUCTURED_OUTPUT' : 'AGENT_RUNTIME_ERROR');
+  if(code==='MARKETING_BLOCKED')return {code,message:'客户已退订、拒绝或退信，已阻断营销草稿；其余客户继续处理。',retryable:false};
+  if (code === 'TASK_BUDGET_EXCEEDED') return {code,message:'本任务的模型预算已用完。已完成结果保留，请缩小资料范围后新建任务。',retryable:false};
   if (code === 'RATE_LIMITED') return { code, message: '本日 Agent 使用额度已达上限，请稍后或调整额度后继续。', retryable: false };
   if (['NOT_FOUND', 'FORBIDDEN', 'UNAUTHORIZED'].includes(code)) return { code, message: '客户、会话或账号权限已变化，请重新选择有权访问的客户。', retryable: false };
   if (code === 'PAYLOAD_TOO_LARGE') return { code, message: '本次资料超过处理上限，请减少范围后重试。', retryable: false };

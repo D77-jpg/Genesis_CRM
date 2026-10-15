@@ -1,3 +1,6 @@
+import {searchProductKnowledge} from './knowledge.service';
+import {customerAttachmentEvidence} from './attachment-text.service';
+import {chargeTaskBudget} from './task-budget';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import env from '../../config/env';
@@ -94,7 +97,7 @@ function clipped(value: unknown, max = 3000): string {
   return String(value ?? '').trim().slice(0, max);
 }
 
-async function buildAnalysisInput(customerId: string, actor: AuthUser): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[] }> {
+async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledgeIds?:string[], goal=''): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[] }> {
   const customer = await getCustomerByIdOrThrow(customerId, actor);
   const projectId = requireProjectId(actor);
   const oid = new Types.ObjectId(customerId);
@@ -138,6 +141,9 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser): Promise<
     totalAmount: quotation.totalAmount, items: quotation.items, paymentTerms: quotation.paymentTerms, leadTime: quotation.leadTime,
     moq: quotation.moq, notes: clipped(quotation.notes),
   });
+  const knowledge=await searchProductKnowledge(actor,`${customer.interestedProducts??''} ${customer.productCategory??''} ${customer.industry??''} ${goal}`,knowledgeIds);
+  for(const item of knowledge)add({sourceId:item.sourceId,kind:'knowledge',recordId:item.knowledgeId,label:`已发布产品知识 · ${item.title} · v${item.version}`},item);
+  for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
   return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog }, sources };
 }
 
@@ -160,7 +166,7 @@ function recommendationEvidence(recommendations: AgentAnalysisClaim[]): { reason
   return { reason: recommendation.rationale!.trim(), sourceIds: recommendation.sourceIds };
 }
 
-export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider }) {
+export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider; knowledgeIds?:string[]; taskId?:string }) {
   const identifiers = scope(actor);
   await getCustomerByIdOrThrow(input.customerId, actor);
   const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
@@ -174,7 +180,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
   let reservation: AgentQuotaReservation | undefined;
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
-    const context = await buildAnalysisInput(input.customerId, actor);
+    const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest);
     if (options?.firstOutreach) {
       const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
       const sender = await getCurrentMailSender(String(requireProjectId(actor)), actor.id);
@@ -187,6 +193,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     const serializedInput = JSON.stringify(context.input);
     if (serializedInput.length > env.AI_MAX_INPUT_CHARS) throw new ApiError(413, '客户资料超过 Agent 单次分析上限，请减少历史数据后重试', 'PAYLOAD_TOO_LARGE');
     reservation = await reserveAgentQuota(actor, serializedInput.length);
+    await chargeTaskBudget(options?.taskId,serializedInput.length,env.AI_MAX_OUTPUT_TOKENS);
     const safetyIdentifier = agentSafetyIdentifier(actor);
     const generated = await activeProvider.analyzeCustomer({ input: context.input, safetyIdentifier });
     const parsed = outputSchema.parse({

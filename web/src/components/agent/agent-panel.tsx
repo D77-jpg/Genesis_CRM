@@ -47,6 +47,8 @@ import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
 import type { AgentAction, AgentRecordedWorkflow, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
+import {AgentBatches} from './agent-batches';
+import {AgentKnowledge} from './agent-knowledge';
 import { AgentTasks, type AgentTask } from './agent-tasks';
 import { AgentMessageContent } from './agent-message-content';
 import { AgentActionDetail } from './agent-action-detail';
@@ -164,6 +166,9 @@ export function AgentPanel(): React.JSX.Element | null {
   const [analyzing, setAnalyzing] = React.useState(false);
   const [error, setError] = React.useState('');
   const [tab, setTab] = React.useState('chat');
+  const selectedBatchIds=useUiStore(s=>s.agentBatchCustomerIds);
+  const clearBatchSelection=useUiStore(s=>s.clearAgentBatchSelection);
+  React.useEffect(()=>{if(selectedBatchIds.length)setTab('batches');},[selectedBatchIds]);
   const [autoOpenTaskId, setAutoOpenTaskId] = React.useState<string|null>(null);
   const [recordsError, setRecordsError] = React.useState('');
   const [renameOpen, setRenameOpen] = React.useState(false);
@@ -350,6 +355,7 @@ export function AgentPanel(): React.JSX.Element | null {
         result.userMessage,
         result.assistantMessage,
       ]);
+      if(result.assistantMessage.batchId)setTab('batches');
       if (result.assistantMessage.taskId) {setAutoOpenTaskId(result.assistantMessage.taskId);setTab('tasks');}
       if (result.assistantMessage.uiAction) openOutreachComposer(result.assistantMessage.uiAction);
       if (result.degraded) toast.warning(result.assistantMessage.content);
@@ -461,6 +467,8 @@ export function AgentPanel(): React.JSX.Element | null {
             {customerPreviewId && <TabsTrigger value="customer-preview"><UserPlus className="h-3.5 w-3.5" />客户预览</TabsTrigger>}
             {customerAnalysisId && <TabsTrigger value="customer-analysis"><BarChart3 className="h-3.5 w-3.5" />客户分析</TabsTrigger>}
             {mailAnalysisId && <TabsTrigger value="mail-analysis"><MailSearch className="h-3.5 w-3.5" />邮件助理</TabsTrigger>}
+            <TabsTrigger value="batches">批量</TabsTrigger>
+            <TabsTrigger value="knowledge">产品知识</TabsTrigger>
             <TabsTrigger value="tasks"><Clock3 className="h-3.5 w-3.5" />任务</TabsTrigger>
             <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
           </TabsList>
@@ -550,6 +558,7 @@ export function AgentPanel(): React.JSX.Element | null {
               <article key={message.id} className={message.role === 'user' ? 'ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-primary/10 text-foreground px-4 py-3 text-sm text-foreground' : `min-w-0 rounded-xl rounded-bl-sm border bg-card px-4 py-4 text-sm shadow-sm ${message.status === 'failed' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
                 {message.role === 'assistant' && <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">AI 生成 · 请核对关键信息</p>}
                 {message.role === 'assistant' ? <AgentMessageContent content={message.content} /> : <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>}
+                {message.batchId&&<Button variant="outline" className="mt-3 min-h-11" onClick={()=>setTab('batches')}>查看批量计划</Button>}
                 {message.taskId && <Button variant="outline" className="mt-3 min-h-11" onClick={()=>{setAutoOpenTaskId(null);setTab('tasks');}}>查看任务进度</Button>}
                 {message.role === 'assistant' && message.uiAction && <Button type="button" className="mt-3" onClick={() => openOutreachComposer(message.uiAction!)}>打开首封开发信</Button>}
               </article>
@@ -590,6 +599,8 @@ export function AgentPanel(): React.JSX.Element | null {
         {customerAnalysisId && <TabsContent forceMount value="customer-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><CustomerAnalysisView analysisId={customerAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
         {mailAnalysisId && <TabsContent forceMount value="mail-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><MailThreadAnalysisView analysisId={mailAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
 
+        <TabsContent value="batches" className="m-0 flex min-h-0 flex-1 flex-col"><AgentBatches key={`${project.id}:${user.id}`} selectedIds={selectedBatchIds} onClearSelection={clearBatchSelection} onTask={()=>{setAutoOpenTaskId(null);setTab('tasks');}} onDraft={openTaskDraft}/></TabsContent>
+        <TabsContent value="knowledge" className="m-0 flex min-h-0 flex-1 flex-col"><AgentKnowledge key={`${project.id}:${user.id}`} admin={user.role==='admin'} customerId={context.type==='customer'?context.resourceId:undefined}/></TabsContent>
         <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks key={`${project.id}:${user.id}`} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft}/></TabsContent>
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">

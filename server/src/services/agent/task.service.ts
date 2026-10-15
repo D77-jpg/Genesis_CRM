@@ -1,7 +1,10 @@
+import {materializeAgentBatches} from './batch.service';
+import {AgentBatch} from '../../models/AgentBatch';
+import {hasProtectedCustomerMail} from './mail-thread-analysis.service';
 import { randomUUID } from 'node:crypto';
 import mongoose, { Types } from 'mongoose';
 import { AgentSession, AgentAction, AgentCustomerAnalysis, User, Project, Customer, DevelopmentLetter } from '../../models';
-import { AgentTask, type AgentTaskDocument, type TaskStep } from '../../models/AgentTask';
+import { AgentTask, type AgentTaskDocument, type IAgentTask, type TaskStep } from '../../models/AgentTask';
 import type { AuthUser } from '../../types/express';
 import { customerScope, requireProjectId } from '../../utils/access';
 import { ApiError } from '../../utils/ApiError';
@@ -21,7 +24,7 @@ import { agentSafetyIdentifier, reserveAgentQuota, settleAgentQuota } from './ru
 const scope = (actor: AuthUser) => ({projectId: requireProjectId(actor), userId: new Types.ObjectId(actor.id)});
 const validId = (id: string) => { if (!/^[a-f\d]{24}$/i.test(id)) throw ApiError.notFound('任务不存在或无权访问'); return id; };
 // Revalidate background authority against current DB state, never a long-lived JWT or upgraded role.
-async function taskActor(task: AgentTaskDocument): Promise<AuthUser> {
+export async function taskActor(task: Pick<IAgentTask,'projectId'|'userId'|'actorRole'>): Promise<AuthUser> {
  const [user, project] = await Promise.all([User.findById(task.userId), Project.findById(task.projectId)]);
  if (!user || user.status === 'disabled' || !project || project.status !== 'active'
   || (user.role !== 'admin' && !user.projectIds.some(p => String(p) === String(task.projectId)))) throw ApiError.notFound('任务权限已失效');
@@ -36,7 +39,7 @@ async function dto(task: AgentTaskDocument, actor: AuthUser) {
   customerId: task.customerId?.toString(), analysisId: task.analysisId?.toString(), draftId: task.draftId?.toString(),
   sentLetterId: task.sentLetterId?.toString(), completedSteps: task.completedSteps, currentStep: task.currentStep,
   events: task.events, error: task.error, attempts: task.attempts,
-  candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), createdAt: task.createdAt, updatedAt: task.updatedAt};
+  candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};
 }
 async function owned(id: string, actor: AuthUser) {
  const task = await AgentTask.findOne({_id: validId(id), ...scope(actor)});
@@ -51,14 +54,14 @@ export async function listAgentTasks(actor: AuthUser) {
  for (const task of rows) { try { result.push(await dto(task,actor)); } catch (error) { if (!(error instanceof ApiError && error.statusCode === 404)) throw error; } }
  return result;
 }
-export async function createAgentTask(input: {sessionId: string; goal: string; requestKey: string}, actor: AuthUser) {
+export async function createAgentTask(input: {sessionId: string; goal: string; requestKey: string; customerId?:string; parentBatchId?:string; knowledgeIds?:string[]; tokenBudget?:number}, actor: AuthUser) {
  const session = await AgentSession.findOne({_id: validId(input.sessionId), ...scope(actor), status: 'active'});
  if (!session) throw ApiError.notFound('会话不存在或无权访问');
  if (!isFirstOutreachCommand(input.goal)) throw ApiError.badRequest('请明确委托准备首封开发信草稿');
- const customerId = session.context.type === 'customer' ? session.context.resourceId : undefined;
+ const customerId = input.customerId ?? (session.context.type === 'customer' ? session.context.resourceId : undefined);
  if (customerId) await getCustomerByIdOrThrow(customerId,actor);
  const data = {...scope(actor), sessionId: session._id, actorRole: actor.role, goal: input.goal, requestKey: input.requestKey,
-  customerId, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
+  customerId,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:2, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
  let task;
  try { task = await AgentTask.findOneAndUpdate({...scope(actor),requestKey: input.requestKey}, {$setOnInsert: data}, {upsert: true,new: true,runValidators: true}); }
  catch (error) { if ((error as {code?:number}).code !== 11000) throw error; task = await AgentTask.findOne({...scope(actor),requestKey: input.requestKey}); }
@@ -96,7 +99,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
  const fence = {_id:task._id,status:'running',leaseToken:token};
  const heartbeat = setInterval(() => { void AgentTask.updateOne(fence,{$set:{leaseUntil:new Date(Date.now()+90_000)}}).catch(() => undefined); },10_000);
  heartbeat.unref();
- const check = async () => { if (!await AgentTask.exists(fence)) throw new Error('TASK_INTERRUPTED'); const actor = await taskActor(task); if(task.customerId) await getCustomerByIdOrThrow(String(task.customerId),actor); return actor; };
+ const check = async () => { if(task.parentBatchId && !await AgentBatch.exists({_id:task.parentBatchId,status:'active'}))throw new Error('TASK_INTERRUPTED'); if (!await AgentTask.exists(fence)) throw new Error('TASK_INTERRUPTED'); const actor = await taskActor(task); if(task.customerId) await getCustomerByIdOrThrow(String(task.customerId),actor); return actor; };
  const change = async (set: Record<string,unknown>, message?:string, complete?:TaskStep) => {
   const result = await AgentTask.updateOne(fence, {$set:set,$inc:{version:1},
    ...(message ? {$push:{events:{$each:[{at:new Date(),message,step:task.currentStep}],$slice:-100}}} : {}),
@@ -134,14 +137,16 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
   }
   actor=await check();
   const customer=await getCustomerByIdOrThrow(String(task.customerId),actor);
+  if(await hasProtectedCustomerMail(customer.id,actor.projectId!))throw new ApiError(403,'客户已停止营销联系','FORBIDDEN',[{field:'agent',message:'MARKETING_BLOCKED'}]);
   if (!customer.email) { await change({status:'waiting_input'},'客户档案缺少邮箱，请在档案补齐后点击继续。'); return; }
   if (!task.completedSteps.includes('analyze_customer')) {
    await step('analyze_customer','正在读取客户档案、时间线、邮件与报价，生成有依据的英文草稿。');
-   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}`},actor,{firstOutreach:true,userRequest:task.goal,provider:providerOverride});
-   await check(); await change({analysisId:new Types.ObjectId(analysis.id)},'分析与草稿内容已持久保存。','analyze_customer');
+   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}`},actor,{firstOutreach:true,userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id});
+   await check(); await change({analysisId:new Types.ObjectId(analysis.id),contextSummary:analysis.facts.map(f=>f.text).join('；').slice(0,1500)},'分析与草稿内容已持久保存。','analyze_customer');
   }
   if (!task.completedSteps.includes('save_draft')) {
    await step('save_draft','正在保存开发信草稿；不会调用发送接口。');
+   if(await hasProtectedCustomerMail(String(task.customerId),actor.projectId!))throw new ApiError(403,'客户已停止营销联系','FORBIDDEN',[{field:'agent',message:'MARKETING_BLOCKED'}]);
    // Recover a write whose response/checkpoint was lost; never overwrite later human edits.
    let draft=await DevelopmentLetter.findOne({projectId:task.projectId,requestKey:`task-draft-${task.id}`});
    if(!draft) {
@@ -176,6 +181,6 @@ let worker: ReturnType<typeof setInterval>|undefined;
 let busy=false;
 export function startAgentTaskWorker() {
  if(worker || process.env.NODE_ENV==='test' || process.env.NODE_TEST_CONTEXT) return;
- worker=setInterval(()=>{ if(busy || mongoose.connection.readyState!==1)return; busy=true; void processAgentTask().catch(()=>undefined).finally(()=>{busy=false;}); },2000);
+ worker=setInterval(()=>{ if(busy || mongoose.connection.readyState!==1)return; busy=true; void materializeAgentBatches().then(()=>processAgentTask()).catch(()=>undefined).finally(()=>{busy=false;}); },2000);
  worker.unref();
 }
