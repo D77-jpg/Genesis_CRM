@@ -804,6 +804,9 @@ test('85 an Agent first-outreach draft records a follow-up only on SMTP acceptan
   const draft = await request('POST', '/letters', salesToken, { customerId, subject: analysis.emailDraft.subject,
     content: '<p>First outreach fixture</p>', agentAnalysisId: analysis.id, saveAsDraft: true, requestKey: `outreach-draft-${suffix}` }, 201);
   assert.equal(draft.letter.status, 'draft');
+  const {AgentTask} = await import('../src/models/AgentTask');
+  const task=await AgentTask.create({projectId,userId:salesId,sessionId:new db.Types.ObjectId(),actorRole:'user',requestKey:`smtp-task-${suffix}`,
+    goal:'帮我写第一封开发信',customerId,analysisId:analysis.id,draftId:draft.letter.id,status:'awaiting_review'});
   const initialCount = await models.FollowUp.countDocuments({ customerId });
   const sent = await request('POST', `/letters/${draft.letter.id}/resend`, salesToken, { scheduledAt: new Date(Date.now()+3600000).toISOString(), requestKey: `outreach-send-${suffix}` }, 201);
   let job = await models.DevelopmentLetter.findById(sent.letter.id);
@@ -811,11 +814,14 @@ test('85 an Agent first-outreach draft records a follow-up only on SMTP acceptan
   await due(sent.letter.id);
   await queue.processMailJob(sent.letter.id, async () => ({ accepted: false, channel: 'smtp', durationMs: 0, retryable: true, error: 'fixture failure' }));
   assert.equal(await models.FollowUp.countDocuments({ customerId }), initialCount);
+  assert.equal((await AgentTask.findById(task.id))?.status,'awaiting_review');
   // Restore the fixture job channel to mock before the second attempt so it never requires a real account.
   await models.DevelopmentLetter.updateOne({ _id: sent.letter.id }, { $set: { channel: 'mock' } });
   await due(sent.letter.id);
   await queue.processMailJob(sent.letter.id, async () => ({ accepted: true, channel: 'smtp', durationMs: 0 }));
   assert.equal(await models.FollowUp.countDocuments({ customerId }), initialCount+1);
+  assert.equal((await AgentTask.findById(task.id))?.status,'completed');
+  assert.equal(String((await AgentTask.findById(task.id))?.sentLetterId),sent.letter.id);
   const followup = await models.FollowUp.findOne({ customerId, content: /首封开发信已发送/ }).sort({ createdAt: -1 });
   assert.equal(followup?.method, 'email'); assert.equal(String(followup?.createdBy), salesId); assert.equal(followup?.result, 'no_reply');
   job = await models.DevelopmentLetter.findById(sent.letter.id);

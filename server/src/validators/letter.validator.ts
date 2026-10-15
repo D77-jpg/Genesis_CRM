@@ -47,6 +47,7 @@ export const sendLetterSchema = z.object({
 });
 
 export const resendLetterSchema = z.object({
+  saveAsDraft: z.boolean().optional(),
   scheduledAt: z.string().datetime().transform((v) => new Date(v)).optional(),
   requestKey: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   subject: z.string().trim().min(1).max(300).optional(),

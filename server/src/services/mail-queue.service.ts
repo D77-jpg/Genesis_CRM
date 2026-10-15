@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { AgentTask } from '../models/AgentTask';
 import { createFollowUp } from './followup.service';
 import { DevelopmentLetter, Customer, User } from '../models';
 import env from '../config/env';
@@ -23,6 +24,8 @@ async function reconcile(id: string): Promise<void> {
       content: `首封开发信已发送（SMTP 已接受，等待客户回复）。主题：${letter.subject}；收件人：${letter.recipientEmail}。`,
       followUpAt: letter.sentAt || letter.createdAt }, String(letter.sentBy), String(letter.projectId),
       { agentActionKey: `first-outreach-sent:${letter.agentOutreachId}` });
+    await AgentTask.updateOne({projectId:letter.projectId,analysisId:letter.agentOutreachId,status:'awaiting_review'},
+      {$set:{status:'completed',sentLetterId:letter._id},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'SMTP 已接受邮件，已自动新增首封开发信跟进记录。'}],$slice:-100}}});
   }
   if (letter.markAsDeveloped) await Customer.updateOne({ _id: letter.customerId, projectId: letter.projectId, status: 'pending' }, { $set: { status: 'contacted' } });
   await DevelopmentLetter.updateOne({ _id: id, projectId: letter.projectId, status: { $in: ['sent', 'opened'] } }, { $set: { effectsPending: false } });

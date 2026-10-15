@@ -543,6 +543,17 @@ export async function resendLetter(
   const contentTemplate = input.content ?? original.template ?? original.content;
   const subjectTemplate = input.subject ?? original.subject;
 
+  if (input.saveAsDraft) {
+    if (original.status !== 'draft') throw ApiError.conflict('只有草稿可以继续保存');
+    const rendered = await renderLetter(customer, subjectTemplate, contentTemplate, input.recipientEmail ?? original.recipientEmail);
+    const saved = await DevelopmentLetter.findOneAndUpdate({_id: original._id, projectId: customer.projectId, status:'draft'}, {$set:{
+      subject:rendered.subject, content:rendered.html, contentText:rendered.text, template:contentTemplate,
+      recipientEmail:rendered.recipientEmail, recipientName:rendered.recipientName,
+    }}, {new:true});
+    if (!saved) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
+    return {letter:toLetterDto(saved.toObject() as unknown as Record<string,unknown>),customer:customer.toJSON() as unknown as ICustomer & {id:string},
+      channel:saved.channel,delivered:false,message:'草稿已更新，未发送'};
+  }
   return persistAndSend({
     customer,
     subjectTemplate,

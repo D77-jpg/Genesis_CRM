@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { z } from 'zod';
+import { getAgentTask, listAgentTasks, controlAgentTask } from '../services/agent/task.service';
 import { rateLimit } from 'express-rate-limit';
 import { validate } from '../middleware/validate.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -73,7 +75,13 @@ const messageLimiter = rateLimit({
   handler: (_req, _res, next) => next(ApiError.tooManyRequests('Agent 请求过于频繁，请稍后重试')),
 });
 
-router.get('/status', asyncHandler(async (_req, res) => sendSuccess(res, await getAgentStatus())));
+router.get('/tasks', asyncHandler(async (req,res) => sendSuccess(res,await listAgentTasks(req.user!))));
+router.get('/tasks/:id', validate({params:agentSessionParamsSchema}),asyncHandler(async (req,res) => sendSuccess(res,await getAgentTask(req.params.id,req.user!))));
+for (const action of ['resume','pause','cancel'] as const) router.post(`/tasks/:id/${action}`, messageLimiter, validate({params:agentSessionParamsSchema,
+ body:z.object({version:z.number().int().min(0),customerId:z.string().regex(/^[a-f\d]{24}$/i).optional(),query:z.string().trim().min(1).max(120).optional()}).strict()}),
+ asyncHandler(async (req,res) => sendSuccess(res,await controlAgentTask(req.params.id,action,req.body,req.user!))));
+
+router.get('/status' , asyncHandler(async (_req, res) => sendSuccess(res, await getAgentStatus())));
 router.get('/tools', (_req, res) => sendSuccess(res, getAgentToolCatalog()));
 router.get('/sessions', asyncHandler(async (req, res) => sendSuccess(res, await listAgentSessions(req.user!))));
 router.post('/sessions', validate({ body: createAgentSessionSchema }), asyncHandler(async (req, res) => {

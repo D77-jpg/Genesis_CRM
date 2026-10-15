@@ -293,6 +293,7 @@ export function SendLetterDialog({
           if (!asDraft && scheduledAt && new Date(scheduledAt).getTime() <= Date.now()) throw new Error('定时时间必须晚于当前时间');
           const result = letter
             ? await resendLetter(letter.id, {
+                saveAsDraft: asDraft,
                 requestKey: requestKey.current,
                 scheduledAt: !asDraft && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
                 subject: values.subject,
@@ -400,10 +401,10 @@ export function SendLetterDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-4 w-4 text-primary" aria-hidden />
-            {reply ? '回复客户邮件' : letter ? '重新发送开发信' : '发送开发信'}
+            {reply ? '回复客户邮件' : letter?.status === 'draft' ? '审核开发信草稿' : letter ? '重新发送开发信' : '发送开发信'}
           </DialogTitle>
           <DialogDescription>
-            {letter
+            {letter?.status === 'draft' ? '草稿已保存。请核对收件人、主题与正文，再由业务员发送。' : letter
               ? '已带出原信内容，可修改后再次发送；会新增一条发送记录。'
               : '正文中的 {{占位符}} 会在发送时自动替换为该客户的真实信息。'}
           </DialogDescription>

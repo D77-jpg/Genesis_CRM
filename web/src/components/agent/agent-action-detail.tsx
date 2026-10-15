@@ -49,7 +49,7 @@ export function AgentActionDetail({ actionId, label, onClose, onOpenWorkflow }: 
           {!detail.workflow && <p className="text-xs text-muted-foreground">{detail.hasWorkflow ? '关联结果已不存在或当前无权访问。' : '此记录仅保存执行摘要，未保存完整查询结果。'}</p>}
         </div>}
       </DialogBody>
-      <DialogFooter><Button variant="outline" onClick={onClose}>关闭详情</Button>{detail?.workflow && <Button onClick={() => onOpenWorkflow(detail.workflow!)}>{detail.workflow.kind === 'customer-preview' ? '查看客户预览' : '查看分析结果'}</Button>}</DialogFooter>
+      <DialogFooter><Button variant="outline" onClick={onClose}>关闭详情</Button>{detail?.workflow && <Button onClick={() => onOpenWorkflow(detail.workflow!)}>{detail.workflow.kind === 'task' ? '查看任务进度' : detail.workflow.kind === 'customer-preview' ? '查看客户预览' : '查看分析结果'}</Button>}</DialogFooter>
     </DialogContent>
   </Dialog>;
 }

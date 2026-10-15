@@ -44,6 +44,8 @@ before(async () => {
     { _id: userB, username: 'bob', passwordHash: 'test-hash', displayName: 'Bob', role: 'user', projectIds: [projectA] },
     { _id: adminUser, username: 'admin', passwordHash: 'test-hash', displayName: 'Admin', role: 'admin', projectIds: [projectA] },
   ]);
+  await models.Project.create({_id:projectA,name:'Fixture Project',slug:'fixture-project',code:'FIX',companyName:'Fixture Seller',mailProfileKey:'fixture'});
+  await (await import('../src/models/AgentTask')).AgentTask.init();
   service = await import('../src/services/agent/agent.service');
   tools = await import('../src/services/agent/tool-registry');
   workflow = await import('../src/services/agent/scratchpad-customer.service');
@@ -67,6 +69,7 @@ test('tool registry exposes read-only tools only', () => {
     'get_customer_timeline',
     'get_dashboard_summary',
     'get_mail_thread',
+    'search_customers',
   ]);
   assert.ok(registered.every((tool) => tool.riskLevel === 'read'));
   assert.ok(tools.agentToolSchemas().every((tool) => tool.strict && tool.parameters.additionalProperties === false));
@@ -257,8 +260,10 @@ test('customer tools enforce customer ownership before returning data', async ()
 test('status is safe to expose and never contains the API key', async () => {
   const status = await service.getAgentStatus();
   const serialized = JSON.stringify(status);
-  assert.equal(status.readOnly, true);
-  assert.equal(status.toolCount, 6);
+  assert.equal(status.readOnly, false);
+  assert.equal(status.toolsReadOnly, true);
+  assert.equal(status.automaticEmailSending, false);
+  assert.equal(status.toolCount, 7);
   assert.equal('apiKey' in status, false);
   assert.equal(serialized.includes('OPENAI_API_KEY'), false);
   assert.equal(serialized.includes('Bearer '), false);
@@ -1000,7 +1005,7 @@ test('saved analysis receipt restores the existing result and denies it after cu
 });
 
 
-test('first outreach command persists a safe composer action and draft analysis without sending or adding a sent follow-up', async () => {
+test('first outreach command persists a durable task and draft analysis without sending or adding a sent follow-up', async () => {
   const { Customer, DevelopmentLetter, FollowUp, AgentCustomerAnalysis, UserMailAccount } = await import('../src/models');
   const account = await UserMailAccount.create({ projectId: projectA, userId: userA, email: 'sender@example.test', displayName: 'Mailbox Sender', smtpHost: 'smtp.example.test', smtpPort: 465, smtpUsername: 'sender@example.test', credentialCiphertext: 'fixture', credentialIv: 'fixture', credentialTag: 'fixture', createdBy: userA, updatedBy: userA });
   const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Outreach Fixture',
@@ -1008,18 +1013,21 @@ test('first outreach command persists a safe composer action and draft analysis 
   const session = await service.createAgentSession({ context: { type: 'customer', resourceId: customer.id } }, actorA);
   const result = await service.sendAgentMessage(session.id, '帮我给这个客户写第一封开发信，不要发送', actorA, 'first-outreach-test-command');
   assert.equal(result.degraded, false);
-  assert.equal(result.assistantMessage.uiAction?.kind, 'compose-first-outreach');
-  assert.equal(result.assistantMessage.uiAction?.customerId, customer.id);
-  const analysis = await AgentCustomerAnalysis.findById(result.assistantMessage.uiAction!.analysisId);
+  const tasks = await import('../src/services/agent/task.service');
+  assert.ok(result.assistantMessage.taskId);
+  await tasks.processAgentTask(result.assistantMessage.taskId);
+  const task = await tasks.getAgentTask(result.assistantMessage.taskId!,actorA);
+  assert.equal(task.status,'awaiting_review');
+  const analysis = await AgentCustomerAnalysis.findById(task.analysisId);
   assert.equal(analysis?.firstOutreach, true); assert.ok(analysis?.emailDraft.subject); assert.ok(analysis?.emailDraft.bodyText);
   assert.match(analysis!.emailDraft.bodyText, /Mailbox Sender/); assert.match(analysis!.emailDraft.bodyText, /sender@example.test/);
-  assert.equal(await DevelopmentLetter.countDocuments({ customerId: customer._id }), 0);
+  assert.equal(await DevelopmentLetter.countDocuments({ customerId: customer._id, status:'draft' }), 1);
   assert.equal(await FollowUp.countDocuments({ customerId: customer._id }), 0);
   const repeated = await service.sendAgentMessage(session.id, '帮我给这个客户写第一封开发信，不要发送', actorA, 'first-outreach-test-command');
-  assert.deepEqual(JSON.parse(JSON.stringify(repeated.assistantMessage.uiAction)), JSON.parse(JSON.stringify(result.assistantMessage.uiAction)));
+  assert.equal(repeated.assistantMessage.taskId,result.assistantMessage.taskId);
   assert.equal(await AgentCustomerAnalysis.countDocuments({ customerId: customer._id }), 1);
   const messages = await service.listAgentMessages(session.id, actorA);
-  assert.equal(messages[1]?.uiAction?.analysisId, String(analysis!._id));
+  assert.equal(messages[1]?.taskId, task.id);
   await assert.rejects(() => analysisWorkflow.getCustomerAnalysis(String(analysis!._id), actorB));
   await UserMailAccount.deleteOne({ _id: account._id });
 });
@@ -1033,7 +1041,7 @@ test('first outreach intent requires a direct command and never upgrades CRM dat
   }
   const session = await service.createAgentSession({ context: { type: 'global' } }, actorA);
   const result = await service.sendAgentMessage(session.id, '帮我写第一封开发信', actorA, 'first-outreach-no-customer');
-  assert.equal(result.assistantMessage.uiAction, undefined); assert.match(result.assistantMessage.content, /先打开目标客户/);
+  assert.ok(result.assistantMessage.taskId); assert.match(result.assistantMessage.content, /任务/);
 });
 
 test('long conversations keep the latest request in the actual provider input and recent message view', async () => {
@@ -1067,4 +1075,113 @@ test('Agent failure messages distinguish invalid output, timeout and access chan
   assert.match(agentFailure(new AgentProviderError('OPENAI_TIMEOUT')).message, /超时/);
   assert.equal(agentFailure(ApiError.notFound('private customer')).retryable, false);
   assert.ok(!agentFailure(new Error('credential-bearing raw error')).message.includes('credential'));
+});
+
+
+test('durable tasks recover a lost checkpoint after restart without duplicate analysis/draft or follow-up', async()=>{
+ const {Customer,DevelopmentLetter,AgentCustomerAnalysis,FollowUp}=await import('../src/models');
+ const {AgentTask}=await import('../src/models/AgentTask');
+ const tasks=await import('../src/services/agent/task.service');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'Durable Fixture',email:'durable@example.test',source:'manual'});
+ const session=await service.createAgentSession({context:{type:'customer',resourceId:c.id}},actorA);
+ const task=await tasks.createAgentTask({sessionId:session.id,goal:'帮我写第一封开发信，不要发送',requestKey:'durable-fixture'},actorA);
+ await Promise.all([tasks.processAgentTask(task.id),tasks.processAgentTask(task.id)]);
+ const done=await tasks.getAgentTask(task.id,actorA);
+ assert.equal(done.status,'awaiting_review');assert.equal(done.completedSteps.length,4);assert.ok(done.draftId);
+ // Simulate process death after the domain write, before its checkpoint could be saved.
+ await AgentTask.updateOne({_id:task.id},{$set:{status:'running',completedSteps:['locate_customer'],leaseToken:'dead-process',leaseUntil:new Date(0)},$unset:{analysisId:1,draftId:1}});
+ await tasks.processAgentTask(task.id);
+ const recovered=await tasks.getAgentTask(task.id,actorA);
+ assert.equal(recovered.status,'awaiting_review');assert.equal(recovered.draftId,done.draftId);
+ assert.equal(await AgentCustomerAnalysis.countDocuments({customerId:c._id}),1);
+ assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id}),1);
+ assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);
+ await assert.rejects(()=>tasks.getAgentTask(task.id,actorB));
+ await assert.rejects(()=>tasks.createAgentTask({sessionId:session.id,goal:'请准备首封开发邮件',requestKey:'durable-fixture'},actorA));
+ await Customer.updateOne({_id:c._id},{$set:{ownerId:userB}});
+ await assert.rejects(()=>tasks.getAgentTask(task.id,actorA));
+ assert.ok(!(await tasks.listAgentTasks(actorA)).some(t=>t.id===task.id));
+});
+
+test('named lookup is bounded by user/project and ambiguous results require explicit selection',async()=>{
+ const {Customer}=await import('../src/models');
+ const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const tasks=await import('../src/services/agent/task.service');
+ const one=await Customer.create({projectId:projectA,ownerId:userA,name:'Twin Fixture Alice',company:'Twin Fixture',email:'twin1@example.test',source:'manual'});
+ await Customer.create({projectId:projectA,ownerId:userA,name:'Twin Fixture Two',company:'Twin Fixture',email:'twin2@example.test',source:'manual'});
+ await Customer.create({projectId:projectA,ownerId:userB,name:'Twin Fixture Private',email:'twinprivate@example.test',source:'manual'});
+ const session=await service.createAgentSession({context:{type:'global'}},actorA);
+ const task=await tasks.createAgentTask({sessionId:session.id,goal:'帮我给 Twin Fixture 写第一封开发信',requestKey:'ambiguous-fixture'},actorA);
+ const provider=new MockAgentProvider();
+ provider.createTurn=async()=>({text:'',output:[],toolCalls:[{callId:'lookup',name:'search_customers',arguments:JSON.stringify({query:'Twin Fixture'})}],usage:{inputTokens:1,outputTokens:1,totalTokens:2}});
+ await tasks.processAgentTask(task.id,provider);
+ const pending=await tasks.getAgentTask(task.id,actorA);
+ assert.equal(pending.status,'waiting_input');assert.equal(pending.candidates.length,2);assert.equal(pending.draftId,undefined);
+ const resumed=await tasks.controlAgentTask(task.id,'resume',{version:pending.version,customerId:one.id},actorA);
+ await assert.rejects(()=>tasks.controlAgentTask(task.id,'cancel',{version:pending.version},actorA));
+ await tasks.processAgentTask(resumed.id,provider);
+ const ready=await tasks.getAgentTask(task.id,actorA);assert.equal(ready.status,'awaiting_review');assert.equal(ready.customerId,one.id);
+ const literal=await tools.executeAgentTool('search_customers',{actor:actorA},{query:'.*'} ) as {items:unknown[]};assert.equal(literal.items.length,0);
+});
+
+test('paused/cancelled in-flight tasks cannot advance to draft; explicit resume retains the checkpoint',async()=>{
+ const {Customer,DevelopmentLetter}=await import('../src/models');
+ const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const tasks=await import('../src/services/agent/task.service');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'Paused Fixture',email:'paused@example.test',source:'manual'});
+ const session=await service.createAgentSession({context:{type:'customer',resourceId:c.id}},actorA);
+ const task=await tasks.createAgentTask({sessionId:session.id,goal:'帮我写第一封开发信',requestKey:'pause-fixture'},actorA);
+ const provider=new MockAgentProvider();const base=provider.analyzeCustomer.bind(provider);
+ let entered!:()=>void;const started=new Promise<void>(r=>{entered=r;});let release!:()=>void;const gate=new Promise<void>(r=>{release=r;});
+ provider.analyzeCustomer=async request=>{entered();await gate;return base(request);};
+ const running=tasks.processAgentTask(task.id,provider);await started;
+ const current=await tasks.getAgentTask(task.id,actorA);
+ const paused=await tasks.controlAgentTask(task.id,'pause',{version:current.version},actorA);release();await running;
+ assert.equal((await tasks.getAgentTask(task.id,actorA)).status,'paused');assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id}),0);
+ await tasks.controlAgentTask(task.id,'resume',{version:paused.version},actorA);await tasks.processAgentTask(task.id);
+ const ready=await tasks.getAgentTask(task.id,actorA);assert.equal(ready.status,'awaiting_review');
+ const cancelled=await tasks.controlAgentTask(task.id,'cancel',{version:ready.version},actorA);assert.equal(cancelled.status,'cancelled');
+ await assert.rejects(()=>tasks.controlAgentTask(task.id,'resume',{version:cancelled.version},actorA));
+ assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id,status:'draft'}),1);
+});
+
+test('task failures remain actionable and retry uses stored analysis instead of generating a second draft',async()=>{
+ const {Customer,DevelopmentLetter}=await import('../src/models');
+ const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const {AgentProviderError}=await import('../src/services/agent/provider');
+ const tasks=await import('../src/services/agent/task.service');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'Retry Fixture',email:'retryfixture@example.test',source:'manual'});
+ const session=await service.createAgentSession({context:{type:'customer',resourceId:c.id}},actorA);
+ const task=await tasks.createAgentTask({sessionId:session.id,goal:'帮我写第一封开发信',requestKey:'retry-fixture'},actorA);
+ const provider=new MockAgentProvider();provider.analyzeCustomer=async()=>{throw new AgentProviderError('OPENAI_TIMEOUT');};
+ await tasks.processAgentTask(task.id,provider);const failed=await tasks.getAgentTask(task.id,actorA);
+ assert.equal(failed.status,'failed');assert.equal(failed.error?.retryable,true);assert.match(failed.error!.message!,/超时/);
+ assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id}),0);
+ await tasks.controlAgentTask(task.id,'resume',{version:failed.version},actorA);await tasks.processAgentTask(task.id);
+ assert.equal((await tasks.getAgentTask(task.id,actorA)).status,'awaiting_review');
+});
+
+test('missing email blocks safely and disabled task owners cannot continue in background',async()=>{
+ const {Customer,User}=await import('../src/models');const tasks=await import('../src/services/agent/task.service');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'No Email Fixture',source:'manual'});
+ const session=await service.createAgentSession({context:{type:'customer',resourceId:c.id}},actorA);
+ const task=await tasks.createAgentTask({sessionId:session.id,goal:'帮我写第一封开发信',requestKey:'noemail-fixture'},actorA);
+ await tasks.processAgentTask(task.id);const waiting=await tasks.getAgentTask(task.id,actorA);assert.equal(waiting.status,'waiting_input');assert.ok(!waiting.analysisId);
+ await Customer.updateOne({_id:c._id},{$set:{email:'nowknown@example.test'}});
+ await tasks.controlAgentTask(task.id,'resume',{version:waiting.version},actorA);await User.updateOne({_id:userA},{$set:{status:'disabled'}});
+ try {await tasks.processAgentTask(task.id);const failed=await tasks.getAgentTask(task.id,actorA);assert.equal(failed.status,'failed');assert.equal(failed.error?.retryable,false);}
+ finally {await User.updateOne({_id:userA},{$set:{status:'active'}});}
+});
+
+test('editing an existing prepared draft remains a draft, preserves task association and never increments sent counters',async()=>{
+ const {Customer,DevelopmentLetter,FollowUp}=await import('../src/models');const tasks=await import('../src/services/agent/task.service');
+ const {resendLetter}=await import('../src/services/letter.service');const {resendLetterSchema}=await import('../src/validators/letter.validator');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'Edited Draft Fixture',email:'editdraft@example.test',source:'manual'});
+ const session=await service.createAgentSession({context:{type:'customer',resourceId:c.id}},actorA);
+ const task=await tasks.createAgentTask({sessionId:session.id,goal:'帮我写第一封开发信',requestKey:'editdraft-fixture'},actorA);
+ await tasks.processAgentTask(task.id);const ready=await tasks.getAgentTask(task.id,actorA);
+ const edited=await resendLetter(ready.draftId!,resendLetterSchema.parse({saveAsDraft:true,subject:'Reviewed by salesperson',content:'<p>Fictional MOQ 73, delivery 19 days.</p>'}),actorA);
+ assert.equal(edited.letter.id,ready.draftId);assert.equal(edited.letter.status,'draft');assert.equal(edited.delivered,false);
+ assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id}),1);assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);
+ assert.equal((await Customer.findById(c._id))?.letterCount,0);assert.equal((await tasks.getAgentTask(task.id,actorA)).status,'awaiting_review');
 });

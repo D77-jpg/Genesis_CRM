@@ -284,6 +284,20 @@ export function CustomerDetailPage(): React.JSX.Element {
     return () => { active = false; };
   }, [customer?.id, composeAnalysisId, setSearchParams]);
   const [resendTarget, setResendTarget] = React.useState<DevelopmentLetter | null>(null);
+  const outreachTaskId=searchParams.get('outreachTask');
+  React.useEffect(()=>{
+    if(!customer?.id || !outreachTaskId || !/^[a-f\d]{24}$/i.test(outreachTaskId)) return;
+    let active=true;
+    void apiGet<{customerId?:string;draftId?:string;status:string}>(`/agent/tasks/${outreachTaskId}`).then(async task=>{
+      if(task.customerId!==customer.id || !task.draftId || task.status!=='awaiting_review') throw new Error('任务草稿与当前客户不匹配或状态已变化');
+      const letter=await apiGet<DevelopmentLetter>(`/letters/${task.draftId}`);
+      if(!active)return;
+      if(letter.customerId!==customer.id || letter.status!=='draft') throw new Error('草稿状态已变化，请刷新任务');
+      setComposeDraft(null);setResendTarget(letter);setSendOpen(true);
+      setSearchParams(current=>{const next=new URLSearchParams(current);next.delete('outreachTask');return next;},{replace:true});
+    }).catch(error=>{if(active)toast.error('任务草稿无法打开',{description:toErrorMessage(error,'请检查权限与草稿状态')});});
+    return()=>{active=false;};
+  },[customer?.id,outreachTaskId,setSearchParams]);
   const [viewTarget, setViewTarget] = React.useState<DevelopmentLetter | null>(null);
   const [viewOpen, setViewOpen] = React.useState(false);
   const [deleteLetterTarget, setDeleteLetterTarget] = React.useState<DevelopmentLetter | null>(null);
