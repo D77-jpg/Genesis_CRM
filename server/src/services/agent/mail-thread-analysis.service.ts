@@ -181,7 +181,6 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     }
     const generated = generatedSchema.parse(providerOutput);
     if(!generated.replyDraft.bodyText.includes('\n')&&generated.replyDraft.bodyText.includes('\\n'))generated.replyDraft.bodyText=generated.replyDraft.bodyText.replace(/\\r\\n|\\n/g,'\n');
-    if(generated.statusSuggestion.status==='replied'&&context.customer?.status!=='replied')generated.statusSuggestion={status:(context.customer?.status??'pending') as typeof generated.statusSuggestion.status,reason:'回复仅保存为草稿，尚未发送；客户状态保持原状。'};
     void _usage;
     const known = new Set(limited.items.map((item) => item.messageId));
     generated.intent.evidenceMessageIds = verifiedIds(generated.intent.evidenceMessageIds, known);

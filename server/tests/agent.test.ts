@@ -1374,7 +1374,7 @@ test('P3 a compatible-gateway sibling nesting error is repaired without relaxing
  const provider=new MockAgentProvider();const original=provider.analyzeMailThread.bind(provider);
  provider.analyzeMailThread=async request=>{const result:any=await original(request);result.statusSuggestion.status='replied';result.statusSuggestion.followUpSuggestion=result.followUpSuggestion;delete result.followUpSuggestion;result.replyDraft.bodyText='Dear team,\\n\\nPlease confirm dimensions.\\nBest regards';return result;};
  const flow=await import('../src/services/agent/mail-thread-analysis.service');const analysis=await flow.createMailThreadAnalysis({mailId:mail.id,direction:'inbound',idempotencyKey:'p3-shape'},actorA,{provider});
- assert.equal(analysis.statusSuggestion.status,'pending');assert.ok(analysis.replyDraft.bodyText.includes('\n\n'));assert.ok(!analysis.replyDraft.bodyText.includes('\\n'));assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);
+ assert.equal((await Customer.findById(c._id))?.status,'pending');assert.ok(analysis.replyDraft.bodyText.includes('\n\n'));assert.ok(!analysis.replyDraft.bodyText.includes('\\n'));assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);
  const bad=new MockAgentProvider();bad.analyzeMailThread=async request=>({...await original(request),unexpectedWrite:'send_all'}) as any;
  await assert.rejects(()=>flow.createMailThreadAnalysis({mailId:mail.id,direction:'inbound',idempotencyKey:'p3-shape-invalid'},actorA,{provider:bad}));
 });
