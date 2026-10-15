@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TableSkeleton } from '@/components/ui/separator';
 import { usePageTitle } from '@/hooks/use-ui';
 import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
+import {agentFailureLabel,agentRunLabel} from '@/lib/agent-display';
 import { formatDateTime } from '@/lib/format';
 import type { AgentDiagnostics, AgentEvalRun } from '@/types';
 
@@ -23,8 +24,8 @@ function EvaluationCard({ evaluation }: { evaluation: AgentEvalRun }): React.JSX
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div>
-          <CardTitle>固定评测 {evaluation.datasetVersion}</CardTitle>
-          <CardDescription>{formatDateTime(evaluation.createdAt)} · {evaluation.provider} / {evaluation.model}</CardDescription>
+          <CardTitle>功能检查</CardTitle>
+          <CardDescription>{formatDateTime(evaluation.createdAt)} · {evaluation.model}</CardDescription>
         </div>
         <Badge variant={passed ? 'developed' : evaluation.status === 'failed' ? 'destructive' : 'secondary'}>
           {evaluation.status === 'failed' ? '运行失败' : `${evaluation.passedCases}/${evaluation.totalCases} 通过`}
@@ -44,14 +45,14 @@ function EvaluationCard({ evaluation }: { evaluation: AgentEvalRun }): React.JSX
             </div>
           ))}
         </div>
-        {evaluation.errorCode ? <p className="mt-3 text-xs text-destructive">错误代码：{evaluation.errorCode}</p> : null}
+        {evaluation.errorCode ? <p className="mt-3 text-xs text-destructive">{agentFailureLabel(evaluation.errorCode)}</p> : null}
       </CardContent>
     </Card>
   );
 }
 
 export function AgentDiagnosticsPage(): React.JSX.Element {
-  usePageTitle('Agent 诊断');
+  usePageTitle('AI 使用情况');
   const [data, setData] = React.useState<AgentDiagnostics | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [running, setRunning] = React.useState(false);
@@ -61,7 +62,7 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
     setLoading(true);
     setError('');
     try { setData(await apiGet<AgentDiagnostics>('/agent/admin/diagnostics?days=30')); }
-    catch (reason) { setError(toErrorMessage(reason, 'Agent 诊断加载失败')); }
+    catch (reason) { setError(toErrorMessage(reason, 'AI 使用情况加载失败')); }
     finally { setLoading(false); }
   }, []);
 
@@ -73,13 +74,13 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
     try {
       // 固定集逐项运行以避免突发流量；真实 Provider 下允许覆盖全局 60 秒请求超时。
       const result = await apiPost<AgentEvalRun>('/agent/admin/evaluations/run', undefined, { timeout: 360_000 });
-      toast.success(`固定评测完成：${result.passedCases}/${result.totalCases} 通过`);
+      toast.success(`功能检查完成：${result.passedCases}/${result.totalCases} 通过`);
       await load();
-    } catch (reason) { toast.error(toErrorMessage(reason, '固定评测运行失败')); }
+    } catch (reason) { toast.error(toErrorMessage(reason, '功能检查运行失败')); }
     finally { setRunning(false); }
   }
 
-  if (loading && !data) return <div className="workspace-page"><PageHeader title="Agent 诊断" /><TableSkeleton rows={8} /></div>;
+  if (loading && !data) return <div className="workspace-page"><PageHeader title="AI 使用情况" /><TableSkeleton rows={8} /></div>;
   if (error && !data) return <ErrorState description={error} onRetry={() => void load()} />;
   if (!data) return <></>;
 
@@ -87,8 +88,8 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
   return (
     <div className="workspace-page">
       <PageHeader
-        title="Agent 诊断"
-        description={`近 ${data.periodDays} 天的使用、安全和审批运行状态。此页面只提供诊断，不增加 Agent 执行权限。`}
+        title="AI 使用情况"
+        description={`近 ${data.periodDays} 天的用量与处理记录。查看账号用量、处理结果，并检查 AI 功能是否正常。`}
         actions={(
           <>
             <Button variant="outline" onClick={() => void load()} disabled={loading}>
@@ -96,7 +97,7 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
             </Button>
             <Button onClick={() => void runEvaluation()} disabled={running}>
               {running ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-              运行固定评测
+              运行功能检查
             </Button>
           </>
         )}
@@ -105,8 +106,8 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Agent 运行" value={tokens(data.totals.runs)} hint={`${data.totals.failed} 次失败`} icon={<Activity className="h-4 w-4" aria-hidden />} tone="primary" />
         <StatCard label="Token 用量" value={tokens(data.totals.totalTokens)} hint={`单用户日上限 ${tokens(data.limits.dailyTokensPerUser)}`} icon={<ShieldCheck className="h-4 w-4" aria-hidden />} />
-        <StatCard label="估算成本" value={money(data.totals.estimatedCostUsd)} hint={data.pricing.configured ? '按服务端配置价格估算' : '尚未配置模型单价'} icon={<Coins className="h-4 w-4" aria-hidden />} />
-        <StatCard label="固定评测" value={latestEval ? percent(latestEval.score) : '未运行'} hint={`${data.dataset.cases} 个固定用例 · ${data.dataset.version}`} icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} tone={latestEval?.score === 1 ? 'developed' : 'pending'} />
+        <StatCard label="估算成本" value={money(data.totals.estimatedCostUsd)} hint={data.pricing.configured ? '按已设置的模型单价估算' : '尚未配置模型单价'} icon={<Coins className="h-4 w-4" aria-hidden />} />
+        <StatCard label="功能检查" value={latestEval ? percent(latestEval.score) : '未运行'} hint={`${data.dataset.cases} 项检查`} icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} tone={latestEval?.score === 1 ? 'developed' : 'pending'} />
       </div>
 
       <Card>
@@ -117,7 +118,7 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
         <CardContent className="px-0 sm:px-0">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>用户</TableHead><TableHead>运行</TableHead><TableHead>Token / 成本</TableHead><TableHead>工具成功率</TableHead><TableHead>审批结果</TableHead><TableHead>安全信号</TableHead><TableHead>今日额度</TableHead>
+              <TableHead>用户</TableHead><TableHead>运行</TableHead><TableHead>Token / 成本</TableHead><TableHead>工具成功率</TableHead><TableHead>审批结果</TableHead><TableHead>资料保护</TableHead><TableHead>今日额度</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {data.users.map((user) => (
@@ -127,7 +128,7 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
                   <TableCell><p className="tabular-nums">{tokens(user.totalTokens)}</p><p className="text-xs text-muted-foreground">{money(user.estimatedCostUsd)}</p></TableCell>
                   <TableCell><span className="tabular-nums">{user.toolCalls} 次 · {percent(user.toolSuccessRate)}</span></TableCell>
                   <TableCell><p>批准 {user.approvals.approved} · 拒绝 {user.approvals.rejected}</p><p className="text-xs text-muted-foreground">待审批 {user.approvals.pending} · 无需审批 {user.approvals.notRequired}</p></TableCell>
-                  <TableCell><p>注入 {user.injectionSignals}</p><p className="text-xs text-muted-foreground">截断 {user.truncatedRuns}</p></TableCell>
+                  <TableCell><p>可疑指令 {user.injectionSignals}</p><p className="text-xs text-muted-foreground">资料过长 {user.truncatedRuns}</p></TableCell>
                   <TableCell><p>{user.today.requests}/{data.limits.dailyRunsPerUser} 次</p><p className="text-xs text-muted-foreground">{tokens(user.today.tokens + user.today.reservedTokens)} tokens</p></TableCell>
                 </TableRow>
               ))}
@@ -139,16 +140,16 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
       <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <div className="space-y-4">
           {data.evaluations.length ? data.evaluations.map((evaluation) => <EvaluationCard key={evaluation.id} evaluation={evaluation} />) : (
-            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">尚未运行固定评测。</CardContent></Card>
+            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">尚未运行功能检查。</CardContent></Card>
           )}
         </div>
         <Card>
-          <CardHeader><CardTitle>最近失败</CardTitle><CardDescription>只展示脱敏错误代码，不展示提示词、邮件正文或密钥。</CardDescription></CardHeader>
+          <CardHeader><CardTitle>最近失败</CardTitle><CardDescription>查看未完成的处理及重试原因，不显示客户正文或服务密钥。</CardDescription></CardHeader>
           <CardContent className="space-y-2">
             {data.recentFailures.length ? data.recentFailures.map((failure) => (
               <div key={failure.id} className="flex items-start gap-2 rounded-md border p-3">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-pending" aria-hidden />
-                <div className="min-w-0"><p className="break-all text-sm font-medium">{failure.errorCode}</p><p className="text-xs text-muted-foreground">{failure.kind} · {failure.provider} · {formatDateTime(failure.createdAt)}</p></div>
+                <div className="min-w-0"><p className="break-all text-sm font-medium">{agentFailureLabel(failure.errorCode)}</p><p className="text-xs text-muted-foreground">{agentRunLabel(failure.kind)} · {formatDateTime(failure.createdAt)}</p></div>
                 <span className="ml-auto flex shrink-0 items-center gap-1 text-xs text-muted-foreground"><Timer className="h-3.5 w-3.5" aria-hidden />{failure.durationMs} ms</span>
               </div>
             )) : <p className="py-6 text-center text-sm text-muted-foreground">所选周期内没有失败记录。</p>}

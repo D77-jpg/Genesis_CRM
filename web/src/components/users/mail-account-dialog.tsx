@@ -176,7 +176,7 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
                 <div>
                   <Label htmlFor="mail-account-password">邮箱密码／授权码</Label>
                   <Input id="mail-account-password" type="password" autoComplete="new-password" className="mt-1.5" value={form.password ?? ''} onChange={(e) => setField('password', e.target.value)} placeholder={account?.credentialSet ? '留空则保留已保存的密码' : '首次配置必须填写'} disabled={saving} />
-                  <p className="mt-1 text-2xs text-muted-foreground">未启用客户端安全密码的邮箱可填写邮箱登录密码；已启用则填写授权码／客户端安全密码。仅加密保存在服务端，页面不会回显。</p>
+                  <p className="mt-1 text-2xs text-muted-foreground">未启用客户端安全密码的邮箱可填写邮箱登录密码；已启用则填写授权码／客户端安全密码。密码会安全保存，不会再次显示。</p>
                 </div>
                 <div><Label htmlFor="mail-account-limit">每日发送额度</Label><Input id="mail-account-limit" type="number" min={1} max={5000} className="mt-1.5" value={form.dailyLimit} onChange={(e) => setField('dailyLimit', Number(e.target.value))} disabled={saving} /></div>
               </div>
@@ -205,7 +205,7 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
                 </div>
               </details>
 
-              <p className="flex items-start gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />发件地址与收件账号由服务端锁定，业务员不能冒用其他人的邮箱。</p>
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />发件地址与收件账号绑定，确保使用本人邮箱。</p>
             </>
           ) : null}
         </DialogBody>

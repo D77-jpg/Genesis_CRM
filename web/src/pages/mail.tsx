@@ -141,7 +141,7 @@ export function MailPage(): React.JSX.Element {
       <span>{status.enabled && status.verificationStatus === 'verified'
         ? `${status.source === 'personal' ? '个人' : '项目统一'}收件同步${status.mailboxAddress ? `：${status.mailboxAddress}` : ''} · ${status.lastSyncAt ? formatDateTime(status.lastSyncAt) : '等待首次同步'}`
         : status.enabled ? '收件邮箱尚未验证' : `${status.source === 'personal' ? '个人' : '项目统一'}收件同步未启用`}</span>
-      <span>发件通道：{status.channel === 'mock' ? '模拟发送' : 'SMTP'}</span>
+      <span>发件通道：{status.channel === 'mock' ? '模拟发送' : '邮箱发送'}</span>
       {status.lastError && <span className="text-destructive">{status.lastError}</span>}
       {status.skipped > 0 && <span>超大邮件已跳过：{status.skipped}</span>}
       <Button variant="ghost" disabled={busy || !status.enabled || !status.configured || status.verificationStatus !== 'verified'} onClick={() => void action(() => apiPost('/mail/sync'))}>同步收件</Button>

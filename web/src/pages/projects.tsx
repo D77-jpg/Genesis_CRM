@@ -99,7 +99,7 @@ export function ProjectsPage(): React.JSX.Element {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><p className="text-xs text-muted-foreground">公司主体</p><p className="truncate" title={project.companyName}>{project.companyName}</p></div>
-              <div className="flex flex-wrap gap-2"><Badge variant="outline">{project.mailChannel === 'smtp' ? 'SMTP 实际发送' : 'Mock 模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
+              <div className="flex flex-wrap gap-2"><Badge variant="outline">{project.mailChannel === 'smtp' ? '邮箱发送' : '模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
               <div className="flex flex-wrap gap-2">
                 {project.status === 'active' && !isCurrent ? (
                   <Button type="button" size="sm" onClick={() => switchProject(project.id)}>
@@ -128,7 +128,7 @@ export function ProjectsPage(): React.JSX.Element {
 
       <Dialog open={open} onOpenChange={(next) => !saving && setOpen(next)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" aria-hidden />{editingId ? '编辑项目资料' : '新建项目工作空间'}</DialogTitle><DialogDescription>公司资料用于邮件占位符与界面品牌；邮箱凭据只通过服务端安全配置，不会保存在浏览器中。</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" aria-hidden />{editingId ? '编辑项目资料' : '新建项目工作空间'}</DialogTitle><DialogDescription>公司资料用于邮件署名和项目展示。邮箱账号请由管理员单独配置。</DialogDescription></DialogHeader>
           <DialogBody className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><Label htmlFor="project-name">项目名称</Label><Input id="project-name" className="mt-1.5" value={form.name} onChange={(e) => { const name = e.target.value; setForm((v) => ({ ...v, name, companyName: v.companyName === v.name ? name : v.companyName })); }} placeholder="例如 Outdoor Gear" /></div>
             <div><Label htmlFor="project-code">项目代码</Label><Input id="project-code" className="mt-1.5" value={form.code} disabled={Boolean(editingId)} onChange={(e) => setForm((v) => ({ ...v, code: e.target.value }))} placeholder="OUTDOOR" /></div>
@@ -139,8 +139,8 @@ export function ProjectsPage(): React.JSX.Element {
             <div><Label htmlFor="project-sender">发件人名称</Label><Input id="project-sender" className="mt-1.5" value={form.senderName} onChange={(e) => setForm((v) => ({ ...v, senderName: e.target.value }))} placeholder="Sales Team" /></div>
             <div><Label htmlFor="project-mail-from">发件地址显示</Label><Input id="project-mail-from" className="mt-1.5" value={form.mailFrom} onChange={(e) => setForm((v) => ({ ...v, mailFrom: e.target.value }))} placeholder="Sales <sales@example.com>" /></div>
             <div><Label htmlFor="project-slug">项目标识</Label><Input id="project-slug" className="mt-1.5" value={form.slug} disabled={Boolean(editingId)} onChange={(e) => setForm((v) => ({ ...v, slug: slugify(e.target.value) }))} placeholder={slugify(form.name) || 'outdoor-gear'} /></div>
-            <div><Label htmlFor="project-profile">邮箱配置键</Label><Input id="project-profile" className="mt-1.5" value={form.mailProfileKey} onChange={(e) => setForm((v) => ({ ...v, mailProfileKey: slugify(e.target.value) }))} placeholder={slugify(form.slug || form.name) || 'outdoor-gear'} /></div>
-            <p className="sm:col-span-2 -mt-2 text-xs text-muted-foreground">项目标识创建后固定；邮箱配置键对应服务端 PROJECT_MAIL_CONFIGS_JSON，修改配置后需重启后端。</p>
+            <div><Label htmlFor="project-profile">邮箱配置标识</Label><Input id="project-profile" className="mt-1.5" value={form.mailProfileKey} onChange={(e) => setForm((v) => ({ ...v, mailProfileKey: slugify(e.target.value) }))} placeholder={slugify(form.slug || form.name) || 'outdoor-gear'} /></div>
+            <p className="sm:col-span-2 -mt-2 text-xs text-muted-foreground">项目标识创建后不可修改。邮箱配置标识用于关联项目邮箱，修改前请与管理员确认。</p>
           </DialogBody>
           <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>取消</Button><Button type="button" loading={saving} disabled={!form.name.trim() || !form.companyName.trim() || (!editingId && !form.code.trim())} onClick={() => void submit()}>{editingId ? '保存修改' : '创建项目'}</Button></DialogFooter>
         </DialogContent>

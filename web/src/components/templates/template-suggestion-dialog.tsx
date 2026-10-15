@@ -116,16 +116,16 @@ export function TemplateSuggestionDialog({ template, onClose, onCopied }: Props)
     <Dialog open={Boolean(template)} onOpenChange={(open) => { if (!open) void close(); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>建议副本 · 人工核对</DialogTitle>
-          <DialogDescription>建议只生成预览；明确确认后才会创建新模板，绝不覆盖原模板。与普通「复制模板」操作独立。</DialogDescription>
+          <DialogTitle>检查模板建议</DialogTitle>
+          <DialogDescription>核对建议后可另存为新模板，原模板会保留。</DialogDescription>
         </DialogHeader>
         <DialogBody className="max-h-[65vh] space-y-4 overflow-y-auto text-sm">
           {busy && !suggestion ? <p role="status">正在生成并获取建议预览…</p> : null}
           {error ? <p role="alert" className="text-destructive">{error}</p> : null}
           {suggestion ? <>
-            <p>模型：<strong>{suggestion.model}</strong>（规则生成，非 OpenAI；未据此推断效果） · 状态：{suggestion.status}</p>
+            <p className="text-muted-foreground">以下为根据现有记录整理的规则建议，实际效果需在使用后观察。</p>
             <p>原模板快照：{suggestion.sourceTemplateSnapshot.name} · 主题：{suggestion.sourceTemplateSnapshot.subject}</p>
-            <p>核实已发送：{suggestion.sourceSummary.sentCount} 封；最低样本门槛：{suggestion.sourceSummary.minimumSampleSize}。其余漏斗数字未接入可信统计，不作为效果依据。</p>
+            <p>核实已发送：{suggestion.sourceSummary.sentCount} 封；最低样本门槛：{suggestion.sourceSummary.minimumSampleSize}。仅依据已确认的发送记录提供建议，不代表效果预测。</p>
             <ul className="list-disc space-y-1 pl-5">{suggestion.explanation.map((line, index) => <li key={index}>{line}</li>)}</ul>
             <section className="space-y-2 rounded-md border p-3">
               <h3 className="font-semibold">拟创建的新模板（只读预览）</h3>
@@ -133,7 +133,7 @@ export function TemplateSuggestionDialog({ template, onClose, onCopied }: Props)
               <p>分类：{suggestion.suggested.category}</p>
               <p>主题：{suggestion.suggested.subject}</p>
               <p className="whitespace-pre-wrap break-words">正文预览：{stripHtml(suggestion.suggested.content, 2000)}</p>
-              <p className="text-xs text-muted-foreground">正文仅作纯文本预览；请检查占位符及排版。确认后新副本保存服务器原始建议 HTML，不改原模板。</p>
+              <p className="text-xs text-muted-foreground">请检查正文、客户变量和排版；确认后另存为新模板，原模板保持不变。</p>
             </section>
             {suggestion.status === 'preview' ? <>
               <Label className="flex items-start gap-2">

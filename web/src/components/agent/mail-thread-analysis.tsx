@@ -121,7 +121,7 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
       hydrate(response.analysis); await onRecordsChanged();
       toast.success(confirmAction === 'reply' ? '回复草稿已保存，未发送' : confirmAction === 'status' ? '客户状态已更新' : '跟进记录已保存');
       setConfirmAction(null); setReviewed(false);
-    } catch (reason) { setError(toErrorMessage(reason, '确认写入失败')); }
+    } catch (reason) { setError(toErrorMessage(reason, '保存失败')); }
     finally { setSaving(false); }
   }
 
@@ -137,11 +137,11 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
       {blocked ? <Alert variant="destructive" className="border-2">
         <AlertOctagon className="h-4 w-4" aria-hidden /><AlertTitle>{safetyLabels[analysis.safety.classification]} · 已停止营销建议</AlertTitle>
         <AlertDescription>{analysis.safety.reason} 回复草稿已禁用，不会提供或保存营销发送内容。仍可在确认后记录客户状态与沟通结果。</AlertDescription>
-      </Alert> : <Alert className="border-emerald-500/30 bg-emerald-500/5"><ShieldAlert className="h-4 w-4 text-emerald-600" aria-hidden /><AlertTitle>写入前逐项确认</AlertTitle><AlertDescription>分析本身只读。回复仅能保存为草稿，客户状态和跟进记录也需要分别确认。</AlertDescription></Alert>}
+      </Alert> : <Alert className="border-emerald-500/30 bg-emerald-500/5"><ShieldAlert className="h-4 w-4 text-emerald-600" aria-hidden /><AlertTitle>请核对后保存</AlertTitle><AlertDescription>回复会先存为草稿。更新客户状态和保存跟进记录，都需要你分别确认。</AlertDescription></Alert>}
       {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
 
       <section className="rounded-lg border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">会话摘要</h3><div className="flex gap-2"><Badge>{intentLabels[analysis.intent.category] ?? analysis.intent.label}</Badge><Badge variant="outline">置信度 {Math.round(analysis.intent.confidence * 100)}%</Badge></div></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">会话摘要</h3><div className="flex gap-2"><Badge>{intentLabels[analysis.intent.category] ?? analysis.intent.label}</Badge></div></div>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{analysis.summary}</p><Evidence ids={analysis.intent.evidenceMessageIds} analysis={analysis} />
       </section>
 
@@ -177,15 +177,15 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
         {!followUpLocked && <div className="mt-3 flex justify-end gap-2"><Button variant="outline" onClick={() => void saveEdits('followup')} disabled={!changed('followup', analysis) || saving}><Save className="h-4 w-4" />保存编辑</Button><Button onClick={() => { setReviewed(false); setConfirmAction('followup'); }} disabled={!analysis.customerId || !followUpContent.trim() || saving}><FileCheck2 className="h-4 w-4" />确认保存记录</Button></div>}
       </section>
 
-      {!analysis.customerId && <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-200"><p>当前线程未关联客户。回复草稿、客户状态和跟进记录写入均不可用。</p>{analysis.rootDirection === 'inbound' && isAdmin && <div className="space-y-2"><p>管理员可基于这封入站邮件生成客户创建预览。提取内容及查重结果需要人工核对；生成预览不会创建客户或发送邮件。</p><Button type="button" variant="outline" onClick={() => void createCustomerPreview()} disabled={creatingPreview || saving}>{creatingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}生成客户创建预览</Button></div>}</div>}
+      {!analysis.customerId && <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-200"><p>当前线程未关联客户。请先关联客户，再保存回复草稿、状态或跟进记录。</p>{analysis.rootDirection === 'inbound' && isAdmin && <div className="space-y-2"><p>管理员可基于这封入站邮件生成客户创建预览。提取内容及查重结果需要人工核对；生成预览不会创建客户或发送邮件。</p><Button type="button" variant="outline" onClick={() => void createCustomerPreview()} disabled={creatingPreview || saving}>{creatingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}生成客户创建预览</Button></div>}</div>}
       <Button type="button" variant="ghost" className="w-full" onClick={clearAnalysis}>返回 Agent 对话</Button>
     </div>
 
     <AlertDialog open={confirmAction !== null} onOpenChange={(open) => { if (!open) { setConfirmAction(null); setReviewed(false); } }}>
-      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmAction === 'reply' ? '确认保存回复草稿？' : confirmAction === 'status' ? '确认更新客户状态？' : '确认保存跟进记录？'}</AlertDialogTitle><AlertDialogDescription>{confirmAction === 'reply' ? '将创建一条 draft 状态的线程回复，系统不会发送邮件。' : confirmAction === 'status' ? `将客户状态更新为“${CUSTOMER_STATUS_OPTIONS.find((item) => item.value === customerStatus)?.label ?? customerStatus}”。` : blocked ? '只记录退订、退信、拒绝或垃圾邮件结果，不会安排未来营销跟进。' : `将保存沟通结果${nextFollowUpAt ? `，并安排 ${formatDateTime(new Date(nextFollowUpAt))} 跟进` : ''}。`}</AlertDialogDescription></AlertDialogHeader>
-        <label className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm"><Checkbox checked={reviewed} onCheckedChange={(value) => setReviewed(value === true)} /><span>我已核对以上可编辑内容，确认只执行本次审批卡片对应的写入动作。</span></label>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmAction === 'reply' ? '确认保存回复草稿？' : confirmAction === 'status' ? '确认更新客户状态？' : '确认保存跟进记录？'}</AlertDialogTitle><AlertDialogDescription>{confirmAction === 'reply' ? '回复将保存到草稿箱，并保留原邮件会话。不会立即发送。' : confirmAction === 'status' ? `将客户状态更新为“${CUSTOMER_STATUS_OPTIONS.find((item) => item.value === customerStatus)?.label ?? customerStatus}”。` : blocked ? '只记录退订、退信、拒绝或垃圾邮件结果，不会安排未来营销跟进。' : `将保存沟通结果${nextFollowUpAt ? `，并安排 ${formatDateTime(new Date(nextFollowUpAt))} 跟进` : ''}。`}</AlertDialogDescription></AlertDialogHeader>
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm"><Checkbox checked={reviewed} onCheckedChange={(value) => setReviewed(value === true)} /><span>我已核对以上可编辑内容，确认保存本次选择的内容。</span></label>
         <p className="text-xs text-muted-foreground">操作会记录审批人、时间和结果，并受项目权限与幂等保护。邮件不会直接发送。</p>
-        <AlertDialogFooter><AlertDialogCancel disabled={saving}>返回核对</AlertDialogCancel><AlertDialogAction disabled={!reviewed || saving} onClick={(event) => { event.preventDefault(); void confirm(); }}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}确认写入</AlertDialogAction></AlertDialogFooter>
+        <AlertDialogFooter><AlertDialogCancel disabled={saving}>返回核对</AlertDialogCancel><AlertDialogAction disabled={!reviewed || saving} onClick={(event) => { event.preventDefault(); void confirm(); }}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}确认保存</AlertDialogAction></AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   </div>;

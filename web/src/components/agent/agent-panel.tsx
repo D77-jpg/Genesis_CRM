@@ -20,7 +20,6 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
-  UserPlus,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -88,7 +87,7 @@ function contextLabel(context: AgentContext): string {
 }
 
 function sessionContextLabel(session: AgentSession): string {
-  if (session.context.type === 'global') return '项目级会话';
+  if (session.context.type === 'global') return '项目会话';
   const type = session.context.type === 'customer' ? '客户' : '邮件';
   return session.contextName ? `${type} · ${session.contextName}` : `${type}会话`;
 }
@@ -129,7 +128,9 @@ function actionLabel(toolName: string): string {
     apply_mail_customer_status: '确认更新客户状态',
     save_mail_followup_record: '确认保存跟进记录',
   };
-  return labels[toolName] ?? toolName;
+  return labels[toolName] ?? ({
+    search_product_knowledge:'查找产品资料',list_customer_attachments:'查看客户附件',read_customer_attachment:'读取附件正文',
+  } as Record<string,string>)[toolName] ?? '处理业务资料';
 }
 
 export function AgentPanel(): React.JSX.Element | null {
@@ -420,7 +421,7 @@ export function AgentPanel(): React.JSX.Element | null {
       openCustomerAnalysis(analysis.id, context.resourceId);
       await loadRecords();
     } catch (reason) {
-      setError(toErrorMessage(reason, '客户分析生成失败，CRM 数据未改动'));
+      setError(toErrorMessage(reason, '客户分析暂未完成，请重试'));
     } finally { setAnalyzing(false); }
   }
 
@@ -433,7 +434,7 @@ export function AgentPanel(): React.JSX.Element | null {
         idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       });
       openMailAnalysis(analysis.id, context.resourceId, context.direction); await loadRecords();
-    } catch (reason) { setError(toErrorMessage(reason, '邮件会话分析失败，CRM 数据未改动')); }
+    } catch (reason) { setError(toErrorMessage(reason, '邮件分析暂未完成，请重试')); }
     finally { setAnalyzing(false); }
   }
 
@@ -448,39 +449,46 @@ export function AgentPanel(): React.JSX.Element | null {
       onClose={() => setOpen(false)}
       className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[min(520px,100vw)] lg:w-[560px]"
     >
-      <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">
+      <div className="flex min-h-20 shrink-0 items-center gap-3 border-b px-4 py-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Bot className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold">业务 Agent</h2>
-            <Badge variant="outline" className="text-[10px]">V1.6 · 业务任务</Badge>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-base font-semibold leading-6">业务 Agent</h2>
+            <span className="inline-flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
+              {status?.available ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" aria-hidden /> : <CircleOff className="h-3.5 w-3.5 text-amber-600" aria-hidden />}
+              {status?.mode === 'mock' ? '演示模式' : status?.available ? 'AI 已启用' : 'AI 未启用'}
+            </span>
           </div>
-          <p className="truncate text-xs text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
+          <p className="mt-1 truncate text-xs leading-5 text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
         </div>
+        {(customerPreviewId||customerAnalysisId||mailAnalysisId)&&<DropdownMenu>
+          <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" aria-label="查看最近分析"><FileClock className="h-4 w-4" aria-hidden /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {customerPreviewId&&<DropdownMenuItem onSelect={()=>setTab('customer-preview')}>客户预览</DropdownMenuItem>}
+            {customerAnalysisId&&<DropdownMenuItem onSelect={()=>setTab('customer-analysis')}>客户分析</DropdownMenuItem>}
+            {mailAnalysisId&&<DropdownMenuItem onSelect={()=>setTab('mail-analysis')}>邮件助理</DropdownMenuItem>}
+          </DropdownMenuContent>
+        </DropdownMenu>}
         <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="关闭业务 Agent">
           <X className="h-4 w-4" />
         </Button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
-          <TabsList className="h-auto min-h-11 max-w-full flex-wrap justify-start gap-y-1">
-            <TabsTrigger value="chat"><Sparkles className="h-3.5 w-3.5" />对话</TabsTrigger>
-            {customerPreviewId && <TabsTrigger value="customer-preview"><UserPlus className="h-3.5 w-3.5" />客户预览</TabsTrigger>}
-            {customerAnalysisId && <TabsTrigger value="customer-analysis"><BarChart3 className="h-3.5 w-3.5" />客户分析</TabsTrigger>}
-            {mailAnalysisId && <TabsTrigger value="mail-analysis"><MailSearch className="h-3.5 w-3.5" />邮件助理</TabsTrigger>}
-            <TabsTrigger value="inbox">事件收件箱</TabsTrigger>
-            <TabsTrigger value="batches">批量</TabsTrigger>
-            <TabsTrigger value="knowledge">产品知识</TabsTrigger>
-            <TabsTrigger value="tasks"><Clock3 className="h-3.5 w-3.5" />任务</TabsTrigger>
-            <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
+        <div className="shrink-0 border-b px-4 py-3">
+          <TabsList aria-label="助手功能" className="grid h-auto w-full max-w-none grid-cols-3 gap-2 overflow-visible p-1.5 [&>button]:h-auto [&>button]:min-h-11 [&>button]:px-2 [&>button]:py-2 [&>button]:leading-5">
+            <TabsTrigger value="chat">对话</TabsTrigger>
+            <TabsTrigger value="inbox">收件箱</TabsTrigger>
+            <TabsTrigger value="batches">批量写信</TabsTrigger>
+            <TabsTrigger value="knowledge">产品资料</TabsTrigger>
+            <TabsTrigger value="tasks">任务</TabsTrigger>
+            <TabsTrigger value="records">操作记录</TabsTrigger>
+            {customerPreviewId && tab==='customer-preview' && <TabsTrigger className="col-span-3" value="customer-preview">客户预览</TabsTrigger>}
+            {customerAnalysisId && tab==='customer-analysis' && <TabsTrigger className="col-span-3" value="customer-analysis">客户分析</TabsTrigger>}
+            {mailAnalysisId && tab==='mail-analysis' && <TabsTrigger className="col-span-3" value="mail-analysis">邮件助理</TabsTrigger>}
           </TabsList>
-          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
-            {status?.available ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <CircleOff className="h-3.5 w-3.5 text-amber-600" />}
-            {status?.mode === 'mock' ? '演示模式' : status?.available ? '模型已配置' : '未配置'}
-          </div>
         </div>
 
         <TabsContent value="chat" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0">
@@ -551,9 +559,9 @@ export function AgentPanel(): React.JSX.Element | null {
             {!loading && messages.length === 0 && (
               <div className="space-y-5 py-8 text-center">
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></span>
-                <div><p className="font-medium">从当前工作上下文开始</p><p className="mt-1 text-sm text-muted-foreground">Agent 可检索并分析客户、准备开发信草稿，再交给你审核发送。</p></div>
+                <div><p className="font-medium">从当前客户或工作开始</p><p className="mt-1 text-sm text-muted-foreground">Agent 可检索并分析客户、准备开发信草稿，再交给你审核发送。</p></div>
                 {context.type === 'customer' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startCustomerAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}<span><span className="block">分析客户并生成英文邮件草稿</span><span className="mt-0.5 block text-xs font-normal opacity-80">汇总档案、时间线、邮件、跟进与报价</span></span></Button>}
-                {context.type === 'mail' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startMailAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}<span><span className="block">启动邮件会话助理</span><span className="mt-0.5 block text-xs font-normal opacity-80">总结意图、提取需求并生成三张审批卡片</span></span></Button>}
+                {context.type === 'mail' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startMailAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}<span><span className="block">启动邮件会话助理</span><span className="mt-0.5 block text-xs font-normal opacity-80">整理客户需求、准备回复并给出跟进建议</span></span></Button>}
                 <div className="space-y-2">
                   {suggestions(context).filter((item) => context.type !== 'customer' || item !== '分析当前客户并建议下一步').map((item) => <Button key={item} type="button" variant="outline" className="h-auto w-full justify-start whitespace-normal py-2 text-left" onClick={() => void sendMessage(item)}>{item}</Button>)}
                 </div>
@@ -610,19 +618,18 @@ export function AgentPanel(): React.JSX.Element | null {
         <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks key={`${project.id}:${user.id}`} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft} onMailAnalysis={showTaskMail} focusTaskId={focusTaskId}/></TabsContent>
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">运行</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.runs}</p></div>
-            <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">工具调用</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.toolCalls}</p></div>
-            <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Token</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.totalTokens.toLocaleString()}</p></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">处理次数</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.runs}</p></div>
+            <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">已完成</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.completed}</p></div>
           </div>
-          <div className="mt-5 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold">工具与审批记录</h3><Button type="button" variant="outline" size="sm" onClick={() => { setRecordsError(''); void loadRecords().catch((reason) => setRecordsError(toErrorMessage(reason, '运行记录加载失败'))); }}>刷新记录</Button></div>
+          <div className="mt-5 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold">操作与确认记录</h3><Button type="button" variant="outline" size="sm" onClick={() => { setRecordsError(''); void loadRecords().catch((reason) => setRecordsError(toErrorMessage(reason, '运行记录加载失败'))); }}>刷新记录</Button></div>
           {recordsError && <p role="alert" className="mt-3 text-sm text-destructive">{recordsError}</p>}
           <div className="mt-3 space-y-2">
-            {actions.length === 0 && <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">暂无工具调用记录</div>}
+            {actions.length === 0 && <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">还没有操作记录</div>}
             {actions.map((action) => (
               <button key={action.id} type="button" onClick={() => setSelectedActionId(action.id)} aria-label={`查看记录：${actionLabel(action.toolName)}`} className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{actionLabel(action.toolName)}</p><Badge variant={action.executionStatus === 'succeeded' ? 'developed' : action.executionStatus === 'failed' ? 'failed' : 'muted'}>{action.executionStatus === 'succeeded' ? '成功' : action.executionStatus === 'failed' ? '失败' : action.executionStatus === 'rejected' ? '已取消' : '处理中'}</Badge></div>
-                <p className="mt-1 text-xs text-muted-foreground">{action.resultSummary || '等待执行'} · {action.approvalStatus === 'not_required' ? action.riskLevel === 'read' ? '只读免审批' : '用户已委托' : action.approvalStatus === 'approved' ? '用户已确认' : '用户已取消'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{action.resultSummary || '等待执行'} · {action.approvalStatus === 'not_required' ? action.riskLevel === 'read' ? '资料查询' : '已委托处理' : action.approvalStatus === 'approved' ? '用户已确认' : '用户已取消'}</p>
                 <p className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground"><span className="flex items-center gap-1"><Clock3 className="h-3 w-3" />{formatDateTime(action.createdAt)}</span><span className="flex items-center gap-1">查看详情<ChevronRight className="h-3 w-3" /></span></p>
               </button>
             ))}
