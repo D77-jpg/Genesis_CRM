@@ -1,311 +1,210 @@
-/**
- * 销售工作区
- * ------------------------------------------------------------------
- * 让 Dashboard 从「看数字」变成「干活」：
- *  - 顶部 5 个可点击指标：今日待跟进 / 已逾期 / 即将跟进 / 今日发送开发信 / 今日新增客户
- *    点击跟进类指标会跳到客户列表并自动套用对应筛选（今天 / 逾期 / 未来）。
- *  - 下方三张清单卡：待跟进客户（逾期优先，红字提示）、最近跟进、最近开发客户；
- *    每一行都能点进对应客户详情。
- *
- * 逾期/今天/未来的判定与后端聚合、客户列表筛选口径一致（见 lib/format.getFollowUpState）。
- */
 import * as React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  AlarmClock,
-  Briefcase,
-  CalendarClock,
-  CalendarDays,
-  History,
-  Send,
-  UserPlus,
-} from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, StatCard } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CalendarCheck2, ChevronRight, Inbox, Mail, MessageSquare, Users } from 'lucide-react';
+import { CustomerStatusBadge, LetterStatusBadge } from '@/components/common/status-badge';
 import { Button } from '@/components/ui/button';
-import { CustomerStatusBadge } from '@/components/common/status-badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { formatDate, formatRelative, initials } from '@/lib/format';
-import { useCustomerStore } from '@/store/customer.store';
-import {
-  customerDetailPath,
-  FOLLOW_UP_METHOD_LABEL,
-  FOLLOW_UP_RESULT_LABEL,
-  ROUTES,
-} from '@/constants';
-import type { CustomerBrief, FollowUpFilter, RecentFollowUpItem, SalesWorkspace } from '@/types';
+import { customerDetailPath, FOLLOW_UP_METHOD_LABEL, FOLLOW_UP_RESULT_LABEL, ROUTES } from '@/constants';
+import { useDashboardNavigation } from './dashboard-navigation';
+import type { CustomerBrief, DevelopmentLetter, OverviewStats, RecentFollowUpItem } from '@/types';
 
-export interface SalesWorkspaceSectionProps {
-  workspace: SalesWorkspace;
-}
-
-/** 待跟进 / 最近开发客户清单里的一行（可点进详情） */
-function CustomerRow({ customer, note }: { customer: CustomerBrief; note?: React.ReactNode }): React.JSX.Element {
+function CustomerRow({ customer, overdue, recent = false }: {
+  customer: CustomerBrief; overdue?: boolean; recent?: boolean;
+}): React.JSX.Element {
+  const subtitle = customer.company && customer.company !== customer.name
+    ? customer.company : customer.grade ? `${customer.grade} 级客户` : '客户档案';
+  const dateLabel = recent ? formatRelative(customer.createdAt) : overdue
+    ? `已逾期 · ${formatDate(customer.nextFollowUpAt)}` : '今天跟进';
   return (
     <li>
-      <Link
-        to={customerDetailPath(customer.id)}
-        className="flex items-start gap-3 rounded-md px-1 py-2 transition-colors hover:bg-muted/60"
-      >
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-2xs font-semibold text-muted-foreground"
-          aria-hidden
-        >
-          {initials(customer.name)}
+      <Link to={customerDetailPath(customer.id)} className="dashboard-customer-row group">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground" aria-hidden>
+            {initials(customer.name)}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium group-hover:text-primary">{customer.name}</span>
+            <span className="mt-0.5 block truncate text-xs text-muted-foreground">{subtitle}</span>
+            <span className={cn("mt-0.5 block text-xs text-muted-foreground sm:hidden", overdue && "text-destructive")}>{dateLabel}</span>
+          </span>
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{customer.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{customer.company || '未填写公司'}</p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <CustomerStatusBadge status={customer.status} />
-          {note ? <span className="text-2xs text-muted-foreground">{note}</span> : null}
-        </div>
+        <span className="dashboard-customer-status"><CustomerStatusBadge status={customer.status} /></span>
+        <span className={cn('dashboard-customer-date text-xs text-muted-foreground', overdue && 'font-medium text-destructive')}>
+          {dateLabel}
+        </span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden />
       </Link>
     </li>
   );
 }
 
-/** 最近跟进记录的一行 */
 function RecentFollowUpRow({ item }: { item: RecentFollowUpItem }): React.JSX.Element {
   return (
-    <li className="py-2.5">
-      <Link to={customerDetailPath(item.customerId)} className="group block rounded-md px-1 transition-colors hover:bg-muted/60">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-sm font-medium group-hover:text-primary group-hover:underline">
-            {item.customerName}
-          </span>
-          <span className="shrink-0 text-2xs text-muted-foreground">{formatRelative(item.followUpAt)}</span>
+    <li>
+      <Link to={customerDetailPath(item.customerId)} className="group block border-b border-border/60 py-4 last:border-0 hover:bg-muted/30">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="text-sm font-medium group-hover:text-primary">{item.customerName}</span>
+          <time dateTime={new Date(item.followUpAt).toISOString()} className="text-xs text-muted-foreground">{formatRelative(item.followUpAt)}</time>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline">{FOLLOW_UP_METHOD_LABEL[item.method] ?? item.method}</Badge>
-          <Badge variant="muted">{FOLLOW_UP_RESULT_LABEL[item.result] ?? item.result}</Badge>
-          {item.customerCompany ? (
-            <span className="truncate text-2xs text-muted-foreground">{item.customerCompany}</span>
-          ) : null}
-        </div>
-        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.content}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {FOLLOW_UP_METHOD_LABEL[item.method] ?? item.method} · {FOLLOW_UP_RESULT_LABEL[item.result] ?? item.result}
+          {item.customerCompany && item.customerCompany !== item.customerName ? ` · ${item.customerCompany}` : ''}
+        </p>
+        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{item.content}</p>
       </Link>
     </li>
   );
 }
 
-/** 清单空态 */
-function ListEmpty({ text }: { text: string }): React.JSX.Element {
-  return <p className="py-8 text-center text-xs text-muted-foreground">{text}</p>;
+function RecentLetterRow({ letter }: { letter: DevelopmentLetter }): React.JSX.Element {
+  return (
+    <li className="border-b border-border/60 last:border-0">
+      <Link to={letter.customer ? customerDetailPath(letter.customer.id) : ROUTES.letters}
+        className="group flex items-start gap-3 py-4 hover:bg-muted/30">
+        <Mail className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium group-hover:text-primary">{letter.subject || '（无主题）'}</span>
+          <span className="mt-1 block truncate text-xs text-muted-foreground">{letter.recipientName} · {letter.recipientEmail}</span>
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-1">
+          <LetterStatusBadge status={letter.status} />
+          <span className="text-xs text-muted-foreground">{letter.sentAt ? formatRelative(letter.sentAt) : '未发送'}</span>
+        </span>
+      </Link>
+    </li>
+  );
 }
 
-export function SalesWorkspaceSection({ workspace }: SalesWorkspaceSectionProps): React.JSX.Element {
-  const navigate = useNavigate();
-  const resetFilters = useCustomerStore((state) => state.resetFilters);
-  const setFilters = useCustomerStore((state) => state.setFilters);
-  const setSorting = useCustomerStore((state) => state.setSorting);
-
-  // 跳到客户列表并套用「跟进时间」筛选（今天 / 逾期 / 未来）
-  const goFollowUp = React.useCallback(
-    (followUp: FollowUpFilter) => {
-      resetFilters();
-      setFilters({ followUp });
-      navigate(ROUTES.customers);
-    },
-    [resetFilters, setFilters, navigate],
+function ListEmpty({ icon: Icon, title, description, children }: React.PropsWithChildren<{
+  icon: typeof Users; title: string; description: string;
+}>): React.JSX.Element {
+  return (
+    <div className="flex min-h-52 flex-col items-center justify-center px-4 py-8 text-center">
+      <Icon className="mb-3 h-7 w-7 text-muted-foreground/70" aria-hidden />
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
+      {children ? <div className="mt-4">{children}</div> : null}
+    </div>
   );
+}
 
-  // 跳到客户列表并按「最新创建」排序，看今天新增的客户
-  const goNewCustomers = React.useCallback(() => {
-    resetFilters();
-    setSorting('createdAt');
-    navigate(ROUTES.customers);
-  }, [resetFilters, setSorting, navigate]);
+const tabClass = 'min-h-11 rounded-none border-b-2 border-transparent bg-transparent px-1.5 py-3 text-xs shadow-none sm:px-2 sm:text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none';
 
-  const hasOverdue = workspace.followUpOverdue > 0;
-  const hasToday = workspace.followUpToday > 0;
+export function SalesWorkspaceSection({ stats }: { stats: OverviewStats }): React.JSX.Element {
+  const { workspace, customer, letter } = stats;
+  const { openCustomers, openLetters } = useDashboardNavigation();
+  const dueCount = workspace.followUpToday + workspace.followUpOverdue;
 
   return (
-    <div className="space-y-3">
-      {/* ---------------------------- 区块标题 ---------------------------- */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <Briefcase className="h-4 w-4 text-muted-foreground" aria-hidden />
-        <h2 className="text-sm font-semibold">销售工作区</h2>
-        <span className="text-xs text-muted-foreground">今天的跟进任务与最近动态，点进去即可处理</span>
-      </div>
+    <section aria-labelledby="customer-worklist-title" className="dashboard-workbench">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 id="customer-worklist-title" className="text-base font-semibold tracking-tight">客户工作清单</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {dueCount > 0 ? `今天待跟进 ${workspace.followUpToday} 位，另有 ${workspace.followUpOverdue} 位已逾期。`
+                : customer.pending > 0 ? '今天没有到期跟进，从最近加入的客户开始开发。' : '今天没有到期跟进，可查看最近客户和沟通动态。'}
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => openCustomers()} className="hidden text-muted-foreground sm:inline-flex">
+            全部客户 <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Button>
+        </div>
 
-      {/* ---------------------------- 指标（可点击） ---------------------------- */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
-        <Link
-          to={ROUTES.customers}
-          onClick={() => goFollowUp('today')}
-          className="block rounded-lg transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <StatCard
-            label="今日待跟进"
-            value={workspace.followUpToday.toLocaleString('zh-CN')}
-            icon={<CalendarClock className="h-4 w-4" aria-hidden />}
-            tone={hasToday ? 'primary' : 'default'}
-            hint={hasToday ? '点击查看今天待跟进客户' : '今天没有待跟进'}
-          />
-        </Link>
-
-        <Link
-          to={ROUTES.customers}
-          onClick={() => goFollowUp('overdue')}
-          className="block rounded-lg transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <StatCard
-            label="已逾期"
-            value={workspace.followUpOverdue.toLocaleString('zh-CN')}
-            icon={<AlarmClock className="h-4 w-4" aria-hidden />}
-            tone={hasOverdue ? 'failed' : 'default'}
-            hint={hasOverdue ? '有客户超过计划跟进时间' : '没有逾期客户'}
-          />
-        </Link>
-
-        <Link
-          to={ROUTES.customers}
-          onClick={() => goFollowUp('upcoming')}
-          className="block rounded-lg transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <StatCard
-            label="即将跟进"
-            value={workspace.followUpUpcoming.toLocaleString('zh-CN')}
-            icon={<CalendarDays className="h-4 w-4" aria-hidden />}
-            tone="default"
-            hint="已安排的未来跟进"
-          />
-        </Link>
-
-        <Link
-          to={ROUTES.letters}
-          className="block rounded-lg transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <StatCard
-            label="今日发送开发信"
-            value={workspace.lettersSentToday.toLocaleString('zh-CN')}
-            icon={<Send className="h-4 w-4" aria-hidden />}
-            tone={workspace.lettersSentToday > 0 ? 'developed' : 'default'}
-            hint="点击查看开发信记录"
-          />
-        </Link>
-
-        <Link
-          to={ROUTES.customers}
-          onClick={goNewCustomers}
-          className="block rounded-lg transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <StatCard
-            label="今日新增客户"
-            value={workspace.newCustomersToday.toLocaleString('zh-CN')}
-            icon={<UserPlus className="h-4 w-4" aria-hidden />}
-            tone={workspace.newCustomersToday > 0 ? 'primary' : 'default'}
-            hint="点击按最新创建查看"
-          />
-        </Link>
-      </div>
-
-      {/* ---------------------------- 清单 ---------------------------- */}
-      <div className="grid gap-3 lg:grid-cols-3">
-        {/* 待跟进客户：逾期优先 */}
-        <Card>
-          <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden />
-                待跟进客户
-              </CardTitle>
-              <CardDescription>逾期优先，点击进入客户详情</CardDescription>
+        <Tabs defaultValue={dueCount > 0 ? 'followups' : 'customers'} className="mt-4">
+          <TabsList aria-label="客户工作清单" className="w-full justify-start gap-2 rounded-none border-b bg-transparent p-0 sm:gap-4">
+            <TabsTrigger value="followups" className={tabClass}>待跟进{dueCount > 0 ? ` ${dueCount}` : ''}</TabsTrigger>
+            <TabsTrigger value="customers" className={tabClass}>最近客户</TabsTrigger>
+            <TabsTrigger value="activity" className={tabClass}>跟进动态</TabsTrigger>
+            <TabsTrigger value="letters" className={tabClass}>邮件记录</TabsTrigger>
+          </TabsList>
+          <TabsContent value="customers" className="mt-0">
+            {workspace.recentCustomers.length ? (
+              <>
+                <div aria-hidden className="dashboard-customer-row dashboard-list-heading">
+                  <span>客户 / 公司</span><span className="dashboard-customer-status">当前阶段</span>
+                  <span className="dashboard-customer-date">加入时间</span><span />
+                </div>
+                <ul aria-label="最近加入的客户">{workspace.recentCustomers.map(item => <CustomerRow key={item.id} customer={item} recent />)}</ul>
+                <div className="dashboard-list-footer">
+                  <span>最近加入的 {workspace.recentCustomers.length} 位客户</span>
+                  <button type="button" className="dashboard-text-action" onClick={() => openCustomers({}, 'createdAt')}>按加入时间查看全部 <ArrowRight className="h-3.5 w-3.5" aria-hidden /></button>
+                </div>
+              </>
+            ) : (
+              <ListEmpty icon={Users} title="从第一位客户开始" description="在客户管理导入或新建客户，再安排跟进和发送开发信。">
+                <Button size="sm" onClick={() => openCustomers()}>去客户管理</Button>
+              </ListEmpty>
+            )}
+          </TabsContent>
+          <TabsContent value="followups" className="mt-0">
+            {workspace.overdueCustomers.length || workspace.todayFollowUpCustomers.length ? (
+              <>
+                {workspace.overdueCustomers.length ? (
+                  <div>
+                    <h3 className="pt-4 text-xs font-medium text-destructive">优先处理 · 已逾期 {workspace.followUpOverdue} 位</h3>
+                    <ul aria-label="逾期客户">{workspace.overdueCustomers.map(item => <CustomerRow key={item.id} customer={item} overdue />)}</ul>
+                  </div>
+                ) : null}
+                {workspace.todayFollowUpCustomers.length ? (
+                  <div>
+                    <h3 className="pt-4 text-xs font-medium text-muted-foreground">今天跟进 · {workspace.followUpToday} 位</h3>
+                    <ul aria-label="今日待跟进客户">{workspace.todayFollowUpCustomers.map(item => <CustomerRow key={item.id} customer={item} />)}</ul>
+                  </div>
+                ) : null}
+              </>
+            ) : <ListEmpty icon={CalendarCheck2} title="今天没有到期跟进" description="可以查看未来的跟进安排，或从最近客户中选择下一位开发对象。" />}
+            <div className="dashboard-list-footer flex-wrap">
+              <button type="button" className="dashboard-text-action" onClick={() => openCustomers({ followUp: 'today' })}>查看今日跟进 <ArrowRight className="h-3.5 w-3.5" aria-hidden /></button>
+              <button type="button" className="dashboard-text-action" onClick={() => openCustomers({ followUp: 'overdue' })}>查看全部逾期 <ArrowRight className="h-3.5 w-3.5" aria-hidden /></button>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => goFollowUp('today')}>
-              查看今天
-            </Button>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {!hasOverdue && !hasToday ? (
-              <ListEmpty text="太棒了，暂时没有待跟进的客户" />
-            ) : (
-              <div className="space-y-3">
-                {workspace.overdueCustomers.length > 0 ? (
-                  <div>
-                    <p className="mb-1 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-destructive">
-                      <AlarmClock className="h-3 w-3" aria-hidden />
-                      已逾期 {workspace.followUpOverdue}
-                    </p>
-                    <ul className="divide-y">
-                      {workspace.overdueCustomers.map((customer) => (
-                        <CustomerRow
-                          key={customer.id}
-                          customer={customer}
-                          note={<span className="font-medium text-destructive">逾期 {formatDate(customer.nextFollowUpAt)}</span>}
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {workspace.todayFollowUpCustomers.length > 0 ? (
-                  <div>
-                    <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      今天 {workspace.followUpToday}
-                    </p>
-                    <ul className="divide-y">
-                      {workspace.todayFollowUpCustomers.map((customer) => (
-                        <CustomerRow key={customer.id} customer={customer} note="今天跟进" />
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 最近跟进 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-4 w-4 text-muted-foreground" aria-hidden />
-              最近跟进
-            </CardTitle>
-            <CardDescription>最新的跟进沟通记录</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {workspace.recentFollowUps.length > 0 ? (
-              <ul className="divide-y">
-                {workspace.recentFollowUps.map((item) => (
-                  <RecentFollowUpRow key={item.id} item={item} />
-                ))}
-              </ul>
-            ) : (
-              <ListEmpty text="还没有跟进记录，进入客户详情即可新增" />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 最近开发客户 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4 text-muted-foreground" aria-hidden />
-              最近开发客户
-            </CardTitle>
-            <CardDescription>最新加入的客户</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {workspace.recentCustomers.length > 0 ? (
-              <ul className="divide-y">
-                {workspace.recentCustomers.map((customer) => (
-                  <CustomerRow
-                    key={customer.id}
-                    customer={customer}
-                    note={<span className={cn('tabular-nums')}>{formatRelative(customer.createdAt)}</span>}
-                  />
-                ))}
-              </ul>
-            ) : (
-              <ListEmpty text="还没有客户，先在客户管理里导入或新建" />
-            )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+          <TabsContent value="activity" className="mt-0">
+            {workspace.recentFollowUps.length
+              ? <ul aria-label="最近跟进动态">{workspace.recentFollowUps.map(item => <RecentFollowUpRow key={item.id} item={item} />)}</ul>
+              : <ListEmpty icon={MessageSquare} title="还没有跟进记录" description="进入客户详情记录沟通结果，最近的跟进会汇总在这里。" />}
+          </TabsContent>
+          <TabsContent value="letters" className="mt-0">
+            {stats.recentLetters.length
+              ? <ul aria-label="最近开发信">{stats.recentLetters.map(item => <RecentLetterRow key={item.id} letter={item} />)}</ul>
+              : <ListEmpty icon={Inbox} title="还没有开发信记录" description="从客户详情撰写开发信，审核后手动发送。" />}
+            <div className="dashboard-list-footer"><span>最新 {stats.recentLetters.length} 条记录</span>
+              <button type="button" className="dashboard-text-action" onClick={() => openLetters()}>全部开发信 <ArrowRight className="h-3.5 w-3.5" aria-hidden /></button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+
+      <aside aria-labelledby="dashboard-reminders-title" className="dashboard-reminders">
+        <h2 id="dashboard-reminders-title" className="text-sm font-semibold">工作提醒</h2>
+        <p className="mt-1 text-xs text-muted-foreground">从这里继续处理未完成的事项</p>
+        <ul className="mt-4 divide-y divide-border/60">
+          {[
+            { label: '逾期跟进', value: workspace.followUpOverdue, urgent: true, action: () => openCustomers({ followUp: 'overdue' }) },
+            { label: '未来跟进', value: workspace.followUpUpcoming, action: () => openCustomers({ followUp: 'upcoming' }) },
+            { label: '待发送草稿', value: letter.draft, action: () => openLetters('draft') },
+            { label: '发送失败', value: letter.failed, urgent: true, action: () => openLetters('failed') },
+            { label: '客户缺少邮箱', value: customer.withoutEmail, action: () => openCustomers({ hasEmail: 'no' }) },
+          ].map(item => (
+            <li key={item.label}>
+              <button type="button" onClick={item.action} className="flex min-h-12 w-full items-center gap-3 py-2 text-left text-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="flex-1">{item.label}</span>
+                <span className={cn('font-semibold tabular-nums', item.urgent && item.value > 0 && 'text-destructive')}>{item.value}</span>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-5 border-t pt-4">
+          <h3 className="text-xs font-medium text-muted-foreground">今日进度</h3>
+          <dl className="mt-3 grid grid-cols-2 gap-3">
+            <div><dt className="text-xs text-muted-foreground">已发送开发信</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{workspace.lettersSentToday}<span className="ml-1 text-xs font-normal text-muted-foreground">封</span></dd></div>
+            <div><dt className="text-xs text-muted-foreground">新增客户</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{workspace.newCustomersToday}<span className="ml-1 text-xs font-normal text-muted-foreground">位</span></dd></div>
+          </dl>
+        </div>
+      </aside>
+    </section>
   );
 }
