@@ -7,7 +7,9 @@ import { customerScope, requireProjectId } from '../../utils/access';
 import { ApiError } from '../../utils/ApiError';
 import { getCustomerByIdOrThrow } from '../customer.service';
 import { getLetter, sendLetter } from '../letter.service';
-import { createCustomerAnalysis } from './customer-analysis.service';
+import { createCustomerAnalysis, getCustomerAnalysis } from './customer-analysis.service';
+import { createLogger } from '../../config/logger';
+const taskLogger=createLogger('agent-task');
 import { agentFailure } from './agent-errors';
 import { isFirstOutreachCommand } from './first-outreach-intent';
 import { resolveAgentProvider } from './ai-settings.service';
@@ -143,7 +145,6 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
    // Recover a write whose response/checkpoint was lost; never overwrite later human edits.
    let draft=await DevelopmentLetter.findOne({projectId:task.projectId,requestKey:`task-draft-${task.id}`});
    if(!draft) {
-    const {getCustomerAnalysis}=await import('./customer-analysis.service');
     const analysis=await getCustomerAnalysis(String(task.analysisId),actor);
     actor=await check();
     const saved=await sendLetter({customerId:String(task.customerId),subject:analysis.emailDraft.subject,
@@ -166,6 +167,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
  } catch(error) {
   if((error as Error).message!=='TASK_INTERRUPTED') {
    const failure=agentFailure(error);
+   taskLogger.warn('Task step failed',{taskId:task.id,step:task.currentStep,code:failure.code,cause:error instanceof Error?error.name:'UnknownError'});
    await AgentTask.updateOne(fence,{$set:{status:'failed',error:failure},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:failure.message,step:task.currentStep}],$slice:-100}}});
   }
  } finally { clearInterval(heartbeat); await AgentTask.updateOne({_id:task._id,leaseToken:token,status:{$ne:'running'}},{$unset:{leaseToken:1,leaseUntil:1}}); }
