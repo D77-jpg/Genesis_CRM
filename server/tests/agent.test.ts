@@ -1366,3 +1366,15 @@ test('P3 supplier numbers cannot be attributed to buyer requirements by citing a
  const flow=await import('../src/services/agent/mail-thread-analysis.service');const analysis=await flow.createMailThreadAnalysis({mailId:mail.id,direction:'inbound',idempotencyKey:'p3-source-guard'},actorA,{provider});
  assert.equal(analysis.extracted.quantity.value,'120 pcs');assert.ok(!analysis.extracted.delivery.value.includes('19'));assert.ok(!analysis.extracted.price.value.includes('73'));assert.equal(analysis.extracted.delivery.evidenceMessageIds.length,0);
 });
+
+test('P3 a compatible-gateway sibling nesting error is repaired without relaxing unknown-field validation or recording unsent replies',async()=>{
+ const {Customer,FollowUp}=await import('../src/models');const {MailMessage}=await import('../src/models/MailMessage');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'P3 Gateway Shape',email:'p3shape@example.test',source:'manual'});
+ const mail=await MailMessage.create({projectId:projectA,mailboxUserId:userA,customerId:c._id,dedupKey:'p3-shape',threadId:'p3-shape',from:c.email,subject:'Packaging inquiry',text:'Product: jewelry boxes',sentAt:new Date()});
+ const provider=new MockAgentProvider();const original=provider.analyzeMailThread.bind(provider);
+ provider.analyzeMailThread=async request=>{const result:any=await original(request);result.statusSuggestion.status='replied';result.statusSuggestion.followUpSuggestion=result.followUpSuggestion;delete result.followUpSuggestion;result.replyDraft.bodyText='Dear team,\\n\\nPlease confirm dimensions.\\nBest regards';return result;};
+ const flow=await import('../src/services/agent/mail-thread-analysis.service');const analysis=await flow.createMailThreadAnalysis({mailId:mail.id,direction:'inbound',idempotencyKey:'p3-shape'},actorA,{provider});
+ assert.equal(analysis.statusSuggestion.status,'pending');assert.ok(analysis.replyDraft.bodyText.includes('\n\n'));assert.ok(!analysis.replyDraft.bodyText.includes('\\n'));assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);
+ const bad=new MockAgentProvider();bad.analyzeMailThread=async request=>({...await original(request),unexpectedWrite:'send_all'}) as any;
+ await assert.rejects(()=>flow.createMailThreadAnalysis({mailId:mail.id,direction:'inbound',idempotencyKey:'p3-shape-invalid'},actorA,{provider:bad}));
+});

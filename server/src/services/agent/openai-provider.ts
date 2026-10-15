@@ -344,6 +344,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
             '生成专业、简洁、可编辑的英文回复草稿；不得承诺邮件中没有的价格、交期、库存或能力，也不得表示已经发送。',
             '若最新客户来信包含退订、退信或明确拒绝，safety 必须分类为对应类型，回复草稿必须为空，不得建议继续营销或设置未来营销跟进。',
             '客户状态和跟进记录只是建议，不能声称已写入。nextFollowUpAt 使用 ISO 8601；不应继续跟进时输出空字符串。',
+            '严格返回完整 JSON：followUpSuggestion 与 statusSuggestion 是根对象中的同级字段，禁止嵌套。未知信息使用空字符串或空数组，禁止 null。正文使用正常换行，避免输出字面的反斜杠 n。',
             `当前服务器时间是 ${new Date().toISOString()}。需要跟进时，nextFollowUpAt 必须晚于当前时间。`,
           ].join('\n'),
           input: JSON.stringify(request.input),
