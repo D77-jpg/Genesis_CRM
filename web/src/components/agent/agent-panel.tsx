@@ -340,7 +340,7 @@ export function AgentPanel(): React.JSX.Element | null {
         result.assistantMessage,
       ]);
       if (result.assistantMessage.uiAction) openOutreachComposer(result.assistantMessage.uiAction);
-      if (result.degraded) toast.warning('Agent 暂时不可用，CRM 其他功能不受影响');
+      if (result.degraded) toast.warning(result.assistantMessage.content);
       await Promise.all([loadRecords(), loadSessions()]);
     } catch (reason) {
       setMessages((current) => current.filter((item) => !item.id.startsWith('pending-')));

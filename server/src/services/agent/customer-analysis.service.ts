@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import env from '../../config/env';
+import { agentFailure } from './agent-errors';
 import { getCurrentMailSender } from '../mail-account.service';
 import type { AgentProvider } from './provider';
 import {
@@ -161,9 +162,12 @@ function recommendationEvidence(recommendations: AgentAnalysisClaim[]): { reason
 
 export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider }) {
   const identifiers = scope(actor);
-  const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
-  if (existing) return dto(existing);
   await getCustomerByIdOrThrow(input.customerId, actor);
+  const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
+  if (existing) {
+    if (String(existing.customerId) !== input.customerId) throw ApiError.conflict('请求标识已用于其他客户');
+    return dto(existing);
+  }
   const activeProvider = options?.provider ?? await resolveAgentProvider();
   const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'customer_analysis', status: 'running' });
   const startedAt = Date.now();
@@ -232,13 +236,9 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
     await settleAgentQuota(reservation);
     if (error instanceof ApiError) throw error;
-    if (error instanceof AgentProviderError) {
-      const message = error.code === 'OPENAI_INCOMPLETE_RESPONSE'
-        ? 'AI 分析内容未完整返回，请重试；CRM 数据未改动'
-        : error.code === 'OPENAI_INVALID_STRUCTURED_OUTPUT'
-          ? 'AI 返回的分析格式无效，请重试；CRM 数据未改动'
-          : 'Agent 分析服务暂时不可用，CRM 数据未改动';
-      throw new ApiError(503, message, 'INTERNAL_ERROR');
+    if (error instanceof AgentProviderError || (error as { name?: string })?.name === 'ZodError') {
+      const failure = agentFailure(error);
+      throw new ApiError(503, failure.message, 'INTERNAL_ERROR', [{ field: 'agent', message: failure.code }]);
     }
     throw error;
   }

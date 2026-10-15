@@ -1035,3 +1035,36 @@ test('first outreach intent requires a direct command and never upgrades CRM dat
   const result = await service.sendAgentMessage(session.id, '帮我写第一封开发信', actorA, 'first-outreach-no-customer');
   assert.equal(result.assistantMessage.uiAction, undefined); assert.match(result.assistantMessage.content, /先打开目标客户/);
 });
+
+test('long conversations keep the latest request in the actual provider input and recent message view', async () => {
+  const { AgentMessage } = await import('../src/models');
+  const session = await service.createAgentSession({context: {type: 'global'}}, actorA);
+  await AgentMessage.insertMany(Array.from({length: 220}, (_,i) => ({
+    projectId: projectA, userId: userA, sessionId: session.id, role: i % 2 ? 'assistant' : 'user',
+    content: 'Earlier message ' + i, status: 'completed', createdAt: new Date(Date.now() - (221-i)*1000),
+  })));
+  const { MockAgentProvider } = await import('../src/services/agent/mock-provider');
+  const provider = new MockAgentProvider();
+  let lastInput = '';
+  provider.createTurn = async request => {
+    lastInput = JSON.stringify(request.input);
+    assert.ok(!request.instructions.includes('V1.0'));
+    return {text: 'Latest request received', output: [], toolCalls: [], usage: {inputTokens:0,outputTokens:0,totalTokens:0}};
+  };
+  await service.sendAgentMessage(session.id, '最新要求：不要提 MOQ 73', actorA, 'long-history-latest-request', provider);
+  assert.match(lastInput, /最新要求/);
+  assert.ok(!lastInput.includes('Earlier message 0'));
+  const messages = await service.listAgentMessages(session.id, actorA);
+  assert.equal(messages.length, 200);
+  assert.equal(messages.at(-2)?.content, '最新要求：不要提 MOQ 73');
+});
+
+test('Agent failure messages distinguish invalid output, timeout and access changes without exposing raw errors', async () => {
+  const { agentFailure } = await import('../src/services/agent/agent-errors');
+  const { AgentProviderError } = await import('../src/services/agent/provider');
+  const { ApiError } = await import('../src/utils/ApiError');
+  assert.match(agentFailure(new AgentProviderError('OPENAI_INVALID_STRUCTURED_OUTPUT')).message, /格式/);
+  assert.match(agentFailure(new AgentProviderError('OPENAI_TIMEOUT')).message, /超时/);
+  assert.equal(agentFailure(ApiError.notFound('private customer')).retryable, false);
+  assert.ok(!agentFailure(new Error('credential-bearing raw error')).message.includes('credential'));
+});
