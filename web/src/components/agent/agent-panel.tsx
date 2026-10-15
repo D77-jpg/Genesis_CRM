@@ -47,6 +47,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
 import type { AgentAction, AgentRecordedWorkflow, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
+import { AgentTasks, type AgentTask } from './agent-tasks';
 import { AgentMessageContent } from './agent-message-content';
 import { AgentActionDetail } from './agent-action-detail';
 import { ScratchpadCustomerPreviewView } from './scratchpad-customer-preview';
@@ -96,13 +97,15 @@ function sameContext(left: AgentContext, right: AgentContext): boolean {
 }
 
 function suggestions(context: AgentContext): string[] {
-  if (context.type === 'customer') return ['分析当前客户并建议下一步', '总结客户时间线', '查看最近跟进和报价'];
+  if (context.type === 'customer') return ['帮我给这个客户写第一封开发信', '总结客户时间线', '查看最近跟进和报价'];
   if (context.type === 'mail') return ['总结当前邮件线程', '提取客户需求与待办', '建议下一步回复思路'];
   return ['总结今天的销售工作区', '有哪些逾期客户需要优先处理？', '给我一份今日工作建议'];
 }
 
 function actionLabel(toolName: string): string {
   const labels: Record<string, string> = {
+    search_customers: '检索客户',
+    prepare_first_outreach_draft: '准备并保存开发信草稿',
     get_current_customer: '读取当前客户',
     get_customer_timeline: '读取客户时间线',
     get_mail_thread: '读取邮件线程',
@@ -161,6 +164,7 @@ export function AgentPanel(): React.JSX.Element | null {
   const [analyzing, setAnalyzing] = React.useState(false);
   const [error, setError] = React.useState('');
   const [tab, setTab] = React.useState('chat');
+  const [autoOpenTaskId, setAutoOpenTaskId] = React.useState<string|null>(null);
   const [recordsError, setRecordsError] = React.useState('');
   const [renameOpen, setRenameOpen] = React.useState(false);
   const [renameTitle, setRenameTitle] = React.useState('');
@@ -290,6 +294,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
   function openRecordedWorkflow(workflow: AgentRecordedWorkflow) {
     setSelectedActionId(null);
+    if (workflow.kind === 'task') {setAutoOpenTaskId(null);setTab('tasks');return;}
     if (workflow.kind === 'customer-analysis' && workflow.context?.type === 'customer') {
       navigate(`/customers/${workflow.context.resourceId}`);
       openCustomerAnalysis(workflow.id, workflow.context.resourceId);
@@ -309,6 +314,18 @@ export function AgentPanel(): React.JSX.Element | null {
     setMessages([]);
     setError('');
     window.requestAnimationFrame(() => textareaRef.current?.focus());
+  }
+
+  function openTaskDraft(task:AgentTask) {
+    if(!task.customerId || !task.draftId) return;
+    setAutoOpenTaskId(null);
+    navigate(`/customers/${task.customerId}?outreachTask=${task.id}`);
+    setOpen(false);
+  }
+  function openOutreachComposer(action: NonNullable<AgentMessage['uiAction']>) {
+    if (action.kind !== 'compose-first-outreach') return;
+    navigate(`/customers/${action.customerId}?composeAnalysis=${action.analysisId}`);
+    setOpen(false);
   }
 
   async function sendMessage(value = draft) {
@@ -333,7 +350,9 @@ export function AgentPanel(): React.JSX.Element | null {
         result.userMessage,
         result.assistantMessage,
       ]);
-      if (result.degraded) toast.warning('Agent 暂时不可用，CRM 其他功能不受影响');
+      if (result.assistantMessage.taskId) {setAutoOpenTaskId(result.assistantMessage.taskId);setTab('tasks');}
+      if (result.assistantMessage.uiAction) openOutreachComposer(result.assistantMessage.uiAction);
+      if (result.degraded) toast.warning(result.assistantMessage.content);
       await Promise.all([loadRecords(), loadSessions()]);
     } catch (reason) {
       setMessages((current) => current.filter((item) => !item.id.startsWith('pending-')));
@@ -426,7 +445,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">业务 Agent</h2>
-            <Badge variant="outline" className="text-[10px]">V1.4 · 安全审批</Badge>
+            <Badge variant="outline" className="text-[10px]">V1.5 · 任务执行</Badge>
           </div>
           <p className="truncate text-xs text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
         </div>
@@ -436,12 +455,13 @@ export function AgentPanel(): React.JSX.Element | null {
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2">
-          <TabsList>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+          <TabsList className="h-auto min-h-11 max-w-full flex-wrap justify-start gap-y-1">
             <TabsTrigger value="chat"><Sparkles className="h-3.5 w-3.5" />对话</TabsTrigger>
             {customerPreviewId && <TabsTrigger value="customer-preview"><UserPlus className="h-3.5 w-3.5" />客户预览</TabsTrigger>}
             {customerAnalysisId && <TabsTrigger value="customer-analysis"><BarChart3 className="h-3.5 w-3.5" />客户分析</TabsTrigger>}
             {mailAnalysisId && <TabsTrigger value="mail-analysis"><MailSearch className="h-3.5 w-3.5" />邮件助理</TabsTrigger>}
+            <TabsTrigger value="tasks"><Clock3 className="h-3.5 w-3.5" />任务</TabsTrigger>
             <TabsTrigger value="records"><FileClock className="h-3.5 w-3.5" />运行记录</TabsTrigger>
           </TabsList>
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
@@ -510,7 +530,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
           <div className="flex shrink-0 items-start gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-            读取与分析保持只读；保存草稿、安排跟进需确认，不会直接发送邮件。
+            可指令准备首封开发信并打开写信页面；发送由业务员操作，成功后自动记录跟进。
           </div>
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
@@ -518,7 +538,7 @@ export function AgentPanel(): React.JSX.Element | null {
             {!loading && messages.length === 0 && (
               <div className="space-y-5 py-8 text-center">
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></span>
-                <div><p className="font-medium">从当前工作上下文开始</p><p className="mt-1 text-sm text-muted-foreground">Agent 会通过只读工具获取数据，再给出分析建议。</p></div>
+                <div><p className="font-medium">从当前工作上下文开始</p><p className="mt-1 text-sm text-muted-foreground">Agent 可检索并分析客户、准备开发信草稿，再交给你审核发送。</p></div>
                 {context.type === 'customer' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startCustomerAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}<span><span className="block">分析客户并生成英文邮件草稿</span><span className="mt-0.5 block text-xs font-normal opacity-80">汇总档案、时间线、邮件、跟进与报价</span></span></Button>}
                 {context.type === 'mail' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startMailAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}<span><span className="block">启动邮件会话助理</span><span className="mt-0.5 block text-xs font-normal opacity-80">总结意图、提取需求并生成三张审批卡片</span></span></Button>}
                 <div className="space-y-2">
@@ -530,6 +550,8 @@ export function AgentPanel(): React.JSX.Element | null {
               <article key={message.id} className={message.role === 'user' ? 'ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-primary/10 text-foreground px-4 py-3 text-sm text-foreground' : `min-w-0 rounded-xl rounded-bl-sm border bg-card px-4 py-4 text-sm shadow-sm ${message.status === 'failed' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
                 {message.role === 'assistant' && <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">AI 生成 · 请核对关键信息</p>}
                 {message.role === 'assistant' ? <AgentMessageContent content={message.content} /> : <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>}
+                {message.taskId && <Button variant="outline" className="mt-3 min-h-11" onClick={()=>{setAutoOpenTaskId(null);setTab('tasks');}}>查看任务进度</Button>}
+                {message.role === 'assistant' && message.uiAction && <Button type="button" className="mt-3" onClick={() => openOutreachComposer(message.uiAction!)}>打开首封开发信</Button>}
               </article>
             ))}
             {sending && <div className="mr-20 flex items-center gap-2 rounded-xl border bg-card px-3 py-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在读取 CRM 数据并分析…</div>}
@@ -568,6 +590,8 @@ export function AgentPanel(): React.JSX.Element | null {
         {customerAnalysisId && <TabsContent forceMount value="customer-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><CustomerAnalysisView analysisId={customerAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
         {mailAnalysisId && <TabsContent forceMount value="mail-analysis" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><MailThreadAnalysisView analysisId={mailAnalysisId} onRecordsChanged={loadRecords} /></TabsContent>}
 
+        <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks key={`${project.id}:${user.id}`} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft}/></TabsContent>
+
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">运行</p><p className="mt-1 text-xl font-semibold tabular-nums">{usage.runs}</p></div>
@@ -581,7 +605,7 @@ export function AgentPanel(): React.JSX.Element | null {
             {actions.map((action) => (
               <button key={action.id} type="button" onClick={() => setSelectedActionId(action.id)} aria-label={`查看记录：${actionLabel(action.toolName)}`} className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{actionLabel(action.toolName)}</p><Badge variant={action.executionStatus === 'succeeded' ? 'developed' : action.executionStatus === 'failed' ? 'failed' : 'muted'}>{action.executionStatus === 'succeeded' ? '成功' : action.executionStatus === 'failed' ? '失败' : action.executionStatus === 'rejected' ? '已取消' : '处理中'}</Badge></div>
-                <p className="mt-1 text-xs text-muted-foreground">{action.resultSummary || '等待执行'} · {action.approvalStatus === 'not_required' ? '只读免审批' : action.approvalStatus === 'approved' ? '用户已确认' : '用户已取消'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{action.resultSummary || '等待执行'} · {action.approvalStatus === 'not_required' ? action.riskLevel === 'read' ? '只读免审批' : '用户已委托' : action.approvalStatus === 'approved' ? '用户已确认' : '用户已取消'}</p>
                 <p className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground"><span className="flex items-center gap-1"><Clock3 className="h-3 w-3" />{formatDateTime(action.createdAt)}</span><span className="flex items-center gap-1">查看详情<ChevronRight className="h-3 w-3" /></span></p>
               </button>
             ))}

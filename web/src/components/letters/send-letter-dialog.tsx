@@ -72,6 +72,7 @@ export interface SendLetterDialogProps {
   customer: Customer | null;
   /** 重发场景：带出原信的主题与模板 */
   letter?: DevelopmentLetter | null;
+  initialDraft?: { analysisId: string; subject: string; content: string } | null;
   /** 发送 / 存草稿成功后回调，父级据此刷新历史列表与客户信息 */
   reply?: { id: string; subject: string; from: string };
   onSent?: (result: SendLetterResult) => void;
@@ -136,6 +137,7 @@ export function SendLetterDialog({
   onOpenChange,
   customer,
   letter = null,
+  initialDraft = null,
   reply,
   onSent,
 }: SendLetterDialogProps): React.JSX.Element {
@@ -198,7 +200,7 @@ export function SendLetterDialog({
     // 优先级：重发的原信 > 上次使用的模板 > 内置默认模板
     const source = letter
       ? { subject: letter.subject, content: letter.template || letter.content }
-      : (loadSavedTemplate() ?? { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE });
+      : initialDraft ?? (loadSavedTemplate() ?? { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE });
 
     reset({
       subject: reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : source.subject ?? '',
@@ -209,7 +211,7 @@ export function SendLetterDialog({
       saveAsDraft: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在「打开 / 客户 / 原信」变化时重建表单
-  }, [open, customerId, letterId, reply?.id, reset]);
+  }, [open, customerId, letterId, initialDraft?.analysisId, reply?.id, reset]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -291,6 +293,7 @@ export function SendLetterDialog({
           if (!asDraft && scheduledAt && new Date(scheduledAt).getTime() <= Date.now()) throw new Error('定时时间必须晚于当前时间');
           const result = letter
             ? await resendLetter(letter.id, {
+                saveAsDraft: asDraft,
                 requestKey: requestKey.current,
                 scheduledAt: !asDraft && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
                 subject: values.subject,
@@ -300,6 +303,7 @@ export function SendLetterDialog({
               })
             : await sendLetter({
                 customerId: customer.id,
+                agentAnalysisId: initialDraft?.analysisId,
                 templateId: attributedTemplate && attributedTemplate.subject === values.subject && attributedTemplate.content === values.content
                    ? attributedTemplate.id : undefined,
                 requestKey: requestKey.current,
@@ -338,7 +342,7 @@ export function SendLetterDialog({
         } finally { submitLock.current = false; }
       })();
     },
-    [canSend, customer, letter, reply, attributedTemplate?.id, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
+    [canSend, customer, letter, initialDraft, reply, attributedTemplate?.id, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
   );
 
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送
@@ -397,10 +401,10 @@ export function SendLetterDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-4 w-4 text-primary" aria-hidden />
-            {reply ? '回复客户邮件' : letter ? '重新发送开发信' : '发送开发信'}
+            {reply ? '回复客户邮件' : letter?.status === 'draft' ? '审核开发信草稿' : letter ? '重新发送开发信' : '发送开发信'}
           </DialogTitle>
           <DialogDescription>
-            {letter
+            {letter?.status === 'draft' ? '草稿已保存。请核对收件人、主题与正文，再由业务员发送。' : letter
               ? '已带出原信内容，可修改后再次发送；会新增一条发送记录。'
               : '正文中的 {{占位符}} 会在发送时自动替换为该客户的真实信息。'}
           </DialogDescription>
@@ -636,7 +640,7 @@ export function SendLetterDialog({
           {reply ? <span id="reply-draft-help" className="sr-only">回复邮件暂不支持存草稿。</span> : null}
           <Button type="button" onClick={() => void submit(false)} loading={sending} disabled={sending || senderLoading || !customer || !canSend}>
             {!sending ? <Send className="h-3.5 w-3.5" aria-hidden /> : null}
-            {scheduledAt ? '保存定时任务' : reply ? '发送回复' : letter ? '重新发送' : '发送开发信'}
+            {scheduledAt ? '保存定时任务' : reply ? '发送回复' : letter && letter.status !== 'draft' ? '重新发送' : '发送开发信'}
           </Button>
         </DialogFooter>
       </DialogContent>

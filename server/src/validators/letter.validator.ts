@@ -22,6 +22,7 @@ const htmlContentSchema = z
 export const sendLetterSchema = z.object({
   scheduledAt: z.string().datetime().transform((v) => new Date(v)).optional(),
   requestKey: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/).optional(),
+  agentAnalysisId: objectIdSchema.optional(),
   replyToId: objectIdSchema.optional(),
   /** 目标客户；也可通过 URL /customers/:id/letters 传入 */
   customerId: objectIdSchema.optional(),
@@ -46,6 +47,7 @@ export const sendLetterSchema = z.object({
 });
 
 export const resendLetterSchema = z.object({
+  saveAsDraft: z.boolean().optional(),
   scheduledAt: z.string().datetime().transform((v) => new Date(v)).optional(),
   requestKey: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   subject: z.string().trim().min(1).max(300).optional(),

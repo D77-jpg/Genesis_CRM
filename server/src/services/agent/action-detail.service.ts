@@ -1,3 +1,4 @@
+import { getAgentTask } from './task.service';
 import { Types } from 'mongoose';
 import { AgentAction, AgentRun } from '../../models';
 import type { AuthUser } from '../../types/express';
@@ -17,12 +18,14 @@ export async function getAgentActionDetail(id: string, actor: AuthUser) {
   const action = await AgentAction.findOne({ _id: id, ...identifiers }).lean();
   if (!action) throw ApiError.notFound('运行记录不存在或无权访问');
   const run = action.runId ? await AgentRun.findOne({ _id: action.runId, ...identifiers }).lean() : null;
-  let workflow: { kind: 'customer-analysis' | 'mail-analysis' | 'customer-preview'; id: string; context?: { type: 'customer' | 'mail'; resourceId: string; direction?: 'inbound' | 'outbound' } } | null = null;
+  let workflow: { kind: 'customer-analysis' | 'mail-analysis' | 'customer-preview' | 'task'; id: string; context?: { type: 'customer' | 'mail'; resourceId: string; direction?: 'inbound' | 'outbound' } } | null = null;
   if (action.workflowId) {
     const workflowId = String(action.workflowId);
     try {
       // Reuse live resource permissions; a cached result must not bypass an owner transfer.
-      if (customerTools.has(action.toolName)) {
+      if (action.toolName === 'prepare_first_outreach_draft') {
+        const task=await getAgentTask(workflowId,actor); workflow={kind:'task',id:task.id};
+      } else if (customerTools.has(action.toolName)) {
         const analysis = await getCustomerAnalysis(workflowId, actor);
         workflow = { kind: 'customer-analysis', id: analysis.id, context: { type: 'customer', resourceId: analysis.customerId } };
       } else if (mailTools.has(action.toolName)) {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { searchAgentCustomers } from './customer-search';
 import { DevelopmentLetter } from '../../models';
 import { MailMessage } from '../../models/MailMessage';
 import type { AuthUser } from '../../types/express';
@@ -54,6 +55,9 @@ async function getMailThread(actor: AuthUser, input: unknown) {
 }
 
 const tools: RegisteredAgentTool[] = [
+  { name: 'search_customers', description: 'Search accessible CRM customers by a literal customer name, company or email. Returns at most ten matches. Read only.', riskLevel: 'read',
+    parameters: {type: 'object', properties: {query: {type: 'string', description: 'Literal customer or company name supplied by the user'}}, required: ['query'], additionalProperties: false},
+    execute: ({actor}, input) => searchAgentCustomers(input, actor) },
   {
     name: 'get_current_customer',
     description: 'Read the current CRM customer profile. Never modifies customer data.',

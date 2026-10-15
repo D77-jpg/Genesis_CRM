@@ -24,6 +24,8 @@ export interface AgentSession {
 }
 
 export interface AgentMessage {
+  taskId?: string;
+  uiAction?: { kind: 'compose-first-outreach'; customerId: string; analysisId: string };
   id: string;
   sessionId: string;
   role: 'user' | 'assistant';
@@ -37,7 +39,9 @@ export interface AgentStatus {
   model: string;
   available: boolean;
   mode: 'mock' | 'live';
-  readOnly: true;
+  readOnly: boolean;
+  toolsReadOnly?: boolean;
+  automaticEmailSending?: boolean;
   toolCount: number;
 }
 
@@ -67,7 +71,7 @@ export interface AgentAction {
 }
 
 export interface AgentRecordedWorkflow {
-  kind: 'customer-analysis' | 'mail-analysis' | 'customer-preview';
+  kind: 'customer-analysis' | 'mail-analysis' | 'customer-preview' | 'task';
   id: string;
   context?: { type: 'customer' | 'mail'; resourceId: string; direction?: 'inbound' | 'outbound' };
 }
@@ -191,6 +195,7 @@ export interface AgentAnalysisClaim {
 }
 
 export interface AgentCustomerAnalysis {
+  firstOutreach?: boolean;
   id: string;
   customerId: string;
   sources: AgentAnalysisSource[];
@@ -449,6 +454,7 @@ export interface MailTrackingSummary {
 }
 
 export interface SendLetterPayload {
+  agentAnalysisId?: string;
   /** 仅在导入模板原文且未修改时附带；服务端校验并固定归因。 */
   templateId?: string;
   scheduledAt?: string;
@@ -466,6 +472,7 @@ export interface SendLetterPayload {
 }
 
 export interface ResendLetterPayload {
+  saveAsDraft?: boolean;
   scheduledAt?: string;
   requestKey?: string;
   subject?: string;

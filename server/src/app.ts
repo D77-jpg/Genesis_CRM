@@ -3,6 +3,7 @@
  * ------------------------------------------------------------------
  * 只负责「中间件 + 路由」的组合，不监听端口（便于测试时直接 import app）。
  */
+import { startAgentTaskWorker } from './services/agent/task.service';
 import express, { type Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -141,6 +142,7 @@ export function createApp(): Application {
   app.use(notFoundHandler);
   app.use(errorHandler);
 
+  startAgentTaskWorker();
   return app;
 }
 
