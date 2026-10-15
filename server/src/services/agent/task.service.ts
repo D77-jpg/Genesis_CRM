@@ -35,12 +35,12 @@ export async function taskActor(task: Pick<IAgentTask,'projectId'|'userId'|'acto
   role: task.actorRole === 'admin' && user.role === 'admin' ? 'admin' : 'user', projectId: String(task.projectId)};
 }
 async function dto(task: AgentTaskDocument, actor: AuthUser) {
- if (task.customerId) await getCustomerByIdOrThrow(String(task.customerId), actor);
+ const customer = task.customerId ? await getCustomerByIdOrThrow(String(task.customerId), actor) : undefined;
  if(task.sourceMailId)await agentMailOrThrow(String(task.sourceMailId),actor);
  const candidates = task.candidates.length ? await Customer.find({
   ...customerScope(actor), _id: {$in: task.candidates.map(c => c.id)}}).select('_id name company').lean() : [];
  return {id: task.id, sessionId: String(task.sessionId), goal: task.goal, status: task.status, version: task.version,
-  customerId: task.customerId?.toString(), analysisId: task.analysisId?.toString(), draftId: task.draftId?.toString(),
+  customerId: task.customerId?.toString(), customerName: customer?.name, analysisId: task.analysisId?.toString(), draftId: task.draftId?.toString(),
   sentLetterId: task.sentLetterId?.toString(), completedSteps: task.completedSteps, currentStep: task.currentStep,
   events: task.events, error: task.error, attempts: task.attempts,
   candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), kind:task.kind,sourceMailId:task.sourceMailId?.toString(),mailAnalysisId:task.mailAnalysisId?.toString(),automatic:Boolean(task.automationRuleId),parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};

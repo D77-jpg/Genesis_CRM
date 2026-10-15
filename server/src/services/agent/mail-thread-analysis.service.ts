@@ -178,7 +178,13 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     generated.intent.evidenceMessageIds = verifiedIds(generated.intent.evidenceMessageIds, known);
     generated.safety.evidenceMessageIds = verifiedIds(generated.safety.evidenceMessageIds, known);
     generated.extracted.products = generated.extracted.products.map((item) => ({ ...item, evidenceMessageIds: verifiedIds(item.evidenceMessageIds, known) }));
-    for (const key of ['quantity', 'price', 'delivery'] as const) generated.extracted[key].evidenceMessageIds = verifiedIds(generated.extracted[key].evidenceMessageIds, known);
+    for (const key of ['quantity', 'price', 'delivery'] as const) {
+      const item=generated.extracted[key];item.evidenceMessageIds=verifiedIds(item.evidenceMessageIds,known);
+      // Supplier terms cannot masquerade as buyer requirements merely by citing an unrelated real mail.
+      const numbers=(text:string)=>(text.match(/\d[\d,]*(?:\.\d+)?/g)??[]).map(n=>Number(n.replace(/,/g,'')));
+      const evidenceNumbers=new Set(limited.items.filter(m=>item.evidenceMessageIds.includes(m.messageId)).flatMap(m=>numbers(m.subject+' '+m.text)));
+      if(numbers(item.value).some(n=>!evidenceNumbers.has(n)))generated.extracted[key]={value:({quantity:'来信未提供可核实的采购数量，请确认。',price:'来信未提供可核实的目标价格，请确认。',delivery:'来信未提供可核实的具体交期，请确认。'} as const)[key],evidenceMessageIds:[]};
+    }
     generated.extracted.questions = generated.extracted.questions.map((item) => ({ ...item, evidenceMessageIds: verifiedIds(item.evidenceMessageIds, known) }));
     const safetySource = context.protectedInbound ?? context.latestInbound;
     const deterministic = safetySource ? detectProtectedMailSignal(safetySource) : { classification: 'normal' as const, reason: '' };

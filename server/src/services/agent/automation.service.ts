@@ -25,7 +25,7 @@ export async function saveAutomationRule(input:z.infer<typeof automationRuleInpu
 }
 export async function listAutomationInbox(actor:AuthUser){
  const rows=await AgentAutomationEvent.find(scope(actor)).sort({createdAt:-1}).limit(60);const result=[];
- for(const e of rows){if(e.customerId&&!await Customer.exists({_id:e.customerId,...customerScope(actor)}))continue;result.push({id:e.id,kind:e.kind,status:e.status,reason:e.reason,taskId:e.taskId?.toString(),sourceId:String(e.sourceId),customerId:e.customerId?.toString(),createdAt:e.createdAt});}return result;
+ for(const e of rows){const customer=e.customerId?await Customer.findOne({_id:e.customerId,...customerScope(actor)}).select('name').lean():undefined;if(e.customerId&&!customer)continue;result.push({id:e.id,kind:e.kind,status:e.status,reason:e.reason,taskId:e.taskId?.toString(),sourceId:String(e.sourceId),customerId:e.customerId?.toString(),customerName:customer?.name,createdAt:e.createdAt});}return result;
 }
 async function putEvent(rule:InstanceType<typeof AgentAutomationRule>,kind:'inbound'|'due'|'sent',sourceId:Types.ObjectId,key:string,customerId?:Types.ObjectId,dueAt?:Date){
  const filter={projectId:rule.projectId,userId:rule.userId,eventKey:key};

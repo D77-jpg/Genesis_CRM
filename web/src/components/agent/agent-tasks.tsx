@@ -10,7 +10,7 @@ export interface AgentTask {
  id:string; sessionId:string; goal:string; version:number;
  status:'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
  parentBatchId?:string; contextSummary?:string; tokenBudget?:number; budgetCharged?:number;
- customerId?:string; draftId?:string; analysisId?:string; currentStep?:string; completedSteps:string[];
+ customerId?:string; customerName?:string; draftId?:string; analysisId?:string; currentStep?:string; completedSteps:string[];
  candidates:{id:string;name:string;company?:string}[]; error?:{message:string;retryable:boolean}; attempts:number;
  events:{at:string;message:string;step?:string}[];
 }
@@ -40,7 +40,7 @@ export function AgentTasks({autoOpenTaskId,onOpenDraft,onMailAnalysis,focusTaskI
   {error && <p role="alert" className="mb-3 rounded border border-destructive/30 p-3 text-sm text-destructive">{error}</p>}
   {!tasks.length && <p className="py-8 text-sm text-muted-foreground">还没有任务。在对话中说“帮我给这个客户写第一封开发信”，或指定客户公司名称。</p>}
   <div className="divide-y">{[...tasks].sort((a,b)=>a.id===focusTaskId?-1:b.id===focusTaskId?1:0).map(task=><section key={task.id} className="py-4 first:pt-0">
-   <div className="flex items-start justify-between gap-3"><p className="min-w-0 break-words text-sm font-medium leading-relaxed">{task.automatic&&<span className="mb-1 block text-xs font-normal text-muted-foreground">事件任务 · {task.kind==='inquiry_reply'?'询盘处理':'跟进到期'}</span>}{task.goal}</p><Badge variant={task.status==='failed'?'destructive':'outline'} className="shrink-0">{labels[task.status]}</Badge></div>
+   <div className="flex items-start justify-between gap-3"><p className="min-w-0 break-words text-sm font-medium leading-relaxed">{task.automatic&&<span className="mb-1 block text-xs font-normal text-muted-foreground">事件任务 · {task.kind==='inquiry_reply'?'询盘处理':'跟进到期'}</span>}{task.customerName&&<span className="mb-1 block font-semibold">{task.customerName}</span>}{task.goal}</p><Badge variant={task.status==='failed'?'destructive':'outline'} className="shrink-0">{labels[task.status]}</Badge></div>
    <ol className="my-4 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="任务步骤">{steps.map(([key,label])=>{
     const done=task.completedSteps.includes(key); const running=task.status==='running'&&task.currentStep===key;
     return <li key={key} className={`flex items-center gap-1.5 text-xs ${done?'text-emerald-600':running?'text-primary':'text-muted-foreground'}`}>
