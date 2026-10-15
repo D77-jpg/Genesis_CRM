@@ -31,7 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.templates, label: '模板中心', icon: FileText, end: false },
   { to: ROUTES.users, label: '用户管理', icon: UserCog, end: false, adminOnly: true },
   { to: ROUTES.projects, label: '项目工作空间', icon: FolderKanban, end: false, adminOnly: true },
-  { to: ROUTES.agentDiagnostics, label: 'Agent 诊断', icon: ShieldCheck, end: false, adminOnly: true },
+  { to: ROUTES.agentDiagnostics, label: 'AI 使用情况', icon: ShieldCheck, end: false, adminOnly: true },
   { to: ROUTES.aiSettings, label: 'AI 配置', icon: Settings2, end: false, adminOnly: true },
 ];
 

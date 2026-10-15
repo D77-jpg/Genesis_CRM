@@ -601,7 +601,7 @@ export function SendLetterDialog({
             <TabsContent value="preview" className="space-y-3 pt-1">
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Eye className="h-3.5 w-3.5" aria-hidden />
-                这是客户实际会看到的内容（占位符已替换，本地渲染）
+                邮件预览（已填入客户资料）
               </p>
 
               <div className="rounded-md border bg-muted/20">

@@ -6,7 +6,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const alertVariants = cva(
-  'relative flex w-full gap-3 rounded-md border p-3 text-sm [&>svg]:mt-0.5 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0',
+  'relative block w-full rounded-md border p-3 text-sm [&:has(>svg)]:pl-10 [&>svg]:absolute [&>svg]:left-3 [&>svg]:top-3.5 [&>svg]:h-4 [&>svg]:w-4',
   {
     variants: {
       variant: {
@@ -29,11 +29,11 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(({ className, variant
 Alert.displayName = 'Alert';
 
 function AlertTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>): React.JSX.Element {
-  return <h5 className={cn('mb-0.5 font-medium leading-none', className)} {...props} />;
+  return <h5 className={cn('mb-1 font-medium leading-5', className)} {...props} />;
 }
 
 function AlertDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>): React.JSX.Element {
-  return <div className={cn('text-xs leading-relaxed text-muted-foreground [&_p]:leading-relaxed', className)} {...props} />;
+  return <div className={cn('min-w-0 break-words text-sm leading-relaxed text-muted-foreground [&_p]:leading-relaxed', className)} {...props} />;
 }
 
 export { Alert, AlertTitle, AlertDescription, alertVariants };

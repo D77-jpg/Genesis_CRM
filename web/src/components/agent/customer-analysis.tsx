@@ -164,7 +164,7 @@ export function CustomerAnalysisView({ analysisId, onRecordsChanged }: { analysi
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div><h3 className="text-sm font-semibold">客户分析与邮件草稿</h3><p className="mt-1 text-xs text-muted-foreground">事实、缺口与建议分别展示；每一项均可追溯到 CRM 来源。</p></div>
         <Badge variant="outline">AI 生成 · 请核对</Badge>
       </div>
@@ -198,7 +198,7 @@ export function CustomerAnalysisView({ analysisId, onRecordsChanged }: { analysi
 
       <AlertDialog open={confirmAction !== null} onOpenChange={(open) => { if (!open) { setConfirmAction(null); setReviewed(false); } }}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>{confirmAction === 'email' ? '确认保存开发信草稿？' : '确认安排下一次跟进？'}</AlertDialogTitle><AlertDialogDescription>{confirmAction === 'email' ? '将创建一条 draft 状态的开发信记录。系统不会发送邮件。' : `将把客户的下一次跟进时间更新为 ${dueAt ? formatDateTime(new Date(dueAt)) : '所选时间'}。`}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>{confirmAction === 'email' ? '确认保存开发信草稿？' : '确认安排下一次跟进？'}</AlertDialogTitle><AlertDialogDescription>{confirmAction === 'email' ? '邮件会保存到草稿箱，审核后可再发送。' : `将把客户的下一次跟进时间更新为 ${dueAt ? formatDateTime(new Date(dueAt)) : '所选时间'}。`}</AlertDialogDescription></AlertDialogHeader>
           <label className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm"><Checkbox checked={reviewed} onCheckedChange={(value) => setReviewed(value === true)} /><span>{confirmAction === 'email' ? '我已核对收件对象、英文主题和正文，仅保存草稿。' : '我已核对跟进时间和目的，确认写入客户记录。'}</span></label>
           <div className="flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />确认动作会记录操作人、时间和结果，并受幂等保护。Agent 没有直接发送邮件的能力。</div>
           <AlertDialogFooter><AlertDialogCancel disabled={saving}>返回核对</AlertDialogCancel><AlertDialogAction disabled={!reviewed || saving} onClick={(event) => { event.preventDefault(); void confirm(); }}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmAction === 'email' ? <Mail className="h-4 w-4" /> : <CalendarClock className="h-4 w-4" />}{confirmAction === 'email' ? '确认保存草稿' : '确认安排跟进'}</AlertDialogAction></AlertDialogFooter>

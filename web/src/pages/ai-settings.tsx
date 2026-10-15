@@ -124,29 +124,29 @@ export function AiSettingsPage(): React.JSX.Element {
             <Badge variant={settings?.provider === 'openai' ? 'developed' : 'secondary'}>{settings?.provider === 'openai' ? '真实模型' : '模拟模式'}</Badge>
           </div>
           <CardDescription>
-            {settings?.source === 'environment' ? '当前来自服务端环境变量；在此保存后由管理员配置接管。' : '当前由管理员配置管理，无需重启服务。'}
+            {settings?.source === 'environment' ? '当前使用系统预设配置，可在此修改。' : '当前使用已保存的配置，修改后立即生效。'}
             {settings?.provider === 'openai' ? ` 模型：${settings.model}` : ''}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
-            <span>{settings?.keyConfigured ? 'API Key 已配置（页面不会读取或显示原值）' : '尚未配置 API Key'}</span>
+            <span>{settings?.keyConfigured ? '服务密钥已保存' : '尚未配置服务密钥'}</span>
           </div>
-          {settings?.keyConfigured && <p className="pl-6 text-xs text-muted-foreground">密钥来源：{settings.keySource === 'database' ? '数据库加密保存' : '服务器私有环境变量'}</p>}
+          {settings?.keyConfigured && <p className="pl-6 text-xs text-muted-foreground">密钥来源：{settings.keySource === 'database' ? '已安全保存' : '系统预设'}</p>}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>切换服务商与模型</CardTitle><CardDescription>支持 OpenAI Responses API 协议；连接测试和保存验证只发送合成的 Ping，不发送客户数据。测试可能产生少量调用费用。</CardDescription></CardHeader>
+        <CardHeader><CardTitle>切换服务商与模型</CardTitle><CardDescription>填写服务商提供的模型和连接信息。测试不会发送客户资料，可能产生少量调用费用。</CardDescription></CardHeader>
         <CardContent>
           <form className="space-y-5" onSubmit={(event) => { event.preventDefault(); void submit('save'); }} noValidate>
             {formError && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive">{formError}</div>}
             <div className="space-y-1.5">
               <Label htmlFor="ai-provider">运行模式</Label>
               <select id="ai-provider" value={form.provider} onChange={(event) => change('provider', event.target.value as AiSettingsForm['provider'])} disabled={Boolean(busy)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <option value="mock">模拟模式（不调用外部 AI）</option>
-                <option value="openai">真实 AI（OpenAI Responses API 兼容）</option>
+                <option value="mock">演示模式（不调用外部 AI）</option>
+                <option value="openai">连接 AI 服务</option>
               </select>
             </div>
             {live && <div className="grid gap-5 md:grid-cols-2">
@@ -158,7 +158,7 @@ export function AiSettingsPage(): React.JSX.Element {
               <div className="space-y-1.5">
                 <Label htmlFor="ai-url">API 基址</Label>
                 <Input id="ai-url" type="url" value={form.baseUrl} onChange={(event) => change('baseUrl', event.target.value)} maxLength={500} disabled={Boolean(busy)} invalid={Boolean(errors.baseUrl)} aria-describedby={errors.baseUrl ? 'ai-url-error' : 'ai-url-hint'} className="[overflow-wrap:anywhere]" />
-                {errors.baseUrl ? <p id="ai-url-error" className="text-xs text-destructive">{errors.baseUrl}</p> : <p id="ai-url-hint" className="text-xs text-muted-foreground">例如 https://api.example.com/v1；服务端会调用 /responses。</p>}
+                {errors.baseUrl ? <p id="ai-url-error" className="text-xs text-destructive">{errors.baseUrl}</p> : <p id="ai-url-hint" className="text-xs text-muted-foreground">填写服务商提供的 API 地址，例如 https://api.example.com/v1。</p>}
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="ai-key">API Key（更换时填写）</Label>
