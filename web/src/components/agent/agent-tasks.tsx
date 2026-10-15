@@ -8,6 +8,7 @@ import { formatDateTime } from '@/lib/format';
 export interface AgentTask {
  id:string; sessionId:string; goal:string; version:number;
  status:'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
+ parentBatchId?:string; contextSummary?:string; tokenBudget?:number; budgetCharged?:number;
  customerId?:string; draftId?:string; analysisId?:string; currentStep?:string; completedSteps:string[];
  candidates:{id:string;name:string;company?:string}[]; error?:{message:string;retryable:boolean}; attempts:number;
  events:{at:string;message:string;step?:string}[];
@@ -44,6 +45,7 @@ export function AgentTasks({autoOpenTaskId,onOpenDraft}: {autoOpenTaskId:string|
     return <li key={key} className={`flex items-center gap-1.5 text-xs ${done?'text-emerald-600':running?'text-primary':'text-muted-foreground'}`}>
      {done?<Check className="h-3.5 w-3.5"/>:running?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<span className="h-3 w-3 rounded-full border"/>}{label}</li>;
    })}</ol>
+   {task.contextSummary&&<details className="my-2"><summary className="cursor-pointer text-xs text-muted-foreground">查看本任务资料摘要</summary><p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed">{task.contextSummary}</p></details>}
    <p role="status" className="text-sm leading-relaxed">{task.error?.message || task.events.at(-1)?.message}</p>
    {task.status==='waiting_input' && <div className="mt-3 space-y-2">
     {task.candidates.map(c=><Button key={c.id} variant="outline" className="h-auto min-h-11 w-full justify-start whitespace-normal text-left" disabled={busy===task.id} onClick={()=>void control(task,'resume',{customerId:c.id})}>{c.name}{c.company?` · ${c.company}`:''}</Button>)}

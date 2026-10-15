@@ -30,6 +30,7 @@ export interface BulkActionsBarProps {
   onManageTags: () => void;
   /** 打开「批量设置跟进时间」弹窗 */
   onSetFollowUp: () => void;
+  onPrepareDrafts?:()=>void;
   onDelete: () => void;
   onClear: () => void;
   className?: string;
@@ -44,6 +45,7 @@ export function BulkActionsBar({
   onAssignOwner,
   onManageTags,
   onSetFollowUp,
+  onPrepareDrafts,
   onDelete,
   onClear,
   className,
@@ -73,6 +75,7 @@ export function BulkActionsBar({
         项
       </span>
 
+      {onPrepareDrafts&&<Button variant="outline" className="min-h-11" disabled={busyOrDisabled||selectedCount>20} onClick={onPrepareDrafts}>Agent 批量准备草稿</Button>}
       <Separator orientation="vertical" className="hidden h-5 sm:block" />
 
       <Select

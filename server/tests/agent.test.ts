@@ -69,8 +69,11 @@ test('tool registry exposes read-only tools only', () => {
     'get_customer_timeline',
     'get_dashboard_summary',
     'get_mail_thread',
+    'list_customer_attachments',
+    'read_customer_attachment',
     'search_customers',
-  ]);
+    'search_product_knowledge',
+  ].sort());
   assert.ok(registered.every((tool) => tool.riskLevel === 'read'));
   assert.ok(tools.agentToolSchemas().every((tool) => tool.strict && tool.parameters.additionalProperties === false));
 });
@@ -263,7 +266,7 @@ test('status is safe to expose and never contains the API key', async () => {
   assert.equal(status.readOnly, false);
   assert.equal(status.toolsReadOnly, true);
   assert.equal(status.automaticEmailSending, false);
-  assert.equal(status.toolCount, 7);
+  assert.equal(status.toolCount, 10);
   assert.equal('apiKey' in status, false);
   assert.equal(serialized.includes('OPENAI_API_KEY'), false);
   assert.equal(serialized.includes('Bearer '), false);
@@ -1202,4 +1205,80 @@ test('partial names and invented lookup strings never silently choose an uninten
  const hallucinated=await tasks.createAgentTask({sessionId:session.id,goal:'帮我给完全不同公司写第一封开发信',requestKey:'invented-guard'},actorA);
  await tasks.processAgentTask(hallucinated.id,provider);const pending=await tasks.getAgentTask(hallucinated.id,actorA);
  assert.equal(pending.status,'waiting_input');assert.equal(pending.candidates.length,0);assert.equal(pending.customerId,undefined);
+});
+
+
+test('P2 product knowledge versions are immutable, published-only, project-scoped and revocable',async()=>{
+ const k=await import('../src/services/agent/knowledge.service');
+ const input={expectedVersion:0,title:'P2 Fixture Jewelry Box',tags:['p2fixture'],content:'Approved fictional MOQ 73, lead time 19 days.',source:'Fixture approval record v1',approved:true};
+ const id=await k.appendKnowledge(undefined,input,adminActor);
+ await assert.rejects(()=>k.appendKnowledge(undefined,input,actorA));
+ assert.equal((await k.searchProductKnowledge(actorA,'p2fixture'))[0]?.version,1);
+ assert.equal((await k.searchProductKnowledge(actorOtherProject,'p2fixture')).length,0);
+ await k.appendKnowledge(id,{...input,expectedVersion:1,content:'Unapproved MOQ 999',approved:false},adminActor);
+ assert.match((await k.searchProductKnowledge(actorA,'p2fixture'))[0]!.content,/73/);
+ await assert.rejects(()=>k.appendKnowledge(id,{...input,expectedVersion:1},adminActor));
+ await k.appendKnowledge(id,{...input,expectedVersion:2,content:'Approved fictional MOQ 74, lead time 20 days.'},adminActor);
+ const published=(await k.searchProductKnowledge(actorA,'p2fixture'))[0]!;assert.equal(published.version,3);assert.match(published.content,/74/);
+ assert.equal((await k.listKnowledge(adminActor)).find(x=>x.id===id)?.revisions[0]?.content,input.content);
+ await k.archiveKnowledge(id,3,adminActor);assert.equal((await k.searchProductKnowledge(actorA,'p2fixture')).length,0);
+});
+
+test('P2 five isolated tasks keep four successes when one model fails; retry never duplicates a draft',async()=>{
+ const {Customer,DevelopmentLetter,AgentCustomerAnalysis}=await import('../src/models');
+ const {AgentTask}=await import('../src/models/AgentTask');const {AgentBatch}=await import('../src/models/AgentBatch');
+ await AgentBatch.init();const batches=await import('../src/services/agent/batch.service');const tasks=await import('../src/services/agent/task.service');
+ const {MockAgentProvider}=await import('../src/services/agent/mock-provider');const {AgentProviderError}=await import('../src/services/agent/provider');
+ const knowledge=await import('../src/services/agent/knowledge.service');const kid=await knowledge.appendKnowledge(undefined,{expectedVersion:0,title:'Batch fixture box',tags:['batchfixture'],content:'Fictional product MOQ 73 and lead time 19 days.',source:'P2 test approval',approved:true},adminActor);
+ const customers=await Customer.insertMany(Array.from({length:5},(_,i)=>({projectId:projectA,ownerId:userA,name:`Batch Fixture ${i===2?'FAIL':i}`,company:`Different Fixture ${i}`,email:`p2batch${i}@example.test`,interestedProducts:'batchfixture',notes:`Customer ${i} has unique packaging requirement ${i}`,source:'manual'})));
+ const session=await service.createAgentSession({context:{type:'global'}},actorA);const input={sessionId:session.id,requestKey:'p2-batch-fixture',goal:'给这5家客户分别准备首封开发信，不要发送',customerIds:customers.map(c=>c.id),knowledgeIds:[kid]};
+ const proposed=await batches.proposeAgentBatch(input,actorA);assert.equal(proposed.status,'proposed');assert.equal(await AgentTask.countDocuments({parentBatchId:proposed.id}),0);
+ await assert.rejects(()=>batches.proposeAgentBatch({...input,customerIds:[customers[0].id]},actorA));
+ await assert.rejects(()=>batches.getAgentBatch(proposed.id,actorB));
+ await batches.controlAgentBatch(proposed.id,'confirm',proposed.version,actorA);
+ const provider=new MockAgentProvider();const original=provider.analyzeCustomer.bind(provider);let calls=0;
+ provider.analyzeCustomer=async req=>{calls++;assert.ok(req.input.sourceCatalog.some(s=>s.kind==='knowledge'&&JSON.stringify(s.content).includes('73')));if(req.input.customerName.includes('FAIL'))throw new AgentProviderError('OPENAI_TIMEOUT');return original(req);};
+ const children=await AgentTask.find({parentBatchId:proposed.id});assert.equal(children.length,5);
+ for(const child of children)await tasks.processAgentTask(child.id,provider);
+ let batch=await batches.getAgentBatch(proposed.id,actorA);assert.equal(batch.ready,4);assert.equal(batch.failed,1);assert.equal(calls,5);assert.ok(batch.budgetCharged<=batch.totalTokenBudget);
+ const failed=batch.rows.find(row=>row.status==='failed')!;const receipt=await tasks.getAgentTask(failed.taskId!,actorA);
+ await tasks.controlAgentTask(receipt.id,'resume',{version:receipt.version},actorA);await tasks.processAgentTask(receipt.id,new MockAgentProvider());
+ batch=await batches.getAgentBatch(proposed.id,actorA);assert.equal(batch.ready,5);assert.equal(await DevelopmentLetter.countDocuments({customerId:{$in:customers.map(c=>c._id)},status:'draft'}),5);
+ assert.equal(await AgentCustomerAnalysis.countDocuments({customerId:{$in:customers.map(c=>c._id)}}),5);
+ const drafts=await DevelopmentLetter.find({customerId:{$in:customers.map(c=>c._id)}});assert.equal(new Set(drafts.map(d=>d.contentText)).size,5);
+ assert.ok(drafts.every(d=>d.status==='draft'));await batches.materializeAgentBatches();assert.equal(await AgentTask.countDocuments({parentBatchId:proposed.id}),5);
+ const current=await batches.getAgentBatch(proposed.id,actorA);await batches.controlAgentBatch(proposed.id,'pause',current.version,actorA);await batches.controlAgentBatch(proposed.id,'resume',current.version+1,actorA);
+});
+
+test('P2 per-customer budget rejects an over-budget model call before the provider runs',async()=>{
+ const {Customer}=await import('../src/models');const tasks=await import('../src/services/agent/task.service');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'Budget Fixture',email:'p2budget@example.test',source:'manual'});const s=await service.createAgentSession({context:{type:'customer',resourceId:c.id}},actorA);
+ const task=await tasks.createAgentTask({sessionId:s.id,goal:'帮我写第一封开发信',requestKey:'p2-budget-fixture',tokenBudget:1},actorA);const provider=new MockAgentProvider();let called=false;provider.analyzeCustomer=async()=>{called=true;throw Error('should not run');};
+ await tasks.processAgentTask(task.id,provider);const failed=await tasks.getAgentTask(task.id,actorA);assert.equal(called,false);assert.equal(failed.error?.code,'TASK_BUDGET_EXCEEDED');assert.equal(failed.error?.retryable,false);
+});
+
+test('P2 opt-out customer cannot receive an automated marketing draft and cannot block sibling tasks',async()=>{
+ const {Customer,DevelopmentLetter}=await import('../src/models');const {MailMessage}=await import('../src/models/MailMessage');const tasks=await import('../src/services/agent/task.service');
+ const c=await Customer.create({projectId:projectA,ownerId:userA,name:'Opt-out Batch Fixture',email:'p2optout@example.test',source:'manual'});
+ await MailMessage.create({projectId:projectA,customerId:c._id,mailboxUserId:userA,dedupKey:'p2-optout',threadId:'p2-optout',from:c.email,subject:'Please unsubscribe',text:'Do not contact us again',sentAt:new Date()});
+ const s=await service.createAgentSession({context:{type:'customer',resourceId:c.id}},actorA);const task=await tasks.createAgentTask({sessionId:s.id,goal:'帮我写第一封开发信',requestKey:'p2-optout-task'},actorA);await tasks.processAgentTask(task.id);
+ const blocked=await tasks.getAgentTask(task.id,actorA);assert.equal(blocked.error?.code,'MARKETING_BLOCKED');assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id}),0);
+});
+
+test('P2 attachment extraction reads actual PDF/DOCX text and reports unsupported/scanned content without inventing facts',async()=>{
+ const {extractAttachmentText}=await import('../src/services/agent/attachment-text.service');
+ const PDFDocument=(await import('pdfkit')).default;const pdf=new PDFDocument();const chunks:Buffer[]=[];const bytes=new Promise<Buffer>(resolve=>{pdf.on('data',c=>chunks.push(c));pdf.on('end',()=>resolve(Buffer.concat(chunks)));});pdf.text('Fictional product MOQ 73, lead time 19 days.');pdf.end();
+ const parsed=await extractAttachmentText(await bytes,'fixture.pdf');assert.equal(parsed.failed,undefined);assert.match(parsed.text,/73/);assert.match(parsed.text,/19/);
+ const JSZip=(await import('jszip')).default;const zip=new JSZip();zip.file('[Content_Types].xml','<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');zip.file('_rels/.rels','<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');zip.file('word/document.xml','<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>DOCX fictional MOQ 73 delivery 19 days</w:t></w:r></w:p></w:body></w:document>');
+ const docx=await extractAttachmentText(await zip.generateAsync({type:'nodebuffer'}),'fixture.docx');assert.equal(docx.failed,undefined);assert.match(docx.text,/73/);
+ assert.equal((await extractAttachmentText(Buffer.from('not an image text'),'fixture.png')).failed,true);
+ assert.equal((await extractAttachmentText(Buffer.from('broken'),'fixture.pdf')).failed,true);
+ const noText=await extractAttachmentText(Buffer.from(''),'fixture.txt');assert.equal(noText.text,'');
+});
+
+test('P2 cached attachment text cannot bypass customer ownership and every source retains its hash',async()=>{
+ const {Customer,CustomerAttachment}=await import('../src/models');const {AgentAttachmentText}=await import('../src/models/AgentKnowledge');const reader=await import('../src/services/agent/attachment-text.service');
+ const c=await Customer.create({projectId:projectA,ownerId:userB,name:'Private Attachment Fixture',source:'manual'});const att=await CustomerAttachment.create({projectId:projectA,customerId:c._id,originalName:'private.txt',filename:'0-private.txt',mimeType:'text/plain',size:8,path:'C:/not-a-real-test-file'});
+ await AgentAttachmentText.create({projectId:projectA,customerId:c._id,attachmentId:att._id,hash:'cached',status:'ready',text:'Private content'});
+ await assert.rejects(()=>reader.readAgentAttachment(c.id,att.id,actorA));await assert.rejects(()=>reader.readAgentAttachment(c.id,att.id,actorOtherProject));
 });

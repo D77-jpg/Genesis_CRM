@@ -66,6 +66,10 @@ import {
 
 import { getAgentActionDetail } from '../services/agent/action-detail.service';
 
+import {appendKnowledge,listKnowledge,archiveKnowledge,knowledgeInput} from '../services/agent/knowledge.service';
+import {getAgentBatch,listAgentBatches,proposeAgentBatch,controlAgentBatch,batchProposalSchema} from '../services/agent/batch.service';
+import {readAgentAttachment} from '../services/agent/attachment-text.service';
+import {BUSINESS_SKILLS} from '../services/agent/skills';
 const router = Router();
 const messageLimiter = rateLimit({
   windowMs: 60_000,
@@ -75,7 +79,17 @@ const messageLimiter = rateLimit({
   handler: (_req, _res, next) => next(ApiError.tooManyRequests('Agent 请求过于频繁，请稍后重试')),
 });
 
-router.get('/tasks', asyncHandler(async (req,res) => sendSuccess(res,await listAgentTasks(req.user!))));
+router.get('/skills',(_req,res)=>sendSuccess(res,BUSINESS_SKILLS));
+router.get('/knowledge',asyncHandler(async(req,res)=>sendSuccess(res,await listKnowledge(req.user!))));
+router.post('/knowledge',requireRole('admin'),validate({body:knowledgeInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await appendKnowledge(undefined,req.body,req.user!)},201)));
+router.post('/knowledge/:id/revisions',requireRole('admin'),validate({params:agentSessionParamsSchema,body:knowledgeInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await appendKnowledge(req.params.id,req.body,req.user!)})));
+router.post('/knowledge/:id/archive',requireRole('admin'),validate({params:agentSessionParamsSchema,body:z.object({version:z.number().int().min(1)}).strict()}),asyncHandler(async(req,res)=>{await archiveKnowledge(req.params.id,req.body.version,req.user!);sendSuccess(res,{archived:true});}));
+router.get('/customers/:id/attachments/:attachmentId/text',validate({params:z.object({id:z.string().regex(/^[a-f\d]{24}$/i),attachmentId:z.string().regex(/^[a-f\d]{24}$/i)})}),asyncHandler(async(req,res)=>sendSuccess(res,await readAgentAttachment(req.params.id,req.params.attachmentId,req.user!))));
+router.get('/batches',asyncHandler(async(req,res)=>sendSuccess(res,await listAgentBatches(req.user!))));
+router.get('/batches/:id',validate({params:agentSessionParamsSchema}),asyncHandler(async(req,res)=>sendSuccess(res,await getAgentBatch(req.params.id,req.user!))));
+router.post('/batches',messageLimiter,validate({body:batchProposalSchema}),asyncHandler(async(req,res)=>sendSuccess(res,await proposeAgentBatch(req.body,req.user!),201)));
+for(const action of ['confirm','pause','resume','cancel'] as const)router.post(`/batches/:id/${action}`,messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({version:z.number().int().min(1)}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await controlAgentBatch(req.params.id,action,req.body.version,req.user!))));
+router.get('/tasks' , asyncHandler(async (req,res) => sendSuccess(res,await listAgentTasks(req.user!))));
 router.get('/tasks/:id', validate({params:agentSessionParamsSchema}),asyncHandler(async (req,res) => sendSuccess(res,await getAgentTask(req.params.id,req.user!))));
 for (const action of ['resume','pause','cancel'] as const) router.post(`/tasks/:id/${action}`, messageLimiter, validate({params:agentSessionParamsSchema,
  body:z.object({version:z.number().int().min(0),customerId:z.string().regex(/^[a-f\d]{24}$/i).optional(),query:z.string().trim().min(1).max(120).optional()}).strict()}),

@@ -34,6 +34,9 @@ interface UiState {
   scratchpadOpen: boolean;
   /** 全局只读 Agent 面板是否展开 */
   agentOpen: boolean;
+  agentBatchCustomerIds:string[];
+  openAgentBatch:(ids:string[])=>void;
+  clearAgentBatchSelection:()=>void;
   /** 正在查看的“随手记转客户”预览。 */
   agentCustomerPreviewId: string | null;
   /** 正在查看的“客户分析与邮件草稿”。 */
@@ -66,6 +69,9 @@ export const useUiStore = create<UiState>()((set, get) => ({
   mobileNavOpen: false,
   scratchpadOpen: false,
   agentOpen: false,
+  agentBatchCustomerIds:[],
+  openAgentBatch:(ids)=>set({agentOpen:true,agentBatchCustomerIds:ids}),
+  clearAgentBatchSelection:()=>set({agentBatchCustomerIds:[]}),
   agentCustomerPreviewId: null,
   agentCustomerAnalysisId: null,
   agentCustomerAnalysisCustomerId: null,

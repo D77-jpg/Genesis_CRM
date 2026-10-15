@@ -1,6 +1,6 @@
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 
-export type AgentAnalysisSourceKind = 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation';
+export type AgentAnalysisSourceKind = 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation' | 'knowledge' | 'attachment';
 
 export interface AgentAnalysisSource {
   sourceId: string;
@@ -50,7 +50,7 @@ export interface IAgentCustomerAnalysis {
 
 const sourceSchema = new Schema<AgentAnalysisSource>({
   sourceId: { type: String, required: true, maxlength: 180 },
-  kind: { type: String, enum: ['profile', 'timeline', 'mail', 'followup', 'quotation'], required: true },
+  kind: { type: String, enum: ['profile', 'timeline', 'mail', 'followup', 'quotation', 'knowledge', 'attachment'], required: true },
   recordId: { type: String, required: true, maxlength: 128 },
   label: { type: String, required: true, maxlength: 240 },
   occurredAt: Date,

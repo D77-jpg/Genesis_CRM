@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import env from '../../config/env';
 import { agentFailure } from './agent-errors';
+import {isBatchOutreachCommand,proposeBatchFromCommand} from './batch.service';
 import { createAgentTask } from './task.service';
 import { isFirstOutreachCommand } from './first-outreach-intent';
 import { AgentAction, AgentMessage, AgentRun, AgentSession, Customer, DevelopmentLetter, type AgentContextType } from '../../models';
@@ -110,7 +111,7 @@ async function resolveContextNames(
 }
 
 function messageDto(doc: InstanceType<typeof AgentMessage>) {
-  return { id: doc.id, sessionId: String(doc.sessionId), role: doc.role, taskId: doc.taskId?.toString(), uiAction: doc.uiAction, content: doc.content, status: doc.status, createdAt: doc.createdAt };
+  return { id: doc.id, sessionId: String(doc.sessionId), role: doc.role, taskId: doc.taskId?.toString(), batchId:doc.batchId?.toString(), uiAction: doc.uiAction, content: doc.content, status: doc.status, createdAt: doc.createdAt };
 }
 
 export async function getAgentStatus() {
@@ -329,6 +330,12 @@ export async function sendAgentMessage(
   let reservation: AgentQuotaReservation | undefined;
 
   try {
+    if(isBatchOutreachCommand(content)){
+      const batch=await proposeBatchFromCommand(session.id,content,`chat-batch-${userMessage.id}`,actor);
+      const assistantMessage=await AgentMessage.create({...identifiers,sessionId:session._id,role:'assistant',content:`已选出 ${batch.rows.length} 位候选客户，批量计划等待你核对确认。确认后逐家准备草稿，不会自动发送。`,status:'completed',replyToMessageId:userMessage._id,batchId:new Types.ObjectId(batch.id)});
+      await AgentRun.updateOne({_id:run._id,...identifiers},{$set:{status:'completed',durationMs:Date.now()-startedAt}});
+      return {userMessage:messageDto(userMessage),assistantMessage:messageDto(assistantMessage),degraded:false,idempotent:false};
+    }
     if (isFirstOutreachCommand(content)) {
       const task = await createAgentTask({sessionId: session.id, goal: content, requestKey: `chat-task-${userMessage.id}`}, actor);
       const assistantMessage = await AgentMessage.create({...identifiers, sessionId: session._id, role: 'assistant',

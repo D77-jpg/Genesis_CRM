@@ -25,6 +25,7 @@ export interface AgentSession {
 
 export interface AgentMessage {
   taskId?: string;
+  batchId?:string;
   uiAction?: { kind: 'compose-first-outreach'; customerId: string; analysisId: string };
   id: string;
   sessionId: string;
@@ -182,7 +183,7 @@ export interface AgentCustomerPreview {
 
 export interface AgentAnalysisSource {
   sourceId: string;
-  kind: 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation';
+  kind: 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation' | 'knowledge' | 'attachment';
   recordId: string;
   label: string;
   occurredAt?: string | Date;
