@@ -1,3 +1,4 @@
+import {inboundAgentScope} from './mail-access';
 import {searchProductKnowledge} from './knowledge.service';
 import {readAgentAttachment} from './attachment-text.service';
 import {listAttachments} from '../attachment.service';
@@ -34,7 +35,7 @@ async function getMailThread(actor: AuthUser, input: unknown) {
   const scope = await customerRefScope(actor);
   const root = args.direction === 'outbound'
     ? await DevelopmentLetter.findOne({ _id: args.mailId, ...scope }).lean()
-    : await MailMessage.findOne({ _id: args.mailId, deleted: { $ne: true }, ...scope }).lean();
+    : await MailMessage.findOne({ _id: args.mailId, deleted: { $ne: true }, ...await inboundAgentScope(actor) }).lean();
   if (!root) throw ApiError.notFound('邮件不存在或无权访问');
   if (root.customerId) await getCustomerByIdOrThrow(String(root.customerId), actor);
   const threadId = root.threadId || String(root._id);

@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import env from '../../config/env';
 import { agentFailure } from './agent-errors';
+import {inboundAgentScope} from './mail-access';
 import {isBatchOutreachCommand,proposeBatchFromCommand} from './batch.service';
 import { createAgentTask } from './task.service';
 import { isFirstOutreachCommand } from './first-outreach-intent';
@@ -97,7 +98,7 @@ async function resolveContextNames(
   const mailScope = await customerRefScope(actor);
   const [customers, inbound, outbound] = await Promise.all([
     Customer.find({ _id: { $in: customerIds }, ...customerScope(actor) }).select('name company').lean(),
-    MailMessage.find({ _id: { $in: inboundIds }, deleted: { $ne: true }, ...mailScope }).select('subject').lean(),
+    MailMessage.find({ _id: { $in: inboundIds }, deleted: { $ne: true }, ...await inboundAgentScope(actor) }).select('subject').lean(),
     DevelopmentLetter.find({ _id: { $in: outboundIds }, ...mailScope }).select('subject').lean(),
   ]);
   const names = new Map<string, string>();
@@ -149,7 +150,7 @@ async function assertContextAccess(context: AgentContextInput, actor: AuthUser):
   // The same customer-reference scope used by mail tools excludes unassigned mail for salespeople.
   const visible = await customerRefScope(actor);
   const mail = context.direction === 'inbound'
-    ? await MailMessage.findOne({ _id: context.resourceId, deleted: { $ne: true }, ...visible }).select('customerId').lean()
+    ? await MailMessage.findOne({ _id: context.resourceId, deleted: { $ne: true }, ...await inboundAgentScope(actor) }).select('customerId').lean()
     : context.direction === 'outbound'
       ? await DevelopmentLetter.findOne({ _id: context.resourceId, ...visible }).select('customerId').lean()
       : null;

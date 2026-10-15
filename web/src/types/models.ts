@@ -229,6 +229,7 @@ export type AgentMailSafety = 'normal' | 'unsubscribe' | 'bounce' | 'rejection' 
 export type AgentMailIntent = 'inquiry' | 'quotation_request' | 'negotiation' | 'sample_request' | 'order' | 'support' | 'positive' | 'neutral' | 'unsubscribe' | 'bounce' | 'rejection' | 'spam' | 'other';
 export interface AgentMailEvidenceValue { value: string; evidenceMessageIds: string[] }
 export interface AgentMailThreadAnalysis {
+  productSources?:{sourceId:string;title:string;version:number;source:string}[];
   id: string;
   rootMailId: string;
   rootDirection: 'inbound' | 'outbound';

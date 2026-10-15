@@ -22,6 +22,7 @@ export interface IAgentMailThreadAnalysis {
   replyToMailId?: Types.ObjectId;
   requestKey: string;
   sources: { messageId: string; direction: 'inbound' | 'outbound'; subject: string; sentAt: Date; label: string }[];
+  productSources:{sourceId:string;title:string;version:number;source:string}[];
   summary: string;
   intent: { category: AgentMailIntent; label: string; confidence: number; evidenceMessageIds: string[] };
   extracted: {
@@ -74,6 +75,7 @@ const schema = new Schema<IAgentMailThreadAnalysis>({
     sentAt: { type: Date, required: true },
     label: { type: String, required: true, maxlength: 360 },
   }, { _id: false })], default: [] },
+  productSources:[{_id:false,sourceId:String,title:String,version:Number,source:String}],
   summary: { type: String, required: true, maxlength: 5000 },
   intent: { type: new Schema({
     category: { type: String, enum: AGENT_MAIL_INTENTS, required: true },

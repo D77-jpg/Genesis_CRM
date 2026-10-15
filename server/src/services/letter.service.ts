@@ -1,3 +1,5 @@
+import {AgentTask} from '../models/AgentTask';
+import {hasProtectedCustomerMail} from './agent/mail-thread-analysis.service';
 import { createHash, randomUUID } from 'node:crypto';
 import { newMessageId, processMailJob } from './mail-queue.service';
 import { safeMailHtml } from './mail-security';
@@ -325,6 +327,7 @@ async function persistAndSend(options: {
   inReplyTo?: string;
   references?: string[];
   templateAttribution?: TemplateAttribution;
+  agentTaskId?:Types.ObjectId;
   agentOutreachId?: Types.ObjectId;
 }): Promise<SendLetterResult> {
   const {
@@ -362,6 +365,7 @@ async function persistAndSend(options: {
   // 1) 草稿：直接落库，不发送、不改客户状态
   if (saveAsDraft) {
     const payload = {
+      ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       projectId: customer.projectId,
       customerId: customer._id,
@@ -404,6 +408,7 @@ async function persistAndSend(options: {
         throw ApiError.conflict('同一请求标识不能用于不同的开发信草稿');
       }
       assertSameTemplateAttribution(draft, options.templateAttribution);
+      if(String(draft.agentTaskId??'')!==String(options.agentTaskId??''))throw ApiError.conflict('同一请求不能更换任务关联');
       if (String(draft.agentOutreachId ?? '') !== String(options.agentOutreachId ?? '')) throw ApiError.conflict('同一请求不能更改首封草稿关联');
     } else {
       draft = await DevelopmentLetter.create(payload);
@@ -432,6 +437,7 @@ async function persistAndSend(options: {
   let letter;
   try {
     letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
+      ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail, subject: rendered.subject,
@@ -455,6 +461,7 @@ async function persistAndSend(options: {
   if (String(letter.customerId) !== String(customer._id)) throw ApiError.conflict('请求标识已用于其他客户');
   if (letter.subject !== rendered.subject || letter.content !== rendered.html || letter.recipientEmail !== rendered.recipientEmail || letter.template !== contentTemplate) throw ApiError.conflict('同一请求标识不能用于不同邮件内容，请重新打开编辑器');
   assertSameTemplateAttribution(letter, options.templateAttribution);
+  if(String(letter.agentTaskId??'')!==String(options.agentTaskId??''))throw ApiError.conflict('同一请求不能更换任务关联');
   if (String(letter.agentOutreachId ?? '') !== String(options.agentOutreachId ?? '')) throw ApiError.conflict('同一请求不能更改首封草稿关联');
   if (letter.scheduledAt?.getTime() !== options.scheduledAt?.getTime()) throw ApiError.conflict('同一请求标识不能修改定时时间，请取消原任务后重新创建');
   // Immediate requests use the SAME durable worker path; background polling also
@@ -488,6 +495,8 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     if (input.replyToId) throw ApiError.badRequest('首封开发信不能作为邮件回复');
     agentOutreachId = analysis._id;
   }
+  if(input.agentTaskId){const task=await AgentTask.findOne({_id:input.agentTaskId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id,status:{$in:input.saveAsDraft?['running','awaiting_review']:['awaiting_review']}});if(!task)throw ApiError.notFound('任务不存在或状态已变化');}
+  if((input.agentTaskId||agentOutreachId)&&await hasProtectedCustomerMail(customer.id,String(customer.projectId)))throw ApiError.conflict('客户已停止营销联系，不能继续发送或准备营销草稿');
   let templateAttribution: TemplateAttribution | undefined;
   if (input.templateId) {
     if (input.replyToId) throw ApiError.badRequest('回复邮件不能作为模板开发信归因');
@@ -509,7 +518,7 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     subjectTemplate: input.templateId ? input.subject : input.subject.trim(),
     contentTemplate: input.content,
     templateAttribution,
-    agentOutreachId,
+    agentOutreachId,agentTaskId:input.agentTaskId?new Types.ObjectId(input.agentTaskId):undefined,
     recipientEmailOverride: input.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: input.saveAsDraft,
@@ -539,6 +548,7 @@ export async function resendLetter(
   const customer = await getCustomerByIdOrThrow(String(original.customerId), actor);
   if (['queued', 'scheduled', 'sending', 'retrying'].includes(original.status) || original.needsReview) throw ApiError.conflict('任务进行中或投递结果待核实，不能重发');
 
+  if((original.agentTaskId||original.agentOutreachId)&&await hasProtectedCustomerMail(customer.id,String(customer.projectId)))throw ApiError.conflict('客户已停止营销联系，禁止继续营销发送');
   // 优先用原始模板（含占位符），没有模板时退化为已渲染的正文
   const contentTemplate = input.content ?? original.template ?? original.content;
   const subjectTemplate = input.subject ?? original.subject;
@@ -558,6 +568,7 @@ export async function resendLetter(
     customer,
     subjectTemplate,
     contentTemplate,
+    agentTaskId:original.agentTaskId,
     agentOutreachId: original.agentOutreachId,
     recipientEmailOverride: input.recipientEmail ?? original.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,

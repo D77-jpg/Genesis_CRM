@@ -181,6 +181,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest);
+    context.input.userRequest=options?.userRequest;
     if (options?.firstOutreach) {
       const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
       const sender = await getCurrentMailSender(String(requireProjectId(actor)), actor.id);
@@ -258,6 +259,7 @@ export async function getCustomerAnalysis(id: string, actor: AuthUser) {
 export async function updateCustomerAnalysis(id: string, input: UpdateAgentCustomerAnalysisBody, actor: AuthUser) {
   const current = await getAnalysisOrThrow(id, actor);
   if (current.version !== input.expectedVersion) throw ApiError.conflict('分析草稿已更新，请重新载入');
+  if(await hasProtectedCustomerMail(String(current.customerId),actor.projectId!))throw ApiError.conflict('客户已有停止营销联系记录，不能准备营销草稿');
   if (current.emailStatus === 'saved' && input.emailDraft) throw ApiError.conflict('开发信草稿已保存，不能继续修改');
   if (current.followUpStatus === 'scheduled' && input.followUpPlan) throw ApiError.conflict('跟进已安排，不能继续修改');
   const patch: Record<string, unknown> = {};
@@ -289,6 +291,7 @@ export async function updateCustomerAnalysis(id: string, input: UpdateAgentCusto
 export async function saveAnalysisEmailDraft(id: string, input: ConfirmAgentAnalysisActionBody, actor: AuthUser) {
   const identifiers = scope(actor);
   const current = await getAnalysisOrThrow(id, actor);
+  if(await hasProtectedCustomerMail(String(current.customerId),actor.projectId!))throw ApiError.conflict('客户已有停止营销联系记录，不能准备营销草稿');
   if (current.emailStatus === 'saved' && current.createdLetterId) return { analysis: dto(current), letterId: String(current.createdLetterId), idempotent: true };
   if (current.emailStatus === 'saving') throw ApiError.conflict('开发信草稿正在保存，请勿重复提交');
   if (current.version !== input.expectedVersion) throw ApiError.conflict('邮件草稿已更新，请核对后再次确认');

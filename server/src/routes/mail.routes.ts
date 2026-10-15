@@ -22,6 +22,7 @@ import { trackingSummary } from '../services/mail-tracking.service';
 import { getProjectMailConfig, imapConfigured, smtpConfigured } from '../services/project-mail-config.service';
 import { getMailAccount } from '../services/mail-account.service';
 
+import {inboundAgentScope} from '../services/agent/mail-access';
 const router = Router();
 router.use(requireAuth);
 const idSchema = z.string().regex(/^[a-fA-F0-9]{24}$/);
@@ -37,12 +38,12 @@ async function withCustomerNames<T extends { customerId?: unknown }>(items: T[])
   return items.map(i => ({ ...i, html: '', text: '', history: undefined, customerName: names.get(String(i.customerId)) }));
 }
 async function inbound(id: string, actor: AuthUser) {
-  const doc = await MailMessage.findOne({ deleted: { $ne: true }, _id: id, ...await customerRefScope(actor) });
+  const doc = await MailMessage.findOne({ deleted: { $ne: true }, _id: id, ...await inboundAgentScope(actor) });
   if (!doc) throw ApiError.notFound('邮件不存在或无权访问');
   return doc;
 }
 async function outgoing(id: string, actor: AuthUser) {
-  const doc = await DevelopmentLetter.findOne({ _id: id, ...await customerRefScope(actor) });
+  const doc = await DevelopmentLetter.findOne({ _id: id, ...await inboundAgentScope(actor) });
   if (!doc) throw ApiError.notFound('邮件不存在或无权访问');
   return doc;
 }
@@ -110,7 +111,7 @@ router.get('/', validate({ query: listQuery }), asyncHandler(async (req, res) =>
     const [docs, total] = await Promise.all([DevelopmentLetter.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit), DevelopmentLetter.countDocuments(filter)]);
     sendSuccess(res, buildPaginated(await withCustomerNames(docs.map(outgoingDto)), total, page, limit));
   } else {
-    const filter = { deleted: { $ne: true }, ...scope, ...(folder === 'unknown' ? { customerId: null } : {}) };
+    const filter = { deleted: { $ne: true }, ...await inboundAgentScope(req.user!), ...(folder === 'unknown' ? { customerId: null } : {}) };
     const [docs, total] = await Promise.all([MailMessage.find({ ...filter, deleted: { $ne: true } }).sort({ sentAt: -1 }).skip((page - 1) * limit).limit(limit), MailMessage.countDocuments(filter)]);
     sendSuccess(res, buildPaginated(await withCustomerNames(docs.map(d => incomingDto(d, req.user!))), total, page, limit));
   }

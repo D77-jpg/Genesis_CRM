@@ -69,6 +69,7 @@ import { getAgentActionDetail } from '../services/agent/action-detail.service';
 import {appendKnowledge,listKnowledge,archiveKnowledge,knowledgeInput} from '../services/agent/knowledge.service';
 import {getAgentBatch,listAgentBatches,proposeAgentBatch,controlAgentBatch,batchProposalSchema} from '../services/agent/batch.service';
 import {readAgentAttachment} from '../services/agent/attachment-text.service';
+import {automationRuleInput,getAutomationRule,saveAutomationRule,listAutomationInbox} from '../services/agent/automation.service';
 import {BUSINESS_SKILLS} from '../services/agent/skills';
 const router = Router();
 const messageLimiter = rateLimit({
@@ -79,6 +80,9 @@ const messageLimiter = rateLimit({
   handler: (_req, _res, next) => next(ApiError.tooManyRequests('Agent 请求过于频繁，请稍后重试')),
 });
 
+router.get('/automation-rule',asyncHandler(async(req,res)=>sendSuccess(res,await getAutomationRule(req.user!))));
+router.put('/automation-rule',messageLimiter,validate({body:automationRuleInput}),asyncHandler(async(req,res)=>sendSuccess(res,await saveAutomationRule(req.body,req.user!))));
+router.get('/inbox',asyncHandler(async(req,res)=>sendSuccess(res,await listAutomationInbox(req.user!))));
 router.get('/skills',(_req,res)=>sendSuccess(res,BUSINESS_SKILLS));
 router.get('/knowledge',asyncHandler(async(req,res)=>sendSuccess(res,await listKnowledge(req.user!))));
 router.post('/knowledge',requireRole('admin'),validate({body:knowledgeInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await appendKnowledge(undefined,req.body,req.user!)},201)));

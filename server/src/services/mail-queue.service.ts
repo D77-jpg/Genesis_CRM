@@ -1,3 +1,5 @@
+import {hasProtectedCustomerMail} from './agent/mail-thread-analysis.service';
+import {recordAgentSendReceipt} from './agent/automation.service';
 import { randomUUID } from 'node:crypto';
 import { AgentTask } from '../models/AgentTask';
 import { createFollowUp } from './followup.service';
@@ -24,9 +26,10 @@ async function reconcile(id: string): Promise<void> {
       content: `首封开发信已发送（SMTP 已接受，等待客户回复）。主题：${letter.subject}；收件人：${letter.recipientEmail}。`,
       followUpAt: letter.sentAt || letter.createdAt }, String(letter.sentBy), String(letter.projectId),
       { agentActionKey: `first-outreach-sent:${letter.agentOutreachId}` });
-    await AgentTask.updateOne({projectId:letter.projectId,analysisId:letter.agentOutreachId,status:'awaiting_review'},
+    await AgentTask.updateOne({projectId:letter.projectId,analysisId:letter.agentOutreachId,status:{$in:['awaiting_review','cancelled']}},
       {$set:{status:'completed',sentLetterId:letter._id},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'SMTP 已接受邮件，已自动新增首封开发信跟进记录。'}],$slice:-100}}});
   }
+  await recordAgentSendReceipt(letter.id);
   if (letter.markAsDeveloped) await Customer.updateOne({ _id: letter.customerId, projectId: letter.projectId, status: 'pending' }, { $set: { status: 'contacted' } });
   await DevelopmentLetter.updateOne({ _id: id, projectId: letter.projectId, status: { $in: ['sent', 'opened'] } }, { $set: { effectsPending: false } });
 }
@@ -57,6 +60,9 @@ export async function processMailJob(id?: string, deliver: (payload: SendMailPay
     return;
   }
 
+  if((job.agentOutreachId||job.agentTaskId)&&await hasProtectedCustomerMail(String(job.customerId),String(job.projectId))){
+    await DevelopmentLetter.updateOne({_id:job._id,status:'sending'},{$set:{status:'cancelled',error:'检测到停止营销联系记录，已阻止投递'},$push:{history:{at:new Date(),status:'cancelled'}}});return;
+  }
   let result: SendMailResult;
   const accountId = job.mailAccountId ? String(job.mailAccountId) : undefined;
   const senderUserId = job.sentBy ? String(job.sentBy) : undefined;
