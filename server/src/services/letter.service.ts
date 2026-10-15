@@ -17,6 +17,7 @@ import { resolveSenderIdentity } from './mail-account.service';
  */
 import { Types, type FilterQuery } from 'mongoose';
 import {
+  AgentCustomerAnalysis,
   Customer,
   DevelopmentLetter,
   LetterTemplate,
@@ -324,6 +325,7 @@ async function persistAndSend(options: {
   inReplyTo?: string;
   references?: string[];
   templateAttribution?: TemplateAttribution;
+  agentOutreachId?: Types.ObjectId;
 }): Promise<SendLetterResult> {
   const {
     customer,
@@ -360,6 +362,7 @@ async function persistAndSend(options: {
   // 1) 草稿：直接落库，不发送、不改客户状态
   if (saveAsDraft) {
     const payload = {
+      ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
@@ -401,6 +404,7 @@ async function persistAndSend(options: {
         throw ApiError.conflict('同一请求标识不能用于不同的开发信草稿');
       }
       assertSameTemplateAttribution(draft, options.templateAttribution);
+      if (String(draft.agentOutreachId ?? '') !== String(options.agentOutreachId ?? '')) throw ApiError.conflict('同一请求不能更改首封草稿关联');
     } else {
       draft = await DevelopmentLetter.create(payload);
     }
@@ -428,6 +432,7 @@ async function persistAndSend(options: {
   let letter;
   try {
     letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
+      ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail, subject: rendered.subject,
       senderAddress: sender.senderAddress,
@@ -450,6 +455,7 @@ async function persistAndSend(options: {
   if (String(letter.customerId) !== String(customer._id)) throw ApiError.conflict('请求标识已用于其他客户');
   if (letter.subject !== rendered.subject || letter.content !== rendered.html || letter.recipientEmail !== rendered.recipientEmail || letter.template !== contentTemplate) throw ApiError.conflict('同一请求标识不能用于不同邮件内容，请重新打开编辑器');
   assertSameTemplateAttribution(letter, options.templateAttribution);
+  if (String(letter.agentOutreachId ?? '') !== String(options.agentOutreachId ?? '')) throw ApiError.conflict('同一请求不能更改首封草稿关联');
   if (letter.scheduledAt?.getTime() !== options.scheduledAt?.getTime()) throw ApiError.conflict('同一请求标识不能修改定时时间，请取消原任务后重新创建');
   // Immediate requests use the SAME durable worker path; background polling also
   // picks the task up if this HTTP request disconnects or the process restarts.
@@ -474,6 +480,14 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
   // getCustomerByIdOrThrow 内部做归属校验：业务员不能给别人的客户发信
   const customer = await getCustomerByIdOrThrow(input.customerId, actor);
 
+  let agentOutreachId: Types.ObjectId | undefined;
+  if (input.agentAnalysisId) {
+    const analysis = await AgentCustomerAnalysis.findOne({ _id: input.agentAnalysisId, projectId: customer.projectId,
+      userId: actor?.id, customerId: customer._id, firstOutreach: true });
+    if (!analysis) throw ApiError.notFound('首封草稿不存在或无权使用');
+    if (input.replyToId) throw ApiError.badRequest('首封开发信不能作为邮件回复');
+    agentOutreachId = analysis._id;
+  }
   let templateAttribution: TemplateAttribution | undefined;
   if (input.templateId) {
     if (input.replyToId) throw ApiError.badRequest('回复邮件不能作为模板开发信归因');
@@ -495,6 +509,7 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     subjectTemplate: input.templateId ? input.subject : input.subject.trim(),
     contentTemplate: input.content,
     templateAttribution,
+    agentOutreachId,
     recipientEmailOverride: input.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: input.saveAsDraft,
@@ -532,6 +547,7 @@ export async function resendLetter(
     customer,
     subjectTemplate,
     contentTemplate,
+    agentOutreachId: original.agentOutreachId,
     recipientEmailOverride: input.recipientEmail ?? original.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: false,

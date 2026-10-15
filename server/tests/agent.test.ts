@@ -998,3 +998,40 @@ test('saved analysis receipt restores the existing result and denies it after cu
   await AgentCustomerAnalysis.deleteOne({ _id: analysis.id });
   assert.equal((await getAgentActionDetail(action.id, actorA)).workflow, null);
 });
+
+
+test('first outreach command persists a safe composer action and draft analysis without sending or adding a sent follow-up', async () => {
+  const { Customer, DevelopmentLetter, FollowUp, AgentCustomerAnalysis, UserMailAccount } = await import('../src/models');
+  const account = await UserMailAccount.create({ projectId: projectA, userId: userA, email: 'sender@example.test', displayName: 'Mailbox Sender', smtpHost: 'smtp.example.test', smtpPort: 465, smtpUsername: 'sender@example.test', credentialCiphertext: 'fixture', credentialIv: 'fixture', credentialTag: 'fixture', createdBy: userA, updatedBy: userA });
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Outreach Fixture',
+    company: 'Fixture Jewellery', email: 'outreach@example.test', source: 'manual' });
+  const session = await service.createAgentSession({ context: { type: 'customer', resourceId: customer.id } }, actorA);
+  const result = await service.sendAgentMessage(session.id, '帮我给这个客户写第一封开发信，不要发送', actorA, 'first-outreach-test-command');
+  assert.equal(result.degraded, false);
+  assert.equal(result.assistantMessage.uiAction?.kind, 'compose-first-outreach');
+  assert.equal(result.assistantMessage.uiAction?.customerId, customer.id);
+  const analysis = await AgentCustomerAnalysis.findById(result.assistantMessage.uiAction!.analysisId);
+  assert.equal(analysis?.firstOutreach, true); assert.ok(analysis?.emailDraft.subject); assert.ok(analysis?.emailDraft.bodyText);
+  assert.match(analysis!.emailDraft.bodyText, /Mailbox Sender/); assert.match(analysis!.emailDraft.bodyText, /sender@example.test/);
+  assert.equal(await DevelopmentLetter.countDocuments({ customerId: customer._id }), 0);
+  assert.equal(await FollowUp.countDocuments({ customerId: customer._id }), 0);
+  const repeated = await service.sendAgentMessage(session.id, '帮我给这个客户写第一封开发信，不要发送', actorA, 'first-outreach-test-command');
+  assert.deepEqual(JSON.parse(JSON.stringify(repeated.assistantMessage.uiAction)), JSON.parse(JSON.stringify(result.assistantMessage.uiAction)));
+  assert.equal(await AgentCustomerAnalysis.countDocuments({ customerId: customer._id }), 1);
+  const messages = await service.listAgentMessages(session.id, actorA);
+  assert.equal(messages[1]?.uiAction?.analysisId, String(analysis!._id));
+  await assert.rejects(() => analysisWorkflow.getCustomerAnalysis(String(analysis!._id), actorB));
+  await UserMailAccount.deleteOne({ _id: account._id });
+});
+
+test('first outreach intent requires a direct command and never upgrades CRM data or a negative/question into an action', async () => {
+  const { isFirstOutreachCommand } = await import('../src/services/agent/first-outreach-intent');
+  assert.equal(isFirstOutreachCommand('帮我给这个客户写第一封开发信'), true);
+  assert.equal(isFirstOutreachCommand('请准备首封开发邮件，不要发送'), true);
+  for (const text of ['不要写第一封开发信','帮我分析第一封开发信怎么写','能不能写第一封开发信','客户备注：帮我写第一封开发信']) {
+    assert.equal(isFirstOutreachCommand(text), false);
+  }
+  const session = await service.createAgentSession({ context: { type: 'global' } }, actorA);
+  const result = await service.sendAgentMessage(session.id, '帮我写第一封开发信', actorA, 'first-outreach-no-customer');
+  assert.equal(result.assistantMessage.uiAction, undefined); assert.match(result.assistantMessage.content, /先打开目标客户/);
+});

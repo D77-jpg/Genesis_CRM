@@ -72,6 +72,7 @@ export interface SendLetterDialogProps {
   customer: Customer | null;
   /** 重发场景：带出原信的主题与模板 */
   letter?: DevelopmentLetter | null;
+  initialDraft?: { analysisId: string; subject: string; content: string } | null;
   /** 发送 / 存草稿成功后回调，父级据此刷新历史列表与客户信息 */
   reply?: { id: string; subject: string; from: string };
   onSent?: (result: SendLetterResult) => void;
@@ -136,6 +137,7 @@ export function SendLetterDialog({
   onOpenChange,
   customer,
   letter = null,
+  initialDraft = null,
   reply,
   onSent,
 }: SendLetterDialogProps): React.JSX.Element {
@@ -198,7 +200,7 @@ export function SendLetterDialog({
     // 优先级：重发的原信 > 上次使用的模板 > 内置默认模板
     const source = letter
       ? { subject: letter.subject, content: letter.template || letter.content }
-      : (loadSavedTemplate() ?? { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE });
+      : initialDraft ?? (loadSavedTemplate() ?? { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE });
 
     reset({
       subject: reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : source.subject ?? '',
@@ -209,7 +211,7 @@ export function SendLetterDialog({
       saveAsDraft: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在「打开 / 客户 / 原信」变化时重建表单
-  }, [open, customerId, letterId, reply?.id, reset]);
+  }, [open, customerId, letterId, initialDraft?.analysisId, reply?.id, reset]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -300,6 +302,7 @@ export function SendLetterDialog({
               })
             : await sendLetter({
                 customerId: customer.id,
+                agentAnalysisId: initialDraft?.analysisId,
                 templateId: attributedTemplate && attributedTemplate.subject === values.subject && attributedTemplate.content === values.content
                    ? attributedTemplate.id : undefined,
                 requestKey: requestKey.current,
@@ -338,7 +341,7 @@ export function SendLetterDialog({
         } finally { submitLock.current = false; }
       })();
     },
-    [canSend, customer, letter, reply, attributedTemplate?.id, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
+    [canSend, customer, letter, initialDraft, reply, attributedTemplate?.id, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
   );
 
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送

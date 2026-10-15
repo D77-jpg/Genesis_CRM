@@ -311,6 +311,12 @@ export function AgentPanel(): React.JSX.Element | null {
     window.requestAnimationFrame(() => textareaRef.current?.focus());
   }
 
+  function openOutreachComposer(action: NonNullable<AgentMessage['uiAction']>) {
+    if (action.kind !== 'compose-first-outreach') return;
+    navigate(`/customers/${action.customerId}?composeAnalysis=${action.analysisId}`);
+    setOpen(false);
+  }
+
   async function sendMessage(value = draft) {
     const content = value.trim();
     if (!content || sending) return;
@@ -333,6 +339,7 @@ export function AgentPanel(): React.JSX.Element | null {
         result.userMessage,
         result.assistantMessage,
       ]);
+      if (result.assistantMessage.uiAction) openOutreachComposer(result.assistantMessage.uiAction);
       if (result.degraded) toast.warning('Agent 暂时不可用，CRM 其他功能不受影响');
       await Promise.all([loadRecords(), loadSessions()]);
     } catch (reason) {
@@ -510,7 +517,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
           <div className="flex shrink-0 items-start gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-            读取与分析保持只读；保存草稿、安排跟进需确认，不会直接发送邮件。
+            可指令准备首封开发信并打开写信页面；发送由业务员操作，成功后自动记录跟进。
           </div>
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
@@ -530,6 +537,7 @@ export function AgentPanel(): React.JSX.Element | null {
               <article key={message.id} className={message.role === 'user' ? 'ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-primary/10 text-foreground px-4 py-3 text-sm text-foreground' : `min-w-0 rounded-xl rounded-bl-sm border bg-card px-4 py-4 text-sm shadow-sm ${message.status === 'failed' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
                 {message.role === 'assistant' && <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">AI 生成 · 请核对关键信息</p>}
                 {message.role === 'assistant' ? <AgentMessageContent content={message.content} /> : <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>}
+                {message.role === 'assistant' && message.uiAction && <Button type="button" className="mt-3" onClick={() => openOutreachComposer(message.uiAction!)}>打开首封开发信</Button>}
               </article>
             ))}
             {sending && <div className="mr-20 flex items-center gap-2 rounded-xl border bg-card px-3 py-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在读取 CRM 数据并分析…</div>}

@@ -24,6 +24,7 @@ export interface AgentSession {
 }
 
 export interface AgentMessage {
+  uiAction?: { kind: 'compose-first-outreach'; customerId: string; analysisId: string };
   id: string;
   sessionId: string;
   role: 'user' | 'assistant';
@@ -191,6 +192,7 @@ export interface AgentAnalysisClaim {
 }
 
 export interface AgentCustomerAnalysis {
+  firstOutreach?: boolean;
   id: string;
   customerId: string;
   sources: AgentAnalysisSource[];
@@ -449,6 +451,7 @@ export interface MailTrackingSummary {
 }
 
 export interface SendLetterPayload {
+  agentAnalysisId?: string;
   /** 仅在导入模板原文且未修改时附带；服务端校验并固定归因。 */
   templateId?: string;
   scheduledAt?: string;

@@ -1,7 +1,10 @@
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import env from '../../config/env';
+import { getCurrentMailSender } from '../mail-account.service';
+import type { AgentProvider } from './provider';
 import {
+  Project,
   AgentAction,
   AgentCustomerAnalysis,
   AgentRun,
@@ -60,6 +63,7 @@ function dto(doc: AgentCustomerAnalysisDocument) {
     facts: doc.facts.map((item) => ({ text: item.text, sourceIds: item.sourceIds })),
     gaps: doc.gaps.map((item) => ({ text: item.text, sourceIds: item.sourceIds })),
     recommendations: doc.recommendations.map((item) => ({ text: item.text, rationale: item.rationale ?? '', sourceIds: item.sourceIds })),
+    firstOutreach: Boolean(doc.firstOutreach),
     emailDraft: { subject: doc.emailDraft.subject, bodyText: doc.emailDraft.bodyText },
     followUpPlan: {
       method: doc.followUpPlan.method, content: doc.followUpPlan.content, dueAt: doc.followUpPlan.dueAt,
@@ -155,18 +159,27 @@ function recommendationEvidence(recommendations: AgentAnalysisClaim[]): { reason
   return { reason: recommendation.rationale!.trim(), sourceIds: recommendation.sourceIds };
 }
 
-export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser) {
+export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider }) {
   const identifiers = scope(actor);
   const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
   if (existing) return dto(existing);
   await getCustomerByIdOrThrow(input.customerId, actor);
-  const activeProvider = await resolveAgentProvider();
+  const activeProvider = options?.provider ?? await resolveAgentProvider();
   const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'customer_analysis', status: 'running' });
   const startedAt = Date.now();
   let reservation: AgentQuotaReservation | undefined;
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildAnalysisInput(input.customerId, actor);
+    if (options?.firstOutreach) {
+      const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
+      const sender = await getCurrentMailSender(String(requireProjectId(actor)), actor.id);
+      context.input.firstOutreach = true;
+      context.input.userRequest = options.userRequest;
+      context.input.seller = { companyName: project?.companyName || env.COMPANY_NAME,
+        website: project?.website, moq: project?.moq, senderName: sender.account?.displayName || actor.displayName || project?.senderName || env.SENDER_NAME,
+        senderEmail: sender.account?.email };
+    }
     const serializedInput = JSON.stringify(context.input);
     if (serializedInput.length > env.AI_MAX_INPUT_CHARS) throw new ApiError(413, '客户资料超过 Agent 单次分析上限，请减少历史数据后重试', 'PAYLOAD_TOO_LARGE');
     reservation = await reserveAgentQuota(actor, serializedInput.length);
@@ -189,6 +202,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     try {
       analysis = await AgentCustomerAnalysis.create({
         ...identifiers, customerId: new Types.ObjectId(input.customerId), requestKey: input.idempotencyKey,
+        firstOutreach: Boolean(options?.firstOutreach),
         sources: context.sources, facts, gaps, recommendations, emailDraft: parsed.emailDraft,
         followUpPlan: {
           ...parsed.followUpPlan,

@@ -25,6 +25,7 @@ export interface IAgentCustomerAnalysis {
   facts: AgentAnalysisClaim[];
   gaps: AgentAnalysisClaim[];
   recommendations: AgentAnalysisClaim[];
+  firstOutreach?: boolean;
   emailDraft: { subject: string; bodyText: string };
   followUpPlan: {
     method: 'email' | 'whatsapp' | 'phone' | 'chat' | 'other';
@@ -70,6 +71,7 @@ const schema = new Schema<IAgentCustomerAnalysis>({
   facts: { type: [claimSchema], default: [] },
   gaps: { type: [claimSchema], default: [] },
   recommendations: { type: [claimSchema], default: [] },
+  firstOutreach: { type: Boolean, default: false },
   emailDraft: {
     type: new Schema({
       subject: { type: String, required: true, trim: true, maxlength: 300 },
