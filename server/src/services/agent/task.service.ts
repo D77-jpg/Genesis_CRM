@@ -119,14 +119,14 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
        input:[{role:'user',content:task.goal}],tools:agentToolSchemas().filter(t=>t.name==='search_customers'),context:{type:'global'},userPrompt:task.goal,safetyIdentifier:agentSafetyIdentifier(actor)});
       await settleAgentQuota(reservation,turn.usage); settled=true;
       const call = turn.toolCalls.find(c=>c.name==='search_customers');
-      if(call) { const parsed=customerSearchArgs.safeParse(JSON.parse(call.arguments)); if(parsed.success) query=parsed.data.query; }
+      if(call) { const parsed=customerSearchArgs.safeParse(JSON.parse(call.arguments)); if(parsed.success && task.goal.toLocaleLowerCase().includes(parsed.data.query.toLocaleLowerCase())) query=parsed.data.query; }
      } catch(error) { if(!settled) await settleAgentQuota(reservation); throw error; }
     }
     actor=await check();
     if (!query) { await change({status:'waiting_input',candidates:[]},'请补充客户或公司名称，再继续。'); return; }
     const found = await searchAgentCustomers({query},actor);
     await change({query,candidates:found.items},`检索到 ${found.truncated?'超过 10':found.items.length} 位可访问客户。`);
-    if(found.items.length!==1 || found.truncated) { await change({status:'waiting_input'},found.items.length ? '存在多个匹配，请选择客户后继续。' : '未找到匹配客户，请调整名称后继续。'); return; }
+    if(found.items.length!==1 || found.truncated || !found.exactMatchIds.includes(found.items[0]!.id)) { await change({status:'waiting_input'},found.items.length ? '请确认匹配的目标客户后继续。' : '未找到匹配客户，请调整名称后继续。'); return; }
     task.customerId=new Types.ObjectId(found.items[0]!.id);
    }
    await getCustomerByIdOrThrow(String(task.customerId),actor);
@@ -148,7 +148,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
     const analysis=await getCustomerAnalysis(String(task.analysisId),actor);
     actor=await check();
     const saved=await sendLetter({customerId:String(task.customerId),subject:analysis.emailDraft.subject,
-     content:`<p>${escapeHtml(analysis.emailDraft.bodyText).replace(/\r?\n/g,'<br>')}</p>`,
+     content:analysis.emailDraft.bodyText.trim().split(/\r?\n(?:[ \t]*\r?\n)+/).map(p=>`<p>${escapeHtml(p).replace(/\r?\n/g,'<br>')}</p>`).join(''),
      saveAsDraft:true,markAsDeveloped:false,agentAnalysisId:analysis.id,requestKey:`task-draft-${task.id}`},actor);
     draft=await DevelopmentLetter.findById(saved.letter.id);
    }

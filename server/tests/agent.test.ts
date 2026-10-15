@@ -1185,3 +1185,21 @@ test('editing an existing prepared draft remains a draft, preserves task associa
  assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id}),1);assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);
  assert.equal((await Customer.findById(c._id))?.letterCount,0);assert.equal((await tasks.getAgentTask(task.id,actorA)).status,'awaiting_review');
 });
+
+
+test('partial names and invented lookup strings never silently choose an unintended customer',async()=>{
+ const {Customer}=await import('../src/models');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const tasks=await import('../src/services/agent/task.service');
+ const {isFirstOutreachCommand}=await import('../src/services/agent/first-outreach-intent');
+ assert.ok(isFirstOutreachCommand('找到 Precision Fixture，分析后写第一封开发信'));
+ assert.ok(isFirstOutreachCommand('能不能帮我写第一封开发信'));
+ await Customer.create({projectId:projectA,ownerId:userA,name:'Precision Fixture Full Name',email:'precision@example.test',source:'manual'});
+ const session=await service.createAgentSession({context:{type:'global'}},actorA);
+ const provider=new MockAgentProvider();provider.createTurn=async()=>({text:'',output:[],toolCalls:[{callId:'q',name:'search_customers',arguments:'{"query":"Precision Fixture"}'}],usage:{inputTokens:0,outputTokens:0,totalTokens:0}});
+ const task=await tasks.createAgentTask({sessionId:session.id,goal:'找到 Precision Fixture，写第一封开发信',requestKey:'partial-guard'},actorA);
+ await tasks.processAgentTask(task.id,provider);const partial=await tasks.getAgentTask(task.id,actorA);
+ assert.equal(partial.status,'waiting_input');assert.equal(partial.candidates.length,1);assert.equal(partial.customerId,undefined);
+ const hallucinated=await tasks.createAgentTask({sessionId:session.id,goal:'帮我给完全不同公司写第一封开发信',requestKey:'invented-guard'},actorA);
+ await tasks.processAgentTask(hallucinated.id,provider);const pending=await tasks.getAgentTask(hallucinated.id,actorA);
+ assert.equal(pending.status,'waiting_input');assert.equal(pending.candidates.length,0);assert.equal(pending.customerId,undefined);
+});

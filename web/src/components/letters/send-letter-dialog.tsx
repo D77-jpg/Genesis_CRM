@@ -640,7 +640,7 @@ export function SendLetterDialog({
           {reply ? <span id="reply-draft-help" className="sr-only">回复邮件暂不支持存草稿。</span> : null}
           <Button type="button" onClick={() => void submit(false)} loading={sending} disabled={sending || senderLoading || !customer || !canSend}>
             {!sending ? <Send className="h-3.5 w-3.5" aria-hidden /> : null}
-            {scheduledAt ? '保存定时任务' : reply ? '发送回复' : letter ? '重新发送' : '发送开发信'}
+            {scheduledAt ? '保存定时任务' : reply ? '发送回复' : letter && letter.status !== 'draft' ? '重新发送' : '发送开发信'}
           </Button>
         </DialogFooter>
       </DialogContent>

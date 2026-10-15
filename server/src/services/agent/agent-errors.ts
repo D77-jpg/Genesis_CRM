@@ -11,6 +11,7 @@ export function agentFailure(error: unknown): { code: string; message: string; r
   if (/NOT_CONFIGURED/.test(code)) return { code, message: 'AI 模型尚未配置，请先由管理员完成配置。', retryable: false };
   if (/INCOMPLETE|INVALID_STRUCTURED|UNVERIFIED_SOURCES/.test(code)) return { code, message: '模型返回的内容不完整、格式不合规或依据不足，请重试；未执行未确认的业务操作。', retryable: true };
   if (/TIMEOUT|ABORT/.test(code)) return { code, message: '模型请求超时，可以稍后重试；已完成的任务步骤会保留。', retryable: true };
+  if (code === 'CONFLICT') return {code,message:'草稿或业务记录状态已变化，请打开已有结果核对后重新发起任务。',retryable:false};
   if (code === 'VALIDATION_ERROR') return { code, message: '资料或建议未通过业务校验，请核对信息后继续。', retryable: false };
   return { code: code.slice(0, 80), message: 'Agent 暂时无法完成这一步，可以稍后重试；请查看任务中保留的已完成结果。', retryable: true };
 }
