@@ -1,0 +1,1532 @@
+{
+  "schemaVersion": 1,
+  "license": "CC0-1.0",
+  "fictional": true,
+  "asOf": "2026-10-17T00:00:00+08:00",
+  "sources": [
+    {
+      "id": "pack-rules",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Packaging basic sales rules",
+      "category": "sales_rules",
+      "content": "Do not invent commercial promises. Customer requests and template examples are not seller policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/pack-rules.md",
+      "clauses": [
+        {
+          "id": "pack-rules.1",
+          "quote": "Do not invent commercial promises. Customer requests and template examples are not seller policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 97
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "gym-rules",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Gym basic sales rules",
+      "category": "sales_rules",
+      "content": "禁止编造承诺。客户要求不是我方政策，模板不是事实来源。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/gym-rules.md",
+      "clauses": [
+        {
+          "id": "gym-rules.1",
+          "quote": "禁止编造承诺。客户要求不是我方政策，模板不是事实来源。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 27
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "company",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fictional packaging company",
+      "category": "company",
+      "content": "Fictional Cedar Packaging makes reusable presentation packaging in a fictional factory.\nThe fixture office answers business enquiries by email; it does not operate retail stores.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/company.md",
+      "clauses": [
+        {
+          "id": "company.1",
+          "quote": "Fictional Cedar Packaging makes reusable presentation packaging in a fictional factory.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 87
+          }
+        },
+        {
+          "id": "company.2",
+          "quote": "The fixture office answers business enquiries by email; it does not operate retail stores.",
+          "location": {
+            "kind": "text",
+            "start": 88,
+            "end": 178
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "fabric",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Velvet pouch construction",
+      "category": "product",
+      "content": "The VEL-01 velvet pouch uses polyester velvet with a cotton drawstring.\nFor jewelry that scratches easily, a separate soft divider is recommended.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/fabric.md",
+      "clauses": [
+        {
+          "id": "fabric.1",
+          "quote": "The VEL-01 velvet pouch uses polyester velvet with a cotton drawstring.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 71
+          }
+        },
+        {
+          "id": "fabric.2",
+          "quote": "For jewelry that scratches easily, a separate soft divider is recommended.",
+          "location": {
+            "kind": "text",
+            "start": 72,
+            "end": 146
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "box",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Rigid gift box structure",
+      "category": "product",
+      "content": "The BX-02 rigid box uses greyboard and wrapped paper, with a removable paper insert.\nThe magnetic closure is unsuitable for products that must avoid magnets.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/box.md",
+      "clauses": [
+        {
+          "id": "box.1",
+          "quote": "The BX-02 rigid box uses greyboard and wrapped paper, with a removable paper insert.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 84
+          }
+        },
+        {
+          "id": "box.2",
+          "quote": "The magnetic closure is unsuitable for products that must avoid magnets.",
+          "location": {
+            "kind": "text",
+            "start": 85,
+            "end": 157
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "logo",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Logo methods",
+      "category": "product",
+      "content": "Hot foil stamping is supported on smooth paper wraps after artwork review.\nRaised embroidery is unsuitable for the VEL-01 thin velvet pouch; a woven label is an alternative.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/logo.md",
+      "clauses": [
+        {
+          "id": "logo.1",
+          "quote": "Hot foil stamping is supported on smooth paper wraps after artwork review.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 74
+          }
+        },
+        {
+          "id": "logo.2",
+          "quote": "Raised embroidery is unsuitable for the VEL-01 thin velvet pouch; a woven label is an alternative.",
+          "location": {
+            "kind": "text",
+            "start": 75,
+            "end": 173
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "moq",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "VEL-01 minimum quantity",
+      "category": "trade",
+      "content": "The standard velvet pouch minimum order is 73 pcs for one size and one print design.\nCombining multiple designs does not count toward the same design minimum.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/moq.md",
+      "clauses": [
+        {
+          "id": "moq.1",
+          "quote": "The standard velvet pouch minimum order is 73 pcs for one size and one print design.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 84
+          }
+        },
+        {
+          "id": "moq.2",
+          "quote": "Combining multiple designs does not count toward the same design minimum.",
+          "location": {
+            "kind": "text",
+            "start": 85,
+            "end": 158
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "73",
+          "unit": "pcs",
+          "conditions": "one size and one design; standard velvet pouch",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "lead",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Production timing",
+      "category": "trade",
+      "content": "Standard velvet pouch production takes 19 working days after the order and artwork are confirmed.\nCourier transit time is excluded from this production duration.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/lead.md",
+      "clauses": [
+        {
+          "id": "lead.1",
+          "quote": "Standard velvet pouch production takes 19 working days after the order and artwork are confirmed.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 97
+          }
+        },
+        {
+          "id": "lead.2",
+          "quote": "Courier transit time is excluded from this production duration.",
+          "location": {
+            "kind": "text",
+            "start": 98,
+            "end": 161
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "19",
+          "unit": "working days",
+          "conditions": "after order and artwork approval; excludes transit",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "sample",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Sampling arrangements",
+      "category": "trade",
+      "content": "Existing stock samples can be requested for checking the standard velvet pouch construction.\nCustom artwork samples require separate confirmation; courier charges are not included.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/sample.md",
+      "clauses": [
+        {
+          "id": "sample.1",
+          "quote": "Existing stock samples can be requested for checking the standard velvet pouch construction.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 92
+          }
+        },
+        {
+          "id": "sample.2",
+          "quote": "Custom artwork samples require separate confirmation; courier charges are not included.",
+          "location": {
+            "kind": "text",
+            "start": 93,
+            "end": 180
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Existing stock samples available; custom samples require separate confirmation",
+          "unit": "",
+          "conditions": "courier charges excluded",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "payment",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Payment boundary",
+      "category": "trade",
+      "content": "For confirmed standard paper-box orders, the fixture payment rule is a 30 percent deposit and 70 percent before dispatch.\nThis payment split does not apply to samples or unconfirmed custom jobs.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/payment.md",
+      "clauses": [
+        {
+          "id": "payment.1",
+          "quote": "For confirmed standard paper-box orders, the fixture payment rule is a 30 percent deposit and 70 percent before dispatch.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 121
+          }
+        },
+        {
+          "id": "payment.2",
+          "quote": "This payment split does not apply to samples or unconfirmed custom jobs.",
+          "location": {
+            "kind": "text",
+            "start": 122,
+            "end": 194
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "payment",
+          "value": "30 percent deposit and 70 percent before dispatch",
+          "unit": "",
+          "conditions": "confirmed standard paper-box orders only; not samples or unconfirmed custom jobs",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "shipping",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Transport responsibility",
+      "category": "trade",
+      "content": "运输方式应在确认目的地、货量和包装尺寸后选择。\n运费需单独核价，本资料不提供固定运费，也不承诺包税。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/shipping.md",
+      "clauses": [
+        {
+          "id": "shipping.1",
+          "quote": "运输方式应在确认目的地、货量和包装尺寸后选择。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 23
+          }
+        },
+        {
+          "id": "shipping.2",
+          "quote": "运费需单独核价，本资料不提供固定运费，也不承诺包税。",
+          "location": {
+            "kind": "text",
+            "start": 24,
+            "end": 50
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "certificate",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Certificate scope",
+      "category": "compliance",
+      "content": "虚构证书 TEST-FSC-204 只适用于经批准的纸盒纸材，不覆盖布袋。\n该测试证书有效至 2029 年 12 月 31 日；这是虚构验收资料，不是真实认证。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/certificate.md",
+      "clauses": [
+        {
+          "id": "certificate.1",
+          "quote": "虚构证书 TEST-FSC-204 只适用于经批准的纸盒纸材，不覆盖布袋。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 37
+          }
+        },
+        {
+          "id": "certificate.2",
+          "quote": "该测试证书有效至 2029 年 12 月 31 日；这是虚构验收资料，不是真实认证。",
+          "location": {
+            "kind": "text",
+            "start": 38,
+            "end": 80
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "inspection",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Quality inspection",
+      "category": "faq",
+      "content": "精品盒出货检查包括外观、尺寸和开合功能；具体公差需图纸确认。\n测试资料没有定义 AQL 数值，不得由模板或模型补充。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/inspection.md",
+      "clauses": [
+        {
+          "id": "inspection.1",
+          "quote": "精品盒出货检查包括外观、尺寸和开合功能；具体公差需图纸确认。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 30
+          }
+        },
+        {
+          "id": "inspection.2",
+          "quote": "测试资料没有定义 AQL 数值，不得由模板或模型补充。",
+          "location": {
+            "kind": "text",
+            "start": 31,
+            "end": 58
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "sales",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Sales commitment limits",
+      "category": "faq",
+      "content": "不能保证所有颜色与屏幕显示完全一致，颜色确认以批准的实物样为准。\n业务员不得承诺未确认的独家销售权，相关请求需要负责人审核。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/sales.md",
+      "clauses": [
+        {
+          "id": "sales.1",
+          "quote": "不能保证所有颜色与屏幕显示完全一致，颜色确认以批准的实物样为准。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 32
+          }
+        },
+        {
+          "id": "sales.2",
+          "quote": "业务员不得承诺未确认的独家销售权，相关请求需要负责人审核。",
+          "location": {
+            "kind": "text",
+            "start": 33,
+            "end": 62
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "agreement",
+      "project": "pack",
+      "kind": "quotation",
+      "title": "Customer-specific price",
+      "category": "trade",
+      "content": "For fictional customer Acorn, an accepted quote covers 200 velvet pouch units at USD 2.35 per piece.\nThis price cannot be used for another customer or a different quantity.",
+      "tags": [],
+      "products": [
+        "velvet pouch"
+      ],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/agreement.md",
+      "clauses": [
+        {
+          "id": "agreement.1",
+          "quote": "For fictional customer Acorn, an accepted quote covers 200 velvet pouch units at USD 2.35 per piece.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 100
+          },
+          "matchAll": [
+            "Acorn",
+            "200",
+            "2.35",
+            "USD"
+          ]
+        },
+        {
+          "id": "agreement.2",
+          "quote": "This price cannot be used for another customer or a different quantity.",
+          "location": {
+            "kind": "text",
+            "start": 101,
+            "end": 172
+          },
+          "matchAll": [
+            "Acorn",
+            "200",
+            "customer"
+          ]
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "gym-frame",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "IH-40 frame",
+      "category": "product",
+      "content": "IH-40 健身架使用粉末涂层钢架，安装后需检查连接件。\n承载能力必须参照指定型号的有效测试报告，本条没有批准承载公斤数。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/gym-frame.md",
+      "clauses": [
+        {
+          "id": "gym-frame.1",
+          "quote": "IH-40 健身架使用粉末涂层钢架，安装后需检查连接件。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 28
+          }
+        },
+        {
+          "id": "gym-frame.2",
+          "quote": "承载能力必须参照指定型号的有效测试报告，本条没有批准承载公斤数。",
+          "location": {
+            "kind": "text",
+            "start": 29,
+            "end": 61
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "gym-warranty",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "IH-40 warranty",
+      "category": "faq",
+      "content": "IH-40 的测试保修规则仅覆盖在正常室内使用下出现的制造缺陷。\n误用、改装和室外腐蚀不在该规则覆盖范围内。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/gym-warranty.md",
+      "clauses": [
+        {
+          "id": "gym-warranty.1",
+          "quote": "IH-40 的测试保修规则仅覆盖在正常室内使用下出现的制造缺陷。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 32
+          }
+        },
+        {
+          "id": "gym-warranty.2",
+          "quote": "误用、改装和室外腐蚀不在该规则覆盖范围内。",
+          "location": {
+            "kind": "text",
+            "start": 33,
+            "end": 54
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "gym-moq",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "IH-40 order minimum",
+      "category": "trade",
+      "content": "IH-40 标准健身架同一涂层颜色起订量为 12 台。\n该数量不适用于特殊结构定制，也不适用于包装项目。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/gym-moq.md",
+      "clauses": [
+        {
+          "id": "gym-moq.1",
+          "quote": "IH-40 标准健身架同一涂层颜色起订量为 12 台。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 27
+          }
+        },
+        {
+          "id": "gym-moq.2",
+          "quote": "该数量不适用于特殊结构定制，也不适用于包装项目。",
+          "location": {
+            "kind": "text",
+            "start": 28,
+            "end": 52
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "12",
+          "unit": "units",
+          "conditions": "IH-40 standard frame; one coating color; no structural modification",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "old-cert",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Expired cotton certificate",
+      "category": "compliance",
+      "content": "Cotton certificate TEST-COT-19 expired in 2025; it cannot establish current compliance.",
+      "tags": [],
+      "products": [],
+      "state": "expired",
+      "version": 1,
+      "source": "fixture://s0/old-cert.md",
+      "clauses": [
+        {
+          "id": "old-cert.1",
+          "quote": "Cotton certificate TEST-COT-19 expired in 2025; it cannot establish current compliance.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 87
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "retired-finish",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Retired mirror finish",
+      "category": "trade",
+      "content": "Mirror silver foil finish has been discontinued and is not offered.",
+      "tags": [],
+      "products": [],
+      "state": "disabled",
+      "version": 1,
+      "source": "fixture://s0/retired-finish.md",
+      "clauses": [
+        {
+          "id": "retired-finish.1",
+          "quote": "Mirror silver foil finish has been discontinued and is not offered.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 67
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "future-credit",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Future credit terms",
+      "category": "trade",
+      "content": "NET 45 payment terms become effective only in 2035.",
+      "tags": [],
+      "products": [],
+      "state": "future",
+      "version": 1,
+      "source": "fixture://s0/future-credit.md",
+      "clauses": [
+        {
+          "id": "future-credit.1",
+          "quote": "NET 45 payment terms become effective only in 2035.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 51
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "draft-rush",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Unpublished rush service",
+      "category": "trade",
+      "content": "An unapproved draft suggests 2 day rush production. This is not an active promise.",
+      "tags": [],
+      "products": [],
+      "state": "draft",
+      "version": 1,
+      "source": "fixture://s0/draft-rush.md",
+      "clauses": [
+        {
+          "id": "draft-rush.1",
+          "quote": "An unapproved draft suggests 2 day rush production. This is not an active promise.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 82
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "conflict-a",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Glitter box embossing rule A",
+      "category": "trade",
+      "content": "For the standard glitter box, embossing setup is USD 40 per design.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/conflict-a.md",
+      "clauses": [
+        {
+          "id": "conflict-a.1",
+          "quote": "For the standard glitter box, embossing setup is USD 40 per design.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 67
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "price",
+          "value": "40",
+          "unit": "per design",
+          "conditions": "standard glitter box embossing",
+          "mode": "confirmed",
+          "currency": "USD"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "conflict-b",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Glitter box embossing rule B",
+      "category": "trade",
+      "content": "For the standard glitter box, embossing setup is USD 65 per design.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/conflict-b.md",
+      "clauses": [
+        {
+          "id": "conflict-b.1",
+          "quote": "For the standard glitter box, embossing setup is USD 65 per design.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 67
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "price",
+          "value": "65",
+          "unit": "per design",
+          "conditions": "standard glitter box embossing",
+          "mode": "confirmed",
+          "currency": "USD"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "scope-other",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "IRONHUE private wholesale reference",
+      "category": "trade",
+      "content": "Fictional IH-99 gym rack MOQ is 88 units, unrelated to packaging.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/scope-other.md",
+      "clauses": [
+        {
+          "id": "scope-other.1",
+          "quote": "Fictional IH-99 gym rack MOQ is 88 units, unrelated to packaging.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 65
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "88",
+          "unit": "units",
+          "conditions": "IH-99 only",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "unapproved-edit",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Published silk color note",
+      "category": "product",
+      "content": "Approved silk wrap colors are ivory and blue.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/unapproved-edit.md",
+      "clauses": [
+        {
+          "id": "unapproved-edit.1",
+          "quote": "Approved silk wrap colors are ivory and blue.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 45
+          }
+        }
+      ],
+      "terms": [],
+      "draftContent": "Unapproved version 2 falsely claims red stock and MOQ 999.",
+      "language": "en"
+    },
+    {
+      "id": "noise-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 0",
+      "category": "product",
+      "content": "Accessory AX-00 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-0.md",
+      "clauses": [
+        {
+          "id": "noise-0.1",
+          "quote": "Accessory AX-00 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-1",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 1",
+      "category": "product",
+      "content": "Accessory AX-01 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-1.md",
+      "clauses": [
+        {
+          "id": "noise-1.1",
+          "quote": "Accessory AX-01 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 2",
+      "category": "product",
+      "content": "Accessory AX-02 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-2.md",
+      "clauses": [
+        {
+          "id": "noise-2.1",
+          "quote": "Accessory AX-02 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-3",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 3",
+      "category": "product",
+      "content": "Accessory AX-03 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-3.md",
+      "clauses": [
+        {
+          "id": "noise-3.1",
+          "quote": "Accessory AX-03 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-4",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 4",
+      "category": "product",
+      "content": "Accessory AX-04 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-4.md",
+      "clauses": [
+        {
+          "id": "noise-4.1",
+          "quote": "Accessory AX-04 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-5",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 5",
+      "category": "product",
+      "content": "Accessory AX-05 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-5.md",
+      "clauses": [
+        {
+          "id": "noise-5.1",
+          "quote": "Accessory AX-05 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-6",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 6",
+      "category": "product",
+      "content": "Accessory AX-06 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-6.md",
+      "clauses": [
+        {
+          "id": "noise-6.1",
+          "quote": "Accessory AX-06 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-7",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 7",
+      "category": "product",
+      "content": "Accessory AX-07 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-7.md",
+      "clauses": [
+        {
+          "id": "noise-7.1",
+          "quote": "Accessory AX-07 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-8",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 8",
+      "category": "product",
+      "content": "Accessory AX-08 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-8.md",
+      "clauses": [
+        {
+          "id": "noise-8.1",
+          "quote": "Accessory AX-08 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-9",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 9",
+      "category": "product",
+      "content": "Accessory AX-09 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-9.md",
+      "clauses": [
+        {
+          "id": "noise-9.1",
+          "quote": "Accessory AX-09 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-10",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 10",
+      "category": "product",
+      "content": "Accessory AX-10 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-10.md",
+      "clauses": [
+        {
+          "id": "noise-10.1",
+          "quote": "Accessory AX-10 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-11",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 11",
+      "category": "product",
+      "content": "Accessory AX-11 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-11.md",
+      "clauses": [
+        {
+          "id": "noise-11.1",
+          "quote": "Accessory AX-11 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-12",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 12",
+      "category": "product",
+      "content": "Accessory AX-12 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-12.md",
+      "clauses": [
+        {
+          "id": "noise-12.1",
+          "quote": "Accessory AX-12 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-13",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 13",
+      "category": "product",
+      "content": "Accessory AX-13 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-13.md",
+      "clauses": [
+        {
+          "id": "noise-13.1",
+          "quote": "Accessory AX-13 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-14",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 14",
+      "category": "product",
+      "content": "Accessory AX-14 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-14.md",
+      "clauses": [
+        {
+          "id": "noise-14.1",
+          "quote": "Accessory AX-14 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-15",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 15",
+      "category": "product",
+      "content": "Accessory AX-15 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-15.md",
+      "clauses": [
+        {
+          "id": "noise-15.1",
+          "quote": "Accessory AX-15 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-16",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 16",
+      "category": "product",
+      "content": "Accessory AX-16 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-16.md",
+      "clauses": [
+        {
+          "id": "noise-16.1",
+          "quote": "Accessory AX-16 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-17",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 17",
+      "category": "product",
+      "content": "Accessory AX-17 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-17.md",
+      "clauses": [
+        {
+          "id": "noise-17.1",
+          "quote": "Accessory AX-17 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-18",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 18",
+      "category": "product",
+      "content": "Accessory AX-18 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-18.md",
+      "clauses": [
+        {
+          "id": "noise-18.1",
+          "quote": "Accessory AX-18 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-19",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 19",
+      "category": "product",
+      "content": "Accessory AX-19 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-19.md",
+      "clauses": [
+        {
+          "id": "noise-19.1",
+          "quote": "Accessory AX-19 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-20",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 20",
+      "category": "product",
+      "content": "Accessory AX-20 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-20.md",
+      "clauses": [
+        {
+          "id": "noise-20.1",
+          "quote": "Accessory AX-20 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-21",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 21",
+      "category": "product",
+      "content": "Accessory AX-21 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-21.md",
+      "clauses": [
+        {
+          "id": "noise-21.1",
+          "quote": "Accessory AX-21 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-22",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 22",
+      "category": "product",
+      "content": "Accessory AX-22 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-22.md",
+      "clauses": [
+        {
+          "id": "noise-22.1",
+          "quote": "Accessory AX-22 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "noise-23",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture accessory note 23",
+      "category": "product",
+      "content": "Accessory AX-23 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s0/noise-23.md",
+      "clauses": [
+        {
+          "id": "noise-23.1",
+          "quote": "Accessory AX-23 has a separate specification. Its geometry, color and use must be reviewed for that accessory; not a velvet pouch or gym frame policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 150
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    }
+  ]
+}

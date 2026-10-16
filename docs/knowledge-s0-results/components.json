@@ -1,0 +1,740 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-17T01:59:48+0800",
+  "network": "Python socket connections denied; ONNX telemetry disabled; local inference only",
+  "scope": "12 development questions only; no holdout, no LLM, no live CRM access",
+  "fixtureHashes": {
+    "corpus.json": "3fb85a80aff72be82cd1d357f20d36c18390239846b6a49d709ce82351048b5b",
+    "cases.dev.json": "e53a451943185312ea7ae4cb1e68a130c253eb94a5c769ba64ccc365f61b0ecf",
+    "probe-set.json": "756fa51b617626463ea365eee9e288899f430e680fdcff3f9080b1ec4f3fa6f1"
+  },
+  "codeSha256": "81eeff80acd7c315b64b6147693f2addf286daffe1e360f25b57f2c6fb169ca5",
+  "modelLockSha256": "18417c751e7c724c1b31542301c75b9d392e8a542c05d1923cc93015cc4d17e0",
+  "runtime": {
+    "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cpuLogical": 20,
+    "ramBytes": 33984950272,
+    "packages": {
+      "onnxruntime": "1.31.0",
+      "tokenizers": "0.23.3",
+      "numpy": "2.5.4",
+      "psutil": "7.2.2",
+      "sqlite-vec": "0.1.9",
+      "rapidocr-onnxruntime": "1.4.4",
+      "Pillow": "12.3.0"
+    }
+  },
+  "models": [
+    {
+      "repo": "Xenova/all-MiniLM-L6-v2",
+      "status": "downloaded",
+      "files": [
+        {
+          "file": "config.json",
+          "bytes": 650,
+          "sha256": "7135149f7cffa1a573466c6e4d8423ed73b62fd2332c575bf738a0d033f70df7"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 711661,
+          "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0"
+        },
+        {
+          "file": "tokenizer_config.json",
+          "bytes": 366,
+          "sha256": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3"
+        },
+        {
+          "file": "onnx/model_quantized.onnx",
+          "bytes": 22972370,
+          "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1"
+        }
+      ],
+      "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+      "license": "apache-2.0",
+      "tags": [
+        "transformers.js",
+        "onnx",
+        "bert",
+        "feature-extraction",
+        "base_model:sentence-transformers/all-MiniLM-L6-v2",
+        "base_model:quantized:sentence-transformers/all-MiniLM-L6-v2",
+        "license:apache-2.0",
+        "region:us"
+      ],
+      "elapsedSeconds": 1.053
+    },
+    {
+      "repo": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+      "status": "downloaded",
+      "files": [
+        {
+          "file": "config.json",
+          "bytes": 891,
+          "sha256": "cc2cfe51aa3fd759d21d21acf5dfd6994aa67a3c9210636d22e143699d336c77"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 17082660,
+          "sha256": "62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626"
+        },
+        {
+          "file": "tokenizer_config.json",
+          "bytes": 435,
+          "sha256": "e7fbfbfa6347b4e414c1cee50d142e2c2f9a895dad68b068ae83a8b564c3837e"
+        },
+        {
+          "file": "onnx/model_quint8_avx2.onnx",
+          "bytes": 118620016,
+          "sha256": "6c2513767fb63d008a4377bef7a7a3555433d9436342bb53e35a3a72ffc52d4b"
+        }
+      ],
+      "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+      "license": "apache-2.0",
+      "tags": [
+        "sentence-transformers",
+        "pytorch",
+        "onnx",
+        "safetensors",
+        "openvino",
+        "xlm-roberta",
+        "text-classification",
+        "transformers",
+        "text-ranking",
+        "en",
+        "ar",
+        "zh",
+        "nl",
+        "fr",
+        "de",
+        "hi",
+        "in",
+        "it",
+        "ja",
+        "pt",
+        "ru",
+        "es",
+        "vi",
+        "multilingual",
+        "dataset:unicamp-dl/mmarco",
+        "base_model:nreimers/mMiniLMv2-L12-H384-distilled-from-XLMR-Large",
+        "base_model:quantized:nreimers/mMiniLMv2-L12-H384-distilled-from-XLMR-Large",
+        "license:apache-2.0",
+        "text-embeddings-inference",
+        "endpoints_compatible",
+        "deploy:azure",
+        "region:us"
+      ],
+      "elapsedSeconds": 0.828
+    },
+    {
+      "repo": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "status": "downloaded",
+      "files": [
+        {
+          "file": "config.json",
+          "bytes": 645,
+          "sha256": "6300193cb75e01cf80c96decef7187dfb33094d97cc1490b7ead6ff134476e4e"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 9081518,
+          "sha256": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8"
+        },
+        {
+          "file": "tokenizer_config.json",
+          "bytes": 526,
+          "sha256": "5036ea374ffedd706e3bef33e2e0d6953cb868ef8a490e76e32ba0faa37a6b9b"
+        },
+        {
+          "file": "onnx/model_quint8_avx2.onnx",
+          "bytes": 118453870,
+          "sha256": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f"
+        }
+      ],
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "license": "apache-2.0",
+      "tags": [
+        "sentence-transformers",
+        "pytorch",
+        "tf",
+        "onnx",
+        "safetensors",
+        "openvino",
+        "bert",
+        "feature-extraction",
+        "sentence-similarity",
+        "transformers",
+        "multilingual",
+        "ar",
+        "bg",
+        "ca",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "et",
+        "fa",
+        "fi",
+        "fr",
+        "gl",
+        "gu",
+        "he",
+        "hi",
+        "hr",
+        "hu",
+        "hy",
+        "id",
+        "it",
+        "ja",
+        "ka",
+        "ko",
+        "ku",
+        "lt",
+        "lv",
+        "mk",
+        "mn",
+        "mr",
+        "ms",
+        "my",
+        "nb",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sq",
+        "sr",
+        "sv",
+        "th",
+        "tr",
+        "uk",
+        "ur",
+        "vi",
+        "arxiv:1908.10084",
+        "license:apache-2.0",
+        "text-embeddings-inference",
+        "endpoints_compatible",
+        "deploy:sagemaker",
+        "deploy:azure",
+        "region:us"
+      ],
+      "elapsedSeconds": 13.909
+    }
+  ],
+  "components": {
+    "Xenova/all-MiniLM-L6-v2": {
+      "status": "verified",
+      "weight": "model_quantized.onnx",
+      "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1",
+      "bytes": 22972370,
+      "threads": 4,
+      "provider": "CPUExecutionProvider",
+      "maxTokens": 128,
+      "seconds": 0.172,
+      "rssBeforeMiB": 58.23,
+      "rssAfterMiB": 116.22,
+      "processPeakSoFarMiB": 120.07,
+      "processCpuSecondsTotal": 0.766,
+      "dimensions": 384,
+      "finite": true,
+      "probe": {
+        "unit": "source-level, development probe only; not span-level baseline and not final quality",
+        "cases": 12,
+        "recallAt10": 1.0,
+        "mrrAt10": 0.7847222222222222,
+        "rows": [
+          {
+            "caseId": "a01-1",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "company",
+              "sample",
+              "box"
+            ]
+          },
+          {
+            "caseId": "a02-3",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "fabric",
+              "logo",
+              "box"
+            ]
+          },
+          {
+            "caseId": "a03-5",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "box",
+              "inspection",
+              "conflict-b"
+            ]
+          },
+          {
+            "caseId": "a04-1",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "logo",
+              "box",
+              "unapproved-edit"
+            ]
+          },
+          {
+            "caseId": "a05-3",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "moq",
+              "conflict-a",
+              "conflict-b"
+            ]
+          },
+          {
+            "caseId": "a06-5",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "sample",
+              "lead",
+              "fabric"
+            ]
+          },
+          {
+            "caseId": "a09-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 0.3333333333333333,
+            "top3": [
+              "inspection",
+              "sales",
+              "shipping"
+            ]
+          },
+          {
+            "caseId": "a10-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 0.25,
+            "top3": [
+              "inspection",
+              "sales",
+              "shipping"
+            ]
+          },
+          {
+            "caseId": "a11-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "inspection",
+              "shipping",
+              "sales"
+            ]
+          },
+          {
+            "caseId": "a12-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 0.3333333333333333,
+            "top3": [
+              "inspection",
+              "shipping",
+              "sales"
+            ]
+          },
+          {
+            "caseId": "a14-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 0.5,
+            "top3": [
+              "gym-moq",
+              "gym-frame",
+              "gym-warranty"
+            ]
+          },
+          {
+            "caseId": "a15-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "gym-warranty",
+              "gym-moq",
+              "gym-frame"
+            ]
+          }
+        ]
+      }
+    },
+    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2": {
+      "status": "verified",
+      "weight": "model_quint8_avx2.onnx",
+      "sha256": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f",
+      "bytes": 118453870,
+      "threads": 4,
+      "provider": "CPUExecutionProvider",
+      "maxTokens": 128,
+      "seconds": 1.006,
+      "rssBeforeMiB": 116.27,
+      "rssAfterMiB": 476.44,
+      "processPeakSoFarMiB": 604.57,
+      "processCpuSecondsTotal": 4.906,
+      "dimensions": 384,
+      "finite": true,
+      "probe": {
+        "unit": "source-level, development probe only; not span-level baseline and not final quality",
+        "cases": 12,
+        "recallAt10": 1.0,
+        "mrrAt10": 1.0,
+        "rows": [
+          {
+            "caseId": "a01-1",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "company",
+              "conflict-a",
+              "sample"
+            ]
+          },
+          {
+            "caseId": "a02-3",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "fabric",
+              "logo",
+              "box"
+            ]
+          },
+          {
+            "caseId": "a03-5",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "box",
+              "inspection",
+              "moq"
+            ]
+          },
+          {
+            "caseId": "a04-1",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "logo",
+              "box",
+              "unapproved-edit"
+            ]
+          },
+          {
+            "caseId": "a05-3",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "moq",
+              "sample",
+              "conflict-b"
+            ]
+          },
+          {
+            "caseId": "a06-5",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "lead",
+              "sample",
+              "fabric"
+            ]
+          },
+          {
+            "caseId": "a09-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "shipping",
+              "sample",
+              "inspection"
+            ]
+          },
+          {
+            "caseId": "a10-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "certificate",
+              "logo",
+              "sample"
+            ]
+          },
+          {
+            "caseId": "a11-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "inspection",
+              "sample",
+              "box"
+            ]
+          },
+          {
+            "caseId": "a12-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "sales",
+              "shipping",
+              "sample"
+            ]
+          },
+          {
+            "caseId": "a14-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "gym-frame",
+              "gym-warranty",
+              "gym-moq"
+            ]
+          },
+          {
+            "caseId": "a15-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "gym-warranty",
+              "noise-5",
+              "gym-frame"
+            ]
+          }
+        ]
+      }
+    },
+    "rerank": {
+      "status": "verified",
+      "repo": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+      "weight": "model_quint8_avx2.onnx",
+      "sha256": "6c2513767fb63d008a4377bef7a7a3555433d9436342bb53e35a3a72ffc52d4b",
+      "bytes": 118620016,
+      "threads": 4,
+      "provider": "CPUExecutionProvider",
+      "maxTokens": 256,
+      "seconds": 1.903,
+      "rssBeforeMiB": 476.47,
+      "rssAfterMiB": 546.36,
+      "processPeakSoFarMiB": 950.51,
+      "processCpuSecondsTotal": 12.547,
+      "latencyMs": {
+        "p50": 70.63485000253422,
+        "p95": 79.63783999912266
+      },
+      "probe": {
+        "unit": "source-level, development probe only; not span-level baseline and not final quality",
+        "cases": 12,
+        "recallAt10": 1.0,
+        "mrrAt10": 1.0,
+        "rows": [
+          {
+            "caseId": "a01-1",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "company",
+              "sales",
+              "inspection"
+            ]
+          },
+          {
+            "caseId": "a02-3",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "fabric",
+              "certificate",
+              "logo"
+            ]
+          },
+          {
+            "caseId": "a03-5",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "box",
+              "inspection",
+              "noise-2"
+            ]
+          },
+          {
+            "caseId": "a04-1",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "logo",
+              "certificate",
+              "company"
+            ]
+          },
+          {
+            "caseId": "a05-3",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "moq",
+              "inspection",
+              "sales"
+            ]
+          },
+          {
+            "caseId": "a06-5",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "sample",
+              "lead",
+              "fabric"
+            ]
+          },
+          {
+            "caseId": "a09-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "shipping",
+              "sample",
+              "payment"
+            ]
+          },
+          {
+            "caseId": "a10-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "certificate",
+              "lead",
+              "logo"
+            ]
+          },
+          {
+            "caseId": "a11-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "inspection",
+              "payment",
+              "sample"
+            ]
+          },
+          {
+            "caseId": "a12-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "sales",
+              "shipping",
+              "payment"
+            ]
+          },
+          {
+            "caseId": "a14-2",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "gym-frame",
+              "gym-warranty",
+              "gym-moq"
+            ]
+          },
+          {
+            "caseId": "a15-4",
+            "recallAt10": 1.0,
+            "reciprocalRank": 1.0,
+            "top3": [
+              "gym-warranty",
+              "noise-3",
+              "noise-15"
+            ]
+          }
+        ]
+      },
+      "authority": "project filter before model, but not production scope/version implementation"
+    },
+    "index": {
+      "status": "verified",
+      "component": "SQLite + sqlite-vec scalar cosine + FTS5",
+      "version": "v0.1.9",
+      "sqlite": "3.53.1",
+      "kind": "exact filtered flat search, not ANN",
+      "persistentReload": true,
+      "projectFilter": true,
+      "disabledExclusion": true,
+      "fts5EnglishSmoke": true,
+      "rows": 10000,
+      "scaleCaveat": "50-source corpus active knowledge vectors repeated; not 10k independent documents; vector query only, no concurrency or end-to-end model latency",
+      "diskBytes": 20738048,
+      "latencyMs": {
+        "p50": 12.696500001766253,
+        "p95": 14.649675001055584
+      },
+      "seconds": 0.28,
+      "rssBeforeMiB": 547.35,
+      "rssAfterMiB": 559.98,
+      "processPeakSoFarMiB": 950.51,
+      "processCpuSecondsTotal": 13.656
+    },
+    "ocr": {
+      "status": "verified",
+      "component": "rapidocr-onnxruntime bundled PP-OCR",
+      "version": "1.4.4",
+      "models": [
+        {
+          "file": "ch_PP-OCRv4_det_infer.onnx",
+          "sha256": "d2a7720d45a54257208b1e13e36a8479894cb74155a5efe29462512d42f49da9",
+          "bytes": 4745517
+        },
+        {
+          "file": "ch_PP-OCRv4_rec_infer.onnx",
+          "sha256": "48fc40f24f6d2a207a2b1091d3437eb3cc3eb6b676dc3ef9c37384005483683b",
+          "bytes": 10857958
+        },
+        {
+          "file": "ch_ppocr_mobile_v2.0_cls_infer.onnx",
+          "sha256": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c",
+          "bytes": 585532
+        }
+      ],
+      "tests": [
+        {
+          "fixture": "clean",
+          "sha256": "c064628c774ce03b1a79e1461e90445f6dcfff0e3fadf2e4ddf1a477fdbbc36f",
+          "expected": "FICTIONAL S0 TEST - NOT A REAL POLICY\nVelvet pouch MOQ 73 pcs\nProduction 19 working days after artwork approval\n虚构测试：绒布袋起订量 73 件\n图稿确认后起算，运费需另外确认",
+          "recognized": "FICTIONALSOTEST-NOTAREALPOLICY\nVelvet pouch MoQ 73 pcs\nProduction 19 working days after artwork approval\n虚构测试：绒布袋起订量73件\n图稿确认后起算，运费需另外确认",
+          "normalizedCER": 0.00847457627118644,
+          "numericTokensPreserved": true,
+          "seconds": 1.349
+        },
+        {
+          "fixture": "rotated",
+          "sha256": "2716580e169cc52bb0716f994aa4f8a74bfc19ad5f34a935454b08dccbf91ea1",
+          "expected": "FICTIONAL S0 TEST - NOT A REAL POLICY\nVelvet pouch MOQ 73 pcs\nProduction 19 working days after artwork approval\n虚构测试：绒布袋起订量 73 件\n图稿确认后起算，运费需另外确认",
+          "recognized": "FICTIONAL SO TEST - NOT A REAL POLICY\nVelvet pouch MoQ 73 pcs\nProduction 19 working days after artwork approval\n虚构测试：绒布袋起订量73件\n图稿确认后起算，运费需另外确认",
+          "normalizedCER": 0.00847457627118644,
+          "numericTokensPreserved": true,
+          "seconds": 1.213
+        }
+      ],
+      "scope": "generated clean/2-degree rotated image only; PDF rendering, noisy photos, complex tables, certificate verification are not evaluated",
+      "seconds": 2.966,
+      "rssBeforeMiB": 559.98,
+      "rssAfterMiB": 616.04,
+      "processPeakSoFarMiB": 950.51,
+      "processCpuSecondsTotal": 35.75
+    }
+  },
+  "processPeakMiB": 950.51
+}

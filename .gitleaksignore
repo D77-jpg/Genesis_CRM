@@ -4,3 +4,5 @@
 e027a639c8d6e3fafcaa9a279a51033045e88136:.github/workflows/integration-release-gate.yml:generic-api-key:35
 e4f08faf1b5eb3db07907033b5cae50170b213d6:scripts/smoke-test.ps1:generic-api-key:523
 5ffeed2b9d06e4a413a45e08f34190fb3442f719:scripts/smoke-test.ps1:generic-api-key:523
+# S0 report contains a verified source-file SHA-256, not a credential.
+73e8289cc32693454df9820652e5a598f90b1d30:docs/knowledge-s0-results/baseline.json:generic-api-key:36

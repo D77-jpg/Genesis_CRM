@@ -24,3 +24,18 @@ finding, including one on these same files or rules, must fail until separately
 reviewed. Do not include actual key values in reports or CI output. Configure
 production secrets privately; the CI test fixture must never be reused in
 production.
+## S0 evaluation report review (2026-10-17, PR #31)
+
+Gitleaks v8.24.0 flags `docs/knowledge-s0-results/baseline.json:36`
+(`productionHashes.mail-access.ts`) as `generic-api-key`. The value is the
+SHA-256 digest of the tracked `server/src/services/agent/mail-access.ts`,
+recomputed locally and compared with the report. It is reproducibility
+metadata, not an API key or an authentication credential.
+
+Only the immutable finding fingerprint for commit
+`73e8289cc32693454df9820652e5a598f90b1d30` is added to `.gitleaksignore`.
+The evaluation report remains unchanged. No path, rule, or digest-pattern
+exemption is introduced. Future findings still require individual review.
+
+Validation: the pinned scanner passed a full `--all` Git-history scan after
+this exact exception; both production dependency audit gates also passed.

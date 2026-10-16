@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "caseIds": [
+    "a01-1",
+    "a02-3",
+    "a03-5",
+    "a04-1",
+    "a05-3",
+    "a06-5",
+    "a09-2",
+    "a10-4",
+    "a11-2",
+    "a12-4",
+    "a14-2",
+    "a15-4"
+  ],
+  "note": "Development-only component probe; never load holdout for component selection."
+}

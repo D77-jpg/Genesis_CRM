@@ -49,6 +49,11 @@ jobs:
           npm run test:scratchpad
           npm run test:agent
           npm run test:ai-settings
+      - name: Knowledge evaluation fixture and metric contracts (no holdout tuning)
+        run: |
+          npm run eval:knowledge:validate
+          npm run test:knowledge-evaluation
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node evaluation/knowledge/schema.ts evaluation/knowledge/metrics.ts evaluation/knowledge/baseline.ts
       - name: Template feedback regression (H-05)
         run: npm run test:template-feedback
       - name: Security boundary regression tests

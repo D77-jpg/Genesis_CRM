@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "models": [
+    {
+      "repo": "Xenova/all-MiniLM-L6-v2",
+      "status": "downloaded",
+      "files": [
+        {
+          "file": "config.json",
+          "bytes": 650,
+          "sha256": "7135149f7cffa1a573466c6e4d8423ed73b62fd2332c575bf738a0d033f70df7"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 711661,
+          "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0"
+        },
+        {
+          "file": "tokenizer_config.json",
+          "bytes": 366,
+          "sha256": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3"
+        },
+        {
+          "file": "onnx/model_quantized.onnx",
+          "bytes": 22972370,
+          "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1"
+        }
+      ],
+      "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+      "license": "apache-2.0",
+      "tags": [
+        "transformers.js",
+        "onnx",
+        "bert",
+        "feature-extraction",
+        "base_model:sentence-transformers/all-MiniLM-L6-v2",
+        "base_model:quantized:sentence-transformers/all-MiniLM-L6-v2",
+        "license:apache-2.0",
+        "region:us"
+      ],
+      "elapsedSeconds": 1.053
+    },
+    {
+      "repo": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+      "status": "downloaded",
+      "files": [
+        {
+          "file": "config.json",
+          "bytes": 891,
+          "sha256": "cc2cfe51aa3fd759d21d21acf5dfd6994aa67a3c9210636d22e143699d336c77"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 17082660,
+          "sha256": "62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626"
+        },
+        {
+          "file": "tokenizer_config.json",
+          "bytes": 435,
+          "sha256": "e7fbfbfa6347b4e414c1cee50d142e2c2f9a895dad68b068ae83a8b564c3837e"
+        },
+        {
+          "file": "onnx/model_quint8_avx2.onnx",
+          "bytes": 118620016,
+          "sha256": "6c2513767fb63d008a4377bef7a7a3555433d9436342bb53e35a3a72ffc52d4b"
+        }
+      ],
+      "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+      "license": "apache-2.0",
+      "tags": [
+        "sentence-transformers",
+        "pytorch",
+        "onnx",
+        "safetensors",
+        "openvino",
+        "xlm-roberta",
+        "text-classification",
+        "transformers",
+        "text-ranking",
+        "en",
+        "ar",
+        "zh",
+        "nl",
+        "fr",
+        "de",
+        "hi",
+        "in",
+        "it",
+        "ja",
+        "pt",
+        "ru",
+        "es",
+        "vi",
+        "multilingual",
+        "dataset:unicamp-dl/mmarco",
+        "base_model:nreimers/mMiniLMv2-L12-H384-distilled-from-XLMR-Large",
+        "base_model:quantized:nreimers/mMiniLMv2-L12-H384-distilled-from-XLMR-Large",
+        "license:apache-2.0",
+        "text-embeddings-inference",
+        "endpoints_compatible",
+        "deploy:azure",
+        "region:us"
+      ],
+      "elapsedSeconds": 0.828
+    },
+    {
+      "repo": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "status": "downloaded",
+      "files": [
+        {
+          "file": "config.json",
+          "bytes": 645,
+          "sha256": "6300193cb75e01cf80c96decef7187dfb33094d97cc1490b7ead6ff134476e4e"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 9081518,
+          "sha256": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8"
+        },
+        {
+          "file": "tokenizer_config.json",
+          "bytes": 526,
+          "sha256": "5036ea374ffedd706e3bef33e2e0d6953cb868ef8a490e76e32ba0faa37a6b9b"
+        },
+        {
+          "file": "onnx/model_quint8_avx2.onnx",
+          "bytes": 118453870,
+          "sha256": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f"
+        }
+      ],
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "license": "apache-2.0",
+      "tags": [
+        "sentence-transformers",
+        "pytorch",
+        "tf",
+        "onnx",
+        "safetensors",
+        "openvino",
+        "bert",
+        "feature-extraction",
+        "sentence-similarity",
+        "transformers",
+        "multilingual",
+        "ar",
+        "bg",
+        "ca",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "et",
+        "fa",
+        "fi",
+        "fr",
+        "gl",
+        "gu",
+        "he",
+        "hi",
+        "hr",
+        "hu",
+        "hy",
+        "id",
+        "it",
+        "ja",
+        "ka",
+        "ko",
+        "ku",
+        "lt",
+        "lv",
+        "mk",
+        "mn",
+        "mr",
+        "ms",
+        "my",
+        "nb",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sq",
+        "sr",
+        "sv",
+        "th",
+        "tr",
+        "uk",
+        "ur",
+        "vi",
+        "arxiv:1908.10084",
+        "license:apache-2.0",
+        "text-embeddings-inference",
+        "endpoints_compatible",
+        "deploy:sagemaker",
+        "deploy:azure",
+        "region:us"
+      ],
+      "elapsedSeconds": 13.909
+    }
+  ]
+}
