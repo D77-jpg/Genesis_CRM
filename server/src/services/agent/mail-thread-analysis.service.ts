@@ -2,7 +2,7 @@ import {Project} from '../../models';
 import {getCurrentMailSender} from '../mail-account.service';
 import {agentMailOrThrow,inboundAgentScope} from './mail-access';
 import {chargeTaskBudget} from './task-budget';
-import {searchProductKnowledge} from './knowledge.service';
+import {buildKnowledgeBundle,auditGroundedEmail,knowledgeFreshness} from './knowledge-grounding';
 import type {AgentProvider} from './provider';
 import env from '../../config/env';
 import { Types } from 'mongoose';
@@ -126,7 +126,7 @@ const generatedSchema = z.object({
 function verifiedIds(ids: string[], known: Set<string>): string[] { return [...new Set(ids)].filter((id) => known.has(id)); }
 function dto(doc: AgentMailThreadAnalysisDocument) {
   return {
-    id: doc.id, rootMailId: doc.rootMailId, rootDirection: doc.rootDirection, threadId: doc.threadId,
+    id: doc.id,knowledgeReview:doc.knowledgeReview, rootMailId: doc.rootMailId, rootDirection: doc.rootDirection, threadId: doc.threadId,
     customerId: doc.customerId ? String(doc.customerId) : undefined,
     productSources:doc.productSources??[],sources: doc.sources, summary: doc.summary, intent: doc.intent, extracted: doc.extracted, safety: doc.safety,
     replyDraft: { subject: doc.replyDraft.subject, bodyText: doc.replyDraft.bodyText },
@@ -159,18 +159,19 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildThreadInput(input.mailId, input.direction, actor);
     if (!context.messages.length) throw ApiError.badRequest('当前邮件线程没有可分析的内容');
-    const knowledge=(await searchProductKnowledge(actor,context.latestInbound?.text??'')).map(k=>({...k,content:k.content.slice(0,3000)}));
+    const knowledgeContext=await buildKnowledgeBundle(actor,context.messages.filter(m=>m.direction==='inbound').slice(-8).map(m=>m.text).join('\n'),{customerId:context.customer?.id});
+    const knowledge=knowledgeContext.sources.map(k=>({...k,approved:true}));
     const project=await Project.findById(requireProjectId(actor)).select('companyName website senderName');
     const sender=await getCurrentMailSender(actor.projectId!,actor.id);
-    const seller={companyName:project?.companyName??env.COMPANY_NAME,senderName:sender.account?.displayName||actor.displayName||project?.senderName||env.SENDER_NAME,senderEmail:sender.account?.email,website:project?.website};
-    const overhead=JSON.stringify({knowledge,seller,customer:context.customer}).length+500;
+    const seller={companyName:project?.companyName??'Company name pending confirmation',senderName:sender.account?.displayName||actor.displayName||project?.senderName||actor.displayName,senderEmail:sender.account?.email,website:project?.website};
+    const overhead=JSON.stringify({knowledgeContext,seller,customer:context.customer}).length+500;
     const limited=limitRecentItems(context.messages,m=>m.text,(m,text)=>({...m,text}),Math.max(1000,env.AI_MAX_INPUT_CHARS-overhead));
     const inputChars=limited.inputCharacters+overhead;
     if(inputChars>env.AI_MAX_INPUT_CHARS)throw new ApiError(413,'来信及知识超出单次处理范围','PAYLOAD_TOO_LARGE');
     reservation = await reserveAgentQuota(actor, inputChars);
     await chargeTaskBudget(options?.taskId,inputChars,env.AI_MAX_OUTPUT_TOKENS);
     const safetyIdentifier = agentSafetyIdentifier(actor);
-    const response = await activeProvider.analyzeMailThread({ input: { customer: context.customer, messages: limited.items,productKnowledge:knowledge,seller }, safetyIdentifier });
+    const response = await activeProvider.analyzeMailThread({ input: { customer: context.customer, messages: limited.items,productKnowledge:knowledge,seller,knowledgeContext }, safetyIdentifier });
     const { usage: _usage, ...providerOutput } = response;
     // Some compatible gateways ignore strict schema and nest the last sibling under statusSuggestion.
     // Only relocate this exact known field; preserve every other key for strict validation to reject.
@@ -232,11 +233,17 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     }
     const nextFollowUpAt = !marketingBlocked && generated.followUpSuggestion.nextFollowUpAt
       ? new Date(generated.followUpSuggestion.nextFollowUpAt) : undefined;
+    const grounded=auditGroundedEmail(generated.replyDraft.bodyText,knowledgeContext,{
+      taskType:'inquiry_reply',customerId:context.customer?.id,mailId:input.mailId,direction:input.direction,
+      customerEvidence:context.messages.filter(m=>m.direction==='inbound').map(m=>m.text).join('\n'),
+      questions:generated.extracted.questions.map(q=>q.text),seller,
+    });
+    if(!marketingBlocked)generated.replyDraft.bodyText=grounded.bodyText;
     let analysis: AgentMailThreadAnalysisDocument;
     try {
       analysis = await AgentMailThreadAnalysis.create({
         ...identifiers, rootMailId: input.mailId, rootDirection: input.direction, threadId: context.threadId,
-        productSources:knowledge.map(k=>({sourceId:k.sourceId,title:k.title,version:k.version,source:k.source})),
+        knowledgeReview:grounded.review,productSources:knowledge.map(k=>({sourceId:k.sourceId,title:k.title,version:k.version,source:k.source})),
         customerId: context.customer ? new Types.ObjectId(context.customer.id) : undefined,
         replyToMailId: context.latestInbound ? new Types.ObjectId(context.latestInbound.messageId) : undefined,
         requestKey: input.idempotencyKey,
@@ -276,7 +283,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
   }
 }
 
-export async function getMailThreadAnalysis(id: string, actor: AuthUser) { return dto(await getOrThrow(id, actor)); }
+export async function getMailThreadAnalysis(id: string, actor: AuthUser) { const doc=await getOrThrow(id,actor);return {...dto(doc),knowledgeFreshness:doc.knowledgeReview?await knowledgeFreshness(doc.knowledgeReview,actor):undefined}; }
 
 export async function updateMailThreadAnalysis(id: string, input: UpdateAgentMailAnalysisBody, actor: AuthUser) {
   const current = await getOrThrow(id, actor);
@@ -326,6 +333,7 @@ export async function saveMailReplyDraft(id: string, input: ConfirmAgentAnalysis
   try {
     const result = await sendLetter({ customerId: String(locked.customerId), replyToId: String(locked.replyToMailId), subject: locked.replyDraft.subject, content: `<p>${escapeHtml(locked.replyDraft.bodyText).replace(/\r?\n/g, '<br>')}</p>`, markAsDeveloped: false, saveAsDraft: true, requestKey: `agent-mail-reply:${locked.id}` }, actor);
     if (result.letter.status !== 'draft' || result.delivered) throw ApiError.internal('回复草稿安全校验失败');
+    if(locked.knowledgeReview)await DevelopmentLetter.updateOne({_id:result.letter.id,projectId:requireProjectId(actor),knowledgeReview:{$exists:false}},{$set:{knowledgeReview:locked.knowledgeReview}});
     const completed = await AgentMailThreadAnalysis.findOneAndUpdate({ _id: locked._id, ...identifiers, replyConfirmationKey: input.idempotencyKey }, { $set: { replyStatus: 'saved', createdLetterId: new Types.ObjectId(result.letter.id) }, $unset: { lastError: 1 }, $inc: { version: 1 } }, { new: true });
     if (!completed) throw ApiError.conflict('草稿已保存，但审批状态同步失败，请刷新');
     await AgentAction.updateOne({ _id: action._id, ...identifiers }, { $set: { executionStatus: 'succeeded', resultSummary: '已保存线程回复草稿，未发送', executedAt: new Date() } });

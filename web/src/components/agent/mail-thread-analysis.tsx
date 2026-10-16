@@ -1,3 +1,4 @@
+import {KnowledgeReviewPanel} from './knowledge-review';
 import * as React from 'react';
 import {
   AlertOctagon, CheckCircle2, FileCheck2, Loader2, Mail, MessageSquareReply, Save, ShieldAlert, UserPlus, UserRoundCog,
@@ -133,6 +134,7 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
   const followUpLocked = analysis.followUpStatus === 'saved';
 
   return <div className="min-h-0 flex-1 overflow-y-auto p-4">
+    <KnowledgeReviewPanel review={analysis.knowledgeReview} freshness={analysis.knowledgeFreshness}/>
     <div className="space-y-4">
       {blocked ? <Alert variant="destructive" className="border-2">
         <AlertOctagon className="h-4 w-4" aria-hidden /><AlertTitle>{safetyLabels[analysis.safety.classification]} · 已停止营销建议</AlertTitle>

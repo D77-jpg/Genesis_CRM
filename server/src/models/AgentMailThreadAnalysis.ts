@@ -1,3 +1,4 @@
+import type {KnowledgeReview} from '../services/agent/knowledge-types';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 import type { CustomerStatus, FollowUpMethod, FollowUpResult } from '../constants';
 
@@ -13,6 +14,7 @@ export interface AgentMailEvidenceValue { value: string; evidenceMessageIds: str
 export interface AgentMailQuestion { text: string; evidenceMessageIds: string[] }
 
 export interface IAgentMailThreadAnalysis {
+  knowledgeReview?: KnowledgeReview;
   projectId: Types.ObjectId;
   userId: Types.ObjectId;
   rootMailId: string;
@@ -60,6 +62,7 @@ const questionSchema = new Schema<AgentMailQuestion>({
 }, { _id: false });
 
 const schema = new Schema<IAgentMailThreadAnalysis>({
+  knowledgeReview: {type: Schema.Types.Mixed},
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   rootMailId: { type: String, required: true, maxlength: 128 },

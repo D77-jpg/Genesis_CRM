@@ -18,6 +18,7 @@ import { createLogger } from '../../config/logger';
 const taskLogger=createLogger('agent-task');
 import { agentFailure } from './agent-errors';
 import { isFirstOutreachCommand } from './first-outreach-intent';
+import {isBusinessMailCommand} from './knowledge-grounding';
 import { resolveAgentProvider } from './ai-settings.service';
 import type { AgentProvider } from './provider';
 import { agentToolSchemas } from './tool-registry';
@@ -62,11 +63,15 @@ export async function listAgentTasks(actor: AuthUser) {
 export async function createAgentTask(input: {sessionId: string; goal: string; requestKey: string; customerId?:string; parentBatchId?:string; knowledgeIds?:string[]; tokenBudget?:number}, actor: AuthUser) {
  const session = await AgentSession.findOne({_id: validId(input.sessionId), ...scope(actor), status: 'active'});
  if (!session) throw ApiError.notFound('会话不存在或无权访问');
- if (!isFirstOutreachCommand(input.goal)) throw ApiError.badRequest('请明确委托准备首封开发信草稿');
- const customerId = input.customerId ?? (session.context.type === 'customer' ? session.context.resourceId : undefined);
+ if (!isFirstOutreachCommand(input.goal)&&!isBusinessMailCommand(input.goal)) throw ApiError.badRequest('请明确委托准备邮件草稿');
+ const inquiry=session.context.type==='mail'&&session.context.direction==='inbound';
+ if(inquiry)await agentMailOrThrow(session.context.resourceId!,actor);
+ const outbound=session.context.type==='mail'&&session.context.direction==='outbound'
+  ?await getLetter(session.context.resourceId!,actor):undefined;
+ const customerId = input.customerId ?? (session.context.type === 'customer' ? session.context.resourceId : outbound?.customerId);
  if (customerId) await getCustomerByIdOrThrow(customerId,actor);
  const data = {...scope(actor), sessionId: session._id, actorRole: actor.role, goal: input.goal, requestKey: input.requestKey,
-  customerId,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:2, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
+  customerId,kind:inquiry?'inquiry_reply':isFirstOutreachCommand(input.goal)?'first_outreach':'followup_review',sourceMailId:inquiry?session.context.resourceId:undefined,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:2, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
  let task;
  try { task = await AgentTask.findOneAndUpdate({...scope(actor),requestKey: input.requestKey}, {$setOnInsert: data}, {upsert: true,new: true,runValidators: true}); }
  catch (error) { if ((error as {code?:number}).code !== 11000) throw error; task = await AgentTask.findOne({...scope(actor),requestKey: input.requestKey}); }
@@ -161,6 +166,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
     const saved=await sendLetter({customerId:String(task.customerId),subject:analysis.emailDraft.subject,
      content:analysis.emailDraft.bodyText.trim().split(/\r?\n(?:[ \t]*\r?\n)+/).map(p=>`<p>${escapeHtml(p).replace(/\r?\n/g,'<br>')}</p>`).join(''),
      saveAsDraft:true,markAsDeveloped:false,agentTaskId:task.id,agentAnalysisId:task.kind==='followup_review'?undefined:analysis.id,requestKey:`task-draft-${task.id}`},actor);
+    if(analysis.knowledgeReview)await DevelopmentLetter.updateOne({_id:saved.letter.id,projectId:task.projectId,knowledgeReview:{$exists:false}},{$set:{knowledgeReview:analysis.knowledgeReview}});
     draft=await DevelopmentLetter.findById(saved.letter.id);
    }
    await check();

@@ -1,3 +1,4 @@
+import type {KnowledgeReview,KnowledgeFreshness} from './knowledge';
 /**
  * 领域模型类型（与后端 Mongoose 模型的 toJSON 输出一一对应）
  */
@@ -196,6 +197,9 @@ export interface AgentAnalysisClaim {
 }
 
 export interface AgentCustomerAnalysis {
+  knowledgeReview?:KnowledgeReview;
+  knowledgeFreshness?:KnowledgeFreshness;
+  reviewBodyChanged?:boolean;
   firstOutreach?: boolean;
   id: string;
   customerId: string;
@@ -229,6 +233,9 @@ export type AgentMailSafety = 'normal' | 'unsubscribe' | 'bounce' | 'rejection' 
 export type AgentMailIntent = 'inquiry' | 'quotation_request' | 'negotiation' | 'sample_request' | 'order' | 'support' | 'positive' | 'neutral' | 'unsubscribe' | 'bounce' | 'rejection' | 'spam' | 'other';
 export interface AgentMailEvidenceValue { value: string; evidenceMessageIds: string[] }
 export interface AgentMailThreadAnalysis {
+  knowledgeReview?:KnowledgeReview;
+  knowledgeFreshness?:KnowledgeFreshness;
+  reviewBodyChanged?:boolean;
   productSources?:{sourceId:string;title:string;version:number;source:string}[];
   id: string;
   rootMailId: string;
@@ -411,6 +418,9 @@ export interface LetterCustomerSummary {
 }
 
 export interface DevelopmentLetter {
+  knowledgeReview?:KnowledgeReview;
+  knowledgeFreshness?:KnowledgeFreshness;
+  reviewBodyChanged?:boolean;
   id: string;
   customerId: string;
   customer?: LetterCustomerSummary;

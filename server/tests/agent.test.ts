@@ -1220,7 +1220,7 @@ test('P2 product knowledge versions are immutable, published-only, project-scope
  await assert.rejects(()=>k.appendKnowledge(id,{...input,expectedVersion:1},adminActor));
  await k.appendKnowledge(id,{...input,expectedVersion:2,content:'Approved fictional MOQ 74, lead time 20 days.'},adminActor);
  const published=(await k.searchProductKnowledge(actorA,'p2fixture'))[0]!;assert.equal(published.version,3);assert.match(published.content,/74/);
- assert.equal((await k.listKnowledge(adminActor)).find(x=>x.id===id)?.revisions[0]?.content,input.content);
+ assert.equal((await k.getKnowledgeHistory(id,adminActor)).revisions[0]?.content,input.content);
  await k.archiveKnowledge(id,3,adminActor);assert.equal((await k.searchProductKnowledge(actorA,'p2fixture')).length,0);
 });
 

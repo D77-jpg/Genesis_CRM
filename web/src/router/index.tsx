@@ -28,6 +28,7 @@ const CustomerDetailPage = React.lazy(() =>
 );
 const MailPage = React.lazy(() => import('@/pages/mail').then(m => ({ default: m.MailPage })));
 const LettersPage = React.lazy(() => import('@/pages/letters').then((m) => ({ default: m.LettersPage })));
+const KnowledgePage = React.lazy(() => import('@/pages/knowledge').then(m=>({default:m.KnowledgePage})));
 const TemplatesPage = React.lazy(() => import('@/pages/templates').then((m) => ({ default: m.TemplatesPage })));
 const UsersPage = React.lazy(() => import('@/pages/users').then((m) => ({ default: m.UsersPage })));
 const ProjectsPage = React.lazy(() => import('@/pages/projects').then((m) => ({ default: m.ProjectsPage })));
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
       { path: 'customers/:id', element: withSuspense(<CustomerDetailPage />) },
       { path: 'mail', element: withSuspense(<MailPage />) },
       { path: 'letters', element: withSuspense(<LettersPage />) },
+      { path: 'knowledge', element: withSuspense(<KnowledgePage />) },
       { path: 'templates', element: withSuspense(<TemplatesPage />) },
       {
         path: 'users',

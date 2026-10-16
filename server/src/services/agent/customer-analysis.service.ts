@@ -1,4 +1,4 @@
-import {searchProductKnowledge} from './knowledge.service';
+import {buildKnowledgeBundle,auditGroundedEmail,knowledgeFreshness,knowledgeTaskType} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
 import {chargeTaskBudget} from './task-budget';
 import { Types } from 'mongoose';
@@ -14,7 +14,6 @@ import {
   AgentRun,
   DevelopmentLetter,
   FollowUp,
-  Quotation,
   type AgentAnalysisClaim,
   type AgentAnalysisSource,
   type AgentCustomerAnalysisDocument,
@@ -62,6 +61,7 @@ function sourceDto(source: AgentAnalysisSource) {
 function dto(doc: AgentCustomerAnalysisDocument) {
   return {
     id: doc.id,
+    knowledgeReview: doc.knowledgeReview,
     customerId: String(doc.customerId),
     sources: doc.sources.map(sourceDto),
     facts: doc.facts.map((item) => ({ text: item.text, sourceIds: item.sourceIds })),
@@ -101,12 +101,11 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   const customer = await getCustomerByIdOrThrow(customerId, actor);
   const projectId = requireProjectId(actor);
   const oid = new Types.ObjectId(customerId);
-  const [timeline, inbound, outbound, followups, quotations] = await Promise.all([
+  const [timeline, inbound, outbound, followups] = await Promise.all([
     getCustomerTimeline(customerId, 30, actor),
     MailMessage.find({ customerId: oid, projectId, deleted: false }).sort({ sentAt: -1 }).limit(20).select('_id subject from fromName text sentAt').lean(),
     DevelopmentLetter.find({ customerId: oid, projectId, status: { $in: ['sent', 'opened'] } }).sort({ sentAt: -1 }).limit(20).select('_id subject recipientEmail contentText sentAt').lean(),
     FollowUp.find({ customerId: oid, projectId }).sort({ followUpAt: -1 }).limit(20).select('_id method result content followUpAt nextFollowUpAt').lean(),
-    Quotation.find({ customerId: oid, projectId }).sort({ updatedAt: -1 }).limit(20).select('_id quotationNo title status currency totalAmount items paymentTerms leadTime moq notes updatedAt').lean(),
   ]);
 
   const sources: AgentAnalysisSource[] = [];
@@ -134,17 +133,11 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   for (const followup of followups) add({
     sourceId: `followup:${String(followup._id)}`, kind: 'followup', recordId: String(followup._id), label: `跟进 · ${followup.method}`, occurredAt: followup.followUpAt,
   }, { method: followup.method, result: followup.result, content: clipped(followup.content), followUpAt: followup.followUpAt, nextFollowUpAt: followup.nextFollowUpAt });
-  for (const quotation of quotations) add({
-    sourceId: `quotation:${String(quotation._id)}`, kind: 'quotation', recordId: String(quotation._id), label: `报价 · ${quotation.quotationNo}`, occurredAt: quotation.updatedAt,
-  }, {
-    quotationNo: quotation.quotationNo, title: quotation.title, status: quotation.status, currency: quotation.currency,
-    totalAmount: quotation.totalAmount, items: quotation.items, paymentTerms: quotation.paymentTerms, leadTime: quotation.leadTime,
-    moq: quotation.moq, notes: clipped(quotation.notes),
-  });
-  const knowledge=await searchProductKnowledge(actor,`${customer.interestedProducts??''} ${customer.productCategory??''} ${customer.industry??''} ${goal}`,knowledgeIds);
-  for(const item of knowledge)add({sourceId:item.sourceId,kind:'knowledge',recordId:item.knowledgeId,label:`已发布产品知识 · ${item.title} · v${item.version}`},item);
+  const knowledgeContext=await buildKnowledgeBundle(actor,`${customer.interestedProducts??''} ${customer.productCategory??''} ${customer.industry??''} ${goal}`,{customerId,ids:knowledgeIds});
+  const knowledge=knowledgeContext.sources;
+  for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...item,approved:true});
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
-  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog }, sources };
+  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,knowledgeContext }, sources };
 }
 
 const outputSchema = z.object({
@@ -182,13 +175,13 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest);
     context.input.userRequest=options?.userRequest;
-    if (options?.firstOutreach) {
+    {
       const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
       const sender = await getCurrentMailSender(String(requireProjectId(actor)), actor.id);
-      context.input.firstOutreach = true;
-      context.input.userRequest = options.userRequest;
-      context.input.seller = { companyName: project?.companyName || env.COMPANY_NAME,
-        website: project?.website, moq: project?.moq, senderName: sender.account?.displayName || actor.displayName || project?.senderName || env.SENDER_NAME,
+      context.input.firstOutreach = Boolean(options?.firstOutreach);
+      context.input.userRequest = options?.userRequest;
+      context.input.seller = { companyName: project?.companyName || 'Company name pending confirmation',
+        website: project?.website, senderName: sender.account?.displayName || actor.displayName || project?.senderName || actor.displayName,
         senderEmail: sender.account?.email };
     }
     const serializedInput = JSON.stringify(context.input);
@@ -201,6 +194,13 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       facts: generated.facts, gaps: generated.gaps, recommendations: generated.recommendations,
       emailDraft: generated.emailDraft, followUpPlan: generated.followUpPlan,
     });
+    const grounded=auditGroundedEmail(parsed.emailDraft.bodyText,context.input.knowledgeContext!,{
+      taskType:knowledgeTaskType(options?.userRequest??'',options?.firstOutreach?'first_outreach':'followup'),
+      customerId:input.customerId,request:options?.userRequest,
+      customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
+      seller:context.input.seller,
+    });
+    parsed.emailDraft.bodyText=grounded.bodyText;
     const known = new Set(context.sources.map((source) => source.sourceId));
     const facts = verifiedClaims(parsed.facts, known);
     const gaps = verifiedClaims(parsed.gaps, known);
@@ -215,7 +215,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       analysis = await AgentCustomerAnalysis.create({
         ...identifiers, customerId: new Types.ObjectId(input.customerId), requestKey: input.idempotencyKey,
         firstOutreach: Boolean(options?.firstOutreach),
-        sources: context.sources, facts, gaps, recommendations, emailDraft: parsed.emailDraft,
+        knowledgeReview:grounded.review,sources: context.sources, facts, gaps, recommendations, emailDraft: parsed.emailDraft,
         followUpPlan: {
           ...parsed.followUpPlan,
           ...followUpEvidence, manuallyEdited: false,
@@ -253,7 +253,8 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
 }
 
 export async function getCustomerAnalysis(id: string, actor: AuthUser) {
-  return dto(await getAnalysisOrThrow(id, actor));
+  const doc=await getAnalysisOrThrow(id,actor);
+  return {...dto(doc),knowledgeFreshness:doc.knowledgeReview?await knowledgeFreshness(doc.knowledgeReview,actor):undefined};
 }
 
 export async function updateCustomerAnalysis(id: string, input: UpdateAgentCustomerAnalysisBody, actor: AuthUser) {
@@ -311,6 +312,7 @@ export async function saveAnalysisEmailDraft(id: string, input: ConfirmAgentAnal
       customerId: String(locked.customerId), subject: locked.emailDraft.subject, content, markAsDeveloped: false,
       saveAsDraft: true, requestKey: `agent-analysis-email:${locked.id}`,
     }, actor);
+    if(locked.knowledgeReview)await DevelopmentLetter.updateOne({_id:result.letter.id,projectId:requireProjectId(actor),knowledgeReview:{$exists:false}},{$set:{knowledgeReview:locked.knowledgeReview}});
     if (result.letter.status !== 'draft' || result.delivered) throw ApiError.internal('草稿安全校验失败');
     const completed = await AgentCustomerAnalysis.findOneAndUpdate(
       { _id: locked._id, ...identifiers, emailConfirmationKey: input.idempotencyKey },

@@ -1,3 +1,4 @@
+import type {KnowledgeBundle} from './knowledge-types';
 import type {
   AgentContextType,
   AgentCustomerPreviewFields,
@@ -43,6 +44,7 @@ export interface CustomerExtractionResult {
 }
 
 export interface CustomerAnalysisInput {
+  knowledgeContext?: KnowledgeBundle;
   firstOutreach?: boolean;
   userRequest?: string;
   seller?: { companyName: string; website?: string; moq?: string; senderName: string; senderEmail?: string };
@@ -66,6 +68,7 @@ export interface CustomerAnalysisRequest {
 }
 
 export interface MailThreadAnalysisInput {
+  knowledgeContext?: KnowledgeBundle;
   seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
   productKnowledge?:{sourceId:string;title:string;content:string;version:number;approved:boolean}[];
   customer?: { id: string; name: string; company?: string; email?: string; status: string };

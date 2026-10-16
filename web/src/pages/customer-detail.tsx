@@ -298,6 +298,18 @@ export function CustomerDetailPage(): React.JSX.Element {
     }).catch(error=>{if(active)toast.error('任务草稿无法打开',{description:toErrorMessage(error,'请检查权限与草稿状态')});});
     return()=>{active=false;};
   },[customer?.id,outreachTaskId,setSearchParams]);
+  const knowledgeDraftId=searchParams.get('knowledgeDraft');
+  React.useEffect(()=>{
+    if(!customer?.id||!knowledgeDraftId||!/^[a-f\d]{24}$/i.test(knowledgeDraftId))return;
+    let active=true;
+    void apiGet<DevelopmentLetter>('/letters/'+knowledgeDraftId).then(letter=>{
+      if(!active)return;
+      if(letter.customerId!==customer.id||letter.status!=='draft')throw new Error('草稿与当前客户不匹配或状态已变化');
+      setComposeDraft(null);setResendTarget(letter);setSendOpen(true);
+      setSearchParams(current=>{const next=new URLSearchParams(current);next.delete('knowledgeDraft');return next;},{replace:true});
+    }).catch(error=>{if(active)toast.error('草稿无法打开',{description:toErrorMessage(error)});});
+    return()=>{active=false;};
+  },[customer?.id,knowledgeDraftId,setSearchParams]);
   const [viewTarget, setViewTarget] = React.useState<DevelopmentLetter | null>(null);
   const [viewOpen, setViewOpen] = React.useState(false);
   const [deleteLetterTarget, setDeleteLetterTarget] = React.useState<DevelopmentLetter | null>(null);

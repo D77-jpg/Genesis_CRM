@@ -1,3 +1,5 @@
+import type {KnowledgeReview,KnowledgeFreshness} from './agent/knowledge-types';
+import {knowledgeFreshness,draftHash} from './agent/knowledge-grounding';
 import {AgentTask} from '../models/AgentTask';
 import {hasProtectedCustomerMail} from './agent/mail-thread-analysis.service';
 import { createHash, randomUUID } from 'node:crypto';
@@ -20,6 +22,7 @@ import { resolveSenderIdentity } from './mail-account.service';
 import { Types, type FilterQuery } from 'mongoose';
 import {
   AgentCustomerAnalysis,
+  AgentMailThreadAnalysis,
   Customer,
   DevelopmentLetter,
   LetterTemplate,
@@ -63,6 +66,9 @@ export interface LetterCustomerSummary {
 
 /** 对外输出的开发信 DTO（id 为字符串，customerId 已扁平化） */
 export interface LetterDto {
+  knowledgeReview?:KnowledgeReview;
+  knowledgeFreshness?:KnowledgeFreshness;
+  reviewBodyChanged?:boolean;
   id: string;
   customerId: string;
   customer?: LetterCustomerSummary;
@@ -211,6 +217,7 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     ...(summary ? { customer: summary } : {}),
     recipientName: String(doc.recipientName ?? ''),
     recipientEmail: String(doc.recipientEmail ?? ''),
+    knowledgeReview:doc.knowledgeReview as KnowledgeReview|undefined,
     subject: String(doc.subject ?? ''),
     content: String(doc.content ?? ''),
     contentText: String(doc.contentText ?? ''),
@@ -275,7 +282,9 @@ export async function getLetter(id: string, actor?: AuthUser): Promise<LetterDto
   const customer = doc.customerId as unknown as { ownerId?: unknown } | null;
   assertCustomerAccess(actor, customer?.ownerId, doc.projectId);
 
-  return toLetterDto(doc.toObject({ virtuals: false, depopulate: false }) as unknown as Record<string, unknown>);
+  const result=toLetterDto(doc.toObject({virtuals:false,depopulate:false}) as unknown as Record<string,unknown>);
+  if(result.knowledgeReview&&actor){result.knowledgeFreshness=await knowledgeFreshness(result.knowledgeReview,actor);result.reviewBodyChanged=draftHash(result.contentText)!==result.knowledgeReview.bodyHash;}
+  return result;
 }
 
 /* ------------------------------------------------------------------ */
@@ -328,6 +337,7 @@ async function persistAndSend(options: {
   references?: string[];
   templateAttribution?: TemplateAttribution;
   agentTaskId?:Types.ObjectId;
+  knowledgeReview?:KnowledgeReview;
   agentOutreachId?: Types.ObjectId;
 }): Promise<SendLetterResult> {
   const {
@@ -367,6 +377,7 @@ async function persistAndSend(options: {
     const payload = {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
+      ...(options.knowledgeReview ? {knowledgeReview:options.knowledgeReview} : {}),
       projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
@@ -439,6 +450,7 @@ async function persistAndSend(options: {
     letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
+      ...(options.knowledgeReview ? {knowledgeReview:options.knowledgeReview} : {}),
       projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail, subject: rendered.subject,
       senderAddress: sender.senderAddress,
@@ -487,6 +499,7 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
   // getCustomerByIdOrThrow 内部做归属校验：业务员不能给别人的客户发信
   const customer = await getCustomerByIdOrThrow(input.customerId, actor);
 
+  let knowledgeReview:KnowledgeReview|undefined;
   let agentOutreachId: Types.ObjectId | undefined;
   if (input.agentAnalysisId) {
     const analysis = await AgentCustomerAnalysis.findOne({ _id: input.agentAnalysisId, projectId: customer.projectId,
@@ -494,8 +507,12 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     if (!analysis) throw ApiError.notFound('首封草稿不存在或无权使用');
     if (input.replyToId) throw ApiError.badRequest('首封开发信不能作为邮件回复');
     agentOutreachId = analysis._id;
+    knowledgeReview=analysis.knowledgeReview;
   }
-  if(input.agentTaskId){const task=await AgentTask.findOne({_id:input.agentTaskId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id,status:{$in:input.saveAsDraft?['running','awaiting_review']:['awaiting_review']}});if(!task)throw ApiError.notFound('任务不存在或状态已变化');}
+  if(input.agentTaskId){const task=await AgentTask.findOne({_id:input.agentTaskId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id,status:{$in:input.saveAsDraft?['running','awaiting_review']:['awaiting_review']}});if(!task)throw ApiError.notFound('任务不存在或状态已变化');const linked=task.mailAnalysisId
+ ?await AgentMailThreadAnalysis.findOne({_id:task.mailAnalysisId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id})
+ :await AgentCustomerAnalysis.findOne({_id:task.analysisId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id});
+ knowledgeReview=linked?.knowledgeReview;}
   if((input.agentTaskId||agentOutreachId)&&await hasProtectedCustomerMail(customer.id,String(customer.projectId)))throw ApiError.conflict('客户已停止营销联系，不能继续发送或准备营销草稿');
   let templateAttribution: TemplateAttribution | undefined;
   if (input.templateId) {
@@ -518,7 +535,7 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     subjectTemplate: input.templateId ? input.subject : input.subject.trim(),
     contentTemplate: input.content,
     templateAttribution,
-    agentOutreachId,agentTaskId:input.agentTaskId?new Types.ObjectId(input.agentTaskId):undefined,
+    knowledgeReview,agentOutreachId,agentTaskId:input.agentTaskId?new Types.ObjectId(input.agentTaskId):undefined,
     recipientEmailOverride: input.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: input.saveAsDraft,
@@ -570,6 +587,7 @@ export async function resendLetter(
     contentTemplate,
     agentTaskId:original.agentTaskId,
     agentOutreachId: original.agentOutreachId,
+    knowledgeReview:original.knowledgeReview,
     recipientEmailOverride: input.recipientEmail ?? original.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: false,

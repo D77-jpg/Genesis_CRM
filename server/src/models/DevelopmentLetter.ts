@@ -1,3 +1,4 @@
+import type {KnowledgeReview} from '../services/agent/knowledge-types';
 /**
  * DevelopmentLetter 模型
  * ------------------------------------------------------------------
@@ -8,6 +9,7 @@ import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoos
 import { LETTER_STATUS, MAIL_CHANNEL, type LetterStatus, type MailChannel } from '../constants';
 
 export interface IDevelopmentLetter {
+  knowledgeReview?: KnowledgeReview;
   projectId: Types.ObjectId;
   /** 所属客户 */
   customerId: Types.ObjectId;
@@ -87,6 +89,7 @@ export type DevelopmentLetterModel = Model<IDevelopmentLetter>;
 
 const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
   {
+    knowledgeReview: {type: Schema.Types.Mixed},
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     customerId: {
       type: Schema.Types.ObjectId,

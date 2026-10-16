@@ -138,7 +138,7 @@ function actionLabel(toolName: string): string {
     save_mail_followup_record: '确认保存跟进记录',
   };
   return labels[toolName] ?? ({
-    search_product_knowledge:'查找产品资料',list_customer_attachments:'查看客户附件',read_customer_attachment:'读取附件正文',
+    search_product_knowledge:'检索项目知识',list_customer_attachments:'查看客户附件',read_customer_attachment:'读取附件正文',
   } as Record<string,string>)[toolName] ?? '处理业务资料';
 }
 
@@ -206,7 +206,7 @@ export function AgentPanel(): React.JSX.Element | null {
     : activeContext.type === 'mail' ? task.sourceMailId === activeContext.resourceId : true);
   const contextCounts = taskCounts(contextualTasks);
   const secondaryLabels: Record<string, string> = {
-    inbox: '来信与提醒', batches: '批量写信', knowledge: '产品资料', records: '操作记录',
+    inbox: '来信与提醒', batches: '批量写信', knowledge: '项目知识库', records: '操作记录',
     'customer-preview': '客户预览', 'customer-analysis': '客户分析', 'mail-analysis': '邮件助理',
   };
 
@@ -552,7 +552,7 @@ export function AgentPanel(): React.JSX.Element | null {
             {[
               { value: 'inbox', label: '来信与提醒', description: '查看客户来信、到期跟进，设置自动准备', icon: Inbox },
               { value: 'batches', label: '批量写信', description: '先选客户，再逐一准备专属开发信', icon: Layers3 },
-              { value: 'knowledge', label: '产品资料', description: '确认产品规格、供货条件，查看客户附件', icon: BookOpen },
+              { value: 'knowledge', label: '项目知识库', description: '查阅公司、产品和交易依据，查看客户附件', icon: BookOpen },
               { value: 'records', label: '操作记录', description: '回看资料查询、草稿及确认结果', icon: FileClock },
             ].map(item => <button type="button" key={item.value} onClick={() => setTab(item.value)} className="flex min-h-20 w-full items-center gap-3 rounded-md py-4 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-primary"><item.icon className="h-5 w-5" aria-hidden /></span>
