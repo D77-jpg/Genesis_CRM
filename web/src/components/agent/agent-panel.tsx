@@ -3,6 +3,14 @@ import { WorkspaceDrawer } from '@/components/common/workspace';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive,
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  BriefcaseBusiness,
+  Inbox,
+  Layers3,
+  ListChecks,
+  MessageSquare,
   Bot,
   BarChart3,
   Check,
@@ -19,7 +27,6 @@ import {
   Plus,
   Send,
   ShieldCheck,
-  Sparkles,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -42,14 +49,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { useEscapeKey, useIsMobile } from '@/hooks/use-ui';
 import { apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
 import { formatDateTime, formatRelative } from '@/lib/format';
+import { CUSTOMER_STATUS_LABEL } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
-import type { AgentAction, AgentRecordedWorkflow, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage } from '@/types';
+import type { AgentAction, AgentRecordedWorkflow, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage, Customer } from '@/types';
 import {AgentEventInbox} from './agent-event-inbox';
 import {AgentBatches} from './agent-batches';
 import {AgentKnowledge} from './agent-knowledge';
 import { AgentTasks, type AgentTask } from './agent-tasks';
+import { taskCounts } from '@/lib/agent-workflow';
 import { AgentMessageContent } from './agent-message-content';
 import { AgentActionDetail } from './agent-action-detail';
 import { ScratchpadCustomerPreviewView } from './scratchpad-customer-preview';
@@ -183,6 +192,54 @@ export function AgentPanel(): React.JSX.Element | null {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
+  const activeSession = sessions.find((session) => session.id === activeSessionId);
+  const activeContext = activeSession?.context ?? context;
+  const [customerInfo, setCustomerInfo] = React.useState<{ key: string; customer: Customer } | null>(null);
+  const [workflowTasks, setWorkflowTasks] = React.useState<AgentTask[]>([]);
+  const [tasksLoaded, setTasksLoaded] = React.useState(false);
+  const [tasksError, setTasksError] = React.useState('');
+  const contextKey = project?.id + ':' + (activeContext.type === 'customer' ? activeContext.resourceId : '');
+  const currentCustomer = customerInfo?.key === contextKey ? customerInfo.customer : null;
+  const counts = taskCounts(workflowTasks);
+  const contextualTasks = workflowTasks.filter(task => activeContext.type === 'customer'
+    ? task.customerId === activeContext.resourceId
+    : activeContext.type === 'mail' ? task.sourceMailId === activeContext.resourceId : true);
+  const contextCounts = taskCounts(contextualTasks);
+  const secondaryLabels: Record<string, string> = {
+    inbox: '来信与提醒', batches: '批量写信', knowledge: '产品资料', records: '操作记录',
+    'customer-preview': '客户预览', 'customer-analysis': '客户分析', 'mail-analysis': '邮件助理',
+  };
+
+  React.useEffect(() => {
+    if (!open || !user || !project) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    setWorkflowTasks([]);
+    setTasksLoaded(false);
+    setTasksError('');
+    const poll = async () => {
+      try {
+        const rows = await apiGet<AgentTask[]>('/agent/tasks');
+        if (active) { setWorkflowTasks(rows); setTasksLoaded(true); setTasksError(''); }
+      } catch (reason) {
+        if (active) setTasksError(toErrorMessage(reason, '待办暂未更新，请稍后重试'));
+      }
+      if (active) timer = setTimeout(() => void poll(), 3000);
+    };
+    void poll();
+    return () => { active = false; clearTimeout(timer); };
+  }, [open, project?.id, user?.id]);
+
+  React.useEffect(() => {
+    setCustomerInfo(null);
+    if (!open || activeContext.type !== 'customer') return;
+    let active = true;
+    void apiGet<Customer>('/customers/' + activeContext.resourceId)
+      .then(customer => { if (active) setCustomerInfo({ key: contextKey, customer }); })
+      .catch(() => { if (active) setCustomerInfo(null); });
+    return () => { active = false; };
+  }, [open, contextKey, activeContext.type]);
+
   const loadRecords = React.useCallback(async () => {
     const [nextUsage, nextActions] = await Promise.all([
       apiGet<AgentUsage>('/agent/usage'),
@@ -220,7 +277,7 @@ export function AgentPanel(): React.JSX.Element | null {
       const matching = nextSessions.find((item) => sameContext(item.context, context));
       setActiveSessionId(matching?.id ?? '');
     } catch (reason) {
-      setError(toErrorMessage(reason, 'Agent 面板加载失败'));
+      setError(toErrorMessage(reason, '销售助手暂时无法加载，请重试'));
     } finally {
       setLoading(false);
     }
@@ -245,8 +302,8 @@ export function AgentPanel(): React.JSX.Element | null {
   }, [activeSessionId]);
 
   React.useEffect(() => {
-    if (open) window.requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [open, activeSessionId]);
+    if (open && !isMobile) window.requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [open, activeSessionId, isMobile]);
 
   React.useEffect(() => {
     // Select a newly opened result once; manual tab changes must remain selected.
@@ -267,7 +324,7 @@ export function AgentPanel(): React.JSX.Element | null {
   }, [clearMailAnalysis, context, mailAnalysisDirection, mailAnalysisId, mailAnalysisMailId]);
 
   React.useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    scrollRef.current?.scrollTo({ top: messages.length || sending ? scrollRef.current.scrollHeight : 0, behavior: 'smooth' });
   }, [messages, sending]);
 
   React.useEffect(() => {
@@ -302,7 +359,7 @@ export function AgentPanel(): React.JSX.Element | null {
 
   function openRecordedWorkflow(workflow: AgentRecordedWorkflow) {
     setSelectedActionId(null);
-    if (workflow.kind === 'task') {setAutoOpenTaskId(null);setTab('tasks');return;}
+    if (workflow.kind === 'task') {setFocusTaskId(workflow.id);setAutoOpenTaskId(null);setTab('tasks');return;}
     if (workflow.kind === 'customer-analysis' && workflow.context?.type === 'customer') {
       navigate(`/customers/${workflow.context.resourceId}`);
       openCustomerAnalysis(workflow.id, workflow.context.resourceId);
@@ -410,15 +467,16 @@ export function AgentPanel(): React.JSX.Element | null {
   }
 
   async function startCustomerAnalysis() {
-    if (context.type !== 'customer' || analyzing) return;
+    if (activeContext.type !== 'customer' || analyzing) return;
     setAnalyzing(true);
     setError('');
     try {
       const analysis = await apiPost<{ id: string }>('/agent/customer-analyses', {
-        customerId: context.resourceId,
+        customerId: activeContext.resourceId,
         idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       });
-      openCustomerAnalysis(analysis.id, context.resourceId);
+      if (!sameContext(activeContext, context)) navigate('/customers/' + activeContext.resourceId);
+      openCustomerAnalysis(analysis.id, activeContext.resourceId);
       await loadRecords();
     } catch (reason) {
       setError(toErrorMessage(reason, '客户分析暂未完成，请重试'));
@@ -426,81 +484,92 @@ export function AgentPanel(): React.JSX.Element | null {
   }
 
   async function startMailAnalysis() {
-    if (context.type !== 'mail' || analyzing) return;
+    if (activeContext.type !== 'mail' || analyzing) return;
     setAnalyzing(true); setError('');
     try {
       const analysis = await apiPost<{ id: string }>('/agent/mail-analyses', {
-        mailId: context.resourceId, direction: context.direction,
+        mailId: activeContext.resourceId, direction: activeContext.direction,
         idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       });
-      openMailAnalysis(analysis.id, context.resourceId, context.direction); await loadRecords();
+      if (!sameContext(activeContext, context)) navigate('/mail?id=' + activeContext.resourceId + '&direction=' + activeContext.direction);
+      openMailAnalysis(analysis.id, activeContext.resourceId, activeContext.direction); await loadRecords();
     } catch (reason) { setError(toErrorMessage(reason, '邮件分析暂未完成，请重试')); }
     finally { setAnalyzing(false); }
   }
 
   if (!open || !user || !project) return null;
 
-  const activeSession = sessions.find((session) => session.id === activeSessionId);
-  const activeContext = activeSession?.context ?? context;
-
   return (
     <WorkspaceDrawer
-      title="业务 Agent"
+      title="销售助手"
       onClose={() => setOpen(false)}
       className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[min(520px,100vw)] lg:w-[560px]"
     >
-      <div className="flex min-h-20 shrink-0 items-center gap-3 border-b px-4 py-3">
+      <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4 py-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Bot className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h2 className="text-base font-semibold leading-6">业务 Agent</h2>
+            <h2 className="text-base font-semibold leading-6">销售助手</h2>
             <span className="inline-flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
               {status?.available ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" aria-hidden /> : <CircleOff className="h-3.5 w-3.5 text-amber-600" aria-hidden />}
-              {status?.mode === 'mock' ? '演示模式' : status?.available ? 'AI 已启用' : 'AI 未启用'}
+              {!status ? '正在连接…' : status.mode === 'mock' ? '演示模式' : status.available ? 'AI 已启用' : 'AI 暂不可用'}
             </span>
           </div>
           <p className="mt-1 truncate text-xs leading-5 text-muted-foreground">{project.name} · {contextLabel(activeContext)}</p>
         </div>
         {(customerPreviewId||customerAnalysisId||mailAnalysisId)&&<DropdownMenu>
-          <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" aria-label="查看最近分析"><FileClock className="h-4 w-4" aria-hidden /></Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label="查看最近分析"><FileClock className="h-4 w-4" aria-hidden /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {customerPreviewId&&<DropdownMenuItem onSelect={()=>setTab('customer-preview')}>客户预览</DropdownMenuItem>}
             {customerAnalysisId&&<DropdownMenuItem onSelect={()=>setTab('customer-analysis')}>客户分析</DropdownMenuItem>}
             {mailAnalysisId&&<DropdownMenuItem onSelect={()=>setTab('mail-analysis')}>邮件助理</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>}
-        <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="关闭业务 Agent">
+        <Button type="button" variant="ghost" size="icon" className="h-11 w-11" onClick={() => setOpen(false)} aria-label="关闭销售助手">
           <X className="h-4 w-4" />
         </Button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 border-b px-4 py-3">
-          <TabsList aria-label="助手功能" className="grid h-auto w-full max-w-none grid-cols-3 gap-2 overflow-visible p-1.5 [&>button]:h-auto [&>button]:min-h-11 [&>button]:px-2 [&>button]:py-2 [&>button]:leading-5">
-            <TabsTrigger value="chat">对话</TabsTrigger>
-            <TabsTrigger value="inbox">收件箱</TabsTrigger>
-            <TabsTrigger value="batches">批量写信</TabsTrigger>
-            <TabsTrigger value="knowledge">产品资料</TabsTrigger>
-            <TabsTrigger value="tasks">任务</TabsTrigger>
-            <TabsTrigger value="records">操作记录</TabsTrigger>
-            {customerPreviewId && tab==='customer-preview' && <TabsTrigger className="col-span-3" value="customer-preview">客户预览</TabsTrigger>}
-            {customerAnalysisId && tab==='customer-analysis' && <TabsTrigger className="col-span-3" value="customer-analysis">客户分析</TabsTrigger>}
-            {mailAnalysisId && tab==='mail-analysis' && <TabsTrigger className="col-span-3" value="mail-analysis">邮件助理</TabsTrigger>}
+        <div className="shrink-0 border-b px-4 py-2">
+          <TabsList aria-label="助手功能" className="grid w-full max-w-none grid-cols-3 gap-2 overflow-visible bg-transparent p-0 [&>button]:min-h-11 [&>button]:px-2 [&>button]:py-2 [&>button]:leading-5 [&>button]:data-[state=active]:bg-primary/10 [&>button]:data-[state=active]:shadow-none">
+            <TabsTrigger value="chat"><MessageSquare className="h-4 w-4" aria-hidden />对话</TabsTrigger>
+            <TabsTrigger value="tasks" onClick={() => { setFocusTaskId(null); setAutoOpenTaskId(null); }}><ListChecks className="h-4 w-4" aria-hidden />待办{tasksLoaded && counts.review + counts.attention > 0 && <span className="rounded-full bg-primary/10 px-1.5 text-xs tabular-nums">{counts.review + counts.attention}</span>}</TabsTrigger>
+            <TabsTrigger value={secondaryLabels[tab] ? tab : 'tools'} onClick={() => setTab('tools')}><BriefcaseBusiness className="h-4 w-4" aria-hidden />工具</TabsTrigger>
           </TabsList>
         </div>
+        {secondaryLabels[tab] && <div className="flex shrink-0 items-center gap-2 border-b px-4 py-1.5">
+          <Button variant="ghost" className="min-h-11 px-2 text-muted-foreground" onClick={() => setTab(['customer-preview','customer-analysis','mail-analysis'].includes(tab) ? 'chat' : 'tools')}><ArrowLeft className="h-4 w-4" aria-hidden />返回{['customer-preview','customer-analysis','mail-analysis'].includes(tab) ? '对话' : '工具'}</Button>
+          <span className="text-sm font-medium">{secondaryLabels[tab]}</span>
+        </div>}
+
+        <TabsContent value="tools" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          <h3 className="text-base font-semibold">更多销售工具</h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">需要审核的草稿在待办中，历史操作可以随时回看。</p>
+          <div className="mt-5 divide-y">
+            {[
+              { value: 'inbox', label: '来信与提醒', description: '查看客户来信、到期跟进，设置自动准备', icon: Inbox },
+              { value: 'batches', label: '批量写信', description: '先选客户，再逐一准备专属开发信', icon: Layers3 },
+              { value: 'knowledge', label: '产品资料', description: '确认产品规格、供货条件，查看客户附件', icon: BookOpen },
+              { value: 'records', label: '操作记录', description: '回看资料查询、草稿及确认结果', icon: FileClock },
+            ].map(item => <button type="button" key={item.value} onClick={() => setTab(item.value)} className="flex min-h-20 w-full items-center gap-3 rounded-md py-4 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-primary"><item.icon className="h-5 w-5" aria-hidden /></span>
+              <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{item.label}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{item.description}</span></span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            </button>)}
+          </div>
+        </TabsContent>
 
         <TabsContent value="chat" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0">
           <div className="flex shrink-0 items-center gap-2 border-b px-4 py-2">
             <DropdownMenu open={sessionListOpen} onOpenChange={setSessionListOpen}>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" className="h-auto min-h-11 min-w-0 flex-1 justify-between gap-3 px-3 text-left" aria-label="选择 Agent 会话">
+                <Button type="button" variant="ghost" className="h-11 min-w-0 flex-1 justify-between gap-3 px-2 text-left" aria-label="选择会话">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{activeSession?.title ?? '新会话'}</span>
-                    <span className="mt-0.5 block truncate text-[11px] font-normal text-muted-foreground">
-                      {activeSession ? sessionContextLabel(activeSession) : `${contextLabel(context)} · 输入第一条问题后自动保存`}
-                    </span>
+
                   </span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                 </Button>
@@ -531,7 +600,7 @@ export function AgentPanel(): React.JSX.Element | null {
             </DropdownMenu>
             <DropdownMenu open={sessionActionsOpen} onOpenChange={setSessionActionsOpen}>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="icon" className="h-11 w-11" disabled={!activeSession} aria-label="当前会话操作">
+                <Button type="button" variant="ghost" size="icon" className="h-11 w-11" disabled={!activeSession} aria-label="当前会话操作">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -544,27 +613,36 @@ export function AgentPanel(): React.JSX.Element | null {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button type="button" variant="outline" size="icon" className="h-11 w-11" onClick={startNewSession} aria-label="开始新会话">
+            <Button type="button" variant="ghost" size="icon" className="h-11 w-11" onClick={startNewSession} aria-label="开始新会话">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="flex shrink-0 items-start gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-xs text-muted-foreground">
-            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-            可指令准备首封开发信并打开写信页面；发送由业务员操作，成功后自动记录跟进。
-          </div>
+          {activeContext.type === 'customer' && <div aria-label="当前会话客户" className="shrink-0 border-b bg-muted/30 px-4 py-3">
+            <p className="break-words text-sm font-semibold leading-6">{currentCustomer?.company || currentCustomer?.name || activeSession?.contextName || '客户资料'}</p>
+            {currentCustomer && <p className="mt-0.5 break-words text-xs leading-5 text-muted-foreground">{[currentCustomer.company && currentCustomer.name !== currentCustomer.company ? currentCustomer.name : '', currentCustomer.country, CUSTOMER_STATUS_LABEL[currentCustomer.status], currentCustomer.email ? '已有联系邮箱' : '尚未填写邮箱'].filter(Boolean).join(' · ')}</p>}
+          </div>}
+          {(contextCounts.review > 0 || contextCounts.attention > 0 || contextCounts.active > 0) && <button type="button" onClick={() => { setFocusTaskId(contextualTasks.find(task => task.status === 'awaiting_review')?.id ?? contextualTasks[0]?.id ?? null); setAutoOpenTaskId(null); setTab('tasks'); }} className="flex min-h-12 shrink-0 items-center gap-2 border-b bg-primary/5 px-4 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+            <ListChecks className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span className="min-w-0 flex-1 leading-5"><span className="mr-1 text-xs text-muted-foreground">{activeContext.type === 'customer' ? '该客户 ·' : activeContext.type === 'mail' ? '该邮件 ·' : '本项目 ·'}</span>{contextCounts.review > 0 ? contextCounts.review + ' 封草稿待你审核' : contextCounts.attention > 0 ? contextCounts.attention + ' 项任务需要你处理' : contextCounts.active + ' 项任务正在准备'}{contextCounts.review > 0 && contextCounts.attention > 0 && <span className="ml-2 text-xs text-muted-foreground">另有 {contextCounts.attention} 项需处理</span>}</span>
+            <span className="shrink-0 text-xs text-primary">{contextCounts.review ? '去审核' : '查看'}</span><ChevronRight className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+          </button>}
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
             {loading && messages.length === 0 && <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在加载会话…</div>}
             {!loading && messages.length === 0 && (
-              <div className="space-y-5 py-8 text-center">
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></span>
-                <div><p className="font-medium">从当前客户或工作开始</p><p className="mt-1 text-sm text-muted-foreground">Agent 可检索并分析客户、准备开发信草稿，再交给你审核发送。</p></div>
-                {context.type === 'customer' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startCustomerAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}<span><span className="block">分析客户并生成英文邮件草稿</span><span className="mt-0.5 block text-xs font-normal opacity-80">汇总档案、时间线、邮件、跟进与报价</span></span></Button>}
-                {context.type === 'mail' && <Button type="button" className="h-auto w-full justify-start py-3 text-left" onClick={() => void startMailAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}<span><span className="block">启动邮件会话助理</span><span className="mt-0.5 block text-xs font-normal opacity-80">整理客户需求、准备回复并给出跟进建议</span></span></Button>}
-                <div className="space-y-2">
-                  {suggestions(context).filter((item) => context.type !== 'customer' || item !== '分析当前客户并建议下一步').map((item) => <Button key={item} type="button" variant="outline" className="h-auto w-full justify-start whitespace-normal py-2 text-left" onClick={() => void sendMessage(item)}>{item}</Button>)}
+              <div className="space-y-5 py-3">
+                <div>
+                  <p className="text-lg font-semibold leading-7">{activeContext.type === 'customer' ? '这位客户，下一步怎么推进？' : activeContext.type === 'mail' ? '一起处理这封客户来信' : '今天想先推进哪项工作？'}</p>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{activeContext.type === 'customer' ? '结合客户资料写信、梳理跟进，或直接告诉我你的需求。' : activeContext.type === 'mail' ? '整理往来内容与客户需求，再准备合适的回复。' : '找客户、看跟进、准备开发信，用一句话交给助手。'}</p>
                 </div>
+                {activeContext.type === 'customer' && <Button type="button" className="h-auto min-h-12 w-full justify-between whitespace-normal px-4 py-3 text-left" onClick={() => void sendMessage('帮我给这个客户写第一封开发信')} disabled={sending}><span className="flex items-center gap-2"><Send className="h-4 w-4" aria-hidden />准备首封开发信</span><ArrowRight className="h-4 w-4" aria-hidden /></Button>}
+                {activeContext.type === 'mail' && <Button type="button" className="h-auto min-h-12 w-full justify-between whitespace-normal px-4 py-3 text-left" onClick={() => void startMailAnalysis()} disabled={analyzing}><span className="flex items-center gap-2">{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}整理来信并准备回复</span><ArrowRight className="h-4 w-4" aria-hidden /></Button>}
+                <div className="divide-y">
+                  {suggestions(activeContext).filter(item => activeContext.type !== 'customer' || !item.includes('第一封')).map(item => <Button key={item} type="button" variant="ghost" className="h-auto min-h-12 w-full justify-between gap-3 whitespace-normal rounded-none px-1 py-3 text-left font-normal leading-6" disabled={sending} onClick={() => void sendMessage(item)}><span>{item}</span><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /></Button>)}
+                  {activeContext.type === 'customer' && <Button type="button" variant="ghost" className="h-auto min-h-12 w-full justify-between gap-3 whitespace-normal rounded-none px-1 py-3 text-left font-normal leading-6" onClick={() => void startCustomerAnalysis()} disabled={analyzing}><span className="flex items-center gap-2">{analyzing && <Loader2 className="h-4 w-4 animate-spin" />}分析客户并起草邮件</span><BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /></Button>}
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">草稿准备好后可打开写信页面，由你审核发送。</p>
               </div>
             )}
             {messages.map((message) => (
@@ -572,7 +650,7 @@ export function AgentPanel(): React.JSX.Element | null {
                 {message.role === 'assistant' && <p className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">AI 生成 · 请核对关键信息</p>}
                 {message.role === 'assistant' ? <AgentMessageContent content={message.content} /> : <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>}
                 {message.batchId&&<Button variant="outline" className="mt-3 min-h-11" onClick={()=>setTab('batches')}>查看批量计划</Button>}
-                {message.taskId && <Button variant="outline" className="mt-3 min-h-11" onClick={()=>{setAutoOpenTaskId(null);setTab('tasks');}}>查看任务进度</Button>}
+                {message.taskId && <Button variant="outline" className="mt-3 min-h-11" onClick={()=>showTask(message.taskId!)}>查看任务进度</Button>}
                 {message.role === 'assistant' && message.uiAction && <Button type="button" className="mt-3" onClick={() => openOutreachComposer(message.uiAction!)}>打开首封开发信</Button>}
               </article>
             ))}
@@ -581,8 +659,8 @@ export function AgentPanel(): React.JSX.Element | null {
 
           {error && <p role="alert" className="mx-4 mb-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
           <form className="shrink-0 border-t p-3" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
-            <label htmlFor="agent-message" className="sr-only">向业务 Agent 提问</label>
-            <div className="flex items-end gap-2">
+            <label htmlFor="agent-message" className="sr-only">向销售助手提问</label>
+            <div className="rounded-xl border bg-background p-3 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">
               <Textarea
                 ref={textareaRef}
                 id="agent-message"
@@ -597,14 +675,14 @@ export function AgentPanel(): React.JSX.Element | null {
                 maxLength={8000}
                 rows={2}
                 disabled={sending}
-                placeholder={`询问${contextLabel(activeContext)}…`}
-                className="min-h-11 max-h-32 resize-none text-base sm:text-sm"
+                placeholder={activeContext.type === 'customer' ? '例如：结合客户需求，准备一封英文跟进信…' : '告诉助手，你想完成什么…'}
+                className="min-h-12 max-h-32 resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 sm:text-sm"
               />
-              <Button type="submit" size="icon" className="h-11 w-11 shrink-0" disabled={!draft.trim() || sending} aria-label="发送消息">
+              <div className="mt-2 flex items-center justify-between gap-2"><span className="flex items-center gap-1.5 text-xs leading-5 text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />邮件由你审核发送</span><Button type="submit" size="icon" className="h-11 w-11 shrink-0" disabled={!draft.trim() || sending} aria-label="发送消息">
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+              </Button></div>
             </div>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">Enter 发送 · Shift + Enter 换行</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">Enter 发送 · Shift + Enter 换行</p>
           </form>
         </TabsContent>
 
@@ -615,7 +693,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <TabsContent value="inbox" className="m-0 flex min-h-0 flex-1 flex-col"><AgentEventInbox key={`${project.id}:${user.id}`} onTask={showTask}/></TabsContent>
         <TabsContent value="batches" className="m-0 flex min-h-0 flex-1 flex-col"><AgentBatches key={`${project.id}:${user.id}`} selectedIds={selectedBatchIds} onClearSelection={clearBatchSelection} onTask={showTask} onDraft={openTaskDraft}/></TabsContent>
         <TabsContent value="knowledge" className="m-0 flex min-h-0 flex-1 flex-col"><AgentKnowledge key={`${project.id}:${user.id}`} admin={user.role==='admin'} customerId={context.type==='customer'?context.resourceId:undefined}/></TabsContent>
-        <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks key={`${project.id}:${user.id}`} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft} onMailAnalysis={showTaskMail} focusTaskId={focusTaskId}/></TabsContent>
+        <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks key={`${project.id}:${user.id}`} tasks={workflowTasks} loaded={tasksLoaded} loadError={tasksError} onTaskUpdated={updated => setWorkflowTasks(rows => rows.map(task => task.id === updated.id ? updated : task))} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft} onMailAnalysis={showTaskMail} focusTaskId={focusTaskId}/></TabsContent>
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-2 gap-3">
