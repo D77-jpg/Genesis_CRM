@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "s0-fixtures-v1",
+  "frozenAt": "2026-10-17",
+  "baseCommit": "1c78bbeb1854881d19154d6e25587e2a73c2098e",
+  "fictional": true,
+  "holdoutPolicy": "Only baseline and final quality evaluation; never parameter/model selection. Labels were curated before this freeze; original trial reports superseded. New tuning exposure requires a new independent holdout.",
+  "sha256": {
+    "corpus.json": "3fb85a80aff72be82cd1d357f20d36c18390239846b6a49d709ce82351048b5b",
+    "cases.dev.json": "e53a451943185312ea7ae4cb1e68a130c253eb94a5c769ba64ccc365f61b0ecf",
+    "cases.holdout.json": "c3584e8dfc9f97d7f2c07d6525fc95803c0c86f75a08ede3fba43b449c655750",
+    "probe-set.json": "756fa51b617626463ea365eee9e288899f430e680fdcff3f9080b1ec4f3fa6f1"
+  }
+}

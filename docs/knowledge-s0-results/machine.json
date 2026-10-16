@@ -1,0 +1,30 @@
+{
+  "profile": "win11-ultra7-cpu4-s0-v1",
+  "capturedAtUTC": "2026-10-16T17:49:42.5876519Z",
+  "os": {
+    "Caption": "Microsoft Windows 11 家庭版 中文版",
+    "Version": "10.0.26200",
+    "BuildNumber": "26200"
+  },
+  "cpu": {
+    "Name": "Intel(R) Core(TM) Ultra 7 265F",
+    "NumberOfCores": 20,
+    "NumberOfLogicalProcessors": 20
+  },
+  "ramBytes": 33984950272,
+  "gpuNames": [
+    "NVIDIA GeForce RTX 5060 Ti"
+  ],
+  "gpuUsed": false,
+  "inferenceProvider": "CPUExecutionProvider",
+  "intraOpThreads": 4,
+  "interOpThreads": 1,
+  "node": "v24.19.0",
+  "python": "Python 3.12.14",
+  "target": {
+    "distinctChunks": 10000,
+    "concurrency": 2,
+    "warmRetrievalIncludingQueryEmbeddingAndRerankP95Ms": 5000,
+    "status": "not_yet_measured_end_to_end"
+  }
+}
