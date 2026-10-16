@@ -73,13 +73,13 @@ export function Header({ onOpenMobileNav }: { onOpenMobileNav: () => void }): Re
             size="icon"
             className="h-10 w-10 sm:h-9 sm:w-9"
             onClick={toggleAgent}
-            aria-label={agentOpen ? '关闭业务 Agent' : '打开业务 Agent'}
+            aria-label={agentOpen ? '关闭销售助手' : '打开销售助手'}
             aria-expanded={agentOpen}
           >
             <Bot className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">业务 Agent · Ctrl/Cmd + Shift + A</TooltipContent>
+        <TooltipContent side="bottom">销售助手 · Ctrl/Cmd + Shift + A</TooltipContent>
       </Tooltip>
 
       <Tooltip>

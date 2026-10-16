@@ -20,6 +20,7 @@ export function AgentBatches({selectedIds,onClearSelection,onTask,onDraft}:{sele
     <h3 className="text-base font-semibold leading-6">批量准备开发信</h3>
     <p className="text-sm leading-6 text-muted-foreground">先确认客户名单，再逐一生成专属草稿。每批最多 20 位，发送前由你审核。</p>
    </header>
+   <ol className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs leading-5 text-muted-foreground" aria-label="批量写信流程"><li><span className="mr-1 font-semibold text-primary">1</span>选择客户</li><li><span className="mr-1 font-semibold text-primary">2</span>确认名单并起草</li><li><span className="mr-1 font-semibold text-primary">3</span>逐封审核发送</li></ol>
    <div className="my-5 space-y-5 border-y py-5">
     {selectedIds.length ? (
      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">

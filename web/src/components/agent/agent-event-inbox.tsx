@@ -10,9 +10,9 @@ export function AgentEventInbox({onTask}:{onTask:(id:string)=>void}){
  async function save(){if(!rule)return;setBusy(true);setError('');try{const result=await apiPut<Rule>('/agent/automation-rule',{expectedVersion:rule.version,enabled:rule.enabled,inbound:rule.inbound,due:rule.due,sent:rule.sent,dailyLimit:rule.dailyLimit,tokenBudget:rule.tokenBudget});setRule(result);setDirty(false);}catch(e){setError(toErrorMessage(e,'事件规则保存失败'));}finally{setBusy(false);}}
  return (
   <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-   <header className="space-y-2"><h3 className="text-base font-semibold leading-6">收件箱与自动准备</h3><p className="text-sm leading-6 text-muted-foreground">新来信和到期跟进会汇集到这里。开启自动准备后，助手为你整理资料、起草邮件，发送仍由你确认。</p></header>
+   <header className="space-y-2"><h3 className="text-base font-semibold leading-6">来信与跟进提醒</h3><p className="text-sm leading-6 text-muted-foreground">集中查看客户新来信与到期跟进。已准备的草稿可以从待办打开审核。</p></header>
    {error&&<p role="alert" className="my-4 text-sm leading-6 text-destructive">{error}</p>}
-   {rule&&<section className="my-5 space-y-5 border-y py-5">
+   {rule&&<details className="my-5 rounded-lg border p-3"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium"><span>自动准备设置</span><span className="text-xs font-normal text-muted-foreground">{dirty?'有未保存修改':rule.enabled?'已开启 · 点击管理':'未开启 · 点击设置'}</span></summary><section className="mt-4 space-y-5 border-t pt-4">
     <div className="space-y-2"><h4 className="text-sm font-semibold">我的自动准备规则</h4><label className="flex min-h-11 cursor-pointer items-start gap-3 py-2 text-sm leading-6">
      <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-primary" checked={rule.enabled} onChange={e=>patch({enabled:e.target.checked})}/>
      <span>开启自动准备<span className="mt-1 block text-xs leading-5 text-muted-foreground">{dirty?'有修改尚未保存':rule.enabled?'已开启':'当前已关闭'}</span></span>
@@ -27,7 +27,7 @@ export function AgentEventInbox({onTask}:{onTask:(id:string)=>void}){
     <details className="rounded-lg border p-3 text-sm"><summary className="cursor-pointer leading-6">高级设置</summary><div className="mt-4 space-y-2"><Label htmlFor="event-token-budget">每项任务的 AI 用量上限</Label><Input id="event-token-budget" type="number" min={10000} max={60000} step={1000} value={rule.tokenBudget} onChange={e=>patch({tokenBudget:Number(e.target.value)})}/><p className="text-xs leading-5 text-muted-foreground">以 tokens 计量，范围为 10,000–60,000。重试会继续使用同一任务的额度。</p></div></details>
     <p className="text-sm leading-6 text-muted-foreground">仅处理当前账号收到的邮件及本人负责客户的事项。开启前的历史邮件不会重复处理；未关联客户的来信需先由管理员确认。关闭或修改规则会停止未完成的自动任务，已有草稿保留。</p>
     <div className="flex flex-wrap items-center gap-3"><Button className="min-h-11" disabled={busy||!dirty||rule.dailyLimit<1||rule.dailyLimit>20||rule.tokenBudget<10000||rule.tokenBudget>60000} onClick={()=>void save()}>{busy?'正在保存…':'保存规则'}</Button>{dirty&&<span className="text-xs leading-5 text-muted-foreground">保存后生效</span>}</div>
-   </section>}
+   </section></details>}
    <h4 className="mb-3 text-sm font-semibold">最近事项</h4>
    {!events.length&&<p className="py-5 text-sm leading-6 text-muted-foreground">暂无新事项。开启规则后，新来信和到期跟进会显示在这里。</p>}
    <ol className="divide-y">{events.map(e=><li key={e.id} className="space-y-3 py-4">
