@@ -1,3 +1,4 @@
+import {KnowledgeReviewPanel} from '@/components/agent/knowledge-review';
 /**
  * 发送开发信弹窗
  * ------------------------------------------------------------------
@@ -432,6 +433,7 @@ export function SendLetterDialog({
               </AlertDescription>
             </Alert>
           ) : null}
+          <KnowledgeReviewPanel letterId={letter?.id} analysisId={initialDraft?.analysisId}/>
           <div className="space-y-1"><Label htmlFor="scheduled-mail-at">定时发送（留空立即发送，使用本地时间）</Label><Input id="scheduled-mail-at" type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} disabled={sending} /></div>
 
           {serverError ? (

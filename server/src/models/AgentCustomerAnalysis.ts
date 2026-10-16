@@ -1,3 +1,4 @@
+import type {KnowledgeReview} from '../services/agent/knowledge-types';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 
 export type AgentAnalysisSourceKind = 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation' | 'knowledge' | 'attachment';
@@ -17,6 +18,7 @@ export interface AgentAnalysisClaim {
 }
 
 export interface IAgentCustomerAnalysis {
+  knowledgeReview?: KnowledgeReview;
   projectId: Types.ObjectId;
   userId: Types.ObjectId;
   customerId: Types.ObjectId;
@@ -63,6 +65,7 @@ const claimSchema = new Schema<AgentAnalysisClaim>({
 }, { _id: false });
 
 const schema = new Schema<IAgentCustomerAnalysis>({
+  knowledgeReview: {type: Schema.Types.Mixed},
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },

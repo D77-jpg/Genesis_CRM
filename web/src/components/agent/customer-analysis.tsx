@@ -1,3 +1,4 @@
+import {KnowledgeReviewPanel} from './knowledge-review';
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -164,6 +165,7 @@ export function CustomerAnalysisView({ analysisId, onRecordsChanged }: { analysi
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <KnowledgeReviewPanel review={analysis.knowledgeReview} freshness={analysis.knowledgeFreshness} />
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div><h3 className="text-sm font-semibold">客户分析与邮件草稿</h3><p className="mt-1 text-xs text-muted-foreground">事实、缺口与建议分别展示；每一项均可追溯到 CRM 来源。</p></div>
         <Badge variant="outline">AI 生成 · 请核对</Badge>
