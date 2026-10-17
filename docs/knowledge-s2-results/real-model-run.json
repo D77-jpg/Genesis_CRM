@@ -1,0 +1,584 @@
+{
+  "schemaVersion": 1,
+  "fictional": true,
+  "realEmbedding": true,
+  "mockedLLM": true,
+  "model": {
+    "id": "fd672e1742304ce51c56b31794a1deeebb78c27f53ff85d218f5d6e1f5868306",
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+    "weightHash": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f",
+    "dimension": 384,
+    "adapter": "genesis-semantic-s2.1",
+    "maxTokens": 128
+  },
+  "samples": [
+    {
+      "command": "upsert",
+      "elapsedMs": 945.14,
+      "rssMiB": 445.79,
+      "embedded": 3,
+      "reused": 0
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 645.24,
+      "rssMiB": 306.42
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 617.35,
+      "rssMiB": 306.56,
+      "embedded": 0,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 669.16,
+      "rssMiB": 306.8
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 934.99,
+      "rssMiB": 445.2,
+      "embedded": 1,
+      "reused": 0
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 628.28,
+      "rssMiB": 306.88
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 986.04,
+      "rssMiB": 446.25,
+      "embedded": 1,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 614.85,
+      "rssMiB": 306.86
+    },
+    {
+      "command": "query",
+      "elapsedMs": 891.88,
+      "rssMiB": 444.57
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 657.55,
+      "rssMiB": 306.9,
+      "embedded": 0,
+      "reused": 4
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 669.23,
+      "rssMiB": 306.59
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 904.74,
+      "rssMiB": 444.75,
+      "embedded": 1,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 663.81,
+      "rssMiB": 306.67
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 717.42,
+      "rssMiB": 306.41,
+      "embedded": 0,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 694.88,
+      "rssMiB": 306.53
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 922.15,
+      "rssMiB": 442.77,
+      "embedded": 1,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 617.91,
+      "rssMiB": 306.76
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 632.32,
+      "rssMiB": 306.69,
+      "embedded": 0,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 622.82,
+      "rssMiB": 306.6
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 917.11,
+      "rssMiB": 444.28,
+      "embedded": 1,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 693.75,
+      "rssMiB": 306.7
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 734.84,
+      "rssMiB": 306.61,
+      "embedded": 0,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 671.02,
+      "rssMiB": 307
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 910.46,
+      "rssMiB": 444.46,
+      "embedded": 1,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 618.93,
+      "rssMiB": 306.68
+    },
+    {
+      "command": "query",
+      "elapsedMs": 903.53,
+      "rssMiB": 444.54
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 630.55,
+      "rssMiB": 306.7,
+      "embedded": 0,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 641.53,
+      "rssMiB": 306.64
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 750.96,
+      "rssMiB": 306.73,
+      "embedded": 0,
+      "reused": 3
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 651.94,
+      "rssMiB": 306.67
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 932.41,
+      "rssMiB": 454.15,
+      "embedded": 16,
+      "reused": 0
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 937.67,
+      "rssMiB": 449.6,
+      "embedded": 6,
+      "reused": 0
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 617.37,
+      "rssMiB": 306.79
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 732.72,
+      "rssMiB": 307.01,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 652.18,
+      "rssMiB": 306.79,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 624.37,
+      "rssMiB": 306.52,
+      "embedded": 0,
+      "reused": 6
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 648.59,
+      "rssMiB": 306.7
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 619.93,
+      "rssMiB": 306.52,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 624.55,
+      "rssMiB": 306.76,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 612.67,
+      "rssMiB": 306.52,
+      "embedded": 0,
+      "reused": 6
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 614.73,
+      "rssMiB": 306.68
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 658.04,
+      "rssMiB": 306.69,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 711.55,
+      "rssMiB": 306.81,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 711.19,
+      "rssMiB": 306.74,
+      "embedded": 0,
+      "reused": 6
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 606.82,
+      "rssMiB": 306.75
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 616.28,
+      "rssMiB": 306.76,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 621.89,
+      "rssMiB": 306.48,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 625.24,
+      "rssMiB": 306.79,
+      "embedded": 0,
+      "reused": 6
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 629.16,
+      "rssMiB": 306.64
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 632.93,
+      "rssMiB": 306.79
+    },
+    {
+      "command": "cleanup",
+      "elapsedMs": 622.99,
+      "rssMiB": 306.81
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 965.13,
+      "rssMiB": 453.04,
+      "embedded": 16,
+      "reused": 0
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 943.67,
+      "rssMiB": 453.5,
+      "embedded": 16,
+      "reused": 0
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 921.46,
+      "rssMiB": 447.43,
+      "embedded": 6,
+      "reused": 0
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 602.8,
+      "rssMiB": 306.63
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 616.2,
+      "rssMiB": 307.01,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 612.81,
+      "rssMiB": 306.61,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 606.07,
+      "rssMiB": 306.67,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 613.75,
+      "rssMiB": 306.93,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 627.63,
+      "rssMiB": 306.82,
+      "embedded": 0,
+      "reused": 6
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 611.29,
+      "rssMiB": 306.43
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 623.65,
+      "rssMiB": 306.85,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 624.5,
+      "rssMiB": 306.67,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 885.46,
+      "rssMiB": 446.03,
+      "embedded": 1,
+      "reused": 6
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 604.92,
+      "rssMiB": 306.64
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 709.98,
+      "rssMiB": 306.7,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 632.92,
+      "rssMiB": 306.56,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 1193.96,
+      "rssMiB": 451.43,
+      "embedded": 4,
+      "reused": 7
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 670.46,
+      "rssMiB": 306.74
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 944.37,
+      "rssMiB": 445.41,
+      "embedded": 2,
+      "reused": 0
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 654.25,
+      "rssMiB": 306.56
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 974.54,
+      "rssMiB": 443.33,
+      "embedded": 1,
+      "reused": 1
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 629.5,
+      "rssMiB": 306.53
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 632.98,
+      "rssMiB": 306.77,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 660.07,
+      "rssMiB": 306.74,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 656.11,
+      "rssMiB": 306.83,
+      "embedded": 0,
+      "reused": 11
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 608.16,
+      "rssMiB": 306.95
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 631.07,
+      "rssMiB": 306.62,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 631.65,
+      "rssMiB": 306.66,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 647.53,
+      "rssMiB": 306.69,
+      "embedded": 0,
+      "reused": 11
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 628.32,
+      "rssMiB": 306.69
+    },
+    {
+      "command": "cleanup",
+      "elapsedMs": 611.12,
+      "rssMiB": 307.08
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 611.5,
+      "rssMiB": 306.69,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 616.58,
+      "rssMiB": 306.82,
+      "embedded": 0,
+      "reused": 16
+    },
+    {
+      "command": "upsert",
+      "elapsedMs": 927.98,
+      "rssMiB": 444.2,
+      "embedded": 1,
+      "reused": 11
+    },
+    {
+      "command": "verify",
+      "elapsedMs": 624.58,
+      "rssMiB": 306.59
+    }
+  ],
+  "maxRssMiB": 454.15,
+  "generatedAt": "2026-10-17T12:02:44.107Z",
+  "limitations": [
+    "Small independent engineering fixtures; not the S3 holdout quality gate",
+    "Dimension migration simulates an incompatible old manifest, not a second real model"
+  ],
+  "sampledRssDefinition": "RSS sampled after tracked upsert/verify calls, not peak whole-machine memory; not every query is instrumented",
+  "externalLLM": "not called; AI_PROVIDER=mock for isolation; the audit test supplies a deliberately fictional model answer",
+  "faultInjection": "test 13 runtime unavailable and test 22 cleanup interruption are explicit test doubles; subsequent operations use real local runtime",
+  "standaloneVectorCosines": {
+    "crossLanguage": 0.9037699468681191,
+    "unrelated": 0.2631598314858612
+  },
+  "freeQueryDiagnostic": {
+    "query": "尼龙拉链旅行收纳袋",
+    "targetRetrieved": false,
+    "fixtureContext": "35 similar recovery fixture publications also present; cause not isolated",
+    "contractTestUsesExplicitAuthorizedKnowledgeSelection": true,
+    "isQualityGate": false
+  },
+  "testMachine": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.14",
+    "logicalCpus": 20,
+    "node": "v24.19.0",
+    "threadsPerOnnxProcess": 4,
+    "maxLocalProcessesPerCrm": 2,
+    "physicalCpus": 20,
+    "memoryGiB": 31.65
+  },
+  "codeCommit": "a783a4c"
+}

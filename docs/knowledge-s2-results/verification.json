@@ -1,0 +1,104 @@
+{
+  "stage": "S2",
+  "status": "local_passed_pending_user_PR_CI_merge",
+  "baseMain": "635acf2",
+  "codeCommit": "a783a4c",
+  "isolatedFictionalOnly": true,
+  "records": {
+    "s2-tests": {
+      "tests": 23,
+      "passed": 23,
+      "failed": 0
+    },
+    "s2-ingestion-regression": {
+      "tests": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    "s2-knowledge-regression": {
+      "tests": 14,
+      "passed": 14,
+      "failed": 0
+    },
+    "s2-agent-regression": {
+      "tests": 62,
+      "passed": 62,
+      "failed": 0
+    },
+    "s2-security-regression": {
+      "tests": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "s2-mail-regression": {
+      "tests": 96,
+      "passed": 96,
+      "failed": 0
+    },
+    "s2-integration-regression": {
+      "tests": 24,
+      "passed": 24,
+      "failed": 0
+    },
+    "s2-web-content": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "s2-web-fields": {
+      "tests": 5,
+      "passed": 5,
+      "failed": 0
+    }
+  },
+  "additionalEvaluationContracts": {
+    "tests": 7,
+    "passed": 7,
+    "failed": 0,
+    "fixtureSources": 50,
+    "cases": 120,
+    "dev": 60,
+    "holdout": 60
+  },
+  "totalTests": 250,
+  "qualityGatePassed": false,
+  "builds": {
+    "server": "passed",
+    "web": "passed",
+    "newTestsStrictTypes": "passed"
+  },
+  "security": {
+    "productionNpmServer": "passed with existing reviewed xlsx exception expiring 2026-10-26",
+    "productionNpmWeb": "same",
+    "gitleaksFullHistory": "passed; no new exceptions"
+  },
+  "notes": [
+    "S0 frozen data and baseline scores unchanged",
+    "No real customers/mail modified; 82 real drafts not published",
+    "Linux GitHub runner pending user PR",
+    "Incompatible 768-dimensional old metadata simulated; second embedding model not run"
+  ],
+  "ui": {
+    "apiPort": 5003,
+    "webPort": 5182,
+    "fictional": true,
+    "apiCodeCommit": "8ff0e33",
+    "scenarios": [
+      "login",
+      "not-ready",
+      "start real build",
+      "ready",
+      "real oversize failure",
+      "retry",
+      "disable fictional bad source",
+      "rebuild"
+    ],
+    "note": "UI smoke uses committed 8ff0e33; omitted-ACL editor fix independently verified at a783a4c"
+  },
+  "featureCommit": "8ff0e33",
+  "screenshots": [
+    "index-ready.png",
+    "index-failure.png",
+    "index-recovered.png"
+  ]
+}
