@@ -73,3 +73,12 @@
 ## 不在 S0 实现的内容
 
 没有向现有生产检索接上新模型或索引，没有业务原文上传入口变化，没有给真实政策做真实性审核，没有改个人邮件读取代码。S0 产物是可运行评测、真实本地组件探针、固定合同/指标及可追溯结果。生产索引、混合检索、事实核对和完整 Agent 仍按 S1—S8 完成。
+
+
+## S1 实现映射（2026-10-17）
+
+原八类合同保持有效。S1 在既有 MongoDB 中增加 KnowledgeBlob / KnowledgeDocument / KnowledgeParsing / KnowledgeChunk；原文保存在独立受限 blob 记录，解析子进程只读临时副本。实际字段、限制、任务租约、版本定位、权限和操作见 [S1 说明](knowledge-s1-ingestion.md)。AgentKnowledge 不改 ID 或修订号，只为人工从片段保存的草稿追加 sourceRefs；后续版本保留该不可变来源引用。
+
+项目原文仅管理员审核，不将客户附件/个人邮箱内容自动归入通用知识。无 owner 的收件正文不再被推断共享，公共邮箱导入必须明确写 project_shared。长上下文与 OCR 的 indexEligible 是预算/结构标志，不能作为发布或授权条件；后续索引仍必须读取人工发布的权威版本。
+
+Publication、IndexGeneration、完整 EvidenceBundle/DraftEvidenceSnapshot 的新实现仍待 S2—S5。此处不把解析片段已有记录等同于事实已确认、向量已建立或生成质量达标。

@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "stage": "S1",
+  "date": "2026-10-17",
+  "timezone": "Asia/Shanghai",
+  "baseMain": "eb9f54f",
+  "featureCommit": "85c982d",
+  "branch": "codex/knowledge-s1-ingestion",
+  "localEngineeringChecks": "passed",
+  "githubCI": "pending_user_PR",
+  "runtime": "Windows 11 26200; Intel Core Ultra 7 265F; 31.65 GiB RAM; Node 24.19.0; Python 3.12.14; CPU only",
+  "parser": "genesis-parser-s1.1",
+  "parserEnvironment": "server/.cache/knowledge-parser (ignored local virtual environment)",
+  "testLogDigest": "1d0ff1238ef895a60b889fa8ddf334edf240525eaae175b284c8aaa277ed0d28",
+  "ingestionGroups": [
+    {
+      "scenario": "UTF-8, Markdown headings, exact codepoint positions and complete conditional table rows",
+      "elapsedMs": 3863.869,
+      "passed": true
+    },
+    {
+      "scenario": "DOCX, XLSX and CSV retain repeated headers, table conditions, notes, ranges, formulas without evaluation",
+      "elapsedMs": 2097.3161,
+      "passed": true
+    },
+    {
+      "scenario": "static PDF, scanned PDF, PNG/JPEG use real local OCR with page geometry; blank image never succeeds",
+      "elapsedMs": 11073.1846,
+      "passed": true
+    },
+    {
+      "scenario": "malicious/corrupt/over-limit files fail individually without executing or fetching content",
+      "elapsedMs": 2931.3896,
+      "passed": true
+    },
+    {
+      "scenario": "project deduplication and HTTP permissions, invalid filename/base64/size; original download reauthorizes",
+      "elapsedMs": 47.2981,
+      "passed": true
+    },
+    {
+      "scenario": "cancel queued/running work, retry creates a new revision, expired lease resumes after restart with fenced artifacts",
+      "elapsedMs": 2743.5426,
+      "passed": true
+    },
+    {
+      "scenario": "worker revalidates authority; parser changed, runtime absent, timeout and abort are explicit failures",
+      "elapsedMs": 25.1251,
+      "passed": true
+    },
+    {
+      "scenario": "reviewed chunks save only immutable draft references, repeat save is idempotent; legacy mapping changes no existing version",
+      "elapsedMs": 729.2447,
+      "passed": true
+    },
+    {
+      "scenario": "Agent filters private mailbox text before tools, timeline and outbound-root thread aggregation; missing owner is quarantined",
+      "elapsedMs": 38.3821,
+      "passed": true
+    },
+    {
+      "scenario": "source/task insertion gap recovers; timeout kills a real isolated process without a success artifact",
+      "elapsedMs": 928.9058,
+      "passed": true
+    },
+    {
+      "scenario": "actual worker termination and replacement process recover the durable lease without duplicate accepted chunks",
+      "elapsedMs": 1704.1878,
+      "passed": true
+    }
+  ],
+  "ingestionDurationMs": 26921.1349,
+  "regressions": {
+    "knowledge": 14,
+    "agent": 62,
+    "mail_and_pop3": 96,
+    "security": 5,
+    "integration": 24,
+    "scratchpad": 3,
+    "template_feedback": 3,
+    "evaluation_contract": 7,
+    "web_agent_content": 3,
+    "web_customer_and_composer": 5
+  },
+  "checks": [
+    "server production build",
+    "web production build",
+    "strict tsc for S1 tests and UI fixture",
+    "S0 frozen labels: 120 queries, 50 sources, unchanged",
+    "production audit server and web (existing reviewed xlsx exception unchanged)",
+    "Gitleaks v8.24.0 staged + full history"
+  ],
+  "ui": {
+    "entry": "/knowledge?view=documents",
+    "fixtureOnly": true,
+    "ports": [
+      5181,
+      5002
+    ],
+    "verified": [
+      "batch upload 4 files",
+      "table headers, row conditions, notes and cell location",
+      "local Chinese/English OCR",
+      "macro refusal with independent file result",
+      "review chunk, save draft, open existing knowledge editor, still unpublished"
+    ],
+    "screenshots": [
+      "table-preview.png",
+      "draft-review.png",
+      "unsafe-file.png",
+      "ocr-preview.png"
+    ]
+  },
+  "recovery": {
+    "actualWorkerProcessKilled": true,
+    "replacementProcess": true,
+    "leaseExpiryInjectedToAvoidWaiting": true,
+    "duplicateAcceptedChunks": 0,
+    "powerLossOrDiskCorruptionTested": false
+  },
+  "resourceLimits": {
+    "wallClockSeconds": 180,
+    "cpuSeconds": 120,
+    "windowsCommitBytes": 1610612736,
+    "linuxAddressBytes": 3221225472,
+    "windowsActiveProcesses": 1,
+    "stdoutBytes": 8388608,
+    "outOfMemoryLoadTested": false,
+    "osNetworkSandbox": false
+  },
+  "dataSafety": {
+    "independentMemoryDatabase": true,
+    "fictionalPoliciesAndCustomers": true,
+    "realCustomerWrites": 0,
+    "realMailSends": 0,
+    "existingKnowledgeAutoPublication": 0,
+    "realBusinessFilesUploadedToExternalServices": 0
+  },
+  "limitations": [
+    "PDF/OCR complex table and cross-page semantics require manual review",
+    "oversized atomic context retained, not truncated, index ineligible",
+    "no embedded original-page highlight reader",
+    "no new production vector index or retrieval-quality claim",
+    "Linux CI awaiting user PR",
+    "native-code exploit resistance/OS sandbox and large-scale load testing remain S7"
+  ],
+  "nextStage": "Merge S1 after CI; start S2 from newest main; use only reviewed publications, not raw chunks or layout eligibility alone"
+}
