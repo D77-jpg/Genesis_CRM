@@ -1,5 +1,5 @@
 import {test} from 'node:test';
-import {mkdtempSync,copyFileSync,appendFileSync,readdirSync,unlinkSync,rmdirSync} from 'node:fs';
+import {mkdtempSync,copyFileSync,appendFileSync,readFileSync,readdirSync,unlinkSync,rmdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
@@ -55,4 +55,23 @@ test('S3 transfer fixture is frozen, product-disjoint for positive splits, and i
  assert.equal(cases.length,120);assert.equal(corpus.sources.length,64);
  const dev=new Set(cases.filter(c=>c.split==='dev').flatMap(c=>c.required));
  assert.ok(cases.filter(c=>c.split==='holdout').flatMap(c=>c.required).every(id=>!dev.has(id)));
+});
+
+// Both root and nested transfer fixtures must survive Windows/Linux Git checkouts byte-for-byte.
+test('all frozen fixture files use LF, including nested transfer data',()=>{
+ for(const directory of ['../evaluation/knowledge','../evaluation/knowledge/transfer']){
+  const root=join(__dirname,directory);
+  const lock=JSON.parse(readFileSync(join(root,'manifest.json'),'utf8')) as {sha256:Record<string,string>};
+  for(const name of ['manifest.json',...Object.keys(lock.sha256)]){
+   assert.equal(readFileSync(join(root,name),'utf8').includes('\r'),false,`${directory}/${name} must use LF`);
+  }
+  // Keep raw-byte validation strict; changing just LF to CRLF must invalidate the lock.
+  const copy=mkdtempSync(join(tmpdir(),'knowledge-fixture-eol-'));
+  try{
+   for(const name of ['manifest.json',...Object.keys(lock.sha256)])copyFileSync(join(root,name),join(copy,name));
+   const file=join(copy,'corpus.json');
+   appendFileSync(file,'\r\n');
+   assert.throws(()=>loadFixtures(copy),/Frozen fixture hash mismatch/);
+  }finally{for(const name of readdirSync(copy))unlinkSync(join(copy,name));rmdirSync(copy);}
+ }
 });

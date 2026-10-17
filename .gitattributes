@@ -2,7 +2,7 @@
 docs/integration/*.openapi.yaml text eol=lf
 
 # S0 frozen fixtures and evaluator/model locks must keep byte-stable LF.
-server/evaluation/knowledge/* text eol=lf
+server/evaluation/knowledge/** text eol=lf
 docs/knowledge-s0-results/*.json text eol=lf
 docs/knowledge-agent-roadmap.md text eol=lf
 

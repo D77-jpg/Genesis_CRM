@@ -6,9 +6,9 @@
   "fictional": true,
   "holdoutPolicy": "Independent transfer corpus with different products/policies. Product-disjoint dev and holdout positive sources. Frozen BEFORE further development; original S0 holdout first result retained as failed and later results diagnostic only.",
   "sha256": {
-    "corpus.json": "08bc0b10194094c4d408dd382388b42da396e16d6830ae0fd9549820f73fd59b",
-    "cases.dev.json": "273e2d254a903240fae37bf4a91f429d69c65789dee445280bfa2447f40f28e0",
-    "cases.holdout.json": "40861302997db7debf369d7f0e1c1d3eed7c0ffebf0ec700b2e5788ec7863fb3",
-    "probe-set.json": "ba25b7111c65d3dc34a85759a531fa964e739f361dd81b1bdada6bc1f5f2e1ac"
+    "corpus.json": "cb160a74b93b473cf2f4c40bf2e2d16af64c4312777a953260a8a5d00dcd9bff",
+    "cases.dev.json": "3b26a8b48f72c0bda07c1ffb92bbfcce53116b15eeafc58a19df9055363ee77d",
+    "cases.holdout.json": "180757743a482c59ae8887892343abbfa60f1ad25cbe5e1137ce579e17789380",
+    "probe-set.json": "524f79168fdd9d4a6b4352018c183c67f882694e699f85ce6d3241b31fd833cb"
   }
 }
