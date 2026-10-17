@@ -180,7 +180,7 @@ export async function knowledgeFreshness(review:KnowledgeReview,actor:AuthUser):
   for(const source of review.sources){
    if(source.knowledgeId){
     const row=rows.find(k=>k.id===source.knowledgeId);const revision=row?.revisions.find(v=>v.version===row.approvedVersion);
-    const reason=!row?'依据已不可用':row.archived?'依据已停用':row.approvedVersion!==source.version?'已发布新版本':!revisionActive(revision)?'依据已失效':'';
+    const reason=revision?.accessScope==='admins'&&actor.role!=='admin'?'依据访问范围已变化':!row?'依据已不可用':row.archived?'依据已停用':row.approvedVersion!==source.version?'已发布新版本':!revisionActive(revision)?'依据已失效':'';
     if(reason)result.changed.push({sourceId:source.sourceId,title:source.title,reason});
    }else if(source.quotationId){
     if(!review.context.customerId){result.changed.push({sourceId:source.sourceId,title:source.title,reason:'缺少客户范围'});continue;}

@@ -1,7 +1,7 @@
 import {Schema,model,Types} from 'mongoose';
 import type {KnowledgeCategory,KnowledgeTerm} from '../services/agent/knowledge-types';
 export interface KnowledgeRevision {
-  sourceRefs?:Record<string,unknown>[];version:number;title:string;tags:string[];content:string;source:string;approved:boolean;
+  accessScope?:'project'|'admins';sourceRefs?:Record<string,unknown>[];version:number;title:string;tags:string[];content:string;source:string;approved:boolean;
   category?:KnowledgeCategory;applicability?:string;products?:string[];validFrom?:Date;validUntil?:Date;
   terms?:KnowledgeTerm[];createdBy:Types.ObjectId;createdAt:Date;
 }
@@ -17,7 +17,7 @@ const schema=new Schema<IAgentKnowledge>({
  projectId:{type:Schema.Types.ObjectId,required:true},version:{type:Number,required:true},
  approvedVersion:{type:Number,default:0},archived:{type:Boolean,default:false},importKey:String,
  revisions:[{_id:false,sourceRefs:[Schema.Types.Mixed],version:Number,title:String,tags:[String],content:String,source:String,approved:Boolean,
- category:String,applicability:String,products:[String],validFrom:Date,validUntil:Date,terms:[termSchema],
+ accessScope:{type:String,enum:['project','admins'],default:'project'},category:String,applicability:String,products:[String],validFrom:Date,validUntil:Date,terms:[termSchema],
  createdBy:Schema.Types.ObjectId,createdAt:Date}],
 },{timestamps:true,versionKey:false});
 schema.index({projectId:1,archived:1,updatedAt:-1});

@@ -7,5 +7,7 @@ docs/knowledge-s0-results/*.json text eol=lf
 docs/knowledge-agent-roadmap.md text eol=lf
 
 # Parser identity and Python sources stay byte-stable across platforms.
+server/tests/fixtures/knowledge-s2/* text eol=lf
+server/semantic/* text eol=lf
 server/parsers/* text eol=lf
 server/tests/fixtures/knowledge-s1/* text eol=lf
