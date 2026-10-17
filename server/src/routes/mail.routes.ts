@@ -43,7 +43,7 @@ async function inbound(id: string, actor: AuthUser) {
   return doc;
 }
 async function outgoing(id: string, actor: AuthUser) {
-  const doc = await DevelopmentLetter.findOne({ _id: id, ...await inboundAgentScope(actor) });
+  const doc = await DevelopmentLetter.findOne({ _id: id, ...await customerRefScope(actor) });
   if (!doc) throw ApiError.notFound('邮件不存在或无权访问');
   return doc;
 }

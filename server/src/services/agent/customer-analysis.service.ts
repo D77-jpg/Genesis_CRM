@@ -1,3 +1,4 @@
+import {inboundAgentScope} from './mail-access';
 import {buildKnowledgeBundle,auditGroundedEmail,knowledgeFreshness,knowledgeTaskType} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
 import {chargeTaskBudget} from './task-budget';
@@ -103,7 +104,7 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   const oid = new Types.ObjectId(customerId);
   const [timeline, inbound, outbound, followups] = await Promise.all([
     getCustomerTimeline(customerId, 30, actor),
-    MailMessage.find({ customerId: oid, projectId, deleted: false }).sort({ sentAt: -1 }).limit(20).select('_id subject from fromName text sentAt').lean(),
+    MailMessage.find({ ...await inboundAgentScope(actor), customerId: oid, projectId, deleted: false }).sort({ sentAt: -1 }).limit(20).select('_id subject from fromName text sentAt').lean(),
     DevelopmentLetter.find({ customerId: oid, projectId, status: { $in: ['sent', 'opened'] } }).sort({ sentAt: -1 }).limit(20).select('_id subject recipientEmail contentText sentAt').lean(),
     FollowUp.find({ customerId: oid, projectId }).sort({ followUpAt: -1 }).limit(20).select('_id method result content followUpAt nextFollowUpAt').lean(),
   ]);

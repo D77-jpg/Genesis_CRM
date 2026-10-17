@@ -109,7 +109,7 @@ export async function importMail(source: Buffer, account?: string, projectId?: s
       attachments.push({ ...meta, filename });
     }
     const sentAt = parsed.date && Number.isFinite(parsed.date.getTime()) ? parsed.date : new Date();
-    const doc = await MailMessage.create({ projectId: scopedProjectId, dedupKey, customerId, threadId, messageId, inReplyTo: parsed.inReplyTo,
+    const doc = await MailMessage.create({ visibility: mailbox ? 'private' : 'project_shared', projectId: scopedProjectId, dedupKey, customerId, threadId, messageId, inReplyTo: parsed.inReplyTo,
       ...(mailbox ? { mailAccountId: mailbox.mailAccountId, mailboxUserId: mailbox.userId, mailboxAddress: mailbox.address } : {}),
       references, subject: (parsed.subject || '').slice(0, 998), normalizedSubject: normalizeSubject(parsed.subject || ''),
       from, fromName: parsed.from?.value[0]?.name, to: addresses(parsed.to), cc: addresses(parsed.cc),

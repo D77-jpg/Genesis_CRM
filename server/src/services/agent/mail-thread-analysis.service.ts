@@ -77,9 +77,10 @@ async function buildThreadInput(mailId: string, direction: 'inbound' | 'outbound
     : await DevelopmentLetter.findOne({ _id: mailId, ...visible });
   if (!root) throw ApiError.notFound('邮件不存在或无权访问');
   const threadId = root.threadId || String(root._id);
-  const filter = { ...(direction==='inbound'?await inboundAgentScope(actor):visible), customerId: root.customerId || null, threadId };
+  const filter = { ...visible, customerId: root.customerId || null, threadId };
+  const inboundFilter = { ...await inboundAgentScope(actor), ...filter };
   const [inbound, outbound] = await Promise.all([
-    MailMessage.find({ ...filter, deleted: { $ne: true } }).sort({ sentAt: -1 }).limit(200),
+    MailMessage.find({ ...inboundFilter, deleted: { $ne: true } }).sort({ sentAt: -1 }).limit(200),
     DevelopmentLetter.find({ ...filter, status: { $ne: 'draft' } }).sort({ createdAt: -1 }).limit(200),
   ]);
   const messages: ThreadMessage[] = [
@@ -100,7 +101,7 @@ async function buildThreadInput(mailId: string, direction: 'inbound' | 'outbound
   const latestInbound = [...messages].reverse().find((item) => item.direction === 'inbound');
   // Safety is independent of the bounded model context: an older opt-out cannot
   // disappear when a later neutral message arrives or the thread exceeds 200 items.
-  const protectedInbound = await MailMessage.findOne({ ...filter, deleted: { $ne: true },
+  const protectedInbound = await MailMessage.findOne({ ...inboundFilter, deleted: { $ne: true },
     $or: [{ from: /mailer-daemon|postmaster/i }, { subject: PROTECTED_MAIL_CONTENT_PATTERN }, { text: PROTECTED_MAIL_CONTENT_PATTERN }],
   }).sort({ sentAt: -1 });
   return {

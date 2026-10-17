@@ -635,7 +635,7 @@ test('74 personal IMAP sync isolates the mailbox, links only owned customers, an
   assert.equal(foreign.customerId, null);
   const status = await request('GET', '/mail/status', salesToken);
   assert.equal(status.source, 'personal'); assert.equal(status.verificationStatus, 'verified'); assert.equal(status.mailboxAddress, personalMailbox);
-  await request('POST', `/mail/${mail?._id}/reply`, adminToken, { subject: 'Wrong sender', content: '<p>x</p>', requestKey: randomUUID() }, 409);
+  await request('POST', `/mail/${mail?._id}/reply`, adminToken, { subject: 'Wrong sender', content: '<p>x</p>', requestKey: randomUUID() }, 404);
 });
 
 test('75 scheduled SMTP jobs lock the sender account and consume its atomic daily quota', async () => {

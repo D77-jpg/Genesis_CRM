@@ -11,6 +11,7 @@
  * 目标是让销售打开客户详情就能快速判断：
  *   之前发生过什么 / 最近一次联系是什么时候（lastContactAt）/ 下一步要做什么（nextFollowUpAt + 状态）。
  */
+import {privateMailScope} from './agent/mail-access';
 import { Types } from 'mongoose';
 import { Customer, CustomerEvent, DevelopmentLetter, FollowUp, Quotation } from '../models';
 import type {
@@ -24,7 +25,7 @@ import type {
   QuotationStatus,
 } from '../constants';
 import { ApiError } from '../utils/ApiError';
-import { projectScope } from '../utils/access';
+import { projectScope, customerScope } from '../utils/access';
 import { createLogger } from '../config/logger';
 import type { AuthUser } from '../types/express';
 
@@ -194,7 +195,7 @@ export async function getCustomerTimeline(customerId: string, limit = 200, actor
   }
   const oid = new Types.ObjectId(customerId);
 
-  const customer = await Customer.findOne({ _id: oid, ...projectScope(actor) }).select('_id projectId createdAt').lean();
+  const customer = await Customer.findOne({ _id: oid, ...customerScope(actor) }).select('_id projectId createdAt').lean();
   if (!customer) {
     throw ApiError.notFound(`客户不存在或已被删除（id=${customerId}）`);
   }
@@ -314,7 +315,7 @@ export async function getCustomerTimeline(customerId: string, limit = 200, actor
 
   items.sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  const received = await MailMessage.find({ customerId: oid, ...projectScope(actor) }).sort({ sentAt: -1 }).limit(limit).select('_id subject from sentAt');
+  const received = await MailMessage.find({ customerId: oid, ...projectScope(actor), ...(actor?privateMailScope(actor):{_id:{$exists:false}}), deleted:{$ne:true} }).sort({ sentAt: -1 }).limit(limit).select('_id subject from sentAt');
   for (const mail of received) items.push({ id: `mail-${mail._id}`, type: 'mail_received', at: mail.sentAt,
     mail: { id: String(mail._id), subject: mail.subject, from: mail.from } });
   items.sort((a, b) => b.at.getTime() - a.at.getTime());

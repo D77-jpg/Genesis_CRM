@@ -5,6 +5,7 @@ const schema = new Schema({
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
   mailAccountId: { type: Schema.Types.ObjectId, ref: 'UserMailAccount', index: true },
   mailboxUserId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+  visibility: { type: String, enum: ['private','project_shared'], default: 'private' },
   mailboxAddress: { type: String, trim: true, lowercase: true, maxlength: 200 },
   dedupKey: { type: String, required: true },
   deleted: { type: Boolean, default: false },

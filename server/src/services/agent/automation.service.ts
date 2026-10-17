@@ -49,7 +49,7 @@ export async function observeAgentEvents(){
   const own={projectId:rule.projectId,ownerId:rule.userId};const customerIds=(await Customer.find(own).select('_id')).map(c=>c._id);
   if(rule.inbound){
    const cursorAt=rule.mailCursorAt??rule.enabledAt??new Date();
-   const mails=await MailMessage.find({projectId:rule.projectId,deleted:{$ne:true},createdAt:{$gte:rule.enabledAt??cursorAt},$and:[{$or:[{mailboxUserId:rule.userId},{mailboxUserId:null,customerId:{$in:customerIds}}]},{$or:[{createdAt:{$gt:cursorAt}},{createdAt:cursorAt,_id:{$gt:rule.mailCursorId??new Types.ObjectId('000000000000000000000000')}}]}]}).sort({createdAt:1,_id:1}).limit(30);
+   const mails=await MailMessage.find({projectId:rule.projectId,deleted:{$ne:true},createdAt:{$gte:rule.enabledAt??cursorAt},$and:[{$or:[{mailboxUserId:rule.userId},{visibility:'project_shared',customerId:{$in:customerIds}}]},{$or:[{createdAt:{$gt:cursorAt}},{createdAt:cursorAt,_id:{$gt:rule.mailCursorId??new Types.ObjectId('000000000000000000000000')}}]}]}).sort({createdAt:1,_id:1}).limit(30);
    for(const mail of mails){
     const e=await putEvent(rule,'inbound',mail._id,`inbound:${mail.id}`,mail.customerId??undefined);if(!e)continue;
     const signal=detectProtectedMailSignal(mail);
