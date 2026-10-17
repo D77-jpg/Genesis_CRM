@@ -58,7 +58,7 @@ npm run test:knowledge-index
 
 第一轮原保留集 Recall=98.75%、MRR=98.75%，但负例状态75%失败，原报告保留；此后只根据失败类别排查状态发现与证据充分性，不看原保留查询文本调答案。原保留集后续是回归诊断，不再宣称未见验收。另在进一步优化前冻结 `transfer`：64 来源、120 题，开发/保留各60，其中各40有依据、20负例；正例产品及来源在两组间不重叠。全部为明确虚构的新产品/政策，不补写真实政策。新开发集初始 Recall=100%、负例状态95%；新保留集不用于后续选择参数。
 
-最终数字、分组、失败样本、测试与截图见本阶段进度和结果目录；若门槛未满足，必须如实记录未完成，不能删题/改标签/放宽目标。
+最终数字、分组、失败样本、测试与截图见 [本阶段结果](knowledge-s3-results/README.md)；若门槛未满足，必须如实记录未完成，不能删题/改标签/放宽目标。
 
 ## 限制与下一阶段
 
@@ -68,3 +68,6 @@ npm run test:knowledge-index
 - 标题状态发现可能漏掉只在正文中出现的旧政策主题；需要 S4/S6 进一步治理元数据，不能自动发布现有草稿。
 
 参考实现依据：SQLite [FTS5/BM25 官方文档](https://www.sqlite.org/fts5.html)，[Embedding 模型卡](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2)，[重排模型卡](https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1)。业务系统和权限/版本/审核流程均由本仓库实现。
+
+
+S1解析记录中的128-token告警/indexEligible保持历史原值；它不是S3发布权限或索引门禁。管理员仍需核实原文内容，保存为知识草稿并审核发布；S3随后建立检索窗口，不要求为了模型长度删掉政策条件。

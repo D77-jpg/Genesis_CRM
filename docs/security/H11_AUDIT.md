@@ -68,3 +68,8 @@ The production dependency audits and guarded-braces regression pass separately.
 Reverification: pinned v8.24.0 scanned all 77 available commits (~4 MB),
 reported no findings, and exited 0 with the status captured immediately.
 No functional code, model lock or frozen evaluation data changed.
+
+
+## S3 报告摘要字段复核
+
+最终交付前的 staged scan 命中9份评测报告中 `productionHashes.mail-access.ts` 的源码SHA-256（generic-api-key）。已逐条与当前 `server/src/services/agent/mail-access.ts` 字节重算一致；未发现凭证。报告改为明确的 `{path, sha256}` 记录数组，摘要值与原始报告rawReportSha256保留，不把含access的文件名作为可能被误解为凭据的JSON键。此调整仅涉及报告DTO，不修改扫描器、规则或ignore；没有新增豁免。提交前和提交后再次扫描，退出码即时检查。

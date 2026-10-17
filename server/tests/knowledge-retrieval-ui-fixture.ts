@@ -17,9 +17,9 @@ async function main(){
  const {uploadDocument,processKnowledgeDocument,documentDetail,saveChunkDraft}=await import('../src/services/knowledge/document.service');
  const text='# Fictional nylon zipper pouch\nNylon zipper travel pouches for accessories.\nFootnote: customized prototypes and courier fees require confirmation. FICTIONAL ONLY.';
  const doc=await uploadDocument({fileName:'s3-fictional-nylon.md',data:Buffer.from(text).toString('base64'),source:'独立虚构原文验收',category:'product'},actor);
- await processKnowledgeDocument();const detail=await documentDetail(doc.id,actor);const chunk=detail.chunks[0];
- const draft=await saveChunkDraft(chunk.id,{title:'虚构尼龙拉链旅行袋',content:chunk.content,category:'product',applicability:'仅限独立虚构项目'},actor);
- await appendKnowledge(draft.id,{expectedVersion:1,title:'虚构尼龙拉链旅行袋',content:chunk.content,source:'独立虚构原文验收',category:'product',applicability:'仅限独立虚构项目',approved:true},actor);
+ await processKnowledgeDocument();const detail=await documentDetail(doc.id,actor);const chunk=detail.chunks[0];const content=chunk?.content;if(!content)throw Error('Fictional source parser returned no content');
+ const draft=await saveChunkDraft(chunk.id,{title:'虚构尼龙拉链旅行袋',content,category:'product',applicability:'仅限独立虚构项目'},actor);
+ await appendKnowledge(draft.id,{expectedVersion:1,title:'虚构尼龙拉链旅行袋',content,source:'独立虚构原文验收',category:'product',applicability:'仅限独立虚构项目',approved:true},actor);
  const {requestIndex}=await import('../src/services/knowledge/index.service');
  const preparation=await requestIndex(actor);const service=await import('../src/services/knowledge/index.service');await service.processKnowledgeIndex(preparation.id);
  const {createApp}=await import('../src/app');const {processKnowledgeIndex}=await import('../src/services/knowledge/index.service');

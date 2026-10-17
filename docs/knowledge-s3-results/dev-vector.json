@@ -1,0 +1,3782 @@
+{
+  "implementationHashes": [
+    {
+      "path": "semantic/model.json",
+      "sha256": "1e8ccfeb60123ad36e567c50f0895eed3eb9c283f5a5554aa2eb9730cf4d080d"
+    },
+    {
+      "path": "semantic/reranker.json",
+      "sha256": "153611ba2745a47c972c4a66e71ebac379d945160e700312b10518482fe2cb30"
+    },
+    {
+      "path": "semantic/runtime.py",
+      "sha256": "44045e93a06dc58165b0c9a9313e22568ccd16cd8a47dfe13cb6e39953d868bb"
+    },
+    {
+      "path": "semantic/retrieval.py",
+      "sha256": "71e007ffca512cb9506ac3d2357457164ad195e8ada68aafe22a47de6978991a"
+    },
+    {
+      "path": "src/services/knowledge/index.service.ts",
+      "sha256": "14ed2404722fd400d19538a6da583ab5834eecc9ad2b72423442d9dcf0a92588"
+    },
+    {
+      "path": "src/services/knowledge/embedding.ts",
+      "sha256": "e7c41e6453841d0bb323574a80daf36f6a38a6ac9c27203095d4a3d8e9a0ecfe"
+    },
+    {
+      "path": "src/services/agent/knowledge.service.ts",
+      "sha256": "a55639c8842a17b069121fc0cfdbe4538f21ab64d288fdbbaad5db6037c2b1b4"
+    },
+    {
+      "path": "src/services/agent/knowledge-grounding.ts",
+      "sha256": "a0ab5dd39ac06afaf618dc2c51d4fc7861e1cbd8b393e3dd8012f59d6bbdfd41"
+    },
+    {
+      "path": "src/services/agent/knowledge-types.ts",
+      "sha256": "d93c11f28aa38793d6c33aad00098d90e13e460067ddfd72616eab072a19b288"
+    },
+    {
+      "path": "src/services/agent/tool-registry.ts",
+      "sha256": "ccbc22d52fa40abc1e51192ddf426ab12a785da54cf861da52f600a59de065d2"
+    },
+    {
+      "path": "evaluation/knowledge/retrieval.ts",
+      "sha256": "ef02420067c6faabd4852e30ef0d557236019fe56c290772a960a5e9d4674ac2"
+    },
+    {
+      "path": "evaluation/knowledge/schema.ts",
+      "sha256": "dd2d517cf6015367d17f9ef86723a758773b18695aa41d742857ff5ec6420a35"
+    },
+    {
+      "path": "evaluation/knowledge/metrics.ts",
+      "sha256": "4a016f03b86d43133510cee959bd8d5b52d05215d29d1af3b9afbe200ac88e64"
+    }
+  ],
+  "schemaVersion": 1,
+  "createdAt": "2026-10-17T13:24:33.326Z",
+  "evaluationAsOf": "2026-10-17T00:00:00+08:00",
+  "clockPolicy": "Date-only frozen in isolated CLI; performance.now remains real; production retrieval unchanged",
+  "commit": "94e10b0bbd3cc135bd7ae488b713eaff3665933f",
+  "dirtyTree": false,
+  "engine": "S3 vector production buildKnowledgeBundle + auditGroundedEmail",
+  "scope": "No LLM or live DB. No email generation quality measured. Sales rules loaded separately, excluded from relevance rank. Up to 10 distinct publications. Customer quotations still scoped by production service.",
+  "split": "dev",
+  "hashes": [
+    {
+      "path": "corpus.json",
+      "sha256": "3fb85a80aff72be82cd1d357f20d36c18390239846b6a49d709ce82351048b5b"
+    },
+    {
+      "path": "cases.dev.json",
+      "sha256": "e53a451943185312ea7ae4cb1e68a130c253eb94a5c769ba64ccc365f61b0ecf"
+    },
+    {
+      "path": "cases.holdout.json",
+      "sha256": "c3584e8dfc9f97d7f2c07d6525fc95803c0c86f75a08ede3fba43b449c655750"
+    },
+    {
+      "path": "probe-set.json",
+      "sha256": "756fa51b617626463ea365eee9e288899f430e680fdcff3f9080b1ec4f3fa6f1"
+    },
+    {
+      "path": "retrieval.ts",
+      "sha256": "ef02420067c6faabd4852e30ef0d557236019fe56c290772a960a5e9d4674ac2"
+    },
+    {
+      "path": "schema.ts",
+      "sha256": "dd2d517cf6015367d17f9ef86723a758773b18695aa41d742857ff5ec6420a35"
+    },
+    {
+      "path": "metrics.ts",
+      "sha256": "4a016f03b86d43133510cee959bd8d5b52d05215d29d1af3b9afbe200ac88e64"
+    },
+    {
+      "path": "runtime-safety.ts",
+      "sha256": "92cee439f80cb085bd4563205907b6d99b1df7098a51792571a6f9c1e9e5a235"
+    }
+  ],
+  "machine": {
+    "os": "win32",
+    "release": "10.0.26200",
+    "cpu": "Intel(R) Core(TM) Ultra 7 265F",
+    "logicalCpus": 20,
+    "totalRamBytes": 33984950272,
+    "node": "v24.19.0"
+  },
+  "fixture": {
+    "sources": 50,
+    "cases": 120,
+    "directory": "D:\\Trade\\genesis\\CRM\\Genesis_CRM\\server\\evaluation\\knowledge"
+  },
+  "productionHashes": [
+    {
+      "path": "knowledge.service.ts",
+      "sha256": "a55639c8842a17b069121fc0cfdbe4538f21ab64d288fdbbaad5db6037c2b1b4"
+    },
+    {
+      "path": "knowledge-grounding.ts",
+      "sha256": "a0ab5dd39ac06afaf618dc2c51d4fc7861e1cbd8b393e3dd8012f59d6bbdfd41"
+    },
+    {
+      "path": "mail-access.ts",
+      "sha256": "0d2356e3b9ea9f530dbdc0bb3a6b32647b9cf9e9f05505f8e462c8586ae787c7"
+    }
+  ],
+  "summary": {
+    "cases": 60,
+    "answerable": 40,
+    "negative": 20,
+    "recallAt10": 0.9625,
+    "mrrAt10": 0.8827777777777778,
+    "classificationAccuracy": 0.9666666666666667,
+    "negativeStateAccuracy": 1,
+    "forbiddenHits": 0,
+    "latencyMs": {
+      "p50": 1322.203,
+      "p95": 1360.44,
+      "max": 1393.095
+    },
+    "unexpectedErrors": []
+  },
+  "bySplit": {
+    "dev": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 0.9625,
+      "mrrAt10": 0.8827777777777778,
+      "classificationAccuracy": 0.9666666666666667,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1322.203,
+        "p95": 1360.44,
+        "max": 1393.095
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byLanguage": {
+    "en": {
+      "cases": 42,
+      "answerable": 24,
+      "negative": 18,
+      "recallAt10": 0.9791666666666666,
+      "mrrAt10": 0.9375,
+      "classificationAccuracy": 0.9523809523809523,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1320.109,
+        "p95": 1360.44,
+        "max": 1376.045
+      },
+      "unexpectedErrors": []
+    },
+    "zh": {
+      "cases": 18,
+      "answerable": 16,
+      "negative": 2,
+      "recallAt10": 0.9375,
+      "mrrAt10": 0.8006944444444444,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1329.438,
+        "p95": 1393.095,
+        "max": 1393.095
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCrossLanguage": {
+    "false": {
+      "cases": 55,
+      "answerable": 35,
+      "negative": 20,
+      "recallAt10": 0.9857142857142858,
+      "mrrAt10": 0.92,
+      "classificationAccuracy": 0.9818181818181818,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1320.516,
+        "p95": 1361.171,
+        "max": 1393.095
+      },
+      "unexpectedErrors": []
+    },
+    "true": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 0.8,
+      "mrrAt10": 0.6222222222222222,
+      "classificationAccuracy": 0.8,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1332.018,
+        "p95": 1343.829,
+        "max": 1343.829
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCategory": {
+    "agreement": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 0.5,
+      "mrrAt10": 0.05555555555555555,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1343.53,
+        "p95": 1343.829,
+        "max": 1343.829
+      },
+      "unexpectedErrors": []
+    },
+    "box": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1320.109,
+        "p95": 1320.23,
+        "max": 1320.23
+      },
+      "unexpectedErrors": []
+    },
+    "certificate": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1340.671,
+        "p95": 1353.881,
+        "max": 1353.881
+      },
+      "unexpectedErrors": []
+    },
+    "company": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 0.8333333333333334,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1344.217,
+        "p95": 1360.44,
+        "max": 1360.44
+      },
+      "unexpectedErrors": []
+    },
+    "conflict": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1313.117,
+        "p95": 1315.195,
+        "max": 1315.195
+      },
+      "unexpectedErrors": []
+    },
+    "customer": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.416,
+        "p95": 0.86,
+        "max": 0.86
+      },
+      "unexpectedErrors": []
+    },
+    "disabled": {
+      "cases": 1,
+      "answerable": 0,
+      "negative": 1,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1302.284,
+        "p95": 1302.284,
+        "max": 1302.284
+      },
+      "unexpectedErrors": []
+    },
+    "draft": {
+      "cases": 1,
+      "answerable": 0,
+      "negative": 1,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1322.547,
+        "p95": 1322.547,
+        "max": 1322.547
+      },
+      "unexpectedErrors": []
+    },
+    "expired": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1319.101,
+        "p95": 1338.441,
+        "max": 1338.441
+      },
+      "unexpectedErrors": []
+    },
+    "fabric": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1320.516,
+        "p95": 1333.084,
+        "max": 1333.084
+      },
+      "unexpectedErrors": []
+    },
+    "failure": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.877,
+        "p95": 0.899,
+        "max": 0.899
+      },
+      "unexpectedErrors": []
+    },
+    "future": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1307.743,
+        "p95": 1352.06,
+        "max": 1352.06
+      },
+      "unexpectedErrors": []
+    },
+    "gym-frame": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.6,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1319.82,
+        "p95": 1393.095,
+        "max": 1393.095
+      },
+      "unexpectedErrors": []
+    },
+    "gym-moq": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.75,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1329.438,
+        "p95": 1347.972,
+        "max": 1347.972
+      },
+      "unexpectedErrors": []
+    },
+    "gym-warranty": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1323.02,
+        "p95": 1327.291,
+        "max": 1327.291
+      },
+      "unexpectedErrors": []
+    },
+    "injection": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.087,
+        "p95": 0.499,
+        "max": 0.499
+      },
+      "unexpectedErrors": []
+    },
+    "inspection": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1322.702,
+        "p95": 1335.497,
+        "max": 1335.497
+      },
+      "unexpectedErrors": []
+    },
+    "lead": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 0.6666666666666666,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1320.15,
+        "p95": 1376.045,
+        "max": 1376.045
+      },
+      "unexpectedErrors": []
+    },
+    "logo": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.8333333333333334,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1326.555,
+        "p95": 1341.315,
+        "max": 1341.315
+      },
+      "unexpectedErrors": []
+    },
+    "mailbox": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1.33,
+        "p95": 4.483,
+        "max": 4.483
+      },
+      "unexpectedErrors": []
+    },
+    "missing": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1325.717,
+        "p95": 1361.171,
+        "max": 1361.171
+      },
+      "unexpectedErrors": []
+    },
+    "moq": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.8333333333333334,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1319.308,
+        "p95": 1338.886,
+        "max": 1338.886
+      },
+      "unexpectedErrors": []
+    },
+    "payment": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 0.6666666666666666,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1329.902,
+        "p95": 1348.988,
+        "max": 1348.988
+      },
+      "unexpectedErrors": []
+    },
+    "project": {
+      "cases": 2,
+      "answerable": 0,
+      "negative": 2,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1320.502,
+        "p95": 1352.239,
+        "max": 1352.239
+      },
+      "unexpectedErrors": []
+    },
+    "sales": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1308.686,
+        "p95": 1340.031,
+        "max": 1340.031
+      },
+      "unexpectedErrors": []
+    },
+    "sample": {
+      "cases": 3,
+      "answerable": 3,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.8333333333333334,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1325.643,
+        "p95": 1332.018,
+        "max": 1332.018
+      },
+      "unexpectedErrors": []
+    },
+    "shipping": {
+      "cases": 2,
+      "answerable": 2,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1306.937,
+        "p95": 1330.395,
+        "max": 1330.395
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "rows": [
+    {
+      "id": "a01-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 1344.217,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 310.76,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 320.12
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a01-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.2"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 1299.38,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 297.37,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 305.61
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a01-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1",
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "noise-20.1"
+        ]
+      ],
+      "durationMs": 1360.44,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 2,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 306.33,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 314.83
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-18.1"
+        ]
+      ],
+      "durationMs": 1333.084,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 299.19,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 308.21
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.2"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "noise-0.1"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-20.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "unapproved-edit.1"
+        ]
+      ],
+      "durationMs": 1318.869,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.31,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 302.89
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1",
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "noise-22.1"
+        ]
+      ],
+      "durationMs": 1320.516,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 292.45,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 300.94
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 1320.23,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 298.63,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 308.1
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ]
+      ],
+      "durationMs": 1320.109,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 295.35,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 304.86
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2",
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "conflict-b.1"
+        ]
+      ],
+      "durationMs": 1296.505,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.45,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 303.5
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a04-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "noise-8.1"
+        ],
+        [
+          "noise-0.1"
+        ],
+        [
+          "noise-16.1"
+        ]
+      ],
+      "durationMs": 1326.555,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 300.58,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 309.28
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a04-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "noise-20.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "noise-12.1"
+        ]
+      ],
+      "durationMs": 1318.529,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 304.73,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 314.27
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a04-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1",
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 1341.315,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.37,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 312.11
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-6.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "noise-2.1"
+        ]
+      ],
+      "durationMs": 1319.308,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 297.06,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 305.66
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "conflict-a.1"
+        ]
+      ],
+      "durationMs": 1338.886,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 310.51,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 319.95
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1",
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 1308.412,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.71,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 304.03
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a06-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "noise-12.1"
+        ]
+      ],
+      "durationMs": 1376.045,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 327.41,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 337.28
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a06-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "no_match",
+      "required": [
+        "lead.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 1312.52,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 292.97,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 301.22
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing",
+        "missing"
+      ]
+    },
+    {
+      "id": "a06-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1",
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 1320.15,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 2,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.65,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 312.09
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a07-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-18.1"
+        ]
+      ],
+      "durationMs": 1325.643,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 291.55,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 300.78
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a07-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "conflict-a.1"
+        ]
+      ],
+      "durationMs": 1317.508,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.21,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 311.18
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a07-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1",
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 1332.018,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 2,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 320.62,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 331.49
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.1"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ]
+      ],
+      "durationMs": 1322.203,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 297.47,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 307.39
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.2"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 1348.988,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 313.81,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 322.26
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "conflict",
+      "required": [
+        "payment.1",
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 1329.902,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.61,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 314.17
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing",
+        "conflict",
+        "conflict",
+        "conflict"
+      ]
+    },
+    {
+      "id": "a09-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 1330.395,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 295.47,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 304.13
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a09-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 1306.937,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.65,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 303.22
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a10-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 1340.671,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 299.1,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 308.93
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a10-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1",
+        "certificate.2"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 1353.881,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.74,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 312.95
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a11-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 1335.497,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 311.76,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 320.53
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a11-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1",
+        "inspection.2"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 1322.702,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 304.27,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 313.51
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a12-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "conflict-b.1"
+        ]
+      ],
+      "durationMs": 1340.031,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 305.97,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 314.37
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a12-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 1308.686,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 286.69,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 295.64
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a13-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "noise-20.1"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-0.1"
+        ],
+        [
+          "noise-12.1"
+        ]
+      ],
+      "durationMs": 1343.53,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 301.92,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 310.61
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a13-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-20.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 1343.829,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 312.95,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 322.02
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a14-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 1393.095,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad3771acae28491e64155c8",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 312.54,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 314.56
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a14-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.2"
+      ],
+      "rankedEvidence": [
+        [
+          "scope-other.1"
+        ],
+        [
+          "noise-7.1"
+        ],
+        [
+          "noise-9.1"
+        ],
+        [
+          "noise-1.1"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "noise-11.1"
+        ],
+        [
+          "noise-3.1"
+        ],
+        [
+          "noise-23.1"
+        ],
+        [
+          "noise-15.1"
+        ],
+        [
+          "noise-5.1"
+        ]
+      ],
+      "durationMs": 1319.82,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad3771acae28491e64155c8",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 307.24,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 308.9
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a15-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 1323.02,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad3771acae28491e64155c8",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 315.81,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 318.11
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a15-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 1327.291,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad3771acae28491e64155c8",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 304.74,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 306.46
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a16-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 1329.438,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad3771acae28491e64155c8",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 327.57,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 330.15
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a16-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "noise-11.1"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "noise-13.1"
+        ],
+        [
+          "noise-9.1"
+        ],
+        [
+          "noise-15.1"
+        ],
+        [
+          "noise-7.1"
+        ],
+        [
+          "noise-19.1"
+        ],
+        [
+          "noise-17.1"
+        ],
+        [
+          "noise-21.1"
+        ]
+      ],
+      "durationMs": 1347.972,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad3771acae28491e64155c8",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 297.13,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 298.85
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n01",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 1325.717,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.82,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 313.17
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing",
+        "missing",
+        "missing",
+        "missing"
+      ]
+    },
+    {
+      "id": "n03",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1361.171,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 325.14,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 342.95
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n05",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1319.101,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 300.81,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 310.51
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "expired",
+              "sourceId": "knowledge:cef9adea1d2cb9752a4290a2:v1",
+              "title": "Expired cotton certificate"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "expired",
+        "missing"
+      ]
+    },
+    {
+      "id": "n07",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ]
+      ],
+      "durationMs": 1338.441,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 309.34,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 318.98
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "expired",
+              "sourceId": "knowledge:cef9adea1d2cb9752a4290a2:v1",
+              "title": "Expired cotton certificate"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "expired",
+        "missing"
+      ]
+    },
+    {
+      "id": "n09",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "disabled",
+      "expected": "disabled",
+      "observed": "disabled",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "noise-0.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "noise-8.1"
+        ]
+      ],
+      "durationMs": 1302.284,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 292,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 301.87
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "disabled",
+              "sourceId": "knowledge:88b66a9fcb8895f9ef6d7a4d:v1",
+              "title": "Retired mirror finish"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "disabled"
+      ]
+    },
+    {
+      "id": "n11",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 1352.06,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 313.84,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 326.69
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "not_effective",
+              "sourceId": "knowledge:535019ef1a61287b3a307037:v1",
+              "title": "Future credit terms"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "not_effective"
+      ]
+    },
+    {
+      "id": "n13",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 1307.743,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 293.97,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 303.27
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "not_effective",
+              "sourceId": "knowledge:535019ef1a61287b3a307037:v1",
+              "title": "Future credit terms"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "not_effective"
+      ]
+    },
+    {
+      "id": "n15",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "draft",
+      "expected": "draft_only",
+      "observed": "draft_only",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 1322.547,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 304.99,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 316.06
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "draft_only",
+              "sourceId": "knowledge:b78bf328b73ec420b198551a:v1",
+              "title": "Unpublished rush service"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "draft_only"
+      ]
+    },
+    {
+      "id": "n17",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ]
+      ],
+      "durationMs": 1315.195,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 291.94,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 300.54
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "conflict",
+        "conflict"
+      ]
+    },
+    {
+      "id": "n19",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "unapproved-edit.1"
+        ]
+      ],
+      "durationMs": 1313.117,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.98,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 311.96
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "conflict",
+        "conflict"
+      ]
+    },
+    {
+      "id": "n21",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1320.502,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 299.5,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 309.13
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "n23",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1352.239,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad37712cae28491e64155a5",
+        "identity": "3c36f27d8cd6e5587c4619f1809e1da94f9837717fecf53d1cec69b016bd4586",
+        "trace": {
+          "mode": "vector",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 322.61,
+            "bm25Ms": 0,
+            "rerankMs": 0,
+            "retrievalMs": 331.6
+          },
+          "reranker": null,
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "n25",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.86,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n27",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.416,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n29",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 4.483,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n31",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1.33,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n33",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.499,
+      "forbiddenHits": []
+    },
+    {
+      "id": "n35",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.087,
+      "forbiddenHits": []
+    },
+    {
+      "id": "n37",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.899,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "retrieval_failed"
+      ]
+    },
+    {
+      "id": "n39",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.877,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "retrieval_failed"
+      ]
+    }
+  ],
+  "sideEffects": {
+    "letters": 0,
+    "followups": 0
+  },
+  "rawReportSha256": "020233c7407756f64624f5f825cbd00ca23d02f7bb7eb262eb3407dd0cfe2455",
+  "compactProjection": "Repeated candidate excerpts removed; digest maps represented as explicit path/sha256 records. All values, per-case gold/actual evidence, states, issues and durations retained; rawReportSha256 references unmodified local input."
+}
