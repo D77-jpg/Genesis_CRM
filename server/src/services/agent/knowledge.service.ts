@@ -1,3 +1,4 @@
+import {semanticKnowledge,knowledgeIndexChanged} from '../knowledge/index.service';
 import {createHash} from 'node:crypto';
 import {Types} from 'mongoose';
 import {z} from 'zod';
@@ -18,6 +19,7 @@ export const termInput=z.object({
  if(t.topic==='price'&&t.mode!=='needs_confirmation'&&!t.currency)c.addIssue({code:'custom',message:'价格必须注明币种'});
 });
 export const knowledgeInput=z.object({
+ accessScope:z.enum(['project','admins']).default('project'),
  expectedVersion:z.number().int().min(0),title:z.string().trim().min(1).max(160),
  tags:z.array(z.string().trim().min(1).max(80)).max(20).default([]),
  content:z.string().trim().min(1).max(12000),source:z.string().trim().min(1).max(500),approved:z.boolean(),
@@ -35,17 +37,23 @@ function admin(actor:AuthUser){if(actor.role!=='admin')throw ApiError.forbidden(
 export async function appendKnowledge(id:string|undefined,input:KnowledgeInput,actor:AuthUser,importKey?:string,sourceRefs?:Record<string,unknown>[]){
  admin(actor);const projectId=requireProjectId(actor);const parsed=knowledgeInput.parse(input);const version=parsed.expectedVersion+1;
  if(version>100)throw ApiError.conflict('请停用后建立新的知识条目');
- const revision={...(sourceRefs?{sourceRefs}:{}),version,title:parsed.title,tags:parsed.tags,content:parsed.content,source:parsed.source,approved:parsed.approved,
+ const revision={accessScope:parsed.accessScope,...(sourceRefs?{sourceRefs}:{}),version,title:parsed.title,tags:parsed.tags,content:parsed.content,source:parsed.source,approved:parsed.approved,
  category:parsed.category,applicability:parsed.applicability,products:parsed.products,validFrom:parsed.validFrom??new Date(),
  validUntil:parsed.validUntil,terms:parsed.terms,createdBy:new Types.ObjectId(actor.id),createdAt:new Date()};
  if(id&&!Types.ObjectId.isValid(id))throw ApiError.notFound('知识不存在');
- if(id&&!sourceRefs){const previous=await AgentKnowledge.findOne({_id:id,projectId,version:parsed.expectedVersion});revision.sourceRefs=previous?.revisions.find(v=>v.version===parsed.expectedVersion)?.sourceRefs;}
+ if(id){
+  const previous=await AgentKnowledge.findOne({_id:id,projectId,version:parsed.expectedVersion});
+  const prior=previous?.revisions.find(v=>v.version===parsed.expectedVersion);
+  if(!sourceRefs)revision.sourceRefs=prior?.sourceRefs;
+  // A legacy editor omitting the new ACL field must never broaden a private publication.
+  if(input.accessScope===undefined)revision.accessScope=prior?.accessScope??'project';
+ }
  if(!id){if(parsed.expectedVersion!==0)throw ApiError.conflict('新知识版本必须从 1 开始');
- return (await AgentKnowledge.create({projectId,version,approvedVersion:parsed.approved?version:0,revisions:[revision],...(importKey?{importKey}:{})})).id;}
+ const created=await AgentKnowledge.create({projectId,version,approvedVersion:parsed.approved?version:0,revisions:[revision],...(importKey?{importKey}:{})});if(parsed.approved)await knowledgeIndexChanged(actor).catch(()=>undefined);return created.id;}
  if(!Types.ObjectId.isValid(id))throw ApiError.notFound('知识不存在');
  const saved=await AgentKnowledge.findOneAndUpdate({_id:id,projectId,version:parsed.expectedVersion,archived:false},
  {$set:{version,...(parsed.approved?{approvedVersion:version}:{})},$push:{revisions:revision}},{new:true,runValidators:true});
- if(!saved)throw ApiError.conflict('知识已变化或已停用，请重新载入');return saved.id;
+ if(!saved)throw ApiError.conflict('知识已变化或已停用，请重新载入');if(parsed.approved)await knowledgeIndexChanged(actor).catch(()=>undefined);return saved.id;
 }
 export function revisionActive(v:KnowledgeRevision|undefined,at=new Date()):boolean{
  return !!v?.approved&&!!v.validFrom&&v.validFrom<=at&&(!v.validUntil||v.validUntil>at);
@@ -54,7 +62,7 @@ export async function listKnowledge(actor:AuthUser){
  const rows=await AgentKnowledge.find({projectId:requireProjectId(actor),...(actor.role==='admin'?{}:{archived:false,approvedVersion:{$gt:0}})}).sort({updatedAt:-1}).limit(500);
  return rows.flatMap(k=>{
   const published=k.revisions.find(v=>v.version===k.approvedVersion);
-  if(actor.role!=='admin'&&!revisionActive(published))return [];
+  if(actor.role!=='admin'&&(!revisionActive(published)||published?.accessScope==='admins'))return [];
   return [{id:k.id,projectId:String(k.projectId),version:k.version,approvedVersion:k.approvedVersion,archived:k.archived,
    status:k.archived?'disabled':k.approvedVersion?'published':'draft',effective:!k.archived&&revisionActive(published),
    hasDraft:k.version>k.approvedVersion,updatedAt:k.updatedAt,
@@ -64,6 +72,7 @@ export async function listKnowledge(actor:AuthUser){
 export async function archiveKnowledge(id:string,version:number,actor:AuthUser){
  admin(actor);if(!Types.ObjectId.isValid(id))throw ApiError.notFound();
  if(!(await AgentKnowledge.updateOne({_id:id,projectId:requireProjectId(actor),version,archived:false},{$set:{archived:true},$inc:{version:1}})).matchedCount)throw ApiError.conflict('知识已变化');
+ await knowledgeIndexChanged(actor).catch(()=>undefined);
 }
 const topicPatterns:Record<PolicyTopic,RegExp>={
  moq:/\bmoq\b|minimum\s+(?:order|quantity)|起订|最低订|最小订单/i,
@@ -102,12 +111,17 @@ export function sourceOf(id:string,v:KnowledgeRevision):KnowledgeSource{
  validFrom:v.validFrom?.toISOString()??'',validUntil:v.validUntil?.toISOString(),terms:v.terms??[]};
 }
 export async function retrieveKnowledge(actor:AuthUser,query:string,ids?:string[]):Promise<KnowledgeBundle>{
- const projectId=String(requireProjectId(actor));const topics=policyTopics(query);const bundle:KnowledgeBundle={projectId,status:'no_match',sources:[],issues:[],topics};
+ if(process.env.KNOWLEDGE_RETRIEVAL_MODE!=='keyword')return semanticKnowledge(actor,query,{topics:policyTopics(query),productApplies,sourceOf,ids});
+ return retrieveKeywordKnowledge(actor,query,ids);
+}
+// Explicit compatibility/baseline path, never automatic fallback after semantic failure.
+export async function retrieveKeywordKnowledge(actor:AuthUser,query:string,ids?:string[]):Promise<KnowledgeBundle>{
+ const projectId=String(requireProjectId(actor));const topics=policyTopics(query);const bundle:KnowledgeBundle={projectId,status:'no_match',sources:[],issues:[],topics,retrieval:{engine:'keyword'}};
  try{
   // Both project and published-state are enforced here, never accepted from model arguments.
   const rows=await AgentKnowledge.find({projectId:new Types.ObjectId(projectId),approvedVersion:{$gt:0}}).sort({_id:1}).limit(1000);
   const tokens=words(query);const candidates=rows.flatMap(k=>{
-   const v=k.revisions.find(r=>r.version===k.approvedVersion&&r.approved);if(!v)return [];
+   const v=k.revisions.find(r=>r.version===k.approvedVersion&&r.approved);if(!v||(actor.role!=='admin'&&v.accessScope==='admins'))return [];
    const haystack=[v.title,...v.tags,v.content,v.applicability??'',...(v.products??[])].join(' ').toLocaleLowerCase();
    const score=tokens.reduce((n,w)=>n+(haystack.includes(w)?(v.title.toLowerCase().includes(w)?4:1):0),0)
     +(ids?.includes(k.id)?100:0)+(v.terms?.some(t=>topics.includes(t.topic))?3:0);
@@ -185,7 +199,7 @@ export async function getKnowledgeHistory(id:string,actor:AuthUser){
  if(!row)throw ApiError.notFound('知识不存在或无权访问');
  if(actor.role!=='admin'){
   const published=row.revisions.find(v=>v.version===row.approvedVersion);
-  if(row.archived||!revisionActive(published))throw ApiError.notFound('知识当前不可用');
+  if(row.archived||!revisionActive(published)||published?.accessScope==='admins')throw ApiError.notFound('知识当前不可用');
   return {revisions:published?[published]:[]};
  }
  return {revisions:row.revisions};

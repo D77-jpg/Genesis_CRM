@@ -1,0 +1,2 @@
+-r ../parsers/requirements.lock
+sqlite-vec==0.1.9

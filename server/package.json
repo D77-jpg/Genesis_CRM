@@ -24,7 +24,8 @@
     "eval:knowledge:validate": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/schema.ts",
     "eval:knowledge:baseline": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/baseline.ts",
     "test:knowledge-evaluation": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-evaluation.test.ts",
-    "test:knowledge-ingestion": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-ingestion.test.ts"
+    "test:knowledge-ingestion": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-ingestion.test.ts",
+    "test:knowledge-index": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-index.test.ts"
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "^1.0.0",

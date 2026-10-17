@@ -1,5 +1,8 @@
 // Some Windows Node 24 hosts intermittently fail os.userInfo() with ENOMEM
 // before tsx starts. Keep test tooling deterministic without affecting app code.
+// Existing regressions and the frozen S0 baseline deliberately retain keyword mode.
+// S2 tests explicitly opt into real local semantic mode; production defaults to semantic.
+process.env.KNOWLEDGE_RETRIEVAL_MODE ??= 'keyword';
 const os = require('node:os');
 const original = os.userInfo;
 os.userInfo = (...args) => {

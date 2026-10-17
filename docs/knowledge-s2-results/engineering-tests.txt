@@ -1,0 +1,42 @@
+
+> cdlm-server@2.6.0 test:knowledge-index
+> node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-index.test.ts
+
+✔ 01 not-ready is explicit; keyword contents are never silently returned (539.1671ms)
+✔ 02 real 384-dimension ONNX vectors persist in sqlite-vec and cross languages (4634.7124ms)
+✔ 03 rebuild reuses real vectors only inside the same project AND visibility scope (5201.8417ms)
+✔ 04 private admin publication is filtered BEFORE local candidate evaluation (3369.9589ms)
+✔ 05 unreviewed / expired / disabled source atoms do not enter generations (1901.6087ms)
+✔ 06 publication update invalidates immediately; draft edit retains last published version (4537.1396ms)
+✔ 07 disable/delete/expiry bypassing CRUD cannot leak stale evidence (11342.5622ms)
+✔ 08 current project membership and actor role are rechecked on query and management (1210.0967ms)
+✔ 09 evidence assembly repeats Mongo checks after local inference (5123.3886ms)
+✔ 10 duplicate tasks and concurrent claims are idempotent (2095.7497ms)
+✔ 11 real worker process dies after a committed batch; replacement resumes checkpoints (5317.5729ms)
+✔ 12 incompatible legacy dimension/identity is rejected; fresh real-model generation migrates (4961.6033ms)
+✔ 13 failed generation never replaces active pointer; retry and cancellation retain checkpoints (3619.9045ms)
+✔ 14 validated generation switch and cleanup protect active/current publications (10374.6303ms)
+✔ 15 missing local index fails explicitly; rebuild restores from Mongo without policy changes (6620.9312ms)
+✔ 16 long indivisible policy is rejected without truncation or stale activation (6193.9363ms)
+S2 diagnostic: free-text provenance source retrieved: false
+✔ 17 S1 document → reviewed draft → approved revision → semantic evidence preserves provenance (6970.7253ms)
+✔ 18 condition-backed inquiry reply uses real indexed policy; missing freight stays unconfirmed (5658.2644ms)
+✔ 19 identical text cannot reuse admin-only cache entries in a broader publication scope (4388.397ms)
+[2026-10-17T12:02:28.696Z] [WARN] [http] GET /api/knowledge-index -> 403 FORBIDDEN { message: '需要以下角色之一: admin' }
+GET /api/knowledge-index 403 11.215 ms
+GET / 200 904.408 ms
+[2026-10-17T12:02:29.638Z] [WARN] [http] POST /api/knowledge-index/rebuild -> 422 VALIDATION_ERROR { message: '数据校验未通过' }
+POST /api/knowledge-index/rebuild 422 3.769 ms
+✔ 20 administrator HTTP controls enforce current identity and project; extra project keys rejected (1469.5089ms)
+Real model semantic cosine: {"crossLanguage":0.9037699468681191,"unrelated":0.2631598314858612}
+✔ 21 standalone real Embedding adapter yields finite normalized semantic vectors, not hashes (1207.7942ms)
+✔ 22 interrupted old-generation cleanup can retry immediately and preserves the active generation (8177.1995ms)
+✔ 23 legacy editors omitting access scope retain admin-only publication permissions (5081.3162ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 110975.3297

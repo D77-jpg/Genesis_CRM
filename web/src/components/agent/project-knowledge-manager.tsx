@@ -12,7 +12,7 @@ import {knowledgeCategories,policyTopics,type KnowledgeCategory,type KnowledgeTe
 
 const localDate=(value?:string)=>{const d=value?new Date(value):new Date();return Number.isNaN(d.getTime())?'':new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};
 const knowledgeError=(error:unknown,fallback?:string)=>error instanceof ApiClientError&&error.details.length?error.details.slice(0,5).map(detail=>detail.message).join('；'):toErrorMessage(error,fallback);
-const newForm=()=>({title:'',category:'company' as KnowledgeCategory,tags:'',content:'',source:'',applicability:'',products:'',validFrom:localDate(),validUntil:'',terms:[] as KnowledgeTerm[]});
+const newForm=()=>({accessScope:'project' as 'project'|'admins',title:'',category:'company' as KnowledgeCategory,tags:'',content:'',source:'',applicability:'',products:'',validFrom:localDate(),validUntil:'',terms:[] as KnowledgeTerm[]});
 const nativeSelect='min-h-11 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{admin:boolean;customerId?:string;initialKnowledgeId?:string}){
  const openedKnowledge=React.useRef('');
@@ -31,11 +31,11 @@ export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{a
  React.useEffect(()=>{void load().catch(e=>setError(knowledgeError(e)));},[load]);
  React.useEffect(()=>{setAttachments([]);setAttachmentText(null);if(customerId)void apiGet<typeof attachments>('/customers/'+customerId+'/attachments').then(setAttachments).catch(e=>setError(knowledgeError(e)));},[customerId]);
  React.useEffect(()=>{if(initialKnowledgeId&&openedKnowledge.current!==initialKnowledgeId){const row=rows.find(r=>r.id===initialKnowledgeId);if(row){openedKnowledge.current=initialKnowledgeId;if(admin)edit(row);else setSelected(row);}}},[initialKnowledgeId,rows,admin]);
- function edit(row?:ProjectKnowledge){const v=row?.revisions.at(-1);setEditing(row??null);setSelected(null);setForm(v?{title:v.title,category:v.category??'product',tags:v.tags.join(', '),content:v.content,source:v.source,applicability:v.applicability??'',products:(v.products??[]).join(', '),validFrom:localDate(v.validFrom),validUntil:v.validUntil?localDate(v.validUntil):'',terms:v.terms??[]}:newForm());setFormOpen(true);}
+ function edit(row?:ProjectKnowledge){const v=row?.revisions.at(-1);setEditing(row??null);setSelected(null);setForm(v?{accessScope:v.accessScope??'project',title:v.title,category:v.category??'product',tags:v.tags.join(', '),content:v.content,source:v.source,applicability:v.applicability??'',products:(v.products??[]).join(', '),validFrom:localDate(v.validFrom),validUntil:v.validUntil?localDate(v.validUntil):'',terms:v.terms??[]}:newForm());setFormOpen(true);}
  function patchTerm(index:number,patch:Partial<KnowledgeTerm>){setForm(f=>({...f,terms:f.terms.map((term,i)=>i===index?{...term,...patch}:term)}));}
  async function save(approved:boolean){
   setBusy(true);setError('');
-  try{await apiPost('/agent/knowledge'+(editing?'/'+editing.id+'/revisions':''),{expectedVersion:editing?.version??0,title:form.title,category:form.category,content:form.content,source:form.source,approved,
+  try{await apiPost('/agent/knowledge'+(editing?'/'+editing.id+'/revisions':''),{accessScope:form.accessScope,expectedVersion:editing?.version??0,title:form.title,category:form.category,content:form.content,source:form.source,approved,
     tags:form.tags.split(/[,，]/).map(s=>s.trim()).filter(Boolean),products:form.products.split(/[,，]/).map(s=>s.trim()).filter(Boolean),applicability:form.applicability,
     validFrom:new Date(form.validFrom).toISOString(),...(form.validUntil?{validUntil:new Date(form.validUntil).toISOString()}:{}),terms:form.terms});
    setFormOpen(false);setEditing(null);await load();
@@ -76,6 +76,7 @@ export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{a
    <h3 className="font-semibold">{editing?'编辑知识 · 新建第 '+(editing.version+1)+' 版':'新增项目知识'}</h3>
    {inputField('knowledge-title','标题',form.title,v=>setForm(f=>({...f,title:v})))}
    <label className="block space-y-2 text-sm"><span className="block font-medium">知识分类</span><select className={nativeSelect} value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value as KnowledgeCategory}))}>{Object.entries(knowledgeCategories).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+   <label className="block space-y-2 text-sm"><span className="block font-medium">使用范围</span><select className={nativeSelect} value={form.accessScope} onChange={e=>setForm(f=>({...f,accessScope:e.target.value as 'project'|'admins'}))}><option value="project">本项目成员</option><option value="admins">仅管理员</option></select><span className="block text-xs text-muted-foreground">范围随审核发布版本生效；销售助手按当前权限读取。</span></label>
    <div className="space-y-2"><Label htmlFor="knowledge-body">正文（事实、说明或经审核回答）</Label><Textarea id="knowledge-body" rows={9} maxLength={12000} value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))}/></div>
    {inputField('knowledge-keywords','关键词（逗号分隔，可含中英文别名）',form.tags,v=>setForm(f=>({...f,tags:v})))}
    {inputField('knowledge-products','适用产品（逗号分隔；留空表示项目通用）',form.products,v=>setForm(f=>({...f,products:v})))}
