@@ -1,0 +1,1938 @@
+{
+  "schemaVersion": 1,
+  "license": "CC0-1.0",
+  "fictional": true,
+  "asOf": "2026-10-17T00:00:00+08:00",
+  "sources": [
+    {
+      "id": "ct-44-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "CT-44 Logo requirements",
+      "category": "product",
+      "content": "CT-44 cotton tote bag supports a printed customer logo; artwork must be approved before manufacture.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/ct-44-0.md",
+      "clauses": [
+        {
+          "id": "ct-44-0.1",
+          "quote": "CT-44 cotton tote bag supports a printed customer logo; artwork must be approved before manufacture.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 100
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "ct-44-1",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "CT-44 Minimum order",
+      "category": "product",
+      "content": "CT-44 起订量为 101 件，仅限库存材料和单一标志。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/ct-44-1.md",
+      "clauses": [
+        {
+          "id": "ct-44-1.1",
+          "quote": "CT-44 起订量为 101 件，仅限库存材料和单一标志。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 29
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "101",
+          "unit": "pieces",
+          "conditions": "CT-44; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "ct-44-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "CT-44 Production lead time",
+      "category": "product",
+      "content": "CT-44 production takes 11 working days after artwork approval and receipt of deposit.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/ct-44-2.md",
+      "clauses": [
+        {
+          "id": "ct-44-2.1",
+          "quote": "CT-44 production takes 11 working days after artwork approval and receipt of deposit.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 85
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "11",
+          "unit": "working days",
+          "conditions": "CT-44; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "ct-44-3",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "CT-44 Sample arrangements",
+      "category": "product",
+      "content": "CT-44 可以申请库存样品；定制打样和快递费用需要另行确认。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/ct-44-3.md",
+      "clauses": [
+        {
+          "id": "ct-44-3.1",
+          "quote": "CT-44 可以申请库存样品；定制打样和快递费用需要另行确认。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 31
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "CT-44; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "rb-17-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "RB-17 Logo requirements",
+      "category": "product",
+      "content": "RB-17 硬质礼盒支持印刷客户标志；生产前必须确认图稿。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/rb-17-0.md",
+      "clauses": [
+        {
+          "id": "rb-17-0.1",
+          "quote": "RB-17 硬质礼盒支持印刷客户标志；生产前必须确认图稿。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 29
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "rb-17-1",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "RB-17 Minimum order",
+      "category": "product",
+      "content": "RB-17 minimum order is 118 pieces using stock materials and a single logo.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/rb-17-1.md",
+      "clauses": [
+        {
+          "id": "rb-17-1.1",
+          "quote": "RB-17 minimum order is 118 pieces using stock materials and a single logo.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 74
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "118",
+          "unit": "pieces",
+          "conditions": "RB-17; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "rb-17-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "RB-17 Production lead time",
+      "category": "product",
+      "content": "RB-17 生产交期为 12 个工作日，自图稿确认且收到定金后起算。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/rb-17-2.md",
+      "clauses": [
+        {
+          "id": "rb-17-2.1",
+          "quote": "RB-17 生产交期为 12 个工作日，自图稿确认且收到定金后起算。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 34
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "12",
+          "unit": "working days",
+          "conditions": "RB-17; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "rb-17-3",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "RB-17 Sample arrangements",
+      "category": "product",
+      "content": "RB-17 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/rb-17-3.md",
+      "clauses": [
+        {
+          "id": "rb-17-3.1",
+          "quote": "RB-17 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 110
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "RB-17; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "sp-26-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "SP-26 Logo requirements",
+      "category": "product",
+      "content": "SP-26 satin pouch supports a printed customer logo; artwork must be approved before manufacture.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sp-26-0.md",
+      "clauses": [
+        {
+          "id": "sp-26-0.1",
+          "quote": "SP-26 satin pouch supports a printed customer logo; artwork must be approved before manufacture.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 96
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "sp-26-1",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "SP-26 Minimum order",
+      "category": "product",
+      "content": "SP-26 起订量为 135 件，仅限库存材料和单一标志。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sp-26-1.md",
+      "clauses": [
+        {
+          "id": "sp-26-1.1",
+          "quote": "SP-26 起订量为 135 件，仅限库存材料和单一标志。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 29
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "135",
+          "unit": "pieces",
+          "conditions": "SP-26; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "sp-26-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "SP-26 Production lead time",
+      "category": "product",
+      "content": "SP-26 production takes 13 working days after artwork approval and receipt of deposit.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sp-26-2.md",
+      "clauses": [
+        {
+          "id": "sp-26-2.1",
+          "quote": "SP-26 production takes 13 working days after artwork approval and receipt of deposit.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 85
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "13",
+          "unit": "working days",
+          "conditions": "SP-26; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "sp-26-3",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "SP-26 Sample arrangements",
+      "category": "product",
+      "content": "SP-26 可以申请库存样品；定制打样和快递费用需要另行确认。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sp-26-3.md",
+      "clauses": [
+        {
+          "id": "sp-26-3.1",
+          "quote": "SP-26 可以申请库存样品；定制打样和快递费用需要另行确认。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 31
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "SP-26; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "fb-12-0",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "FB-12 Logo requirements",
+      "category": "product",
+      "content": "FB-12 折叠训练凳支持印刷客户标志；生产前必须确认图稿。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/fb-12-0.md",
+      "clauses": [
+        {
+          "id": "fb-12-0.1",
+          "quote": "FB-12 折叠训练凳支持印刷客户标志；生产前必须确认图稿。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 30
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "fb-12-1",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "FB-12 Minimum order",
+      "category": "product",
+      "content": "FB-12 minimum order is 152 pieces using stock materials and a single logo.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/fb-12-1.md",
+      "clauses": [
+        {
+          "id": "fb-12-1.1",
+          "quote": "FB-12 minimum order is 152 pieces using stock materials and a single logo.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 74
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "152",
+          "unit": "pieces",
+          "conditions": "FB-12; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "fb-12-2",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "FB-12 Production lead time",
+      "category": "product",
+      "content": "FB-12 生产交期为 14 个工作日，自图稿确认且收到定金后起算。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/fb-12-2.md",
+      "clauses": [
+        {
+          "id": "fb-12-2.1",
+          "quote": "FB-12 生产交期为 14 个工作日，自图稿确认且收到定金后起算。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 34
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "14",
+          "unit": "working days",
+          "conditions": "FB-12; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "fb-12-3",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "FB-12 Sample arrangements",
+      "category": "product",
+      "content": "FB-12 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/fb-12-3.md",
+      "clauses": [
+        {
+          "id": "fb-12-3.1",
+          "quote": "FB-12 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 110
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "FB-12; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "wr-63-0",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "WR-63 Logo requirements",
+      "category": "product",
+      "content": "WR-63 weight rack supports a printed customer logo; artwork must be approved before manufacture.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/wr-63-0.md",
+      "clauses": [
+        {
+          "id": "wr-63-0.1",
+          "quote": "WR-63 weight rack supports a printed customer logo; artwork must be approved before manufacture.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 96
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "wr-63-1",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "WR-63 Minimum order",
+      "category": "product",
+      "content": "WR-63 起订量为 169 件，仅限库存材料和单一标志。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/wr-63-1.md",
+      "clauses": [
+        {
+          "id": "wr-63-1.1",
+          "quote": "WR-63 起订量为 169 件，仅限库存材料和单一标志。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 29
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "169",
+          "unit": "pieces",
+          "conditions": "WR-63; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "wr-63-2",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "WR-63 Production lead time",
+      "category": "product",
+      "content": "WR-63 production takes 15 working days after artwork approval and receipt of deposit.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/wr-63-2.md",
+      "clauses": [
+        {
+          "id": "wr-63-2.1",
+          "quote": "WR-63 production takes 15 working days after artwork approval and receipt of deposit.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 85
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "15",
+          "unit": "working days",
+          "conditions": "WR-63; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "wr-63-3",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "WR-63 Sample arrangements",
+      "category": "product",
+      "content": "WR-63 可以申请库存样品；定制打样和快递费用需要另行确认。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/wr-63-3.md",
+      "clauses": [
+        {
+          "id": "wr-63-3.1",
+          "quote": "WR-63 可以申请库存样品；定制打样和快递费用需要另行确认。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 31
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "WR-63; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "lp-82-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "LP-82 Logo requirements",
+      "category": "product",
+      "content": "LP-82 亚麻抽绳袋支持印刷客户标志；生产前必须确认图稿。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/lp-82-0.md",
+      "clauses": [
+        {
+          "id": "lp-82-0.1",
+          "quote": "LP-82 亚麻抽绳袋支持印刷客户标志；生产前必须确认图稿。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 30
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "lp-82-1",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "LP-82 Minimum order",
+      "category": "product",
+      "content": "LP-82 minimum order is 186 pieces using stock materials and a single logo.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/lp-82-1.md",
+      "clauses": [
+        {
+          "id": "lp-82-1.1",
+          "quote": "LP-82 minimum order is 186 pieces using stock materials and a single logo.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 74
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "186",
+          "unit": "pieces",
+          "conditions": "LP-82; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "lp-82-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "LP-82 Production lead time",
+      "category": "product",
+      "content": "LP-82 生产交期为 16 个工作日，自图稿确认且收到定金后起算。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/lp-82-2.md",
+      "clauses": [
+        {
+          "id": "lp-82-2.1",
+          "quote": "LP-82 生产交期为 16 个工作日，自图稿确认且收到定金后起算。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 34
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "16",
+          "unit": "working days",
+          "conditions": "LP-82; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "lp-82-3",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "LP-82 Sample arrangements",
+      "category": "product",
+      "content": "LP-82 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/lp-82-3.md",
+      "clauses": [
+        {
+          "id": "lp-82-3.1",
+          "quote": "LP-82 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 110
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "LP-82; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "pb-56-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "PB-56 Logo requirements",
+      "category": "product",
+      "content": "PB-56 paper shopping bag supports a printed customer logo; artwork must be approved before manufacture.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/pb-56-0.md",
+      "clauses": [
+        {
+          "id": "pb-56-0.1",
+          "quote": "PB-56 paper shopping bag supports a printed customer logo; artwork must be approved before manufacture.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 103
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "pb-56-1",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "PB-56 Minimum order",
+      "category": "product",
+      "content": "PB-56 起订量为 203 件，仅限库存材料和单一标志。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/pb-56-1.md",
+      "clauses": [
+        {
+          "id": "pb-56-1.1",
+          "quote": "PB-56 起订量为 203 件，仅限库存材料和单一标志。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 29
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "203",
+          "unit": "pieces",
+          "conditions": "PB-56; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "pb-56-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "PB-56 Production lead time",
+      "category": "product",
+      "content": "PB-56 production takes 17 working days after artwork approval and receipt of deposit.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/pb-56-2.md",
+      "clauses": [
+        {
+          "id": "pb-56-2.1",
+          "quote": "PB-56 production takes 17 working days after artwork approval and receipt of deposit.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 85
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "17",
+          "unit": "working days",
+          "conditions": "PB-56; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "pb-56-3",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "PB-56 Sample arrangements",
+      "category": "product",
+      "content": "PB-56 可以申请库存样品；定制打样和快递费用需要另行确认。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/pb-56-3.md",
+      "clauses": [
+        {
+          "id": "pb-56-3.1",
+          "quote": "PB-56 可以申请库存样品；定制打样和快递费用需要另行确认。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 31
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "PB-56; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "tb-31-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "TB-31 Logo requirements",
+      "category": "product",
+      "content": "TB-31 旅行拉链袋支持印刷客户标志；生产前必须确认图稿。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/tb-31-0.md",
+      "clauses": [
+        {
+          "id": "tb-31-0.1",
+          "quote": "TB-31 旅行拉链袋支持印刷客户标志；生产前必须确认图稿。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 30
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "tb-31-1",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "TB-31 Minimum order",
+      "category": "product",
+      "content": "TB-31 minimum order is 220 pieces using stock materials and a single logo.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/tb-31-1.md",
+      "clauses": [
+        {
+          "id": "tb-31-1.1",
+          "quote": "TB-31 minimum order is 220 pieces using stock materials and a single logo.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 74
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "220",
+          "unit": "pieces",
+          "conditions": "TB-31; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "tb-31-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "TB-31 Production lead time",
+      "category": "product",
+      "content": "TB-31 生产交期为 18 个工作日，自图稿确认且收到定金后起算。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/tb-31-2.md",
+      "clauses": [
+        {
+          "id": "tb-31-2.1",
+          "quote": "TB-31 生产交期为 18 个工作日，自图稿确认且收到定金后起算。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 34
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "18",
+          "unit": "working days",
+          "conditions": "TB-31; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "tb-31-3",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "TB-31 Sample arrangements",
+      "category": "product",
+      "content": "TB-31 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/tb-31-3.md",
+      "clauses": [
+        {
+          "id": "tb-31-3.1",
+          "quote": "TB-31 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 110
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "TB-31; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "gb-48-0",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "GB-48 Logo requirements",
+      "category": "product",
+      "content": "GB-48 gym cable station supports a printed customer logo; artwork must be approved before manufacture.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/gb-48-0.md",
+      "clauses": [
+        {
+          "id": "gb-48-0.1",
+          "quote": "GB-48 gym cable station supports a printed customer logo; artwork must be approved before manufacture.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 102
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "gb-48-1",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "GB-48 Minimum order",
+      "category": "product",
+      "content": "GB-48 起订量为 237 件，仅限库存材料和单一标志。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/gb-48-1.md",
+      "clauses": [
+        {
+          "id": "gb-48-1.1",
+          "quote": "GB-48 起订量为 237 件，仅限库存材料和单一标志。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 29
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "237",
+          "unit": "pieces",
+          "conditions": "GB-48; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "gb-48-2",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "GB-48 Production lead time",
+      "category": "product",
+      "content": "GB-48 production takes 19 working days after artwork approval and receipt of deposit.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/gb-48-2.md",
+      "clauses": [
+        {
+          "id": "gb-48-2.1",
+          "quote": "GB-48 production takes 19 working days after artwork approval and receipt of deposit.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 85
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "19",
+          "unit": "working days",
+          "conditions": "GB-48; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "gb-48-3",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "GB-48 Sample arrangements",
+      "category": "product",
+      "content": "GB-48 可以申请库存样品；定制打样和快递费用需要另行确认。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/gb-48-3.md",
+      "clauses": [
+        {
+          "id": "gb-48-3.1",
+          "quote": "GB-48 可以申请库存样品；定制打样和快递费用需要另行确认。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 31
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "GB-48; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "sb-95-0",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "SB-95 Logo requirements",
+      "category": "product",
+      "content": "SB-95 可调深蹲架支持印刷客户标志；生产前必须确认图稿。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sb-95-0.md",
+      "clauses": [
+        {
+          "id": "sb-95-0.1",
+          "quote": "SB-95 可调深蹲架支持印刷客户标志；生产前必须确认图稿。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 30
+          }
+        }
+      ],
+      "terms": [],
+      "language": "zh"
+    },
+    {
+      "id": "sb-95-1",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "SB-95 Minimum order",
+      "category": "product",
+      "content": "SB-95 minimum order is 254 pieces using stock materials and a single logo.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sb-95-1.md",
+      "clauses": [
+        {
+          "id": "sb-95-1.1",
+          "quote": "SB-95 minimum order is 254 pieces using stock materials and a single logo.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 74
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "moq",
+          "value": "254",
+          "unit": "pieces",
+          "conditions": "SB-95; stock materials; single logo",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "sb-95-2",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "SB-95 Production lead time",
+      "category": "product",
+      "content": "SB-95 生产交期为 20 个工作日，自图稿确认且收到定金后起算。",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sb-95-2.md",
+      "clauses": [
+        {
+          "id": "sb-95-2.1",
+          "quote": "SB-95 生产交期为 20 个工作日，自图稿确认且收到定金后起算。",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 34
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "lead_time",
+          "value": "20",
+          "unit": "working days",
+          "conditions": "SB-95; after artwork approval and deposit receipt",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "zh"
+    },
+    {
+      "id": "sb-95-3",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "SB-95 Sample arrangements",
+      "category": "product",
+      "content": "SB-95 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/sb-95-3.md",
+      "clauses": [
+        {
+          "id": "sb-95-3.1",
+          "quote": "SB-95 stock samples can be requested; customized prototypes and courier charges require separate confirmation.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 110
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "sample",
+          "value": "Stock samples can be requested",
+          "conditions": "SB-95; customized prototypes and courier charges require confirmation",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "expired-A",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "UV-71 Expired recycled-fiber certificate",
+      "category": "compliance",
+      "content": "UV-71 fictional recycled-fiber certificate expired in 2025. This is NOT current compliance evidence.",
+      "tags": [],
+      "products": [],
+      "state": "expired",
+      "version": 1,
+      "source": "fixture://s3-transfer/expired-A.md",
+      "clauses": [
+        {
+          "id": "expired-A.1",
+          "quote": "UV-71 fictional recycled-fiber certificate expired in 2025. This is NOT current compliance evidence.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 100
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "disabled-A",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Retired UV protective coating",
+      "category": "product",
+      "content": "Fictional archived process, not available as current capability.",
+      "tags": [],
+      "products": [],
+      "state": "disabled",
+      "version": 1,
+      "source": "fixture://s3-transfer/disabled-A.md",
+      "clauses": [
+        {
+          "id": "disabled-A.1",
+          "quote": "Fictional archived process, not available as current capability.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 64
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "future-A",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Future installment payment policy",
+      "category": "trade",
+      "content": "Future fictional credit plan; no current customer may use it.",
+      "tags": [],
+      "products": [],
+      "state": "future",
+      "version": 1,
+      "source": "fixture://s3-transfer/future-A.md",
+      "clauses": [
+        {
+          "id": "future-A.1",
+          "quote": "Future fictional credit plan; no current customer may use it.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 61
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "draft-A",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Unpublished priority shipment service",
+      "category": "trade",
+      "content": "Unpublished suggestion only, not a promise.",
+      "tags": [],
+      "products": [],
+      "state": "draft",
+      "version": 1,
+      "source": "fixture://s3-transfer/draft-A.md",
+      "clauses": [
+        {
+          "id": "draft-A.1",
+          "quote": "Unpublished suggestion only, not a promise.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 43
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "conflict-A-47",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "UV-71 setup fee 47",
+      "category": "trade",
+      "content": "UV-71 standard logo setup fee is USD 47 per artwork.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/conflict-A-47.md",
+      "clauses": [
+        {
+          "id": "conflict-A-47.1",
+          "quote": "UV-71 standard logo setup fee is USD 47 per artwork.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 52
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "price",
+          "value": "47",
+          "currency": "USD",
+          "unit": "per artwork",
+          "conditions": "UV-71 standard logo setup",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "conflict-A-68",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "UV-71 setup fee 68",
+      "category": "trade",
+      "content": "UV-71 standard logo setup fee is USD 68 per artwork.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/conflict-A-68.md",
+      "clauses": [
+        {
+          "id": "conflict-A-68.1",
+          "quote": "UV-71 standard logo setup fee is USD 68 per artwork.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 52
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "price",
+          "value": "68",
+          "currency": "USD",
+          "unit": "per artwork",
+          "conditions": "UV-71 standard logo setup",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "expired-B",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "HC-83 Expired recycled-fiber certificate",
+      "category": "compliance",
+      "content": "HC-83 fictional recycled-fiber certificate expired in 2025. This is NOT current compliance evidence.",
+      "tags": [],
+      "products": [],
+      "state": "expired",
+      "version": 1,
+      "source": "fixture://s3-transfer/expired-B.md",
+      "clauses": [
+        {
+          "id": "expired-B.1",
+          "quote": "HC-83 fictional recycled-fiber certificate expired in 2025. This is NOT current compliance evidence.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 100
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "disabled-B",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Discontinued heat transfer finish",
+      "category": "product",
+      "content": "Fictional archived process, not available as current capability.",
+      "tags": [],
+      "products": [],
+      "state": "disabled",
+      "version": 1,
+      "source": "fixture://s3-transfer/disabled-B.md",
+      "clauses": [
+        {
+          "id": "disabled-B.1",
+          "quote": "Fictional archived process, not available as current capability.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 64
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "future-B",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Not yet effective credit settlement terms",
+      "category": "trade",
+      "content": "Future fictional credit plan; no current customer may use it.",
+      "tags": [],
+      "products": [],
+      "state": "future",
+      "version": 1,
+      "source": "fixture://s3-transfer/future-B.md",
+      "clauses": [
+        {
+          "id": "future-B.1",
+          "quote": "Future fictional credit plan; no current customer may use it.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 61
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "draft-B",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Draft express production option",
+      "category": "trade",
+      "content": "Unpublished suggestion only, not a promise.",
+      "tags": [],
+      "products": [],
+      "state": "draft",
+      "version": 1,
+      "source": "fixture://s3-transfer/draft-B.md",
+      "clauses": [
+        {
+          "id": "draft-B.1",
+          "quote": "Unpublished suggestion only, not a promise.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 43
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "conflict-B-47",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "HC-83 setup fee 47",
+      "category": "trade",
+      "content": "HC-83 standard logo setup fee is USD 47 per artwork.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/conflict-B-47.md",
+      "clauses": [
+        {
+          "id": "conflict-B-47.1",
+          "quote": "HC-83 standard logo setup fee is USD 47 per artwork.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 52
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "price",
+          "value": "47",
+          "currency": "USD",
+          "unit": "per artwork",
+          "conditions": "HC-83 standard logo setup",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "conflict-B-68",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "HC-83 setup fee 68",
+      "category": "trade",
+      "content": "HC-83 standard logo setup fee is USD 68 per artwork.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/conflict-B-68.md",
+      "clauses": [
+        {
+          "id": "conflict-B-68.1",
+          "quote": "HC-83 standard logo setup fee is USD 68 per artwork.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 52
+          }
+        }
+      ],
+      "terms": [
+        {
+          "topic": "price",
+          "value": "68",
+          "currency": "USD",
+          "unit": "per artwork",
+          "conditions": "HC-83 standard logo setup",
+          "mode": "confirmed"
+        }
+      ],
+      "language": "en"
+    },
+    {
+      "id": "distractor-0",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture storage note 0",
+      "category": "product",
+      "content": "Fictional internal storage guidance 0: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-0.md",
+      "clauses": [
+        {
+          "id": "distractor-0.1",
+          "quote": "Fictional internal storage guidance 0: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-1",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture storage note 1",
+      "category": "product",
+      "content": "Fictional internal storage guidance 1: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-1.md",
+      "clauses": [
+        {
+          "id": "distractor-1.1",
+          "quote": "Fictional internal storage guidance 1: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-2",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture storage note 2",
+      "category": "product",
+      "content": "Fictional internal storage guidance 2: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-2.md",
+      "clauses": [
+        {
+          "id": "distractor-2.1",
+          "quote": "Fictional internal storage guidance 2: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-3",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture storage note 3",
+      "category": "product",
+      "content": "Fictional internal storage guidance 3: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-3.md",
+      "clauses": [
+        {
+          "id": "distractor-3.1",
+          "quote": "Fictional internal storage guidance 3: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-4",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture storage note 4",
+      "category": "product",
+      "content": "Fictional internal storage guidance 4: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-4.md",
+      "clauses": [
+        {
+          "id": "distractor-4.1",
+          "quote": "Fictional internal storage guidance 4: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-5",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture storage note 5",
+      "category": "product",
+      "content": "Fictional internal storage guidance 5: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-5.md",
+      "clauses": [
+        {
+          "id": "distractor-5.1",
+          "quote": "Fictional internal storage guidance 5: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-6",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture storage note 6",
+      "category": "product",
+      "content": "Fictional internal storage guidance 6: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-6.md",
+      "clauses": [
+        {
+          "id": "distractor-6.1",
+          "quote": "Fictional internal storage guidance 6: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-7",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture storage note 7",
+      "category": "product",
+      "content": "Fictional internal storage guidance 7: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-7.md",
+      "clauses": [
+        {
+          "id": "distractor-7.1",
+          "quote": "Fictional internal storage guidance 7: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-8",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture storage note 8",
+      "category": "product",
+      "content": "Fictional internal storage guidance 8: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-8.md",
+      "clauses": [
+        {
+          "id": "distractor-8.1",
+          "quote": "Fictional internal storage guidance 8: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-9",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture storage note 9",
+      "category": "product",
+      "content": "Fictional internal storage guidance 9: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-9.md",
+      "clauses": [
+        {
+          "id": "distractor-9.1",
+          "quote": "Fictional internal storage guidance 9: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 107
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-10",
+      "project": "pack",
+      "kind": "knowledge",
+      "title": "Fixture storage note 10",
+      "category": "product",
+      "content": "Fictional internal storage guidance 10: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-10.md",
+      "clauses": [
+        {
+          "id": "distractor-10.1",
+          "quote": "Fictional internal storage guidance 10: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 108
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    },
+    {
+      "id": "distractor-11",
+      "project": "gym",
+      "kind": "knowledge",
+      "title": "Fixture storage note 11",
+      "category": "product",
+      "content": "Fictional internal storage guidance 11: keep cartons dry and record their location. Not a commercial policy.",
+      "tags": [],
+      "products": [],
+      "state": "active",
+      "version": 1,
+      "source": "fixture://s3-transfer/distractor-11.md",
+      "clauses": [
+        {
+          "id": "distractor-11.1",
+          "quote": "Fictional internal storage guidance 11: keep cartons dry and record their location. Not a commercial policy.",
+          "location": {
+            "kind": "text",
+            "start": 0,
+            "end": 108
+          }
+        }
+      ],
+      "terms": [],
+      "language": "en"
+    }
+  ]
+}

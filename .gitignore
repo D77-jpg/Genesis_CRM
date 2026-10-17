@@ -55,3 +55,7 @@ tmp/
 # ---- Local business / customer data (real customer PII, never commit) ----
 Genesis-*.xlsx
 Monarc Jewellery*.md
+
+# Local Python adapters must not commit interpreter caches.
+__pycache__/
+*.pyc

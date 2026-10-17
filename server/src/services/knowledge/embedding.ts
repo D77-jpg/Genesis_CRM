@@ -10,12 +10,14 @@ const root=resolve(__dirname,'../../../semantic');
 export async function embeddingIdentity():Promise<IndexIdentity>{
  const raw=await readFile(join(root,'model.json'),'utf8');
  const lock=JSON.parse(raw) as {model:string;revision:string;files:Record<string,string>;weight:string;dimension:number;maxTokens:number;adapter:string};
- return {id:sha(raw+sha(await readFile(join(root,'runtime.py')))),model:lock.model,revision:lock.revision,weightHash:lock.files[lock.weight],dimension:lock.dimension,adapter:lock.adapter,maxTokens:lock.maxTokens};
+ return {id:sha(raw+sha(await readFile(join(root,'runtime.py')))+sha(await readFile(join(root,'retrieval.py')))+sha(await readFile(join(root,'reranker.json')))),model:lock.model,revision:lock.revision,weightHash:lock.files[lock.weight],dimension:lock.dimension,adapter:lock.adapter,maxTokens:lock.maxTokens};
 }
 const output=z.object({identity:z.string(),dimension:z.number().int(),adapter:z.string(),elapsedMs:z.number().finite(),rssMiB:z.number().finite(),
  vectors:z.array(z.array(z.number().finite()).min(1).max(4096)).max(16).optional(),
  count:z.number().int().optional(),checksum:z.string().optional(),embedded:z.number().int().optional(),reused:z.number().int().optional(),
- hits:z.array(z.object({id:z.string(),distance:z.number().finite()})).max(30).optional(),queryDimension:z.number().int().optional(),removed:z.number().optional()}).strict();
+ segments:z.array(z.object({key:z.string(),text:z.string(),start:z.number().int(),end:z.number().int(),tokens:z.number().int()})).max(4096).optional(),
+ trace:z.object({mode:z.string(),queryParts:z.number(),allowedItems:z.number(),candidates:z.number(),timings:z.record(z.number()),reranker:z.object({model:z.string(),revision:z.string(),pairs:z.number()}).nullable(),degraded:z.object({code:z.string(),message:z.string()}).nullable(),diagnostics:z.array(z.object({code:z.string(),sourceId:z.string(),title:z.string()}))}).optional(),
+ hits:z.array(z.object({id:z.string(),distance:z.number().finite(),accepted:z.boolean().optional(),scores:z.record(z.number()).optional()})).max(50).optional(),queryDimension:z.number().int().optional(),removed:z.number().optional()}).strict();
 export type LocalResult=z.infer<typeof output>;
 export interface EmbeddingAdapter {embed(texts:string[],identity:IndexIdentity,signal?:AbortSignal):Promise<{vectors:number[][];identity:string;dimension:number}>}
 export interface SemanticAdapter {run(command:Record<string,unknown>,identity:IndexIdentity,signal?:AbortSignal):Promise<LocalResult>}
@@ -32,7 +34,7 @@ export const localEmbedding:EmbeddingAdapter&SemanticAdapter={async embed(texts,
  if(!python||!process.env.KNOWLEDGE_MODEL_DIR||!process.env.KNOWLEDGE_INDEX_DIR)throw new IndexError('runtime_unavailable','本地语义环境未配置，请管理员安装模型和索引组件后重试');
  await acquire();try{return await new Promise((resolveResult,reject)=>{
   const env:NodeJS.ProcessEnv={PYTHONIOENCODING:'utf-8',PYTHONUTF8:'1',PYTHONDONTWRITEBYTECODE:'1',HF_HUB_OFFLINE:'1',TRANSFORMERS_OFFLINE:'1',OMP_NUM_THREADS:'4',OPENBLAS_NUM_THREADS:'4',
-   KNOWLEDGE_MODEL_DIR:process.env.KNOWLEDGE_MODEL_DIR,KNOWLEDGE_INDEX_DIR:process.env.KNOWLEDGE_INDEX_DIR};
+   KNOWLEDGE_RERANKER_DIR:process.env.KNOWLEDGE_RERANKER_DIR,KNOWLEDGE_MODEL_DIR:process.env.KNOWLEDGE_MODEL_DIR,KNOWLEDGE_INDEX_DIR:process.env.KNOWLEDGE_INDEX_DIR};
   for(const key of ['SystemRoot','WINDIR','TEMP','TMP','PATH'])if(process.env[key])env[key]=process.env[key];
   const child=spawn(python,['-I',join(root,'runtime.py')],{env,windowsHide:true,stdio:['pipe','pipe','pipe']});
   let text='',failure:IndexError|undefined;

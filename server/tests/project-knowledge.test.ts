@@ -191,3 +191,11 @@ test('14 Markdown preview preserves parent product/industry headings in child en
  assert.equal(result.entries[3].title,'Gym equipment / Steel frame');
  assert.ok(result.entries.every(entry=>!entry.approved));
 });
+
+test('15 rejected candidate diagnostics never enter generation context; complete selected evidence is preserved',async()=>{
+ const {knowledgeForModel}=await import('../src/services/agent/knowledge-types');
+ const {retrieveKnowledge}=await import('../src/services/agent/knowledge.service');
+ const original=await retrieveKnowledge(actor,'velvet pouch MOQ');
+ original.retrieval={engine:'local_semantic',generation:'fixture',trace:{candidates:[{excerpt:'REJECTED CANARY'}]}};
+ const filtered=knowledgeForModel(original);assert.equal(filtered.retrieval?.trace,undefined);assert.equal(filtered.sources,original.sources);assert.ok(original.retrieval.trace);
+});

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "caseIds": [
+    "ct-44-0-en",
+    "ct-44-0-zh",
+    "ct-44-1-en",
+    "ct-44-1-zh",
+    "ct-44-2-en",
+    "ct-44-2-zh",
+    "ct-44-3-en",
+    "ct-44-3-zh",
+    "rb-17-0-en",
+    "rb-17-0-zh",
+    "rb-17-1-en",
+    "rb-17-1-zh"
+  ],
+  "note": "Development-only transfer probe; holdout products and questions frozen before the next change."
+}

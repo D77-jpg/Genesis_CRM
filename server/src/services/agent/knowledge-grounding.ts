@@ -51,9 +51,19 @@ function quantityOf(text:string):number|undefined{
  const m=/(?:quantity|qty|order quantity|采购数量|数量)\s*[:：=]?\s*(\d[\d,]*)|(?:^|\s)(\d[\d,]*)\s*(?:pcs|pieces|units|件)\b/i.exec(text);
  return m?Number((m[1]??m[2]).replace(/,/g,'')):undefined;
 }
-export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{customerId?:string;quantity?:number;ids?:string[]}={}){
- const bundle=await retrieveKnowledge(actor,query,options.ids);
- if(!options.customerId||bundle.status==='retrieval_failed')return bundle;
+function requestedPriceMissing(bundle:KnowledgeBundle,query:string){
+ if(bundle.status!=='ready'||!policyTopics(query).includes('price'))return bundle;
+ const freight=/freight|shipping|courier|运费|物流费用|快递费/i.test(query);
+ const hasValue=bundle.sources.some(s=>s.terms.some(t=>(t.mode!=='needs_confirmation'&&
+  t.topic==='price'&&(!freight||/freight|shipping|courier|运费|物流|快递/i.test(t.conditions)))
+  ||(freight&&t.topic==='shipping'&&t.mode!=='needs_confirmation'&&!!t.currency&&/\d/.test(t.value))));
+ const hasOtherAnswer=bundle.topics.some(topic=>topic!=='price'&&topic!=='shipping'&&bundle.sources.some(s=>s.terms.some(t=>t.topic===topic&&t.mode!=='needs_confirmation')));
+ if(!hasValue)return {...bundle,status:hasOtherAnswer?'ready' as const:'no_match' as const,issues:[...bundle.issues,{code:'missing',message:freight?'尚无适用于本次请求的已确认运费金额；相关物流说明不能当作报价':'尚无适用于本次请求的已确认价格；相关产品介绍不能当作报价'}]};
+ return bundle;
+}
+export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{customerId?:string;quantity?:number;ids?:string[];retrievalMode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'}={}){
+ const bundle=await retrieveKnowledge(actor,query,options.ids,options.retrievalMode);
+ if(!options.customerId||bundle.status==='retrieval_failed')return requestedPriceMissing(bundle,query);
  // A customer's quotation can only enter their own context and only after a fresh ACL check.
  const customer=await getCustomerByIdOrThrow(options.customerId,actor);
  const quantity=options.quantity??quantityOf(query)??(/^\d+$/.test(customer.expectedQuantity??'')?Number(customer.expectedQuantity):undefined);
@@ -66,10 +76,11 @@ export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{
     conditions:item.productName+'; quantity '+item.quantity+'; customer '+customer.name+'; quotation '+q.quotationNo,mode:'confirmed'}));
    const conditions=terms.map(t=>t.conditions).join('; ');
    for(const [topic,value] of [['moq',q.moq],['lead_time',q.leadTime],['payment',q.paymentTerms]] as const)if(value)terms.push({topic,value,conditions,mode:'confirmed'});
+   if(bundle.status==='no_match')bundle.status='ready';
    bundle.sources.push({sourceId:'quotation:'+q.id+':v'+q.version,quotationId:q.id,version:q.version,title:q.quotationNo,category:'trade',kind:'quotation',
     source:'已接受的客户专属报价',content:JSON.stringify(items),applicability:conditions,products:items.map(i=>i.productName),validFrom:q.updatedAt.toISOString(),validUntil:q.validityDate!.toISOString(),terms});
   }
-  return bundle;
+  return requestedPriceMissing(bundle,query);
  }catch{
   return {...bundle,status:'retrieval_failed' as const,issues:[...bundle.issues,{code:'retrieval_failed',message:'客户专属报价检索失败，不能作出报价承诺'}]};
  }

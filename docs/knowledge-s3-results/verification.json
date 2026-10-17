@@ -1,0 +1,494 @@
+{
+  "schemaVersion": 1,
+  "stage": "S3",
+  "date": "2026-10-17",
+  "baseMain": "0021b59",
+  "featureCommit": "75a2814",
+  "branch": "codex/knowledge-s3-retrieval",
+  "localDelivery": "passed; user PR/CI/merge pending",
+  "machine": {
+    "os": "win32",
+    "release": "10.0.26200",
+    "cpu": "Intel(R) Core(TM) Ultra 7 265F",
+    "logicalCpus": 20,
+    "totalRamBytes": 33984950272,
+    "node": "v24.19.0"
+  },
+  "implementationHashes": [
+    {
+      "path": "semantic/model.json",
+      "sha256": "1e8ccfeb60123ad36e567c50f0895eed3eb9c283f5a5554aa2eb9730cf4d080d"
+    },
+    {
+      "path": "semantic/reranker.json",
+      "sha256": "153611ba2745a47c972c4a66e71ebac379d945160e700312b10518482fe2cb30"
+    },
+    {
+      "path": "semantic/runtime.py",
+      "sha256": "44045e93a06dc58165b0c9a9313e22568ccd16cd8a47dfe13cb6e39953d868bb"
+    },
+    {
+      "path": "semantic/retrieval.py",
+      "sha256": "b834e654617bbb61099fcd5f00dcc0c402e5178c1c126f9a2f4fa47261c7787d"
+    },
+    {
+      "path": "src/services/knowledge/index.service.ts",
+      "sha256": "1fad0c4dc4cae7480cd00c245056f3593c6782c37118d6c5238ce313e00b0016"
+    },
+    {
+      "path": "src/services/knowledge/embedding.ts",
+      "sha256": "e7c41e6453841d0bb323574a80daf36f6a38a6ac9c27203095d4a3d8e9a0ecfe"
+    },
+    {
+      "path": "src/services/agent/knowledge.service.ts",
+      "sha256": "a55639c8842a17b069121fc0cfdbe4538f21ab64d288fdbbaad5db6037c2b1b4"
+    },
+    {
+      "path": "src/services/agent/knowledge-grounding.ts",
+      "sha256": "1c0ae14cecfe7e1d83e6240b6bfaa3bf644dce145e9a4138d67e23a4313a71cd"
+    },
+    {
+      "path": "src/services/agent/knowledge-types.ts",
+      "sha256": "d93c11f28aa38793d6c33aad00098d90e13e460067ddfd72616eab072a19b288"
+    },
+    {
+      "path": "src/services/agent/tool-registry.ts",
+      "sha256": "ccbc22d52fa40abc1e51192ddf426ab12a785da54cf861da52f600a59de065d2"
+    },
+    {
+      "path": "evaluation/knowledge/retrieval.ts",
+      "sha256": "ef02420067c6faabd4852e30ef0d557236019fe56c290772a960a5e9d4674ac2"
+    },
+    {
+      "path": "evaluation/knowledge/schema.ts",
+      "sha256": "dd2d517cf6015367d17f9ef86723a758773b18695aa41d742857ff5ec6420a35"
+    },
+    {
+      "path": "evaluation/knowledge/metrics.ts",
+      "sha256": "4a016f03b86d43133510cee959bd8d5b52d05215d29d1af3b9afbe200ac88e64"
+    }
+  ],
+  "models": {
+    "embedding": {
+      "adapter": "genesis-semantic-s3.1",
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "license": "apache-2.0",
+      "dimension": 384,
+      "maxTokens": 128,
+      "pooling": "attention-mask mean + L2",
+      "distance": "cosine",
+      "weight": "onnx/model_quint8_avx2.onnx",
+      "files": [
+        {
+          "path": "config.json",
+          "sha256": "6300193cb75e01cf80c96decef7187dfb33094d97cc1490b7ead6ff134476e4e"
+        },
+        {
+          "path": "tokenizer.json",
+          "sha256": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "sha256": "5036ea374ffedd706e3bef33e2e0d6953cb868ef8a490e76e32ba0faa37a6b9b"
+        },
+        {
+          "path": "onnx/model_quint8_avx2.onnx",
+          "sha256": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f"
+        }
+      ],
+      "packages": {
+        "onnxruntime": "1.31.0",
+        "numpy": "2.5.4",
+        "tokenizers": "0.23.3",
+        "sqlite-vec": "0.1.9",
+        "psutil": "7.2.2"
+      }
+    },
+    "reranker": {
+      "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+      "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+      "license": "apache-2.0",
+      "weight": "onnx/model_quint8_avx2.onnx",
+      "maxTokens": 256,
+      "files": [
+        {
+          "name": "config.json",
+          "sha256": "cc2cfe51aa3fd759d21d21acf5dfd6994aa67a3c9210636d22e143699d336c77"
+        },
+        {
+          "name": "tokenizer.json",
+          "sha256": "62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "sha256": "e7fbfbfa6347b4e414c1cee50d142e2c2f9a895dad68b068ae83a8b564c3837e"
+        },
+        {
+          "name": "onnx/model_quint8_avx2.onnx",
+          "sha256": "6c2513767fb63d008a4377bef7a7a3555433d9436342bb53e35a3a72ffc52d4b"
+        }
+      ]
+    },
+    "realEmbedding": true,
+    "realRerank": true,
+    "realFTS5": true,
+    "LLM": "mock/off; no generative quality evaluation"
+  },
+  "quality": {
+    "originalFixed120": {
+      "cases": 120,
+      "answerable": 80,
+      "negative": 40,
+      "recallAt10": 0.9875,
+      "mrrAt10": 0.98125,
+      "classificationAccuracy": 0.975,
+      "negativeStateAccuracy": 0.975,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2369.144,
+        "p95": 2513.289,
+        "max": 2551.104
+      },
+      "unexpectedErrors": []
+    },
+    "originalFixedSplits": {
+      "dev": {
+        "cases": 60,
+        "answerable": 40,
+        "negative": 20,
+        "recallAt10": 0.9875,
+        "mrrAt10": 0.975,
+        "classificationAccuracy": 0.9833333333333333,
+        "negativeStateAccuracy": 1,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2365.912,
+          "p95": 2481.832,
+          "max": 2527.34
+        },
+        "unexpectedErrors": []
+      },
+      "holdout": {
+        "cases": 60,
+        "answerable": 40,
+        "negative": 20,
+        "recallAt10": 0.9875,
+        "mrrAt10": 0.9875,
+        "classificationAccuracy": 0.9666666666666667,
+        "negativeStateAccuracy": 0.95,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2372.804,
+          "p95": 2520.127,
+          "max": 2551.104
+        },
+        "unexpectedErrors": []
+      }
+    },
+    "originalLanguages": {
+      "en": {
+        "cases": 73,
+        "answerable": 48,
+        "negative": 25,
+        "recallAt10": 0.9791666666666666,
+        "mrrAt10": 0.9895833333333334,
+        "classificationAccuracy": 0.958904109589041,
+        "negativeStateAccuracy": 0.96,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2370.226,
+          "p95": 2520.127,
+          "max": 2551.104
+        },
+        "unexpectedErrors": []
+      },
+      "zh": {
+        "cases": 47,
+        "answerable": 32,
+        "negative": 15,
+        "recallAt10": 1,
+        "mrrAt10": 0.96875,
+        "classificationAccuracy": 1,
+        "negativeStateAccuracy": 1,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2366.707,
+          "p95": 2473.711,
+          "max": 2550.412
+        },
+        "unexpectedErrors": []
+      }
+    },
+    "originalCrossLanguage": {
+      "false": {
+        "cases": 78,
+        "answerable": 38,
+        "negative": 40,
+        "recallAt10": 0.9868421052631579,
+        "mrrAt10": 0.9868421052631579,
+        "classificationAccuracy": 0.9743589743589743,
+        "negativeStateAccuracy": 0.975,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2364.796,
+          "p95": 2513.289,
+          "max": 2550.412
+        },
+        "unexpectedErrors": []
+      },
+      "true": {
+        "cases": 42,
+        "answerable": 42,
+        "negative": 0,
+        "recallAt10": 0.9880952380952381,
+        "mrrAt10": 0.9761904761904762,
+        "classificationAccuracy": 0.9761904761904762,
+        "negativeStateAccuracy": null,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2379.884,
+          "p95": 2520.127,
+          "max": 2551.104
+        },
+        "unexpectedErrors": []
+      }
+    },
+    "newIndependentFirstCheckpoint": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 0.9833333333333333,
+      "negativeStateAccuracy": 0.95,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2514.118,
+        "p95": 2780.77,
+        "max": 2841.29
+      },
+      "unexpectedErrors": []
+    },
+    "newIndependentFinalRegression": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 0.9833333333333333,
+      "negativeStateAccuracy": 0.95,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2396.97,
+        "p95": 2589.046,
+        "max": 2817.626
+      },
+      "unexpectedErrors": []
+    },
+    "newIndependentLanguages": {
+      "en": {
+        "cases": 34,
+        "answerable": 20,
+        "negative": 14,
+        "recallAt10": 1,
+        "mrrAt10": 1,
+        "classificationAccuracy": 1,
+        "negativeStateAccuracy": 1,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2386.714,
+          "p95": 2589.046,
+          "max": 2700.597
+        },
+        "unexpectedErrors": []
+      },
+      "zh": {
+        "cases": 26,
+        "answerable": 20,
+        "negative": 6,
+        "recallAt10": 1,
+        "mrrAt10": 1,
+        "classificationAccuracy": 0.9615384615384616,
+        "negativeStateAccuracy": 0.8333333333333334,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2397.676,
+          "p95": 2629.454,
+          "max": 2817.626
+        },
+        "unexpectedErrors": []
+      }
+    },
+    "newIndependentCrossLanguage": {
+      "false": {
+        "cases": 40,
+        "answerable": 20,
+        "negative": 20,
+        "recallAt10": 1,
+        "mrrAt10": 1,
+        "classificationAccuracy": 0.975,
+        "negativeStateAccuracy": 0.95,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2374.879,
+          "p95": 2589.046,
+          "max": 2817.626
+        },
+        "unexpectedErrors": []
+      },
+      "true": {
+        "cases": 20,
+        "answerable": 20,
+        "negative": 0,
+        "recallAt10": 1,
+        "mrrAt10": 1,
+        "classificationAccuracy": 1,
+        "negativeStateAccuracy": null,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 2415.981,
+          "p95": 2583.99,
+          "max": 2629.454
+        },
+        "unexpectedErrors": []
+      }
+    },
+    "firstOriginalHoldoutFailed": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 0.9875,
+      "mrrAt10": 0.9875,
+      "classificationAccuracy": 0.9,
+      "negativeStateAccuracy": 0.75,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2354.448,
+        "p95": 2536.727,
+        "max": 2670.938
+      },
+      "unexpectedErrors": []
+    },
+    "remainingOriginalCases": [
+      {
+        "id": "a01-5",
+        "category": "company",
+        "expected": "answerable",
+        "observed": "answerable",
+        "missing": [
+          "company.1"
+        ],
+        "issueCodes": []
+      },
+      {
+        "id": "a06-3",
+        "category": "lead",
+        "expected": "answerable",
+        "observed": "no_match",
+        "missing": [],
+        "issueCodes": [
+          "missing",
+          "missing"
+        ]
+      },
+      {
+        "id": "a10-3",
+        "category": "certificate",
+        "expected": "answerable",
+        "observed": "expired",
+        "missing": [],
+        "issueCodes": [
+          "expired",
+          "missing"
+        ]
+      },
+      {
+        "id": "a10-5",
+        "category": "certificate",
+        "expected": "answerable",
+        "observed": "answerable",
+        "missing": [
+          "certificate.2"
+        ],
+        "issueCodes": [
+          "missing"
+        ]
+      },
+      {
+        "id": "n16",
+        "category": "draft",
+        "expected": "draft_only",
+        "observed": "no_match",
+        "missing": [],
+        "issueCodes": []
+      }
+    ],
+    "remainingIndependentCases": [
+      {
+        "id": "holdout-negative-8",
+        "category": "draft",
+        "expected": "draft_only",
+        "observed": "no_match",
+        "missing": [],
+        "issueCodes": [
+          "missing"
+        ]
+      }
+    ]
+  },
+  "tests": {
+    "knowledgeRetrieval": 13,
+    "knowledgeIndex": 23,
+    "projectKnowledge": 15,
+    "agent": 62,
+    "evaluationContracts": 8,
+    "ingestion": 11,
+    "integration": 24,
+    "scratchpad": 3,
+    "templateFeedback": 3,
+    "webBraces": 20,
+    "webCustomerInputs": 5,
+    "webMarkdown": 3,
+    "mailAndPOP3": "passed",
+    "security": "passed",
+    "serverBuild": "passed",
+    "webBuild": "passed",
+    "strictNewTypecheck": "passed",
+    "npmProductionAudits": "passed; existing xlsx exception expires 2026-10-26",
+    "gitleaks": "v8.24.0 all history: 82 commits / ~4.23MB, immediate exit0; no new exceptions"
+  },
+  "ui": {
+    "fictional": true,
+    "api": 5007,
+    "web": 5187,
+    "steps": [
+      "fixture sign-in",
+      "existing knowledge navigation",
+      "ready generation",
+      "Chinese query retrieves English source v2",
+      "complete body and footnote",
+      "linked original parsing revision",
+      "Unicode position 0..162"
+    ],
+    "screenshots": [
+      "search.png",
+      "source.png"
+    ]
+  },
+  "sideEffects": {
+    "realCustomersModified": false,
+    "realMailSent": false,
+    "realKnowledgeAutomaticallyPublished": false,
+    "original82DraftsPreserved": true
+  },
+  "limits": [
+    "128 token encoder windows remain, complete parent evidence restored",
+    "16 query windows / 128 indexing windows per atom / 256 rerank pairs; explicit failure or downgrade",
+    "128 authorized historical titles per query; safe failure beyond capacity",
+    "Chinese draft-state diagnostic misses one unseen case: 5/6 Chinese negatives correct, overall 19/20",
+    "Original compound company/certificate evidence misses and safe-partial state mismatches retained",
+    "Conditional entailment, full claim support and five-mail workflow remain S4/S5/S6",
+    "10000 independent chunks, concurrency2, warm end-to-end P95 and multiple servers remain S7"
+  ]
+}

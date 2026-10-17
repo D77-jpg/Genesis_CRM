@@ -88,3 +88,10 @@ Publication、IndexGeneration、完整 EvidenceBundle/DraftEvidenceSnapshot 的�
 已实现的本地模型适配、发布衍生片段、持久索引任务/代次、Mongo 门禁、双重授权和内部草稿追踪，见 [ADR-002 与操作合同](knowledge-s2-index.md)。S1 原文/解析/片段不覆盖；AgentKnowledge 的发布版本仍是权威。S2 的 published_text 位置与原文件位置严格区分，未编辑原始资料来伪造精确定位。
 
 这不代表八类合同后续所有质量与运维要求完成：条件冲突/充分性归 S4，统一工作流归 S5，完整体验归 S6，备份/多实例/规模性能归 S7。不得把 S2 小型真实模型测试当最终企业知识库验收。
+
+
+## S3 合同落地（0021b59 之后）
+
+[ADR-003](knowledge-s3-retrieval.md) 定义检索窗口和完整发布依据分离、授权范围内 FTS5/BM25、来源去重/RRF/固定本地重排、显式降级与状态发现。IndexIdentity 升级为 genesis-semantic-s3.1，必须建立新代次；原文/解析/知识修订/旧草稿不重写。
+
+标题状态元数据同样受二次权限复核；管理员检索 trace 不进入销售模型上下文。来源分数不是事实置信度；完整条件核对与邮件逐项语义支持仍由 S4 完成，不把高召回当成最终承诺支持率。

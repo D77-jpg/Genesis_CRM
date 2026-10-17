@@ -1,0 +1,6154 @@
+{
+  "implementationHashes": [
+    {
+      "path": "semantic/model.json",
+      "sha256": "1e8ccfeb60123ad36e567c50f0895eed3eb9c283f5a5554aa2eb9730cf4d080d"
+    },
+    {
+      "path": "semantic/reranker.json",
+      "sha256": "153611ba2745a47c972c4a66e71ebac379d945160e700312b10518482fe2cb30"
+    },
+    {
+      "path": "semantic/runtime.py",
+      "sha256": "44045e93a06dc58165b0c9a9313e22568ccd16cd8a47dfe13cb6e39953d868bb"
+    },
+    {
+      "path": "semantic/retrieval.py",
+      "sha256": "b834e654617bbb61099fcd5f00dcc0c402e5178c1c126f9a2f4fa47261c7787d"
+    },
+    {
+      "path": "src/services/knowledge/index.service.ts",
+      "sha256": "1fad0c4dc4cae7480cd00c245056f3593c6782c37118d6c5238ce313e00b0016"
+    },
+    {
+      "path": "src/services/knowledge/embedding.ts",
+      "sha256": "e7c41e6453841d0bb323574a80daf36f6a38a6ac9c27203095d4a3d8e9a0ecfe"
+    },
+    {
+      "path": "src/services/agent/knowledge.service.ts",
+      "sha256": "a55639c8842a17b069121fc0cfdbe4538f21ab64d288fdbbaad5db6037c2b1b4"
+    },
+    {
+      "path": "src/services/agent/knowledge-grounding.ts",
+      "sha256": "1c0ae14cecfe7e1d83e6240b6bfaa3bf644dce145e9a4138d67e23a4313a71cd"
+    },
+    {
+      "path": "src/services/agent/knowledge-types.ts",
+      "sha256": "d93c11f28aa38793d6c33aad00098d90e13e460067ddfd72616eab072a19b288"
+    },
+    {
+      "path": "src/services/agent/tool-registry.ts",
+      "sha256": "ccbc22d52fa40abc1e51192ddf426ab12a785da54cf861da52f600a59de065d2"
+    },
+    {
+      "path": "evaluation/knowledge/retrieval.ts",
+      "sha256": "ef02420067c6faabd4852e30ef0d557236019fe56c290772a960a5e9d4674ac2"
+    },
+    {
+      "path": "evaluation/knowledge/schema.ts",
+      "sha256": "dd2d517cf6015367d17f9ef86723a758773b18695aa41d742857ff5ec6420a35"
+    },
+    {
+      "path": "evaluation/knowledge/metrics.ts",
+      "sha256": "4a016f03b86d43133510cee959bd8d5b52d05215d29d1af3b9afbe200ac88e64"
+    }
+  ],
+  "schemaVersion": 1,
+  "createdAt": "2026-10-17T13:36:09.978Z",
+  "evaluationAsOf": "2026-10-17T00:00:00+08:00",
+  "clockPolicy": "Date-only frozen in isolated CLI; performance.now remains real; production retrieval unchanged",
+  "commit": "75a2814dd639200875d17610682f6fad5bb1c454",
+  "dirtyTree": false,
+  "engine": "S3 hybrid_rerank production buildKnowledgeBundle + auditGroundedEmail",
+  "scope": "No LLM or live DB. No email generation quality measured. Sales rules loaded separately, excluded from relevance rank. Up to 10 distinct publications. Customer quotations still scoped by production service.",
+  "split": "all",
+  "hashes": [
+    {
+      "path": "corpus.json",
+      "sha256": "3fb85a80aff72be82cd1d357f20d36c18390239846b6a49d709ce82351048b5b"
+    },
+    {
+      "path": "cases.dev.json",
+      "sha256": "e53a451943185312ea7ae4cb1e68a130c253eb94a5c769ba64ccc365f61b0ecf"
+    },
+    {
+      "path": "cases.holdout.json",
+      "sha256": "c3584e8dfc9f97d7f2c07d6525fc95803c0c86f75a08ede3fba43b449c655750"
+    },
+    {
+      "path": "probe-set.json",
+      "sha256": "756fa51b617626463ea365eee9e288899f430e680fdcff3f9080b1ec4f3fa6f1"
+    },
+    {
+      "path": "retrieval.ts",
+      "sha256": "ef02420067c6faabd4852e30ef0d557236019fe56c290772a960a5e9d4674ac2"
+    },
+    {
+      "path": "schema.ts",
+      "sha256": "dd2d517cf6015367d17f9ef86723a758773b18695aa41d742857ff5ec6420a35"
+    },
+    {
+      "path": "metrics.ts",
+      "sha256": "4a016f03b86d43133510cee959bd8d5b52d05215d29d1af3b9afbe200ac88e64"
+    },
+    {
+      "path": "runtime-safety.ts",
+      "sha256": "92cee439f80cb085bd4563205907b6d99b1df7098a51792571a6f9c1e9e5a235"
+    }
+  ],
+  "machine": {
+    "os": "win32",
+    "release": "10.0.26200",
+    "cpu": "Intel(R) Core(TM) Ultra 7 265F",
+    "logicalCpus": 20,
+    "totalRamBytes": 33984950272,
+    "node": "v24.19.0"
+  },
+  "fixture": {
+    "sources": 50,
+    "cases": 120,
+    "directory": "D:\\Trade\\genesis\\CRM\\Genesis_CRM\\server\\evaluation\\knowledge"
+  },
+  "productionHashes": [
+    {
+      "path": "knowledge.service.ts",
+      "sha256": "a55639c8842a17b069121fc0cfdbe4538f21ab64d288fdbbaad5db6037c2b1b4"
+    },
+    {
+      "path": "knowledge-grounding.ts",
+      "sha256": "1c0ae14cecfe7e1d83e6240b6bfaa3bf644dce145e9a4138d67e23a4313a71cd"
+    },
+    {
+      "path": "mail-access.ts",
+      "sha256": "0d2356e3b9ea9f530dbdc0bb3a6b32647b9cf9e9f05505f8e462c8586ae787c7"
+    }
+  ],
+  "summary": {
+    "cases": 120,
+    "answerable": 80,
+    "negative": 40,
+    "recallAt10": 0.9875,
+    "mrrAt10": 0.98125,
+    "classificationAccuracy": 0.975,
+    "negativeStateAccuracy": 0.975,
+    "forbiddenHits": 0,
+    "latencyMs": {
+      "p50": 2369.144,
+      "p95": 2513.289,
+      "max": 2551.104
+    },
+    "unexpectedErrors": []
+  },
+  "bySplit": {
+    "dev": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 0.9875,
+      "mrrAt10": 0.975,
+      "classificationAccuracy": 0.9833333333333333,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2365.912,
+        "p95": 2481.832,
+        "max": 2527.34
+      },
+      "unexpectedErrors": []
+    },
+    "holdout": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 0.9875,
+      "mrrAt10": 0.9875,
+      "classificationAccuracy": 0.9666666666666667,
+      "negativeStateAccuracy": 0.95,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2372.804,
+        "p95": 2520.127,
+        "max": 2551.104
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byLanguage": {
+    "en": {
+      "cases": 73,
+      "answerable": 48,
+      "negative": 25,
+      "recallAt10": 0.9791666666666666,
+      "mrrAt10": 0.9895833333333334,
+      "classificationAccuracy": 0.958904109589041,
+      "negativeStateAccuracy": 0.96,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2370.226,
+        "p95": 2520.127,
+        "max": 2551.104
+      },
+      "unexpectedErrors": []
+    },
+    "zh": {
+      "cases": 47,
+      "answerable": 32,
+      "negative": 15,
+      "recallAt10": 1,
+      "mrrAt10": 0.96875,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2366.707,
+        "p95": 2473.711,
+        "max": 2550.412
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCrossLanguage": {
+    "false": {
+      "cases": 78,
+      "answerable": 38,
+      "negative": 40,
+      "recallAt10": 0.9868421052631579,
+      "mrrAt10": 0.9868421052631579,
+      "classificationAccuracy": 0.9743589743589743,
+      "negativeStateAccuracy": 0.975,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2364.796,
+        "p95": 2513.289,
+        "max": 2550.412
+      },
+      "unexpectedErrors": []
+    },
+    "true": {
+      "cases": 42,
+      "answerable": 42,
+      "negative": 0,
+      "recallAt10": 0.9880952380952381,
+      "mrrAt10": 0.9761904761904762,
+      "classificationAccuracy": 0.9761904761904762,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2379.884,
+        "p95": 2520.127,
+        "max": 2551.104
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCategory": {
+    "agreement": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.7,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2374.669,
+        "p95": 2446.811,
+        "max": 2446.811
+      },
+      "unexpectedErrors": []
+    },
+    "box": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2365.802,
+        "p95": 2375.826,
+        "max": 2375.826
+      },
+      "unexpectedErrors": []
+    },
+    "certificate": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 0.9,
+      "mrrAt10": 1,
+      "classificationAccuracy": 0.8,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2383.011,
+        "p95": 2482.981,
+        "max": 2482.981
+      },
+      "unexpectedErrors": []
+    },
+    "company": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 0.9,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2390.247,
+        "p95": 2467.659,
+        "max": 2467.659
+      },
+      "unexpectedErrors": []
+    },
+    "conflict": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2359.246,
+        "p95": 2386.998,
+        "max": 2386.998
+      },
+      "unexpectedErrors": []
+    },
+    "customer": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.465,
+        "p95": 0.787,
+        "max": 0.787
+      },
+      "unexpectedErrors": []
+    },
+    "disabled": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2385.603,
+        "p95": 2471.472,
+        "max": 2471.472
+      },
+      "unexpectedErrors": []
+    },
+    "draft": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 0.6666666666666666,
+      "negativeStateAccuracy": 0.6666666666666666,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2379.299,
+        "p95": 2381.171,
+        "max": 2381.171
+      },
+      "unexpectedErrors": []
+    },
+    "expired": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2486.903,
+        "p95": 2513.289,
+        "max": 2513.289
+      },
+      "unexpectedErrors": []
+    },
+    "fabric": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2367.824,
+        "p95": 2450.724,
+        "max": 2450.724
+      },
+      "unexpectedErrors": []
+    },
+    "failure": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.904,
+        "p95": 1.077,
+        "max": 1.077
+      },
+      "unexpectedErrors": []
+    },
+    "future": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2377.341,
+        "p95": 2527.34,
+        "max": 2527.34
+      },
+      "unexpectedErrors": []
+    },
+    "gym-frame": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2321.597,
+        "p95": 2354.72,
+        "max": 2354.72
+      },
+      "unexpectedErrors": []
+    },
+    "gym-moq": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2520.127,
+        "p95": 2551.104,
+        "max": 2551.104
+      },
+      "unexpectedErrors": []
+    },
+    "gym-warranty": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2337.715,
+        "p95": 2357.627,
+        "max": 2357.627
+      },
+      "unexpectedErrors": []
+    },
+    "injection": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.098,
+        "p95": 0.522,
+        "max": 0.522
+      },
+      "unexpectedErrors": []
+    },
+    "inspection": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2382.873,
+        "p95": 2423.049,
+        "max": 2423.049
+      },
+      "unexpectedErrors": []
+    },
+    "lead": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 0.8,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2369.321,
+        "p95": 2473.053,
+        "max": 2473.053
+      },
+      "unexpectedErrors": []
+    },
+    "logo": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2403.313,
+        "p95": 2473.711,
+        "max": 2473.711
+      },
+      "unexpectedErrors": []
+    },
+    "mailbox": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.967,
+        "p95": 4.606,
+        "max": 4.606
+      },
+      "unexpectedErrors": []
+    },
+    "missing": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2370.374,
+        "p95": 2550.412,
+        "max": 2550.412
+      },
+      "unexpectedErrors": []
+    },
+    "moq": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2401.487,
+        "p95": 2424.149,
+        "max": 2424.149
+      },
+      "unexpectedErrors": []
+    },
+    "payment": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2380.63,
+        "p95": 2440.824,
+        "max": 2440.824
+      },
+      "unexpectedErrors": []
+    },
+    "project": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2372.804,
+        "p95": 2379.72,
+        "max": 2379.72
+      },
+      "unexpectedErrors": []
+    },
+    "sales": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2370.226,
+        "p95": 2434.172,
+        "max": 2434.172
+      },
+      "unexpectedErrors": []
+    },
+    "sample": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2388.166,
+        "p95": 2481.832,
+        "max": 2481.832
+      },
+      "unexpectedErrors": []
+    },
+    "shipping": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 2379.884,
+        "p95": 2393.983,
+        "max": 2393.983
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "rows": [
+    {
+      "id": "a01-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 2356.321,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 290.56,
+            "bm25Ms": 7.85,
+            "rerankMs": 1094.58,
+            "retrievalMs": 1401.82
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a01-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.2"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 2354.976,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 293.56,
+            "bm25Ms": 6.99,
+            "rerankMs": 1099.36,
+            "retrievalMs": 1410.8
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a01-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1",
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "noise-6.1"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ]
+      ],
+      "durationMs": 2467.659,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 2,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 302.44,
+            "bm25Ms": 7.53,
+            "rerankMs": 1216.16,
+            "retrievalMs": 1535.27
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 54
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-8.1"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-18.1"
+        ]
+      ],
+      "durationMs": 2344.051,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 288.35,
+            "bm25Ms": 7.51,
+            "rerankMs": 1111.27,
+            "retrievalMs": 1415.2
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.2"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 2366.445,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 295.86,
+            "bm25Ms": 6.84,
+            "rerankMs": 1102.68,
+            "retrievalMs": 1414.27
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1",
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 2367.824,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 295.9,
+            "bm25Ms": 7.02,
+            "rerankMs": 1109.83,
+            "retrievalMs": 1421.09
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 2369.144,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 287.37,
+            "bm25Ms": 14.39,
+            "rerankMs": 1102.62,
+            "retrievalMs": 1415.76
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 2375.826,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 285.34,
+            "bm25Ms": 6.69,
+            "rerankMs": 1122.15,
+            "retrievalMs": 1428.66
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2",
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 2365.802,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 284.8,
+            "bm25Ms": 7.09,
+            "rerankMs": 1113.48,
+            "retrievalMs": 1414.12
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a04-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ]
+      ],
+      "durationMs": 2403.313,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 300.91,
+            "bm25Ms": 7.25,
+            "rerankMs": 1126.09,
+            "retrievalMs": 1442.85
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a04-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ]
+      ],
+      "durationMs": 2353.567,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 289.36,
+            "bm25Ms": 7.68,
+            "rerankMs": 1111.85,
+            "retrievalMs": 1417.2
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a04-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1",
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ]
+      ],
+      "durationMs": 2424.601,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 291.64,
+            "bm25Ms": 7.07,
+            "rerankMs": 1129.04,
+            "retrievalMs": 1445.67
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 2424.149,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 312.43,
+            "bm25Ms": 8.55,
+            "rerankMs": 1128.46,
+            "retrievalMs": 1458.3
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 2364.796,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 306.51,
+            "bm25Ms": 6.65,
+            "rerankMs": 1110.4,
+            "retrievalMs": 1433.6
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1",
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 2401.487,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 290.93,
+            "bm25Ms": 8.13,
+            "rerankMs": 1135.38,
+            "retrievalMs": 1443
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a06-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 2377.74,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 287.68,
+            "bm25Ms": 7.28,
+            "rerankMs": 1141.61,
+            "retrievalMs": 1445.15
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a06-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "no_match",
+      "required": [
+        "lead.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2369.321,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 289.45,
+            "bm25Ms": 6.88,
+            "rerankMs": 1119.44,
+            "retrievalMs": 1423.74
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing",
+        "missing"
+      ]
+    },
+    {
+      "id": "a06-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1",
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 2473.053,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 2,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 298.36,
+            "bm25Ms": 6.74,
+            "rerankMs": 1226.72,
+            "retrievalMs": 1539.7
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 54
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a07-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2388.604,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 315.02,
+            "bm25Ms": 6.87,
+            "rerankMs": 1118.52,
+            "retrievalMs": 1449.57
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a07-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 2362.819,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 289.31,
+            "bm25Ms": 7.37,
+            "rerankMs": 1111.71,
+            "retrievalMs": 1416.99
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a07-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1",
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 2481.832,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 2,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 292.46,
+            "bm25Ms": 7.07,
+            "rerankMs": 1214.21,
+            "retrievalMs": 1522.24
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 54
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.1"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 2356.153,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 287.66,
+            "bm25Ms": 6.8,
+            "rerankMs": 1107.81,
+            "retrievalMs": 1411.66
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.2"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 2393.901,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 326.81,
+            "bm25Ms": 6.75,
+            "rerankMs": 1121.42,
+            "retrievalMs": 1464.38
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.1",
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 2380.63,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 311.93,
+            "bm25Ms": 6.89,
+            "rerankMs": 1111.89,
+            "retrievalMs": 1440.02
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing",
+        "missing",
+        "missing"
+      ]
+    },
+    {
+      "id": "a09-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 2380.26,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 286.53,
+            "bm25Ms": 6.56,
+            "rerankMs": 1118.27,
+            "retrievalMs": 1421.03
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a09-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 2335.556,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 292.47,
+            "bm25Ms": 6.62,
+            "rerankMs": 1100.35,
+            "retrievalMs": 1407.86
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a10-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 2364.141,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 289.59,
+            "bm25Ms": 7.23,
+            "rerankMs": 1118.08,
+            "retrievalMs": 1423.8
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a10-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1",
+        "certificate.2"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2383.011,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 292.05,
+            "bm25Ms": 7.01,
+            "rerankMs": 1124.77,
+            "retrievalMs": 1436.05
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a11-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2368.768,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 288.98,
+            "bm25Ms": 7.5,
+            "rerankMs": 1114.13,
+            "retrievalMs": 1419.67
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a11-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1",
+        "inspection.2"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 2382.873,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 299.26,
+            "bm25Ms": 6.56,
+            "rerankMs": 1112.79,
+            "retrievalMs": 1427.09
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a12-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 2356.492,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 286.41,
+            "bm25Ms": 6.59,
+            "rerankMs": 1127.55,
+            "retrievalMs": 1429.16
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a12-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 2365.912,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 285.98,
+            "bm25Ms": 6.91,
+            "rerankMs": 1113.6,
+            "retrievalMs": 1414.25
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a13-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 2373.539,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 296.7,
+            "bm25Ms": 6.77,
+            "rerankMs": 1121.35,
+            "retrievalMs": 1432.84
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a13-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 2374.669,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 296.99,
+            "bm25Ms": 7.49,
+            "rerankMs": 1119.62,
+            "retrievalMs": 1434.77
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a14-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 2311.767,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 296.49,
+            "bm25Ms": 4.9,
+            "rerankMs": 1071.8,
+            "retrievalMs": 1374.42
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a14-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ]
+      ],
+      "durationMs": 2298.495,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 285.35,
+            "bm25Ms": 4.3,
+            "rerankMs": 1058.83,
+            "retrievalMs": 1349.31
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a15-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 2295.472,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 296.97,
+            "bm25Ms": 4.3,
+            "rerankMs": 1049.41,
+            "retrievalMs": 1351.78
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a15-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "scope-other.1"
+        ]
+      ],
+      "durationMs": 2323.655,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 310.14,
+            "bm25Ms": 4.24,
+            "rerankMs": 1067.1,
+            "retrievalMs": 1382.31
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a16-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ]
+      ],
+      "durationMs": 2305.598,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 288.54,
+            "bm25Ms": 4.38,
+            "rerankMs": 1048.38,
+            "retrievalMs": 1342.41
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a16-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "noise-13.1"
+        ]
+      ],
+      "durationMs": 2347.883,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 302.74,
+            "bm25Ms": 4.28,
+            "rerankMs": 1097.24,
+            "retrievalMs": 1405.09
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n01",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2340.664,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 289.23,
+            "bm25Ms": 6.71,
+            "rerankMs": 1109.6,
+            "retrievalMs": 1413.77
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing",
+        "missing",
+        "missing"
+      ]
+    },
+    {
+      "id": "n03",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2370.374,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 291.75,
+            "bm25Ms": 6.77,
+            "rerankMs": 1116.17,
+            "retrievalMs": 1423.29
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n05",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2486.903,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.67,
+            "bm25Ms": 6.86,
+            "rerankMs": 1184.31,
+            "retrievalMs": 1505.13
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "expired",
+              "sourceId": "knowledge:cef9adea1d2cb9752a4290a2:v1",
+              "title": "Expired cotton certificate"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "expired",
+        "missing"
+      ]
+    },
+    {
+      "id": "n07",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2513.289,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 296.42,
+            "bm25Ms": 6.71,
+            "rerankMs": 1145.33,
+            "retrievalMs": 1458.57
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "expired",
+              "sourceId": "knowledge:cef9adea1d2cb9752a4290a2:v1",
+              "title": "Expired cotton certificate"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "expired",
+        "missing"
+      ]
+    },
+    {
+      "id": "n09",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "disabled",
+      "expected": "disabled",
+      "observed": "disabled",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 2471.472,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 296.65,
+            "bm25Ms": 15.12,
+            "rerankMs": 1148.87,
+            "retrievalMs": 1469.26
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "disabled",
+              "sourceId": "knowledge:88b66a9fcb8895f9ef6d7a4d:v1",
+              "title": "Retired mirror finish"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "disabled"
+      ]
+    },
+    {
+      "id": "n11",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2527.34,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 340.24,
+            "bm25Ms": 7.26,
+            "rerankMs": 1129.74,
+            "retrievalMs": 1486.21
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "not_effective",
+              "sourceId": "knowledge:535019ef1a61287b3a307037:v1",
+              "title": "Future credit terms"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "not_effective",
+        "missing"
+      ]
+    },
+    {
+      "id": "n13",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2377.341,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 295.64,
+            "bm25Ms": 6.99,
+            "rerankMs": 1102.69,
+            "retrievalMs": 1413.85
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "not_effective",
+              "sourceId": "knowledge:535019ef1a61287b3a307037:v1",
+              "title": "Future credit terms"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "not_effective",
+        "missing"
+      ]
+    },
+    {
+      "id": "n15",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "draft",
+      "expected": "draft_only",
+      "observed": "draft_only",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 2381.171,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 292.51,
+            "bm25Ms": 6.9,
+            "rerankMs": 1123.47,
+            "retrievalMs": 1434.86
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "draft_only",
+              "sourceId": "knowledge:b78bf328b73ec420b198551a:v1",
+              "title": "Unpublished rush service"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "draft_only"
+      ]
+    },
+    {
+      "id": "n17",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ]
+      ],
+      "durationMs": 2359.246,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 303.17,
+            "bm25Ms": 6.76,
+            "rerankMs": 1107.74,
+            "retrievalMs": 1425.87
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "conflict",
+        "conflict"
+      ]
+    },
+    {
+      "id": "n19",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ]
+      ],
+      "durationMs": 2347.467,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 290.59,
+            "bm25Ms": 6.7,
+            "rerankMs": 1109.19,
+            "retrievalMs": 1415.04
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "conflict",
+        "conflict"
+      ]
+    },
+    {
+      "id": "n21",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2376.588,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 307.4,
+            "bm25Ms": 6.86,
+            "rerankMs": 1116.96,
+            "retrievalMs": 1441.65
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "n23",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2344.919,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 298.15,
+            "bm25Ms": 6.66,
+            "rerankMs": 1109.46,
+            "retrievalMs": 1422.79
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "n25",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.785,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n27",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.458,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n29",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 4.606,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n31",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1.491,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n33",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.522,
+      "forbiddenHits": []
+    },
+    {
+      "id": "n35",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.098,
+      "forbiddenHits": []
+    },
+    {
+      "id": "n37",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.904,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "retrieval_failed"
+      ]
+    },
+    {
+      "id": "n39",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.905,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "retrieval_failed"
+      ]
+    },
+    {
+      "id": "a01-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 2390.247,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.42,
+            "bm25Ms": 6.64,
+            "rerankMs": 1122.22,
+            "retrievalMs": 1431.3
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a01-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.2"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 2397.124,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 284.73,
+            "bm25Ms": 6.71,
+            "rerankMs": 1139.55,
+            "retrievalMs": 1439.71
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 2450.724,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 299.67,
+            "bm25Ms": 6.96,
+            "rerankMs": 1116.82,
+            "retrievalMs": 1433.74
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a02-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.2"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 2373.015,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 308.47,
+            "bm25Ms": 6.84,
+            "rerankMs": 1104.75,
+            "retrievalMs": 1428.16
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 2359.483,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 289.79,
+            "bm25Ms": 6.6,
+            "rerankMs": 1121.05,
+            "retrievalMs": 1426.23
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a03-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "noise-6.1"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "noise-20.1"
+        ]
+      ],
+      "durationMs": 2359.521,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 285.14,
+            "bm25Ms": 7.81,
+            "rerankMs": 1113.14,
+            "retrievalMs": 1414.19
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a04-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-16.1"
+        ]
+      ],
+      "durationMs": 2473.711,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 319.52,
+            "bm25Ms": 7.32,
+            "rerankMs": 1129.99,
+            "retrievalMs": 1465.68
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a04-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 2390.567,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 297.1,
+            "bm25Ms": 6.75,
+            "rerankMs": 1115.97,
+            "retrievalMs": 1429.37
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 2413.005,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 300.9,
+            "bm25Ms": 7.71,
+            "rerankMs": 1115.91,
+            "retrievalMs": 1433.03
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a05-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 2364.772,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 287.09,
+            "bm25Ms": 6.78,
+            "rerankMs": 1117.34,
+            "retrievalMs": 1419.89
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a06-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2366.707,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 287.52,
+            "bm25Ms": 6.62,
+            "rerankMs": 1108.06,
+            "retrievalMs": 1410.87
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a06-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2361.791,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 287.32,
+            "bm25Ms": 6.64,
+            "rerankMs": 1105.36,
+            "retrievalMs": 1407.6
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a07-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "noise-20.1"
+        ],
+        [
+          "noise-10.1"
+        ]
+      ],
+      "durationMs": 2388.166,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 296.43,
+            "bm25Ms": 6.73,
+            "rerankMs": 1119.28,
+            "retrievalMs": 1430.59
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a07-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 2382.374,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.54,
+            "bm25Ms": 6.62,
+            "rerankMs": 1133.38,
+            "retrievalMs": 1443.41
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.1"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2360.585,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 288.03,
+            "bm25Ms": 6.81,
+            "rerankMs": 1101.62,
+            "retrievalMs": 1404.98
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a08-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.2"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 2440.824,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 297.72,
+            "bm25Ms": 6.77,
+            "rerankMs": 1186.28,
+            "retrievalMs": 1499.04
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a09-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 2393.983,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 299.55,
+            "bm25Ms": 6.88,
+            "rerankMs": 1116.77,
+            "retrievalMs": 1433.09
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a09-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 2344.294,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 290.7,
+            "bm25Ms": 6.64,
+            "rerankMs": 1106.1,
+            "retrievalMs": 1411.98
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing",
+        "missing"
+      ]
+    },
+    {
+      "id": "a09-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.1",
+        "payment.1"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 2379.884,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 288.7,
+            "bm25Ms": 7.03,
+            "rerankMs": 1117.4,
+            "retrievalMs": 1423.16
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a10-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 2454.595,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 345.64,
+            "bm25Ms": 6.99,
+            "rerankMs": 1149.1,
+            "retrievalMs": 1511.49
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a10-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "expired",
+      "required": [
+        "certificate.2"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 2348.174,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 298,
+            "bm25Ms": 7.17,
+            "rerankMs": 1086.09,
+            "retrievalMs": 1400.44
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "expired",
+              "sourceId": "knowledge:cef9adea1d2cb9752a4290a2:v1",
+              "title": "Expired cotton certificate"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "expired",
+        "missing"
+      ]
+    },
+    {
+      "id": "a10-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.2",
+        "box.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 2482.981,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 300.03,
+            "bm25Ms": 7.23,
+            "rerankMs": 1144.01,
+            "retrievalMs": 1460.35
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a11-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 2423.049,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.37,
+            "bm25Ms": 6.77,
+            "rerankMs": 1139.12,
+            "retrievalMs": 1451.48
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "a11-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.2"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 2408.389,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 298.93,
+            "bm25Ms": 6.73,
+            "rerankMs": 1130.78,
+            "retrievalMs": 1446.31
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a11-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1",
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 2369.5,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 298.51,
+            "bm25Ms": 6.89,
+            "rerankMs": 1103.12,
+            "retrievalMs": 1417.63
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a12-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 2370.226,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 288.61,
+            "bm25Ms": 6.96,
+            "rerankMs": 1109.15,
+            "retrievalMs": 1413.15
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a12-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 2405.437,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 288.69,
+            "bm25Ms": 6.63,
+            "rerankMs": 1145.83,
+            "retrievalMs": 1454.09
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a12-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.1",
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ]
+      ],
+      "durationMs": 2434.172,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 295.05,
+            "bm25Ms": 6.96,
+            "rerankMs": 1118.65,
+            "retrievalMs": 1429.25
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a13-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 2428.609,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 306.01,
+            "bm25Ms": 8.4,
+            "rerankMs": 1158.81,
+            "retrievalMs": 1482.26
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a13-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.2"
+      ],
+      "rankedEvidence": [
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 2372.777,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.08,
+            "bm25Ms": 7.14,
+            "rerankMs": 1110.46,
+            "retrievalMs": 1421.89
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a13-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.1",
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 2446.811,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 299.03,
+            "bm25Ms": 7.2,
+            "rerankMs": 1136.73,
+            "retrievalMs": 1451.07
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a14-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 2321.597,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 288.66,
+            "bm25Ms": 4.34,
+            "rerankMs": 1074.9,
+            "retrievalMs": 1369.08
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a14-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 2354.72,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 298.09,
+            "bm25Ms": 4.33,
+            "rerankMs": 1069.69,
+            "retrievalMs": 1373.35
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a14-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.1",
+        "gym-warranty.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 2349.27,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 288.03,
+            "bm25Ms": 8.12,
+            "rerankMs": 1103.14,
+            "retrievalMs": 1400.5
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a15-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 2357.627,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 290.19,
+            "bm25Ms": 4.32,
+            "rerankMs": 1078.4,
+            "retrievalMs": 1374.13
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a15-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 2337.715,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 293.39,
+            "bm25Ms": 4.43,
+            "rerankMs": 1049.85,
+            "retrievalMs": 1348.84
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a15-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.2",
+        "gym-moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ]
+      ],
+      "durationMs": 2348.863,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 297.74,
+            "bm25Ms": 4.5,
+            "rerankMs": 1105.98,
+            "retrievalMs": 1409.68
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a16-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 2520.127,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 316.72,
+            "bm25Ms": 5.25,
+            "rerankMs": 1166.15,
+            "retrievalMs": 1489.42
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a16-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 2551.104,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 326.5,
+            "bm25Ms": 4.6,
+            "rerankMs": 1160.8,
+            "retrievalMs": 1493.07
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "a16-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.1",
+        "gym-frame.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 2529.551,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379d279f07d5cde8506e7",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 18,
+          "timings": {
+            "vectorMs": 303.7,
+            "bm25Ms": 4.97,
+            "rerankMs": 1176.39,
+            "retrievalMs": 1486.4
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 16
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n02",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2550.412,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 311.8,
+            "bm25Ms": 7.19,
+            "rerankMs": 1161.4,
+            "retrievalMs": 1489.28
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "n04",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2513.413,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 308.98,
+            "bm25Ms": 6.68,
+            "rerankMs": 1131.49,
+            "retrievalMs": 1456.82
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n06",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2335.247,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 290.39,
+            "bm25Ms": 6.66,
+            "rerankMs": 1100.42,
+            "retrievalMs": 1406.77
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "expired",
+              "sourceId": "knowledge:cef9adea1d2cb9752a4290a2:v1",
+              "title": "Expired cotton certificate"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "expired",
+        "missing"
+      ]
+    },
+    {
+      "id": "n08",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "disabled",
+      "expected": "disabled",
+      "observed": "disabled",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 2385.603,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 296.32,
+            "bm25Ms": 6.82,
+            "rerankMs": 1115.72,
+            "retrievalMs": 1427.36
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "disabled",
+              "sourceId": "knowledge:88b66a9fcb8895f9ef6d7a4d:v1",
+              "title": "Retired mirror finish"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "disabled"
+      ]
+    },
+    {
+      "id": "n10",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "disabled",
+      "expected": "disabled",
+      "observed": "disabled",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 2341.763,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 304.6,
+            "bm25Ms": 7.04,
+            "rerankMs": 1097.45,
+            "retrievalMs": 1417.91
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "disabled",
+              "sourceId": "knowledge:88b66a9fcb8895f9ef6d7a4d:v1",
+              "title": "Retired mirror finish"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "disabled"
+      ]
+    },
+    {
+      "id": "n12",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2369.032,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 294.82,
+            "bm25Ms": 7.61,
+            "rerankMs": 1086.59,
+            "retrievalMs": 1397.71
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "not_effective",
+              "sourceId": "knowledge:535019ef1a61287b3a307037:v1",
+              "title": "Future credit terms"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "not_effective",
+        "missing"
+      ]
+    },
+    {
+      "id": "n14",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "draft",
+      "expected": "draft_only",
+      "observed": "draft_only",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2379.299,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 288.08,
+            "bm25Ms": 6.61,
+            "rerankMs": 1119.28,
+            "retrievalMs": 1425.68
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": [
+            {
+              "code": "draft_only",
+              "sourceId": "knowledge:b78bf328b73ec420b198551a:v1",
+              "title": "Unpublished rush service"
+            }
+          ]
+        }
+      },
+      "issueCodes": [
+        "draft_only",
+        "missing"
+      ]
+    },
+    {
+      "id": "n16",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "draft",
+      "expected": "draft_only",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2332.767,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 284.73,
+            "bm25Ms": 7.09,
+            "rerankMs": 1095.01,
+            "retrievalMs": 1398.39
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n18",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 2381.049,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 312.49,
+            "bm25Ms": 6.59,
+            "rerankMs": 1112.89,
+            "retrievalMs": 1440.27
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "conflict",
+        "conflict"
+      ]
+    },
+    {
+      "id": "n20",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ]
+      ],
+      "durationMs": 2386.998,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 285.99,
+            "bm25Ms": 7.1,
+            "rerankMs": 1119.98,
+            "retrievalMs": 1422.92
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "conflict",
+        "conflict"
+      ]
+    },
+    {
+      "id": "n22",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2379.72,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 296.98,
+            "bm25Ms": 6.86,
+            "rerankMs": 1102.25,
+            "retrievalMs": 1416.04
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": [
+        "missing"
+      ]
+    },
+    {
+      "id": "n24",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 2372.804,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "trace": {
+        "engine": "local_semantic",
+        "generation": "6ad379ca79f07d5cde8506c4",
+        "identity": "328d1057633b4e1aed280059982fe2d0268437a34402646c7ab2a5a7f31eeae2",
+        "trace": {
+          "mode": "hybrid_rerank",
+          "queryParts": 1,
+          "allowedItems": 33,
+          "timings": {
+            "vectorMs": 287.17,
+            "bm25Ms": 6.61,
+            "rerankMs": 1112.93,
+            "retrievalMs": 1416.97
+          },
+          "reranker": {
+            "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+            "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+            "pairs": 27
+          },
+          "degraded": null,
+          "diagnostics": []
+        }
+      },
+      "issueCodes": []
+    },
+    {
+      "id": "n26",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.787,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n28",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.465,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n30",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.967,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n32",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.76,
+      "forbiddenHits": [],
+      "error": "ApiError"
+    },
+    {
+      "id": "n34",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.163,
+      "forbiddenHits": []
+    },
+    {
+      "id": "n36",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.073,
+      "forbiddenHits": []
+    },
+    {
+      "id": "n38",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1.077,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "retrieval_failed"
+      ]
+    },
+    {
+      "id": "n40",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.828,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "retrieval_failed"
+      ]
+    }
+  ],
+  "sideEffects": {
+    "letters": 0,
+    "followups": 0
+  },
+  "rawReportSha256": "d97ead43d283724912a82277e2527ad5b4bd2bc43b7b8eda6cbe9d22210bde5f",
+  "compactProjection": "Repeated candidate excerpts removed; digest maps represented as explicit path/sha256 records. All values, per-case gold/actual evidence, states, issues and durations retained; rawReportSha256 references unmodified local input."
+}

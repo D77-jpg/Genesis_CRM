@@ -1,3 +1,4 @@
+import {knowledgeForModel} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
 import {buildKnowledgeBundle,auditGroundedEmail,knowledgeFreshness,knowledgeTaskType} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
@@ -138,7 +139,7 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   const knowledge=knowledgeContext.sources;
   for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...item,approved:true});
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
-  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,knowledgeContext }, sources };
+  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,knowledgeContext:knowledgeForModel(knowledgeContext) }, sources };
 }
 
 const outputSchema = z.object({
