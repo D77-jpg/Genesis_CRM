@@ -1,3 +1,4 @@
+import {knowledgeForModel} from './knowledge-types';
 import {Project} from '../../models';
 import {getCurrentMailSender} from '../mail-account.service';
 import {agentMailOrThrow,inboundAgentScope} from './mail-access';
@@ -160,7 +161,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const context = await buildThreadInput(input.mailId, input.direction, actor);
     if (!context.messages.length) throw ApiError.badRequest('当前邮件线程没有可分析的内容');
-    const knowledgeContext=await buildKnowledgeBundle(actor,context.messages.filter(m=>m.direction==='inbound').slice(-8).map(m=>m.text).join('\n'),{customerId:context.customer?.id});
+    const knowledgeContext=await buildKnowledgeBundle(actor,context.messages.filter(m=>m.direction==='inbound').slice(-8).map(m=>m.text).join('\n'),{customerId:context.customer?.id}).then(knowledgeForModel);
     const knowledge=knowledgeContext.sources.map(k=>({...k,approved:true}));
     const project=await Project.findById(requireProjectId(actor)).select('companyName website senderName');
     const sender=await getCurrentMailSender(actor.projectId!,actor.id);

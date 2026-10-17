@@ -27,3 +27,10 @@ export interface KnowledgeReview {
   bodyHash: string;
 }
 export interface KnowledgeFreshness { checkedAt: string; changed: {sourceId:string;title:string;reason:string}[]; failed?:boolean }
+
+// Administrator diagnostics are not facts for generation. Preserve the full selected
+// publication/snapshot, but never send rejected candidate excerpts or ranking traces.
+export function knowledgeForModel(bundle:KnowledgeBundle):KnowledgeBundle {
+ const retrieval=bundle.retrieval;
+ return {...bundle,retrieval:retrieval?{engine:retrieval.engine,generation:retrieval.generation,identity:retrieval.identity}:undefined};
+}

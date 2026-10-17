@@ -13,6 +13,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="strict")
 
 VERSION = "genesis-semantic-s3.1"
 # -I excludes the script directory; import only this audited sibling explicitly.
+sys.dont_write_bytecode = True
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from retrieval import segment,retrieve
 

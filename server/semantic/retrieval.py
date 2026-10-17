@@ -13,7 +13,7 @@ import unicodedata
 
 STOP=set('the a an and or for to of is are your our this that what which does do how can you we it in on by with please fictional fixture only test'.split())
 # General bilingual sales vocabulary, not fixture IDs, answers, numbers or policies.
-ALIASES=[['珠宝','首饰','jewelry','jewellery'],['包装','packaging'],['绒布','天鹅绒','velvet'],['棉布','cotton'],['缎面','satin'],['尼龙','nylon'],['拉链','zipper'],['抽绳','drawstring'],['袋','pouch','pouches','bag','bags'],['盒','box','boxes'],['旅行','travel'],['样品','打样','sample','samples','prototype'],['起订','最低订','moq','minimum order'],['交期','交货','lead time','delivery'],['运费','freight'],['物流','shipping','logistics'],['付款','payment'],['价格','报价','price','quotation','pricing'],['认证','证书','certification','certificate'],['工厂','factory'],['公司','company'],['健身','fitness','gym'],['深蹲架','squat rack'],['材质','材料','fabric','material'],['刺绣','embroidery'],['烫金','foil'],['尺寸','size','dimension']]
+ALIASES=[['珠宝','首饰','jewelry','jewellery'],['包装','packaging'],['绒布','天鹅绒','velvet'],['棉布','cotton'],['缎面','satin'],['尼龙','nylon'],['拉链','zipper'],['抽绳','drawstring'],['袋','pouch','pouches','bag','bags'],['盒','box','boxes'],['旅行','travel'],['样品','打样','sample','samples','prototype'],['起订','最低订','moq','minimum order'],['交期','交货','lead time','delivery'],['运费','freight'],['物流','shipping','logistics'],['付款','payment'],['价格','报价','price','quotation','pricing'],['认证','证书','certification','certificate'],['工厂','factory'],['公司','company'],['健身','fitness','gym'],['深蹲架','squat rack'],['材质','材料','fabric','material'],['刺绣','embroidery'],['烫金','foil'],['尺寸','size','dimension'],['镜面','mirror'],['工艺','finish'],['停用','retired','disabled'],['未发布','unpublished'],['加急','rush']]
 
 def normalize(text):
     return unicodedata.normalize('NFKC',text).lower()
@@ -122,6 +122,8 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     if mode not in ['bm25','vector','hybrid','hybrid_rerank']: raise Failure('mode_invalid','不支持的检索方式')
     docs=[{'id':r[0],'text':r[1],'parent':r[2]} for r in db.execute('SELECT t.item,t.text,t.parent FROM texts t JOIN allowed a ON a.item=t.item WHERE t.project=? AND t.generation=?',(request['projectId'],request['generation']))]
     byid={d['id']:d for d in docs}
+    stored=dict(db.execute('SELECT item,hash FROM vectors WHERE project=? AND generation=?',(request['projectId'],request['generation'])))
+    if any(hashlib.sha256(d['text'].encode()).hexdigest()!=stored.get(d['id']) for d in docs): raise Failure('lexical_corrupt','词项内容与已发布索引摘要不一致，请重建')
     if len(docs)!=len(set(request['allowed'])): raise Failure('lexical_missing','词项索引缺失，请重建资料')
     query=unicodedata.normalize('NFKC',request['query']).strip()
     if not query or len(query)>16000: raise Failure('query_budget','问题为空或过长，请拆分后查询')
@@ -155,11 +157,11 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     ordered=sorted(fused,key=lambda p:(-fused[p],p))[:30]
     degraded=None;rerank_meta=None;now=time.perf_counter();rerank_scores={}
     if mode=='hybrid_rerank' and ordered:
-        selected=[byid[best[p]] for p in ordered[:20]]
+        selected=[byid[best[p]] for p in ordered[:30]]
         try:
             scores,rerank_meta=rerank(query,selected,options,Failure)
-            rerank_scores={p:scores[best[p]] for p in ordered[:20]}
-            ordered=sorted(ordered[:20],key=lambda p:(-rerank_scores[p],-fused[p],p))+ordered[20:]
+            rerank_scores={p:scores[best[p]] for p in ordered[:30]}
+            ordered=sorted(ordered[:30],key=lambda p:(-rerank_scores[p],-fused[p],p))+ordered[30:]
         except Exception as e:
             degraded={'code':getattr(e,'code','rerank_failed'),'message':'重排暂时不可用，本次使用已授权的混合召回；排序质量可能下降'}
     timings['rerankMs']=round((time.perf_counter()-now)*1000,2)
@@ -174,7 +176,10 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
         item=best[parent];score=details[parent]
         # Similarity/logits are ranking signals, never calibrated fact confidence.
         accepted=rerank_scores[parent]>=-5 if parent in rerank_scores else score.get('vector',-1)>=0.35 or score.get('bm25',0)>0
-        if anchors and not all(a in normalize(byid[item]['text']) for a in anchors): accepted=False
+        if anchors:
+            available=any(all(a in normalize(d['text']) for a in anchors) for d in docs)
+            competing=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(byid[item]['text'])))
+            if not available or (competing and not anchors<=competing): accepted=False
         hits.append({'id':item,'distance':1-score.get('vector',0),'accepted':accepted,'scores':{**score,'rrf':fused[parent],**({'rerank':rerank_scores[parent]} if parent in rerank_scores else {})}})
     timings['retrievalMs']=round((time.perf_counter()-started)*1000,2)
     return {'hits':hits,'trace':{'mode':mode,'queryParts':len(query_windows),'allowedItems':len(docs),'candidates':len(ordered),'timings':timings,'reranker':rerank_meta,'degraded':degraded,'diagnostics':diagnostic}}
