@@ -209,3 +209,11 @@ test('22 interrupted old-generation cleanup can retry immediately and preserves 
  await cleanupIndexes(actor,real);assert.equal((await Gen.findById(old))?.state,'deleted');assert.equal((await Gen.findById(active))?.state,'ready');
  assert.equal(String((await State.findOne({projectId:a}))!.activeGeneration),active);
 });
+
+test('23 legacy editors omitting access scope retain admin-only publication permissions',async()=>{
+ const v=policy('Legacy private editor fixture','Private sample review for cotton bags.');
+ const id=await appendKnowledge(undefined,{...v,accessScope:'admins'},actor);
+ await appendKnowledge(id,{...v,expectedVersion:1,content:'Updated private sample review for cotton bags.'},actor);
+ const record=await AgentKnowledge.findById(id);assert.equal(record?.revisions.at(-1)?.accessScope,'admins');
+ await build();assert.ok((await query('private cotton sample',sales)).sources.every(s=>s.knowledgeId!==id));
+});

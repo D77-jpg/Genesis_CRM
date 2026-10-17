@@ -41,7 +41,13 @@ export async function appendKnowledge(id:string|undefined,input:KnowledgeInput,a
  category:parsed.category,applicability:parsed.applicability,products:parsed.products,validFrom:parsed.validFrom??new Date(),
  validUntil:parsed.validUntil,terms:parsed.terms,createdBy:new Types.ObjectId(actor.id),createdAt:new Date()};
  if(id&&!Types.ObjectId.isValid(id))throw ApiError.notFound('知识不存在');
- if(id&&!sourceRefs){const previous=await AgentKnowledge.findOne({_id:id,projectId,version:parsed.expectedVersion});revision.sourceRefs=previous?.revisions.find(v=>v.version===parsed.expectedVersion)?.sourceRefs;}
+ if(id){
+  const previous=await AgentKnowledge.findOne({_id:id,projectId,version:parsed.expectedVersion});
+  const prior=previous?.revisions.find(v=>v.version===parsed.expectedVersion);
+  if(!sourceRefs)revision.sourceRefs=prior?.sourceRefs;
+  // A legacy editor omitting the new ACL field must never broaden a private publication.
+  if(input.accessScope===undefined)revision.accessScope=prior?.accessScope??'project';
+ }
  if(!id){if(parsed.expectedVersion!==0)throw ApiError.conflict('新知识版本必须从 1 开始');
  const created=await AgentKnowledge.create({projectId,version,approvedVersion:parsed.approved?version:0,revisions:[revision],...(importKey?{importKey}:{})});if(parsed.approved)await knowledgeIndexChanged(actor).catch(()=>undefined);return created.id;}
  if(!Types.ObjectId.isValid(id))throw ApiError.notFound('知识不存在');
