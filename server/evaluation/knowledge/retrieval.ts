@@ -16,13 +16,17 @@ import type {AuthUser} from '../../src/types/express';
 process.env.AI_PROVIDER='mock';process.env.MAIL_CHANNEL='mock';process.env.NODE_ENV='test';
 const oid=(label:string)=>new Types.ObjectId(createHash('sha256').update('knowledge-s0:'+label).digest('hex').slice(0,24));
 const normalized=(text:string)=>text.toLowerCase().replace(/\s+/g,' ').trim();
+const implementationFiles=['semantic/model.json','semantic/reranker.json','semantic/runtime.py','semantic/retrieval.py','src/services/knowledge/index.service.ts','src/services/knowledge/embedding.ts','src/services/agent/knowledge.service.ts','src/services/agent/knowledge-grounding.ts','src/services/agent/knowledge-types.ts','src/services/agent/tool-registry.ts','evaluation/knowledge/retrieval.ts','evaluation/knowledge/schema.ts','evaluation/knowledge/metrics.ts'];
+const codeHashes=()=>Object.fromEntries(implementationFiles.map(f=>[f,createHash('sha256').update(readFileSync(join(__dirname,'../..',f))).digest('hex')]));
 async function main(){
+ const implementationHashes=codeHashes();
  const mode=(process.argv.find(a=>a.startsWith('--mode='))?.slice(7)??'hybrid_rerank') as 'bm25'|'vector'|'hybrid'|'hybrid_rerank';
  if(!['bm25','vector','hybrid','hybrid_rerank'].includes(mode))throw Error('Invalid mode');
  const split=process.argv.find(arg=>arg.startsWith('--split='))?.split('=')[1]??'dev';
  if(!['dev','holdout','all'].includes(split))throw Error('Invalid split');
- const output=resolve(process.argv.find(arg=>arg.startsWith('--output='))?.slice(9)??join(__dirname,'../../tmp/knowledge-s0/baseline-'+split+'.json'));
- const fixtures=loadFixtures();const runAtUTC=new Date().toISOString();let clockFrozen=false;
+ const output=resolve(process.argv.find(arg=>arg.startsWith('--output='))?.slice(9)??join(__dirname,'../../tmp/knowledge-s3/'+mode+'-'+split+'.json'));
+ const fixtureDirectory=resolve(process.argv.find(a=>a.startsWith('--fixtures='))?.slice(11)??__dirname);
+ const fixtures=loadFixtures(fixtureDirectory);const runAtUTC=new Date().toISOString();let clockFrozen=false;
  const {mkdtemp,rm}=await import('node:fs/promises');const indexDir=await mkdtemp(join(os.tmpdir(),'genesis-s3-eval-'));process.env.KNOWLEDGE_INDEX_DIR=indexDir;process.env.KNOWLEDGE_RETRIEVAL_MODE='semantic';
  const memory=await MongoMemoryServer.create();process.env.MONGODB_URI=memory.getUri('knowledge-s0-isolated');
  const mongoose=(await import('mongoose')).default;
@@ -77,7 +81,7 @@ async function main(){
      });
      for(const hit of bundle.sources){const source=byMongoId.get(hit.knowledgeId??hit.quotationId??'');if(source&&(source.project!==c.project||source.state!=='active'||c.forbidden.some(id=>source.clauses.some(clause=>clause.id===id))))row.forbiddenHits.push(source.id);}
      // This transparent adapter maps existing returned states; it adds no semantic model,
-     // no golden-answer lookup, and cannot manufacture a missing draft-only signal.
+     // no golden-answer lookup. State labels below map actual production issues.
      row.observed=review.status==='retrieval_failed'?'retrieval_failed':review.status==='conflict'?'conflict':
       row.issueCodes.includes('expired')?'expired':row.issueCodes.includes('disabled')?'disabled':row.issueCodes.includes('not_effective')?'not_effective':
       row.issueCodes.includes('draft_only')?'draft_only':bundle.status==='no_match'?'no_match':bundle.sources.some(hit=>hit.category!=='sales_rules')?'answerable':'no_match';
@@ -88,10 +92,13 @@ async function main(){
   }
   const sent=await DevelopmentLetter.countDocuments(),followups=await FollowUp.countDocuments();
   if(sent||followups)throw Error('Read-only baseline unexpectedly wrote mail/follow-up');
-  const hashes=Object.fromEntries(['corpus.json','cases.dev.json','cases.holdout.json','probe-set.json','retrieval.ts','schema.ts','metrics.ts','runtime-safety.ts'].map(file=>[file,createHash('sha256').update(readFileSync(join(__dirname,file))).digest('hex')]));
-  const report={schemaVersion:1,createdAt:runAtUTC,evaluationAsOf:fixtures.corpus.asOf,clockPolicy:'Date-only frozen in isolated CLI; performance.now remains real; production retrieval unchanged',commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirtyTree:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim().length>0,engine:'S3 '+mode+' production buildKnowledgeBundle + auditGroundedEmail',scope:'No LLM or live DB. No email generation quality measured. Sales rules loaded separately, excluded from relevance rank. Up to 10 distinct publications. Customer quotations still scoped by production service.',split,hashes,machine:{os:os.platform(),release:os.release(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,totalRamBytes:os.totalmem(),node:process.version},fixture:{sources:50,cases:120},productionHashes:Object.fromEntries(['knowledge.service.ts','knowledge-grounding.ts','mail-access.ts'].map(file=>[file,createHash('sha256').update(readFileSync(join(__dirname,'../../src/services/agent',file))).digest('hex')])),summary:summarize(observations),bySplit:grouped(observations,r=>r.split),byLanguage:grouped(observations,r=>r.language),byCrossLanguage:grouped(observations,r=>String(r.crossLanguage)),byCategory:grouped(observations,r=>r.category),rows:observations,sideEffects:{letters:sent,followups}};
+  const hashes=Object.fromEntries(['corpus.json','cases.dev.json','cases.holdout.json','probe-set.json','retrieval.ts','schema.ts','metrics.ts','runtime-safety.ts'].map(file=>[file,createHash('sha256').update(readFileSync(join(['corpus.json','cases.dev.json','cases.holdout.json','probe-set.json'].includes(file)?fixtureDirectory:__dirname,file))).digest('hex')]));
+  if(JSON.stringify(implementationHashes)!==JSON.stringify(codeHashes()))throw Error('Implementation changed during evaluation; rerun on a frozen tree');
+  const report={implementationHashes,schemaVersion:1,createdAt:runAtUTC,evaluationAsOf:fixtures.corpus.asOf,clockPolicy:'Date-only frozen in isolated CLI; performance.now remains real; production retrieval unchanged',commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirtyTree:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim().length>0,engine:'S3 '+mode+' production buildKnowledgeBundle + auditGroundedEmail',scope:'No LLM or live DB. No email generation quality measured. Sales rules loaded separately, excluded from relevance rank. Up to 10 distinct publications. Customer quotations still scoped by production service.',split,hashes,machine:{os:os.platform(),release:os.release(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,totalRamBytes:os.totalmem(),node:process.version},fixture:{sources:fixtures.corpus.sources.length,cases:fixtures.cases.length,directory:fixtureDirectory},productionHashes:Object.fromEntries(['knowledge.service.ts','knowledge-grounding.ts','mail-access.ts'].map(file=>[file,createHash('sha256').update(readFileSync(join(__dirname,'../../src/services/agent',file))).digest('hex')])),summary:summarize(observations),bySplit:grouped(observations,r=>r.split),byLanguage:grouped(observations,r=>r.language),byCrossLanguage:grouped(observations,r=>String(r.crossLanguage)),byCategory:grouped(observations,r=>r.category),rows:observations,sideEffects:{letters:sent,followups}};
   mkdirSync(dirname(output),{recursive:true});writeFileSync(output,JSON.stringify(report,null,2)+'\n');
-  console.log(JSON.stringify({output,summary:report.summary,bySplit:report.bySplit,sideEffects:report.sideEffects}));
+  const gates={recall:report.summary.recallAt10!==null&&report.summary.recallAt10>=0.9,negativeStates:report.summary.negativeStateAccuracy!==null&&report.summary.negativeStateAccuracy>=0.95,noLeaks:report.summary.forbiddenHits===0,noUnexpectedErrors:report.summary.unexpectedErrors.length===0};
+  console.log(JSON.stringify({output,summary:report.summary,bySplit:report.bySplit,sideEffects:report.sideEffects,gates}));
+  if(process.argv.includes('--enforce-gates')&&Object.values(gates).some(v=>!v))process.exitCode=2;
  }finally{if(clockFrozen)mock.timers.reset();await mongoose.disconnect();await memory.stop();await rm(indexDir,{recursive:true,force:true});}
 }
 main().catch(error=>{console.error(error instanceof Error?error.message:'Evaluation failed');process.exitCode=1;});

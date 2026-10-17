@@ -1,3 +1,6 @@
+import {Customer} from '../src/models/Customer';
+import {Quotation} from '../src/models/Quotation';
+import {buildKnowledgeBundle} from '../src/services/agent/knowledge-grounding';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
@@ -86,4 +89,14 @@ test('S3 09 administrator test endpoint is protected and rejects model-supplied 
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/knowledge-index/search`,{method:'POST',headers:headers(actor),body:JSON.stringify({query:'nylon',projectId:String(foreign)})})).status,422);
   const r=await fetch(`http://127.0.0.1:${port}/api/knowledge-index/search`,{method:'POST',headers:headers(actor),body:JSON.stringify({query:'尼龙拉链旅行收纳袋'})});assert.equal(r.status,200);assert.ok((await r.json() as {data:unknown}).data);
  }finally{await new Promise<void>((resolve,reject)=>http.close(e=>e?reject(e):resolve()));}
+});
+
+test('S3 10 related product text cannot masquerade as an approved price; quote-only evidence retains customer scope',async()=>{
+ const buyer=await Customer.create({projectId:project,ownerId:salesId,name:'Fictional quote buyer',email:'buyer@example.test'});
+ const stranger=await Customer.create({projectId:project,ownerId:salesId,name:'Fictional second buyer',email:'other@example.test'});
+ await Quotation.create({projectId:project,customerId:buyer._id,quotationNo:'S3-QUOTE-ONLY',title:'Fictional exact quote',status:'accepted',version:1,currency:'USD',validityDate:new Date('2030-01-01'),items:[{productName:'KQ-27 velvet pouch',quantity:200,unitPrice:2.35,amount:470}],totalAmount:470});
+ const q='KQ-27 velvet pouch price; quantity 200';
+ const known=await buildKnowledgeBundle(sales,q,{customerId:buyer.id});assert.equal(known.status,'ready');assert.ok(known.sources.some(s=>s.kind==='quotation'));
+ const other=await buildKnowledgeBundle(sales,q,{customerId:stranger.id});assert.equal(other.status,'no_match');assert.ok(other.sources.every(s=>s.kind!=='quotation'));
+ const freight=await buildKnowledgeBundle(sales,'nylon zipper pouch freight price to buyer warehouse');assert.equal(freight.status,'no_match');assert.ok(freight.issues.some(i=>i.code==='missing'));
 });

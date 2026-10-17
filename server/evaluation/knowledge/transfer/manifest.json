@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "s3-transfer-v1",
+  "frozenAt": "2026-10-17",
+  "baseCommit": "0f0d8d8fccf7d205113c3168274ebb8ac4be8517",
+  "fictional": true,
+  "holdoutPolicy": "Independent transfer corpus with different products/policies. Product-disjoint dev and holdout positive sources. Frozen BEFORE further development; original S0 holdout first result retained as failed and later results diagnostic only.",
+  "sha256": {
+    "corpus.json": "08bc0b10194094c4d408dd382388b42da396e16d6830ae0fd9549820f73fd59b",
+    "cases.dev.json": "273e2d254a903240fae37bf4a91f429d69c65789dee445280bfa2447f40f28e0",
+    "cases.holdout.json": "40861302997db7debf369d7f0e1c1d3eed7c0ffebf0ec700b2e5788ec7863fb3",
+    "probe-set.json": "ba25b7111c65d3dc34a85759a531fa964e739f361dd81b1bdada6bc1f5f2e1ac"
+  }
+}

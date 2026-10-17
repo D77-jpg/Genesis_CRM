@@ -43,7 +43,7 @@ export function validateFixtures(rawCorpus:unknown,rawCases:unknown,rawProbe:unk
 export function loadFixtures(directory=__dirname){
  const json=(name:string)=>JSON.parse(readFileSync(join(directory,name),'utf8')) as unknown;
  const sha=z.string().regex(/^[a-f0-9]{64}$/);
- const lock=z.object({schemaVersion:z.literal(1),datasetVersion:z.literal('s0-fixtures-v1'),frozenAt:z.string(),baseCommit:z.string().regex(/^[a-f0-9]{40}$/),fictional:z.literal(true),holdoutPolicy:z.string().min(20),sha256:z.object({'corpus.json':sha,'cases.dev.json':sha,'cases.holdout.json':sha,'probe-set.json':sha}).strict()}).strict().parse(json('manifest.json'));
+ const lock=z.object({schemaVersion:z.literal(1),datasetVersion:z.enum(['s0-fixtures-v1','s3-transfer-v1']),frozenAt:z.string(),baseCommit:z.string().regex(/^[a-f0-9]{40}$/),fictional:z.literal(true),holdoutPolicy:z.string().min(20),sha256:z.object({'corpus.json':sha,'cases.dev.json':sha,'cases.holdout.json':sha,'probe-set.json':sha}).strict()}).strict().parse(json('manifest.json'));
  for(const [file,sha] of Object.entries(lock.sha256)){if(createHash('sha256').update(readFileSync(join(directory,file))).digest('hex')!==sha)throw Error('Frozen fixture hash mismatch '+file);}
  return validateFixtures(json('corpus.json'),[...(json('cases.dev.json') as unknown[]),...(json('cases.holdout.json') as unknown[])],json('probe-set.json'));
 }

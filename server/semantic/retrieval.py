@@ -13,7 +13,7 @@ import unicodedata
 
 STOP=set('the a an and or for to of is are your our this that what which does do how can you we it in on by with please fictional fixture only test'.split())
 # General bilingual sales vocabulary, not fixture IDs, answers, numbers or policies.
-ALIASES=[['珠宝','首饰','jewelry','jewellery'],['包装','packaging'],['绒布','天鹅绒','velvet'],['棉布','cotton'],['缎面','satin'],['尼龙','nylon'],['拉链','zipper'],['抽绳','drawstring'],['袋','pouch','pouches','bag','bags'],['盒','box','boxes'],['旅行','travel'],['样品','打样','sample','samples','prototype'],['起订','最低订','moq','minimum order'],['交期','交货','lead time','delivery'],['运费','freight'],['物流','shipping','logistics'],['付款','payment'],['价格','报价','price','quotation','pricing'],['认证','证书','certification','certificate'],['工厂','factory'],['公司','company'],['健身','fitness','gym'],['深蹲架','squat rack'],['材质','材料','fabric','material'],['刺绣','embroidery'],['烫金','foil'],['尺寸','size','dimension'],['镜面','mirror'],['工艺','finish'],['停用','retired','disabled'],['未发布','unpublished'],['加急','rush']]
+ALIASES=[['珠宝','首饰','jewelry','jewellery'],['包装','packaging'],['绒布','天鹅绒','velvet'],['棉布','cotton'],['缎面','satin'],['尼龙','nylon'],['拉链','zipper'],['抽绳','drawstring'],['袋','pouch','pouches','bag','bags'],['盒','box','boxes'],['旅行','travel'],['样品','打样','sample','samples','prototype'],['起订','最低订','moq','minimum order'],['交期','交货','lead time','delivery'],['运费','freight'],['物流','shipping','logistics'],['付款','payment'],['价格','报价','price','quotation','pricing'],['认证','证书','certification','certificate'],['工厂','factory'],['公司','company'],['健身','fitness','gym'],['深蹲架','squat rack'],['材质','材料','fabric','material'],['刺绣','embroidery'],['烫金','foil'],['尺寸','size','dimension'],['镜面','mirror'],['工艺','finish'],['停用','retired','disabled'],['未发布','unpublished'],['加急','rush'],['分期','installment'],['赊账','赊销','账期','credit'],['未生效','未来','future'],['停产','discontinued'],['快速','express'],['涂层','coating']]
 
 def normalize(text):
     return unicodedata.normalize('NFKC',text).lower()
@@ -129,11 +129,12 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     if not query or len(query)>16000: raise Failure('query_budget','问题为空或过长，请拆分后查询')
     try: query_windows=query_parts(tokenizer,query,128)
     except ValueError: raise Failure('query_budget','问题超出单次处理预算，请拆分后查询；未截断')
-    timings={};vector_scores={};lexical=[]
+    timings={};vector_scores={};lexical=[];query_vectors=[]
     now=time.perf_counter()
     if mode!='bm25':
         for offset in range(0,len(query_windows),8):
             for vector in embed([q['text'] for q in query_windows[offset:offset+8]]):
+                query_vectors.append(vector)
                 rows=db.execute('SELECT v.item,vec_distance_cosine(v.vector,?) distance FROM vectors v JOIN allowed a ON a.item=v.item WHERE v.project=? AND v.generation=? AND v.model=?',(vector.tobytes(),request['projectId'],request['generation'],request['identity'])).fetchall()
                 for item,distance in rows: vector_scores[item]=max(vector_scores.get(item,-1),1-float(distance))
     timings['vectorMs']=round((time.perf_counter()-now)*1000,2);now=time.perf_counter()
@@ -167,15 +168,29 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     timings['rerankMs']=round((time.perf_counter()-now)*1000,2)
     diagnostic=[]
     query_set=set(tokens(query));anchors=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(query)))
-    for row in request.get('diagnostics',[]):
+    diagnostic_rows=request.get('diagnostics',[])
+    # State discovery searches authorized titles only, never unpublished/expired
+    # policy bodies. No hidden policies are used as current business evidence.
+    if len(diagnostic_rows)>128: raise Failure('diagnostic_budget','历史状态资料过多，请按产品缩小范围后查询；未假定不存在过期资料')
+    semantic_titles={}
+    if query_vectors and diagnostic_rows:
+        for row in diagnostic_rows:
+            title_parts=windows(tokenizer,row['title'],128,4)
+            vectors_for_title=embed([part['text'] for part in title_parts])
+            semantic_titles[row['sourceId']]=max(float(v@q) for v in vectors_for_title for q in query_vectors)
+    best_active=max(vector_scores.values(),default=0)
+    for row in diagnostic_rows:
         title_set=set(tokens(row['title']));common=query_set&title_set
         exact=any(a in normalize(row['title']) for a in anchors)
-        if exact or (len(common)>=2 and len(common)/max(len(title_set),1)>=0.65): diagnostic.append({'code':row['code'],'sourceId':row['sourceId'],'title':row['title']})
+        lexical=len(common)>=2 and len(common)/max(len(title_set),1)>=0.65
+        similarity=semantic_titles.get(row['sourceId'],-1)
+        semantic=similarity>=0.5 and similarity>=best_active+0.04
+        if exact or lexical or semantic: diagnostic.append({'code':row['code'],'sourceId':row['sourceId'],'title':row['title']})
     hits=[]
     for parent in ordered:
         item=best[parent];score=details[parent]
         # Similarity/logits are ranking signals, never calibrated fact confidence.
-        accepted=rerank_scores[parent]>=-5 if parent in rerank_scores else score.get('vector',-1)>=0.35 or score.get('bm25',0)>0
+        accepted=rerank_scores[parent]>=-4.3 if parent in rerank_scores else score.get('vector',-1)>=0.35 or score.get('bm25',0)>0
         if anchors:
             available=any(all(a in normalize(d['text']) for a in anchors) for d in docs)
             competing=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(byid[item]['text'])))

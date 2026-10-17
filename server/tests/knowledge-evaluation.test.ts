@@ -49,3 +49,10 @@ test('frozen hashes detect even valid JSON edits before an evaluation can run',(
   assert.throws(()=>loadFixtures(directory),/Frozen fixture hash mismatch/);
  }finally{for(const name of readdirSync(directory))unlinkSync(join(directory,name));rmdirSync(directory);}
 });
+
+test('S3 transfer fixture is frozen, product-disjoint for positive splits, and independent of S0',()=>{
+ const {corpus,cases}=loadFixtures(join(__dirname,'../evaluation/knowledge/transfer'));
+ assert.equal(cases.length,120);assert.equal(corpus.sources.length,64);
+ const dev=new Set(cases.filter(c=>c.split==='dev').flatMap(c=>c.required));
+ assert.ok(cases.filter(c=>c.split==='holdout').flatMap(c=>c.required).every(id=>!dev.has(id)));
+});
