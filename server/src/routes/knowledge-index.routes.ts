@@ -1,5 +1,4 @@
-import {retrieveKnowledge} from '../services/agent/knowledge.service';
-import {auditGroundedEmail} from '../services/agent/knowledge-grounding';
+import {buildKnowledgeBundle,auditGroundedEmail} from '../services/agent/knowledge-grounding';
 import {Router} from 'express';
 import {z} from 'zod';
 import {rateLimit} from 'express-rate-limit';
@@ -12,7 +11,7 @@ const router=Router();router.use(requireRole('admin'));
 const limiter=rateLimit({windowMs:60000,max:10,standardHeaders:true,legacyHeaders:false});
 router.get('/',asyncHandler(async(req,res)=>sendSuccess(res,await indexStatus(req.user!))));
 router.post('/search',limiter,validate({body:z.object({query:z.string().trim().min(1).max(16000),mode:z.enum(['bm25','vector','hybrid','hybrid_rerank']).default('hybrid_rerank')}).strict()}),asyncHandler(async(req,res)=>{
- const bundle=await retrieveKnowledge(req.user!,req.body.query,undefined,req.body.mode);const review=auditGroundedEmail('',bundle,{taskType:'retrieval_inspection'}).review;
+ const bundle=await buildKnowledgeBundle(req.user!,req.body.query,{retrievalMode:req.body.mode});const review=auditGroundedEmail('',bundle,{taskType:'retrieval_inspection'}).review;
  sendSuccess(res,{...bundle,reviewStatus:review.status,issues:review.issues});
 }));
 router.post('/rebuild',limiter,validate({body:z.object({requestKey:z.string().uuid()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await requestIndex(req.user!,req.body.requestKey),202)));

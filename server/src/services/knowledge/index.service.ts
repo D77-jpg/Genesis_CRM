@@ -29,6 +29,15 @@ async function published(projectId:string){
  const manifest=sha(JSON.stringify(rows.map(r=>[r.id,r.version,r.revision])));
  return {rows,manifest};
 }
+async function diagnosticMetadata(projectId:string,actor:AuthUser){
+ const inactive=await AgentKnowledge.find({projectId,$or:[{archived:true},{approvedVersion:0},{'revisions.validUntil':{$lte:new Date()}},{'revisions.validFrom':{$gt:new Date()}}]}).select('approvedVersion version archived revisions.version revisions.title revisions.validFrom revisions.validUntil revisions.accessScope').sort({_id:1}).limit(10001).lean();
+ return inactive.flatMap(k=>{
+   const v=k.revisions.find(v=>v.version===(k.approvedVersion||k.version));
+   if(!v||(!k.approvedVersion&&actor.role!=='admin')||(v.accessScope==='admins'&&actor.role!=='admin'))return [];
+   const code=k.archived?'disabled':!k.approvedVersion?'draft_only':v.validFrom&&v.validFrom>new Date()?'not_effective':v.validUntil&&v.validUntil<=new Date()?'expired':null;
+   return code?[{code,sourceId:'knowledge:'+String(k._id)+':v'+v.version,title:v.title}]:[];
+  });
+}
 function visible(row:Published,actor:AuthUser){return row.revision.accessScope!=='admins'||actor.role==='admin';}
 async function init(){await Promise.all([State.init(),Gen.init(),Item.init()]);}
 async function withSwitch<T>(projectId:string,fn:(state:HydratedDocument<IndexState>)=>Promise<T>):Promise<T>{
@@ -189,16 +198,10 @@ export async function semanticKnowledge(actor:AuthUser,query:string,options:{top
   const allowed=snapshot.rows.filter(r=>visible(r,current)&&options.productApplies(r.revision.products,query));
   const rows=await Item.find({projectId,generation:g._id,knowledgeId:{$in:allowed.map(r=>objectId(r.id))},identity:identity.id,dimension:identity.dimension}).sort({ordinal:1}).lean();
   // No query-vector cache in S2. Embedding reuse key is (project, visibility, model identity, full content hash).
-  const inactive=await AgentKnowledge.find({projectId,$or:[{archived:true},{approvedVersion:0},{'revisions.validUntil':{$lte:new Date()}},{'revisions.validFrom':{$gt:new Date()}}]}).sort({_id:1}).limit(10001).lean();
-  const diagnostics=inactive.flatMap(k=>{
-   const v=k.revisions.find(v=>v.version===(k.approvedVersion||k.version));
-   if(!v||(!k.approvedVersion&&current.role!=='admin')||(v.accessScope==='admins'&&current.role!=='admin'))return [];
-   const code=k.archived?'disabled':!k.approvedVersion?'draft_only':v.validFrom&&v.validFrom>new Date()?'not_effective':v.validUntil&&v.validUntil<=new Date()?'expired':null;
-   return code?[{code,sourceId:'knowledge:'+String(k._id)+':v'+v.version,title:v.title}]:[];
-  });
+  const diagnostics=await diagnosticMetadata(projectId,current);
   const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',expectedCount:g.total,expectedChecksum:g.checksum},identity);
   const again=await indexActor(actor),after=await published(projectId),pointer=await State.findOne({projectId}),afterIdentity=await embeddingIdentity();
-  if(after.manifest!==snapshot.manifest||String(pointer?.activeGeneration)!==g.id||again.role!==current.role||afterIdentity.id!==identity.id)return {...base,status:'index_stale',issues:[{code:'index_stale',message:'检索期间知识或权限发生变化，请重新查询'}]};
+  if(after.manifest!==snapshot.manifest||String(pointer?.activeGeneration)!==g.id||again.role!==current.role||afterIdentity.id!==identity.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,again))))return {...base,status:'index_stale',issues:[{code:'index_stale',message:'检索期间知识或权限发生变化，请重新查询'}]};
   const sources:KnowledgeSource[]=[];
   const rules=allowed.filter(r=>r.revision.category==='sales_rules');
   for(const row of rules.slice(0,4))sources.push({...options.sourceOf(row.id,row.revision),content:row.revision.content});
@@ -215,7 +218,7 @@ export async function semanticKnowledge(actor:AuthUser,query:string,options:{top
    if(seen.size>=10)break;
   }
   const diagnosticIssues=(result.trace?.diagnostics??[]).map(d=>({code:d.code,message:({expired:'相关资料已过期：',disabled:'相关资料已停用：',not_effective:'相关资料尚未生效：',draft_only:'相关资料尚未发布：'} as Record<string,string>)[d.code]+d.title,sourceIds:[d.sourceId]}));
-  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')?'expired':sources.some(s=>s.category!=='sales_rules')?'ready':'no_match',sources,issues:[...diagnosticIssues,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=rows.find(i=>i.itemId===h.id),row=allowed.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
+  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&(!sources.some(s=>s.category!=='sales_rules')||/expired|过期|失效/i.test(query))?'expired':sources.some(s=>s.category!=='sales_rules')?'ready':'no_match',sources,issues:[...diagnosticIssues,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=rows.find(i=>i.itemId===h.id),row=allowed.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
  }catch(e){return {...base,status:'retrieval_failed',sources:[],issues:[{code:e instanceof IndexError?e.code:'retrieval_failed',message:e instanceof IndexError?e.message:'语义检索或权限核对失败，请检查后重试；不能据此作出交易承诺'}]};}
 }
 let timer:NodeJS.Timeout|undefined,busy=false,cursor='';

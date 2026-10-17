@@ -171,7 +171,7 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     diagnostic_rows=request.get('diagnostics',[])
     # State discovery searches authorized titles only, never unpublished/expired
     # policy bodies. No hidden policies are used as current business evidence.
-    if len(diagnostic_rows)>128: raise Failure('diagnostic_budget','历史状态资料过多，请按产品缩小范围后查询；未假定不存在过期资料')
+    if len(diagnostic_rows)>128: raise Failure('diagnostic_budget','历史资料状态检查超过单次预算，请管理员整理历史资料或调整受控容量；本次已中止，未使用旧政策')
     semantic_titles={}
     if query_vectors and diagnostic_rows:
         for row in diagnostic_rows:

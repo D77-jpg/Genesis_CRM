@@ -57,7 +57,8 @@ function requestedPriceMissing(bundle:KnowledgeBundle,query:string){
  const hasValue=bundle.sources.some(s=>s.terms.some(t=>(t.mode!=='needs_confirmation'&&
   t.topic==='price'&&(!freight||/freight|shipping|courier|运费|物流|快递/i.test(t.conditions)))
   ||(freight&&t.topic==='shipping'&&t.mode!=='needs_confirmation'&&!!t.currency&&/\d/.test(t.value))));
- if(!hasValue)return {...bundle,status:'no_match' as const,issues:[...bundle.issues,{code:'missing',message:freight?'尚无适用于本次请求的已确认运费金额；相关物流说明不能当作报价':'尚无适用于本次请求的已确认价格；相关产品介绍不能当作报价'}]};
+ const hasOtherAnswer=bundle.topics.some(topic=>topic!=='price'&&topic!=='shipping'&&bundle.sources.some(s=>s.terms.some(t=>t.topic===topic&&t.mode!=='needs_confirmation')));
+ if(!hasValue)return {...bundle,status:hasOtherAnswer?'ready' as const:'no_match' as const,issues:[...bundle.issues,{code:'missing',message:freight?'尚无适用于本次请求的已确认运费金额；相关物流说明不能当作报价':'尚无适用于本次请求的已确认价格；相关产品介绍不能当作报价'}]};
  return bundle;
 }
 export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{customerId?:string;quantity?:number;ids?:string[];retrievalMode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'}={}){

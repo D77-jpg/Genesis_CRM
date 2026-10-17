@@ -75,7 +75,7 @@ jobs:
           npm run test:knowledge-index
           npm run test:knowledge-ingestion
           npm run test:knowledge
-          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/knowledge-ingestion.test.ts tests/knowledge-ui-fixture.ts tests/knowledge-index.test.ts tests/knowledge-retrieval.test.ts tests/knowledge-index-ui-fixture.ts tests/fixtures/knowledge-s2/worker.ts
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/knowledge-ingestion.test.ts tests/knowledge-ui-fixture.ts tests/knowledge-index.test.ts tests/knowledge-retrieval.test.ts tests/knowledge-retrieval-ui-fixture.ts tests/knowledge-index-ui-fixture.ts tests/fixtures/knowledge-s2/worker.ts
       - name: Template feedback regression (H-05)
         run: npm run test:template-feedback
       - name: Security boundary regression tests

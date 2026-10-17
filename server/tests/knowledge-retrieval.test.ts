@@ -100,3 +100,20 @@ test('S3 10 related product text cannot masquerade as an approved price; quote-o
  const other=await buildKnowledgeBundle(sales,q,{customerId:stranger.id});assert.equal(other.status,'no_match');assert.ok(other.sources.every(s=>s.kind!=='quotation'));
  const freight=await buildKnowledgeBundle(sales,'nylon zipper pouch freight price to buyer warehouse');assert.equal(freight.status,'no_match');assert.ok(freight.issues.some(i=>i.code==='missing'));
 });
+
+test('S3 11 historical-title ACL changes during inference block the whole response before evidence assembly',async()=>{
+ const record=await AgentKnowledge.create({projectId:project,version:1,approvedVersion:1,revisions:[{...entry('Race metadata CERT-41','HISTORICAL BODY NOT AUTHORITY'),version:1,accessScope:'project',validUntil:new Date('2021-01-01'),createdBy:adminId,createdAt:new Date()}]});
+ const {semanticKnowledge}=await import('../src/services/knowledge/index.service');const {sourceOf}=await import('../src/services/agent/knowledge.service');
+ const b=await semanticKnowledge(sales,'CERT-41 current certificate',{topics:[],productApplies,sourceOf},{async run(c,i,signal){const r=await localEmbedding.run(c,i,signal);if(c.command==='query')await AgentKnowledge.updateOne({_id:record._id},{$set:{'revisions.0.accessScope':'admins'}});return r;}});
+ assert.equal(b.status,'index_stale');assert.deepEqual(b.sources,[]);assert.ok(!JSON.stringify(b).includes('Race metadata'));
+});
+test('S3 12 valid partial evidence is not globally classified as expired by a diagnostic title',async()=>{
+ const expired=await AgentKnowledge.create({projectId:project,version:1,approvedVersion:1,revisions:[{...entry('Old diagnostic note','NOT CURRENT'),version:1,validUntil:new Date('2021-01-01'),createdBy:adminId,createdAt:new Date()}]});
+ const {semanticKnowledge}=await import('../src/services/knowledge/index.service');const {sourceOf}=await import('../src/services/agent/knowledge.service');
+ const b=await semanticKnowledge(sales,'nylon zipper travel pouch',{topics:[],productApplies,sourceOf},{async run(c,i,signal){const r=await localEmbedding.run(c,i,signal);if(c.command==='query'&&r.trace)r.trace.diagnostics.push({code:'expired',sourceId:'knowledge:'+expired.id+':v1',title:'Old diagnostic note'});return r;}});
+ assert.equal(b.status,'ready');assert.ok(b.sources.some(s=>s.knowledgeId===target));assert.ok(b.issues.some(i=>i.code==='expired'));
+});
+test('S3 13 exceeded historical-state capacity is an explicit failure, never a no-answer or old-policy fallback',async()=>{
+ await AgentKnowledge.insertMany(Array.from({length:129},(_,n)=>({projectId:project,version:1,approvedVersion:1,revisions:[{...entry('Historical metadata '+n,'EXPIRED CANARY '+n),version:1,validUntil:new Date('2021-01-01'),createdBy:adminId,createdAt:new Date()}]})));
+ const b=await retrieveKnowledge(sales,'nylon zipper travel pouch');assert.equal(b.status,'retrieval_failed');assert.ok(b.issues.some(i=>i.code==='diagnostic_budget'));assert.deepEqual(b.sources,[]);
+});
