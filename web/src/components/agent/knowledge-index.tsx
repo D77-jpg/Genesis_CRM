@@ -1,3 +1,4 @@
+import {KnowledgeSearch} from './knowledge-search';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {CheckCircle2,RefreshCw,AlertCircle,Search} from 'lucide-react';
 import {apiGet,apiPost,toErrorMessage} from '@/lib/api';
@@ -23,7 +24,7 @@ export function KnowledgeIndex(){
   {!value?<p role="status" className="text-sm text-muted-foreground">正在读取准备状态…</p>:<>
    <section className="rounded-lg border p-4 space-y-2" aria-label="当前可用情况"><h2 className="font-medium flex items-center gap-2">{value.ready?<CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true"/>:<AlertCircle className="h-5 w-5 text-amber-600" aria-hidden="true"/>}{value.ready?'资料已就绪':'资料尚未就绪'}</h2>
     <p className="text-sm leading-relaxed text-muted-foreground">{value.storageIssue&&<span className="block text-destructive mb-2">{value.storageIssue}</span>}当前有 {value.effectivePublications} 条有效发布资料。{value.ready?'助手可以检索这些资料；后续变更会重新核对。':'请更新检索资料。准备完成前，助手会明确提示缺少可用检索依据。'}</p>
-    <p className="text-sm text-muted-foreground">长段落若超出模型上限，请保持条件完整，拆成较短知识条目后重新发布。</p></section>
+    <p className="text-sm text-muted-foreground">长资料会自动分段查找，返回完整的发布依据。复杂条件仍需管理员审核。</p></section>
    <section aria-label="准备记录"><div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="font-medium">准备记录</h2><Button variant="ghost" disabled={busy} onClick={()=>void act('/knowledge-index/cleanup')}>清理一天前的旧代次</Button></div>
     {!value.generations.length?<p className="text-sm text-muted-foreground border-t py-6">还没有准备记录。先审核并发布知识，再点击“更新检索资料”。</p>:<ul className="divide-y border-y">{value.generations.map(g=><li key={g.id} className="py-4 space-y-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium text-sm">{labels[g.state]??g.state}{g.id===value.activeGeneration?' · 当前使用':''}</p><p className="text-sm text-muted-foreground mt-1">{new Date(g.createdAt).toLocaleString()} · {g.publications} 条知识 · {g.done}/{g.total} 个片段</p></div><div className="flex flex-wrap gap-2">
      {g.state==='failed'&&<Button disabled={busy} variant="outline" onClick={()=>void act(`/knowledge-index/${g.id}/retry`)}>重试此任务</Button>}
@@ -32,6 +33,6 @@ export function KnowledgeIndex(){
     </div></div>{g.state==='running'&&<progress aria-label="资料准备进度" className="w-full h-2" max={Math.max(g.total,1)} value={g.done}/>}
     {g.error&&<p className="text-sm text-destructive leading-relaxed" role="status">{g.error.message}</p>}
     <details className="text-xs text-muted-foreground"><summary className="cursor-pointer min-h-6">技术信息</summary><p className="break-all leading-relaxed mt-2">代次 {g.id} · {g.identity.model} · {g.identity.dimension} 维 · 模型版本 {g.identity.revision}<br/>本次生成 {g.embedded}，复用 {g.reused}；尝试 {g.attempts} 次。{g.metrics?`最近批次 ${Math.round(g.metrics.elapsedMs)} ms，进程常驻内存 ${g.metrics.rssMiB} MiB。`:''}</p></details></li>)}</ul>}
-   </section></>}
+   </section><KnowledgeSearch/></>}
  </div>;
 }

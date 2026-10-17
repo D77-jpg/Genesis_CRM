@@ -95,7 +95,8 @@ function words(text:string):string[]{
 export function productApplies(products:string[]|undefined,text:string):boolean{
  if(!products?.length)return true;
  const normalize=(value:string)=>value.toLowerCase().replace(/jewellery|jewelry|珠宝|首饰/g,' jewelry ')
-  .replace(/velvet|绒布/g,' velvet ').replace(/satin|缎面/g,' satin ').replace(/cotton|棉布/g,' cotton ')
+  .replace(/velvet|绒布|天鹅绒/g,' velvet ').replace(/satin|缎面/g,' satin ').replace(/cotton|棉布/g,' cotton ')
+  .replace(/nylon|尼龙/g,' nylon ').replace(/zipper|拉链/g,' zipper ').replace(/travel|旅行/g,' travel ').replace(/drawstring|抽绳/g,' drawstring ').replace(/fitness|gym|健身/g,' fitness ')
   .replace(/pouches|pouch|bags|bag|袋/g,' pouch ').replace(/boxes|box|盒/g,' box ');
  const haystack=normalize(text);
  return products.some(product=>{
@@ -110,8 +111,8 @@ export function sourceOf(id:string,v:KnowledgeRevision):KnowledgeSource{
  applicability:v.applicability??'历史资料，适用条件需审核',products:v.products??[],
  validFrom:v.validFrom?.toISOString()??'',validUntil:v.validUntil?.toISOString(),terms:v.terms??[]};
 }
-export async function retrieveKnowledge(actor:AuthUser,query:string,ids?:string[]):Promise<KnowledgeBundle>{
- if(process.env.KNOWLEDGE_RETRIEVAL_MODE!=='keyword')return semanticKnowledge(actor,query,{topics:policyTopics(query),productApplies,sourceOf,ids});
+export async function retrieveKnowledge(actor:AuthUser,query:string,ids?:string[],mode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'):Promise<KnowledgeBundle>{
+ if(process.env.KNOWLEDGE_RETRIEVAL_MODE!=='keyword')return semanticKnowledge(actor,query,{topics:policyTopics(query),productApplies,sourceOf,ids,mode});
  return retrieveKeywordKnowledge(actor,query,ids);
 }
 // Explicit compatibility/baseline path, never automatic fallback after semantic failure.

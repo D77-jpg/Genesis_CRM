@@ -53,7 +53,7 @@ jobs:
         run: |
           npm run eval:knowledge:validate
           npm run test:knowledge-evaluation
-          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node evaluation/knowledge/schema.ts evaluation/knowledge/metrics.ts evaluation/knowledge/baseline.ts
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node evaluation/knowledge/schema.ts evaluation/knowledge/metrics.ts evaluation/knowledge/baseline.ts evaluation/knowledge/retrieval.ts
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -64,16 +64,18 @@ jobs:
           python -m venv .cache/knowledge-parser
           .cache/knowledge-parser/bin/python -m pip install --disable-pip-version-check -r semantic/requirements.lock
           .cache/knowledge-parser/bin/python parsers/setup_runtime.py --assets .cache/knowledge-parser/assets
-          .cache/knowledge-parser/bin/python semantic/setup_runtime.py --model-dir .cache/knowledge-semantic/model
+          .cache/knowledge-parser/bin/python semantic/setup_runtime.py --model-dir .cache/knowledge-semantic/model --reranker-dir .cache/knowledge-semantic/reranker
+          echo "KNOWLEDGE_RERANKER_DIR=$PWD/.cache/knowledge-semantic/reranker" >> "$GITHUB_ENV"
           echo "KNOWLEDGE_MODEL_DIR=$PWD/.cache/knowledge-semantic/model" >> "$GITHUB_ENV"
           echo "KNOWLEDGE_PYTHON=$PWD/.cache/knowledge-parser/bin/python" >> "$GITHUB_ENV"
           echo "KNOWLEDGE_TOKENIZER_DIR=$PWD/.cache/knowledge-parser/assets" >> "$GITHUB_ENV"
       - name: Isolated document/OCR/lease recovery and mailbox ACL regression
         run: |
+          npm run test:knowledge-retrieval
           npm run test:knowledge-index
           npm run test:knowledge-ingestion
           npm run test:knowledge
-          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/knowledge-ingestion.test.ts tests/knowledge-ui-fixture.ts tests/knowledge-index.test.ts tests/knowledge-index-ui-fixture.ts tests/fixtures/knowledge-s2/worker.ts
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/knowledge-ingestion.test.ts tests/knowledge-ui-fixture.ts tests/knowledge-index.test.ts tests/knowledge-retrieval.test.ts tests/knowledge-index-ui-fixture.ts tests/fixtures/knowledge-s2/worker.ts
       - name: Template feedback regression (H-05)
         run: npm run test:template-feedback
       - name: Security boundary regression tests

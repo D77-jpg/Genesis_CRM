@@ -145,11 +145,15 @@ test('15 missing local index fails explicitly; rebuild restores from Mongo witho
  const result=await query('paper bag');assert.equal(result.status,'retrieval_failed','empty new SQLite must not look like a valid no-match');
  await build();assert.equal((await query('paper bag')).status,'ready');
 });
-test('16 long indivisible policy is rejected without truncation or stale activation',async()=>{
- const id=await appendKnowledge(undefined,policy('Too long fixture',('conditional specification ').repeat(300)),actor),task=await requestIndex(actor,randomUUID());
- await processKnowledgeIndex(task.id,real);assert.equal((await Gen.findById(task.id))?.error?.code,'atom_too_long');assert.ok((await Gen.findById(task.id))?.error?.message.includes('未截断正文'));
- assert.equal((await query('conditional specification')).status,'index_stale');await archiveKnowledge(id,1,actor);await build();
+test('16 long publication indexes lossless retrieval windows and restores full parent conditions',async()=>{
+ const content=('conditional specification ').repeat(300)+'Final condition: MOQ 731 pcs only after artwork approval; freight excluded.';
+ const id=await appendKnowledge(undefined,policy('Long fixture',content),actor);await build();
+ const result=await retrieveKnowledge(actor,'conditional specification',[id]);const source=result.sources.find(s=>s.knowledgeId===id);
+ assert.equal(source?.content,content);assert.ok(source.index!.chunks.length>1);
+ assert.ok(source.index!.chunks.every(c=>!!c.location.retrievalWindow));
+ await archiveKnowledge(id,1,actor);await build();
 });
+
 test('17 S1 document → reviewed draft → approved revision → semantic evidence preserves provenance',async()=>{
  const {uploadDocument,processKnowledgeDocument,documentDetail,saveChunkDraft}=await import('../src/services/knowledge/document.service');
  const text='# Fictional zipper pouch\nNylon zipper pouches for travel accessories.';

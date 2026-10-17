@@ -7,14 +7,14 @@ export interface KnowledgeTerm {
   min?: number; max?: number; mode: 'reference'|'confirmed'|'needs_confirmation';
 }
 export interface KnowledgeSource {
-  index?:{selection:'explicit'|'semantic';generation:string;model:string;modelName:string;revision:string;dimension:number;manifest:string;chunks:{id:string;contentHash:string;location:Record<string,unknown>;sourceRefs:Record<string,unknown>[]}[]};
+  index?:{scores?:Record<string,number>;selection:'explicit'|'semantic';generation:string;model:string;modelName:string;revision:string;dimension:number;manifest:string;chunks:{id:string;contentHash:string;location:Record<string,unknown>;sourceRefs:Record<string,unknown>[]}[]};
   sourceId: string; knowledgeId?: string; quotationId?: string; version: number; title: string;
   category: KnowledgeCategory; kind: 'knowledge'|'quotation'; content: string; source: string;
   applicability: string; products: string[]; validFrom: string; validUntil?: string; terms: KnowledgeTerm[];
 }
 export interface KnowledgeIssue { code: string; message: string; sourceIds?: string[]; topic?: PolicyTopic }
 export interface KnowledgeBundle {
-  retrieval?:{engine:'keyword'|'local_semantic';generation?:string;identity?:string};
+  retrieval?:{engine:'keyword'|'local_semantic';generation?:string;identity?:string;trace?:Record<string,unknown>};
   projectId: string; status: 'index_not_ready'|'index_stale'|'ready'|'no_match'|'retrieval_failed'|'expired'|'conflict';
   sources: KnowledgeSource[]; issues: KnowledgeIssue[]; topics: PolicyTopic[];
 }

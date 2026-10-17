@@ -11,7 +11,10 @@ import sys
 import time
 sys.stdout.reconfigure(encoding="utf-8", errors="strict")
 
-VERSION = "genesis-semantic-s2.1"
+VERSION = "genesis-semantic-s3.1"
+# -I excludes the script directory; import only this audited sibling explicitly.
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from retrieval import segment,retrieve
 
 
 class Failure(Exception):
@@ -139,10 +142,14 @@ def main():
       PRIMARY KEY(project,scope,model,hash));
     CREATE INDEX IF NOT EXISTS vectors_generation ON vectors(project,generation);
     """)
+    db.execute("CREATE TABLE IF NOT EXISTS texts(project TEXT,generation TEXT,item TEXT,text TEXT,parent TEXT,PRIMARY KEY(project,generation,item))")
     project, generation = request["projectId"], request.get("generation", "")
     command = request["command"]
     result = {}
-    if command == "embed":
+    if command == "segment":
+        try: result={"segments":segment(tokenizer,request["atoms"])}
+        except ValueError: raise Failure("window_budget", "资料过长，超过单条检索窗口预算；原文未截断，请按主题拆分")
+    elif command == "embed":
         texts=request["texts"]
         if not 0<len(texts)<=16:
             raise Failure("batch_limit", "每次向量化最多 16 个片段")
@@ -172,6 +179,7 @@ def main():
                 if existing and existing != (identity, item["hash"]):
                     raise Failure("immutable_collision", "代次内的片段发生变化，请建立新代次")
                 db.execute("INSERT OR IGNORE INTO vectors VALUES(?,?,?,?,?,?)", (project, generation, item["id"], identity, item["hash"], item["vector"]))
+                db.execute("INSERT OR IGNORE INTO texts VALUES(?,?,?,?,?)",(project,generation,item["id"],item["text"],item.get("parent",item["id"])))
         result = {"count": len(items), "embedded": len(missing), "reused": reused}
     elif command == "verify":
         rows = db.execute("SELECT item,model,hash,length(vector) FROM vectors WHERE project=? AND generation=? ORDER BY item", (project, generation)).fetchall()
@@ -181,6 +189,9 @@ def main():
             array=np.frombuffer(vector,dtype=np.float32)
             if not np.isfinite(array).all() or abs(float(np.linalg.norm(array))-1)>0.001:
                 raise Failure('invalid_vector', '索引向量数值或归一化校验失败，请重建')
+        texts=db.execute("SELECT item,text FROM texts WHERE project=? AND generation=? ORDER BY item",(project,generation)).fetchall()
+        if len(texts)!=len(rows) or any(a[0]!=b[0] or digest(b[1].encode())!=a[2] for a,b in zip(rows,texts)):
+            raise Failure("lexical_missing", "词项索引缺失或不完整，请重建资料")
         result = {"count": len(rows), "checksum": digest(json.dumps([[r[0], r[2]] for r in rows], separators=(",", ":")).encode())}
     elif command == "query":
         stored = db.execute('SELECT item,hash,model,length(vector) FROM vectors WHERE project=? AND generation=? ORDER BY item', (project,generation)).fetchall()
@@ -193,15 +204,12 @@ def main():
         # SQL join applies the current Mongo-authorized candidate IDs BEFORE distance evaluation.
         db.execute("CREATE TEMP TABLE allowed(item TEXT PRIMARY KEY)")
         db.executemany("INSERT OR IGNORE INTO allowed VALUES(?)", [(i,) for i in allowed])
-        vector = embed([request["query"]])[0].tobytes()
-        rows = db.execute("""SELECT v.item,vec_distance_cosine(v.vector,?) AS distance FROM vectors v
-          JOIN allowed a ON a.item=v.item WHERE v.project=? AND v.generation=? AND v.model=?
-          AND length(v.vector)=? ORDER BY distance,v.item LIMIT 30""", (vector, project, generation, identity, lock["dimension"] * 4)).fetchall()
-        result = {"hits": [{"id": r[0], "distance": r[1]} for r in rows], "queryDimension": len(vector)//4}
+        result = retrieve(db,request,tokenizer,embed,options,Failure)
     elif command == "cleanup":
         with db:
             for key in request["generations"]:
                 db.execute("DELETE FROM vectors WHERE project=? AND generation=?", (project, key))
+                db.execute("DELETE FROM texts WHERE project=? AND generation=?", (project,key))
             # Remove cache artifacts no longer referenced, scoped to this project only.
             db.execute("DELETE FROM embeddings WHERE project=? AND NOT EXISTS (SELECT 1 FROM vectors WHERE vectors.project=embeddings.project AND vectors.model=embeddings.model AND vectors.hash=embeddings.hash)", (project,))
         result = {"removed": len(request["generations"])}

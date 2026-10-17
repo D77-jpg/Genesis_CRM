@@ -51,8 +51,8 @@ function quantityOf(text:string):number|undefined{
  const m=/(?:quantity|qty|order quantity|采购数量|数量)\s*[:：=]?\s*(\d[\d,]*)|(?:^|\s)(\d[\d,]*)\s*(?:pcs|pieces|units|件)\b/i.exec(text);
  return m?Number((m[1]??m[2]).replace(/,/g,'')):undefined;
 }
-export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{customerId?:string;quantity?:number;ids?:string[]}={}){
- const bundle=await retrieveKnowledge(actor,query,options.ids);
+export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{customerId?:string;quantity?:number;ids?:string[];retrievalMode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'}={}){
+ const bundle=await retrieveKnowledge(actor,query,options.ids,options.retrievalMode);
  if(!options.customerId||bundle.status==='retrieval_failed')return bundle;
  // A customer's quotation can only enter their own context and only after a fresh ACL check.
  const customer=await getCustomerByIdOrThrow(options.customerId,actor);
