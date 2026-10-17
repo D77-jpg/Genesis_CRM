@@ -1,3 +1,4 @@
+import {inboundAgentScope} from './mail-access';
 import { createHash } from 'node:crypto';
 import { Types } from 'mongoose';
 import {
@@ -128,9 +129,9 @@ function assertSafeMail(mail: { from: string; subject: string; text: string }): 
 
 async function getMailSource(mailId: string, actor: AuthUser) {
   requireMailAdmin(actor);
-  const mail = await MailMessage.findOne({ _id: mailId, projectId: requireProjectId(actor), deleted: { $ne: true }, customerId: null });
+  const mail = await MailMessage.findOne({ ...await inboundAgentScope(actor), _id: mailId, projectId: requireProjectId(actor), deleted: { $ne: true }, customerId: null });
   if (!mail) throw ApiError.notFound('邮件不存在或无权访问');
-  const thread = await MailMessage.find({ projectId: requireProjectId(actor), threadId: mail.threadId, deleted: { $ne: true } })
+  const thread = await MailMessage.find({ ...await inboundAgentScope(actor), projectId: requireProjectId(actor), threadId: mail.threadId, deleted: { $ne: true } })
     .select('from subject text').limit(201).lean();
   if (thread.length > 200) throw ApiError.conflict('邮件会话过长，无法完整复核历史安全信号，请人工处理');
   // Historical stop-contact signals remain binding even when a newer message looks benign.

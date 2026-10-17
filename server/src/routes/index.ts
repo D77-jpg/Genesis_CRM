@@ -42,6 +42,7 @@ import trackingRoutes from './tracking.routes';
 import projectRoutes from './project.routes';
 import scratchpadRoutes from './scratchpad.routes';
 import agentRoutes from './agent.routes';
+import knowledgeDocumentRoutes from './knowledge-documents.routes';
 import mailAccountRoutes from './mail-account.routes';
 import integrationRoutes from './integration.routes';
 
@@ -92,6 +93,7 @@ router.use('/quotations', requireAuth, requireProject, quotationRoutes);
 router.use('/templates', requireAuth, requireProject, templateRoutes);
 router.use('/scratchpad', requireAuth, requireProject, scratchpadRoutes);
 router.use('/agent', requireAuth, requireProject, agentRoutes);
+router.use('/knowledge-documents', requireAuth, requireProject, knowledgeDocumentRoutes);
 router.use('/mail-accounts', requireAuth, requireProject, mailAccountRoutes);
 router.use('/users', userRoutes);
 router.get('/stats/overview', requireAuth, requireProject, overviewHandler);

@@ -32,12 +32,14 @@ export const knowledgeInput=z.object({
 });
 export type KnowledgeInput=z.input<typeof knowledgeInput>;
 function admin(actor:AuthUser){if(actor.role!=='admin')throw ApiError.forbidden('知识由项目管理员编辑、审核和发布');}
-export async function appendKnowledge(id:string|undefined,input:KnowledgeInput,actor:AuthUser,importKey?:string){
+export async function appendKnowledge(id:string|undefined,input:KnowledgeInput,actor:AuthUser,importKey?:string,sourceRefs?:Record<string,unknown>[]){
  admin(actor);const projectId=requireProjectId(actor);const parsed=knowledgeInput.parse(input);const version=parsed.expectedVersion+1;
  if(version>100)throw ApiError.conflict('请停用后建立新的知识条目');
- const revision={version,title:parsed.title,tags:parsed.tags,content:parsed.content,source:parsed.source,approved:parsed.approved,
+ const revision={...(sourceRefs?{sourceRefs}:{}),version,title:parsed.title,tags:parsed.tags,content:parsed.content,source:parsed.source,approved:parsed.approved,
  category:parsed.category,applicability:parsed.applicability,products:parsed.products,validFrom:parsed.validFrom??new Date(),
  validUntil:parsed.validUntil,terms:parsed.terms,createdBy:new Types.ObjectId(actor.id),createdAt:new Date()};
+ if(id&&!Types.ObjectId.isValid(id))throw ApiError.notFound('知识不存在');
+ if(id&&!sourceRefs){const previous=await AgentKnowledge.findOne({_id:id,projectId,version:parsed.expectedVersion});revision.sourceRefs=previous?.revisions.find(v=>v.version===parsed.expectedVersion)?.sourceRefs;}
  if(!id){if(parsed.expectedVersion!==0)throw ApiError.conflict('新知识版本必须从 1 开始');
  return (await AgentKnowledge.create({projectId,version,approvedVersion:parsed.approved?version:0,revisions:[revision],...(importKey?{importKey}:{})})).id;}
  if(!Types.ObjectId.isValid(id))throw ApiError.notFound('知识不存在');

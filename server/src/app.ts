@@ -3,6 +3,7 @@
  * ------------------------------------------------------------------
  * 只负责「中间件 + 路由」的组合，不监听端口（便于测试时直接 import app）。
  */
+import { startKnowledgeDocumentWorker } from './services/knowledge/document.service';
 import { startAgentTaskWorker } from './services/agent/task.service';
 import express, { type Application } from 'express';
 import cors from 'cors';
@@ -143,6 +144,7 @@ export function createApp(): Application {
   app.use(errorHandler);
 
   startAgentTaskWorker();
+  startKnowledgeDocumentWorker();
   return app;
 }
 

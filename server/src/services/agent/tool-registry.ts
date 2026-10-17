@@ -41,7 +41,7 @@ async function getMailThread(actor: AuthUser, input: unknown) {
   const threadId = root.threadId || String(root._id);
   const filter = { ...scope, customerId: root.customerId || null, threadId };
   const [received, sent] = await Promise.all([
-    MailMessage.find({ ...filter, deleted: { $ne: true } }).sort({ sentAt: 1 }).limit(50).lean(),
+    MailMessage.find({ ...await inboundAgentScope(actor), ...filter, deleted: { $ne: true } }).sort({ sentAt: 1 }).limit(50).lean(),
     DevelopmentLetter.find({ ...filter, status: { $ne: 'draft' } }).sort({ createdAt: 1 }).limit(50).lean(),
   ]);
   const thread = [

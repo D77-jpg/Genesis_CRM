@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "parserVersion": "genesis-parser-s1.1",
+  "vocabularyRepository": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "vocabularyRevision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+  "vocabularyDigest": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8",
+  "ocrWeights": {
+    "ch_PP-OCRv4_det_infer.onnx": "d2a7720d45a54257208b1e13e36a8479894cb74155a5efe29462512d42f49da9",
+    "ch_PP-OCRv4_rec_infer.onnx": "48fc40f24f6d2a207a2b1091d3437eb3cc3eb6b676dc3ef9c37384005483683b",
+    "ch_ppocr_mobile_v2.0_cls_infer.onnx": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+  },
+  "packages": {
+    "pypdfium2": "5.14.0",
+    "rapidocr-onnxruntime": "1.4.4",
+    "onnxruntime": "1.31.0",
+    "tokenizers": "0.23.3",
+    "pillow": "12.3.0"
+  },
+  "licenses": {
+    "pypdfium2": "Apache-2.0 OR BSD-3-Clause; PDFium BSD and bundled third-party notices",
+    "rapidocr-onnxruntime": "Apache-2.0",
+    "onnxruntime": "MIT",
+    "tokenizers": "Apache-2.0",
+    "pillow": "MIT-CMU",
+    "tokenizer": "Apache-2.0"
+  }
+}

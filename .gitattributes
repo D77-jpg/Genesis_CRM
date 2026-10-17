@@ -5,3 +5,7 @@ docs/integration/*.openapi.yaml text eol=lf
 server/evaluation/knowledge/* text eol=lf
 docs/knowledge-s0-results/*.json text eol=lf
 docs/knowledge-agent-roadmap.md text eol=lf
+
+# Parser identity and Python sources stay byte-stable across platforms.
+server/parsers/* text eol=lf
+server/tests/fixtures/knowledge-s1/* text eol=lf
