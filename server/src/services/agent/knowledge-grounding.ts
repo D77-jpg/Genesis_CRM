@@ -129,6 +129,7 @@ export function conditionalSentence(term:KnowledgeTerm,source:KnowledgeSource){
 }
 export function customerProfileOf(value:{name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}):CustomerFactProfile{return {name:value.name,company:value.company??'',country:value.country??'',industry:value.industry??'',interestedProducts:value.interestedProducts??''};}
 export interface GroundedEmailOptions {
+ knownRequirements?:{quantity?:number;quantityUnit?:string;destination?:string};
  customerProfile?:CustomerFactProfile;
  taskType:string;recipientName?:string;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string;
  customerEvidence?:string;questions?:string[];seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
@@ -162,7 +163,7 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  const outreach=options.taskType==='first_outreach';
  const sections=[recipient?'Dear '+recipient+',':'Hello,',outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.',
  answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'',
- outreach?'Would a brief discussion about your requirements be useful?':'Could you please confirm your final specifications so we can agree on the next step?',
+ outreach?'Would a brief discussion about your requirements be useful?':options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':'Could you please confirm your final specifications so we can agree on the next step?',
  seller?['Best regards,',seller.senderName,seller.companyName,seller.senderEmail,seller.website].filter(Boolean).join('\n'):''];
  const bodyText=sections.filter(Boolean).join('\n\n');
  const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));

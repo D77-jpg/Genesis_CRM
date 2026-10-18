@@ -29,7 +29,8 @@
     "test:knowledge-retrieval": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-retrieval.test.ts",
     "eval:knowledge:retrieval": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/retrieval.ts",
     "test:knowledge-facts": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-facts.test.ts",
-    "eval:knowledge:facts": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/fact-evaluation.ts"
+    "eval:knowledge:facts": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/fact-evaluation.ts",
+    "test:knowledge-workflow": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-workflow.test.ts"
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "^1.0.0",

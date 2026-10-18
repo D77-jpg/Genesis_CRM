@@ -54,7 +54,8 @@ jobs:
           npm run eval:knowledge:validate
           npm run test:knowledge-evaluation
           npm run test:knowledge-facts
-          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node evaluation/knowledge/schema.ts evaluation/knowledge/metrics.ts evaluation/knowledge/baseline.ts evaluation/knowledge/retrieval.ts evaluation/knowledge/fact-evaluation.ts tests/knowledge-facts.test.ts
+          npm run test:knowledge-workflow
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node evaluation/knowledge/schema.ts evaluation/knowledge/metrics.ts evaluation/knowledge/baseline.ts evaluation/knowledge/retrieval.ts evaluation/knowledge/fact-evaluation.ts tests/knowledge-facts.test.ts tests/knowledge-workflow.test.ts tests/fixtures/knowledge-s5/worker.ts
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

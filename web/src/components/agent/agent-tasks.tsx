@@ -7,7 +7,8 @@ import { apiPost, toErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { taskCounts, visibleTasks, type TaskFilter } from '@/lib/agent-workflow';
 export interface AgentTask {
- kind?:'first_outreach'|'inquiry_reply'|'followup_review';sourceMailId?:string;mailAnalysisId?:string;automatic?:boolean;
+ kind?:'first_outreach'|'inquiry_reply'|'followup_review'|'quotation_explanation'|'sample_reply';sourceMailId?:string;mailAnalysisId?:string;automatic?:boolean;
+ workflowEpoch?:number;workflowCalls?:number;workflow?:{key:string;label:string;epoch:number;state:'running'|'completed'|'failed';durationMs?:number;reused:number;tool?:string}[];previousArtifacts?:{draftId?:string;at:string}[];
  id:string; sessionId:string; goal:string; version:number;
  status:'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
  parentBatchId?:string; contextSummary?:string; tokenBudget?:number; budgetCharged?:number;
@@ -20,7 +21,7 @@ const labels: Record<AgentTask['status'], string> = {
   queued: '排队中', running: '准备中', waiting_input: '待补充', paused: '已暂停',
   awaiting_review: '待你审核', completed: '已发送', failed: '需要处理', cancelled: '已取消',
 };
-const kinds = { first_outreach: '首封开发信', inquiry_reply: '询盘回复', followup_review: '跟进邮件' };
+const kinds = { first_outreach: '首封开发信', inquiry_reply: '询盘回复', followup_review: '跟进邮件',quotation_explanation:'报价说明',sample_reply:'样品回复' };
 const steps = [['locate_customer','定位客户'],['analyze_customer','分析与起草'],['save_draft','保存草稿'],['verify_draft','核对结果']];
 const descriptions: Record<AgentTask['status'], string> = {
   queued: '已排队，助手会继续准备。', running: '正在整理资料并起草…',
@@ -117,6 +118,8 @@ export function AgentTasks({ tasks, loaded, loadError, onTaskUpdated, autoOpenTa
           const done = task.completedSteps.includes(key); const running = task.status === 'running' && task.currentStep === key;
           return <li key={key} className={'flex items-center gap-1.5 text-xs leading-5 ' + (done ? 'text-emerald-600 dark:text-emerald-400' : running ? 'text-primary' : 'text-muted-foreground')}>{done ? <Check className="h-3.5 w-3.5" aria-hidden /> : running ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <span className="h-3 w-3 rounded-full border" aria-hidden />}{label}</li>;
         })}</ol>
+        {task.workflow && task.workflow.length>0 && <section aria-label="证据准备过程" className="space-y-3"><h4 className="text-sm font-medium">依据如何用于这封邮件</h4><p className="text-xs leading-5 text-muted-foreground">每一步保留结果。继续时会重新核对权限和资料版本，发送仍由你确认。</p><ol className="space-y-3">{task.workflow.filter(s=>s.epoch===(task.workflowEpoch??0)).map(s=><li key={s.key} className="flex items-start gap-2 text-sm leading-6">{s.state==='completed'?<Check className="mt-1 h-4 w-4 shrink-0 text-emerald-600" aria-hidden/>:s.state==='running'&&task.status==='running'?<Loader2 className="mt-1 h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden/>:<span className="mt-2 h-3 w-3 shrink-0 rounded-full border" aria-hidden/>}<div className="min-w-0"><p>{s.label}</p><p className="text-xs leading-5 text-muted-foreground">{s.state==='completed'?'已完成':s.state==='running'?'等待继续':'尚未完成'}{s.durationMs!==undefined?' · '+(s.durationMs/1000).toFixed(1)+'秒':''}{s.reused>0?' · 已复用保存结果':''}</p></div></li>)}</ol>{(task.workflowEpoch??0)>0&&<p className="text-xs leading-5 text-amber-700 dark:text-amber-400">资料发生过变化，当前显示重新核对后的处理过程；旧草稿仍保留。</p>}</section>}
+        {task.previousArtifacts?.some(a=>a.draftId)&&<details><summary className="min-h-11 cursor-pointer text-sm">查看此前保留的草稿</summary><div className="space-y-2">{task.previousArtifacts.filter(a=>a.draftId).map(a=><Button key={a.draftId} variant="outline" className="min-h-11" asChild><a href={'/customers/'+task.customerId+'?knowledgeDraft='+a.draftId}>旧草稿 · {formatDateTime(a.at)}</a></Button>)}</div></details>}
         {task.contextSummary && <div><h4 className="text-xs font-medium">客户资料摘要</h4><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">{task.contextSummary}</p></div>}
         {task.mailAnalysisId && onMailAnalysis && <Button variant="outline" className="min-h-11" onClick={() => onMailAnalysis(task)}>查看询盘摘要与回复</Button>}
         <ol className="space-y-3 text-xs text-muted-foreground">{task.events.map((event, index) => <li key={index}><time>{formatDateTime(event.at)}</time><p className="mt-1 break-words leading-5">{event.message}</p></li>)}</ol>

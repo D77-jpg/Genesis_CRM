@@ -1,3 +1,9 @@
+import {taskContextStamp} from './task-context';
+import {taskEvidenceWorkflow,workflowLabels,workflowHash} from './evidence-workflow';
+import {salesMailKind} from './sales-evidence';
+import {knowledgeFreshness} from './knowledge-grounding';
+import {chargeTaskBudget} from './task-budget';
+import {AgentMailThreadAnalysis} from '../../models';
 import {observeAgentEvents,assertAutomaticTask} from './automation.service';
 import {executeInquiryTask} from './inquiry-task';
 import {agentMailOrThrow} from './mail-access';
@@ -43,6 +49,7 @@ async function dto(task: AgentTaskDocument, actor: AuthUser) {
  return {id: task.id, sessionId: String(task.sessionId), goal: task.goal, status: task.status, version: task.version,
   customerId: task.customerId?.toString(), customerName: customer?.name, analysisId: task.analysisId?.toString(), draftId: task.draftId?.toString(),
   sentLetterId: task.sentLetterId?.toString(), completedSteps: task.completedSteps, currentStep: task.currentStep,
+  workflowEpoch:task.workflowEpoch??0,workflowCalls:task.workflowCalls??0,workflowActiveMs:task.workflowActiveMs??0,previousArtifacts:task.previousArtifacts??[],workflow:(task.workflowRecords??[]).map(({payload:_payload,...record})=>({...record,label:workflowLabels[record.key]??record.key})),
   events: task.events, error: task.error, attempts: task.attempts,
   candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), kind:task.kind,sourceMailId:task.sourceMailId?.toString(),mailAnalysisId:task.mailAnalysisId?.toString(),automatic:Boolean(task.automationRuleId),parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};
 }
@@ -70,13 +77,13 @@ export async function createAgentTask(input: {sessionId: string; goal: string; r
   ?await getLetter(session.context.resourceId!,actor):undefined;
  const customerId = input.customerId ?? (session.context.type === 'customer' ? session.context.resourceId : outbound?.customerId);
  if (customerId) await getCustomerByIdOrThrow(customerId,actor);
- const data = {...scope(actor), sessionId: session._id, actorRole: actor.role, goal: input.goal, requestKey: input.requestKey,
-  customerId,kind:inquiry?'inquiry_reply':isFirstOutreachCommand(input.goal)?'first_outreach':'followup_review',sourceMailId:inquiry?session.context.resourceId:undefined,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:2, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
+ const data = {...scope(actor), sessionId: session._id, actorRole: actor.role, goal: input.goal, requestKey: input.requestKey,requestSignature:workflowHash({sessionId:input.sessionId,goal:input.goal,customerId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000}),
+  customerId,kind:salesMailKind(input.goal,inquiry),sourceMailId:inquiry?session.context.resourceId:undefined,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:5, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
  let task;
  try { task = await AgentTask.findOneAndUpdate({...scope(actor),requestKey: input.requestKey}, {$setOnInsert: data}, {upsert: true,new: true,runValidators: true}); }
  catch (error) { if ((error as {code?:number}).code !== 11000) throw error; task = await AgentTask.findOne({...scope(actor),requestKey: input.requestKey}); }
  if (!task) throw ApiError.internal('任务保存失败');
- if (task.goal !== input.goal || String(task.sessionId) !== input.sessionId) throw ApiError.conflict('请求标识已用于其他任务');
+ if (task.goal !== input.goal || String(task.sessionId) !== input.sessionId || (task.requestSignature&&task.requestSignature!==data.requestSignature)) throw ApiError.conflict('请求标识已用于其他任务');
  return dto(task,actor);
 }
 export async function controlAgentTask(id: string, action: 'resume'|'pause'|'cancel', input: {version: number; customerId?: string; query?: string}, actor: AuthUser) {
@@ -102,14 +109,17 @@ export async function controlAgentTask(id: string, action: 'resume'|'pause'|'can
 const escapeHtml = (s:string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 // A lease fences state transitions. Every domain write also has its own durable idempotency key.
 export async function processAgentTask(id?: string, providerOverride?: AgentProvider): Promise<void> {
+ await AgentTask.updateMany({...(id?{_id:validId(id)}:{}),attempts:{$gte:5},$or:[{status:'queued'},{status:'running',leaseUntil:{$lt:new Date()}}]},{$set:{status:'failed',error:{code:'TASK_WORKFLOW_LIMIT',message:'任务恢复次数已达上限，已保存结果保留，请新建任务。',retryable:false}},$unset:{leaseToken:1,leaseUntil:1},$inc:{version:1}});
+ const attemptStarted=Date.now();
  const token = randomUUID();
- const task = await AgentTask.findOneAndUpdate({... (id ? {_id: validId(id)} : {}), $or:[{status:'queued'},{status:'running',leaseUntil:{$lt:new Date()}}]},
+ const task = await AgentTask.findOneAndUpdate({attempts:{$lt:5},... (id ? {_id: validId(id)} : {}), $or:[{status:'queued'},{status:'running',leaseUntil:{$lt:new Date()}}]},
   {$set:{status:'running',leaseToken:token,leaseUntil:new Date(Date.now()+90_000)},$inc:{version:1,attempts:1}}, {new:true,sort:{createdAt:1}});
  if (!task) return;
  const fence = {_id:task._id,status:'running',leaseToken:token};
  const heartbeat = setInterval(() => { void AgentTask.updateOne(fence,{$set:{leaseUntil:new Date(Date.now()+90_000)}}).catch(() => undefined); },10_000);
  heartbeat.unref();
- const check = async () => { if(task.parentBatchId && !await AgentBatch.exists({_id:task.parentBatchId,status:'active'}))throw new Error('TASK_INTERRUPTED'); if (!await AgentTask.exists(fence)) throw new Error('TASK_INTERRUPTED'); const actor = await taskActor(task); await assertAutomaticTask(task,actor); if(task.customerId) await getCustomerByIdOrThrow(String(task.customerId),actor); return actor; };
+ let expectedStamp:string|undefined;
+ const check = async () => {if(Date.now()-attemptStarted>180000)throw new ApiError(429,'单次任务处理超过时限','RATE_LIMITED',[{field:'agent',message:'TASK_WORKFLOW_LIMIT'}]); if(task.parentBatchId && !await AgentBatch.exists({_id:task.parentBatchId,status:'active'}))throw new Error('TASK_INTERRUPTED'); if (!await AgentTask.exists(fence)) throw new Error('TASK_INTERRUPTED'); const actor = await taskActor(task); await assertAutomaticTask(task,actor); if(task.customerId) await getCustomerByIdOrThrow(String(task.customerId),actor);if(task.sourceMailId)await agentMailOrThrow(String(task.sourceMailId),actor);if(expectedStamp&&await taskContextStamp(task.customerId?.toString(),task.sourceMailId?.toString(),actor)!==expectedStamp)throw ApiError.conflict('任务期间客户、往来或知识发生变化，请重新准备');return actor; };
  const change = async (set: Record<string,unknown>, message?:string, complete?:TaskStep) => {
   const result = await AgentTask.updateOne(fence, {$set:set,$inc:{version:1},
    ...(message ? {$push:{events:{$each:[{at:new Date(),message,step:task.currentStep}],$slice:-100}}} : {}),
@@ -119,13 +129,25 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
  const step = async (key:TaskStep,message:string) => { await check(); task.currentStep=key; await change({currentStep:key},message); };
  try {
   let actor = await check();
-  if(task.kind==='inquiry_reply'){await executeInquiryTask(task,{check,step,change},providerOverride);return;}
+  const prepareWorkflow=async()=>{
+   actor=await check();const stamp=await taskContextStamp(task.customerId?.toString(),task.sourceMailId?.toString(),actor);
+   const suffix=(task.workflowEpoch??0)?'-e'+task.workflowEpoch:'';
+   const prior=task.sourceMailId?await AgentMailThreadAnalysis.findOne({projectId:task.projectId,userId:task.userId,requestKey:`task-mail-${task.id}-${task.customerId??'unknown'}${suffix}`}):await AgentCustomerAnalysis.findOne({projectId:task.projectId,userId:task.userId,requestKey:`task-analysis-${task.id}${suffix}`});
+   const fresh=prior?.knowledgeReview?await knowledgeFreshness(prior.knowledgeReview,actor):undefined;
+   if((task.workflowStamp&&task.workflowStamp!==stamp)||fresh?.failed||fresh?.changed.length){
+    if((task.workflowEpoch??0)>=3)throw ApiError.conflict('资料多次变化，请核对后新建任务');
+    await change({workflowEpoch:(task.workflowEpoch??0)+1,analysisId:null,mailAnalysisId:null,draftId:null,completedSteps:task.completedSteps.filter(k=>k==='locate_customer'),previousArtifacts:[...(task.previousArtifacts??[]),{analysisId:task.analysisId?.toString(),mailAnalysisId:task.mailAnalysisId?.toString(),draftId:task.draftId?.toString(),at:new Date().toISOString()}]},'资料或有效依据已变化，原稿保留，按新版本重新准备。');
+   }
+   await change({workflowStamp:stamp});expectedStamp=stamp;return taskEvidenceWorkflow(task,token,check);
+  };
+  if(task.sourceMailId){const workflow=await prepareWorkflow();await executeInquiryTask(task,{check,step,change},providerOverride,workflow);return;}
   if (!task.completedSteps.includes('locate_customer')) {
    await step('locate_customer','正在定位当前项目内有权访问的客户。');
    if (!task.customerId) {
     let query = task.query;
     if (!query) {
      const provider = providerOverride ?? await resolveAgentProvider();
+     await chargeTaskBudget(task.id,task.goal.length,4096);
      const reservation = await reserveAgentQuota(actor,task.goal.length);
      let settled=false;
      try {
@@ -150,27 +172,29 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
   const customer=await getCustomerByIdOrThrow(String(task.customerId),actor);
   if(await hasProtectedCustomerMail(customer.id,actor.projectId!))throw new ApiError(403,'客户已停止营销联系','FORBIDDEN',[{field:'agent',message:'MARKETING_BLOCKED'}]);
   if (!customer.email) { await change({status:'waiting_input'},'客户档案缺少邮箱，请在档案补齐后点击继续。'); return; }
+  const workflow=await prepareWorkflow();
+  const epochSuffix=(task.workflowEpoch??0)?'-e'+task.workflowEpoch:'';
   if (!task.completedSteps.includes('analyze_customer')) {
    await step('analyze_customer','正在读取客户档案、时间线、邮件与报价，生成有依据的英文草稿。');
-   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}`},actor,{firstOutreach:task.kind!=='followup_review',userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id});
+   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}${epochSuffix}`},actor,{firstOutreach:task.kind==='first_outreach',userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id,workflow,taskKind:task.kind});
    await check(); await change({analysisId:new Types.ObjectId(analysis.id),contextSummary:analysis.facts.map(f=>f.text).join('；').slice(0,1500)},'分析与草稿内容已持久保存。','analyze_customer');
   }
   if (!task.completedSteps.includes('save_draft')) {
    await step('save_draft','正在保存开发信草稿；不会调用发送接口。');
    if(await hasProtectedCustomerMail(String(task.customerId),actor.projectId!))throw new ApiError(403,'客户已停止营销联系','FORBIDDEN',[{field:'agent',message:'MARKETING_BLOCKED'}]);
    // Recover a write whose response/checkpoint was lost; never overwrite later human edits.
-   let draft=await DevelopmentLetter.findOne({projectId:task.projectId,requestKey:`task-draft-${task.id}`});
+   let draft=await DevelopmentLetter.findOne({projectId:task.projectId,requestKey:`task-draft-${task.id}${epochSuffix}`});
    if(!draft) {
     const analysis=await getCustomerAnalysis(String(task.analysisId),actor);
     actor=await check();
     const saved=await sendLetter({customerId:String(task.customerId),subject:analysis.emailDraft.subject,
      content:analysis.emailDraft.bodyText.trim().split(/\r?\n(?:[ \t]*\r?\n)+/).map(p=>`<p>${escapeHtml(p).replace(/\r?\n/g,'<br>')}</p>`).join(''),
-     saveAsDraft:true,markAsDeveloped:false,agentTaskId:task.id,agentAnalysisId:task.kind==='followup_review'?undefined:analysis.id,requestKey:`task-draft-${task.id}`},actor);
+     saveAsDraft:true,markAsDeveloped:false,agentTaskId:task.id,agentAnalysisId:task.kind==='first_outreach'?analysis.id:undefined,requestKey:`task-draft-${task.id}${epochSuffix}`},actor);
     if(analysis.knowledgeReview)await DevelopmentLetter.updateOne({_id:saved.letter.id,projectId:task.projectId,knowledgeReview:{$exists:false}},{$set:{knowledgeReview:analysis.knowledgeReview}});
     draft=await DevelopmentLetter.findById(saved.letter.id);
    }
    await check();
-   if(!draft || String(draft.customerId)!==String(task.customerId) || (task.kind==='followup_review'?String(draft.agentTaskId)!==task.id:String(draft.agentOutreachId)!==String(task.analysisId))) throw ApiError.conflict('草稿关联不一致，请人工核对');
+   if(!draft || String(draft.customerId)!==String(task.customerId) || (task.kind!=='first_outreach'?String(draft.agentTaskId)!==task.id:String(draft.agentOutreachId)!==String(task.analysisId))) throw ApiError.conflict('草稿关联不一致，请人工核对');
    await AgentCustomerAnalysis.updateOne({_id:task.analysisId,projectId:task.projectId,userId:task.userId,emailStatus:{$in:['editable','failed']}},{$set:{emailStatus:'saved',createdLetterId:draft._id},$inc:{version:1}});
    await change({draftId:draft._id},'开发信草稿已保存至 CRM。','save_draft');
    await AgentAction.updateOne({projectId:task.projectId,userId:task.userId,workflowId:task._id,toolName:'prepare_first_outreach_draft'},{$setOnInsert:{
@@ -180,6 +204,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
   }
   await step('verify_draft','核对草稿归属和保存结果。');
   await getLetter(String(task.draftId),await check());
+  await workflow.run('handoff',{draftId:String(task.draftId)},async()=>({draftId:String(task.draftId),customerId:String(task.customerId),reviewRequired:true,sent:false}));
   await change({status:'awaiting_review'},'草稿准备完成，请打开审核页面；真实 SMTP 接受后才会记录已发送跟进。','verify_draft');
  } catch(error) {
   if((error as Error).message!=='TASK_INTERRUPTED') {

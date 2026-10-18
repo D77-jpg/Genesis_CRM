@@ -108,8 +108,8 @@ function sameContext(left: AgentContext, right: AgentContext): boolean {
 }
 
 function suggestions(context: AgentContext): string[] {
-  if (context.type === 'customer') return ['帮我给这个客户写第一封开发信', '总结客户时间线', '查看最近跟进和报价'];
-  if (context.type === 'mail') return ['总结当前邮件线程', '提取客户需求与待办', '建议下一步回复思路'];
+  if (context.type === 'customer') return ['帮我给这个客户写第一封开发信', '请给这个客户写报价说明邮件，不要发送', '请给这个客户写样品回复邮件，不要发送', '请给这个客户写跟进邮件，不要发送', '总结客户时间线'];
+  if (context.type === 'mail') return ['请回复这封询盘邮件，不要发送', '请写样品回复邮件，不要发送', '请写报价说明邮件，不要发送', '总结当前邮件线程'];
   return ['总结今天的销售工作区', '有哪些逾期客户需要优先处理？', '给我一份今日工作建议'];
 }
 
