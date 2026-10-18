@@ -91,11 +91,20 @@ def rerank(query,docs,options,Failure):
     lock=json.loads(Path(__file__).with_name('reranker.json').read_text('utf-8'))
     root=Path(os.environ.get('KNOWLEDGE_RERANKER_DIR',''))
     if not os.environ.get('KNOWLEDGE_RERANKER_DIR'): raise Failure('rerank_unavailable','本地重排模型未配置')
-    for artifact in lock['files']:
+    model_key=(str(root.resolve()),tuple((f['name'],(root/f['name']).stat().st_size,(root/f['name']).stat().st_mtime_ns) for f in lock['files']))
+    cached=globals().get('_rerank_cache')
+    if cached and cached[0]==model_key:
+        tok,model=cached[1],cached[2]
+    else:
+        tok,model=None,None
+    for artifact in ([] if model is not None else lock['files']):
         name,expected=artifact['name'],artifact['sha256']
         if hashlib.sha256((root/name).read_bytes()).hexdigest()!=expected: raise Failure('rerank_changed','重排模型校验失败')
-    tok=Tokenizer.from_file(str(root/'tokenizer.json'));tok.no_truncation();tok.no_padding()
-    model=ort.InferenceSession(str(root/lock['weight']),options,providers=['CPUExecutionProvider'])
+    if model is None:
+        tok=Tokenizer.from_file(str(root/'tokenizer.json'))
+        model=ort.InferenceSession(str(root/lock['weight']),options,providers=['CPUExecutionProvider'])
+        globals()['_rerank_cache']=(model_key,tok,model)
+    tok.no_truncation();tok.no_padding()
     queries=query_parts(tok,query,80)
     pairs=[];owners=[]
     for d in docs:

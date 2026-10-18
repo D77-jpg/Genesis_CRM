@@ -22,7 +22,7 @@ export async function indexActor(actor:AuthUser):Promise<AuthUser>{
  return {...actor,role:actor.role==='admin'&&u.role==='admin'?'admin':'user'};
 }
 async function published(projectId:string){
- const docs=await AgentKnowledge.find({projectId:objectId(projectId),approvedVersion:{$gt:0},archived:false}).sort({_id:1}).limit(10001).lean();
+ const docs=await AgentKnowledge.aggregate<{_id:Types.ObjectId;approvedVersion:number;revisions:KnowledgeRevision[]}>([{$match:{projectId:objectId(projectId),approvedVersion:{$gt:0},archived:false}},{$sort:{_id:1}},{$limit:10001},{$project:{approvedVersion:1,revisions:{$filter:{input:'$revisions',as:'v',cond:{$eq:['$$v.version','$approvedVersion']}}}}}]);
  if(docs.length>10000)throw new IndexError('publication_limit','首版支持每项目最多 10000 条已发布知识，请拆分项目资料');
  const rows:Published[]=docs.flatMap(k=>{const revision=k.revisions.find(v=>v.version===k.approvedVersion);return revision&&valid(revision)?[{id:String(k._id),version:k.approvedVersion,revision}]:[];});
  // Full effective revision + ACL + provenance: changes bypassing normal CRUD are also detected.
@@ -68,7 +68,7 @@ export async function requestIndex(actor:AuthUser,requestKey='automatic'){
 export async function knowledgeIndexChanged(actor:AuthUser){
  const enabled=await State.exists({projectId:requireProjectId(actor),enabled:true});if(enabled)await requestIndex(actor);
 }
-async function plan(rows:Published[],generation:string,projectId:string,identity:IndexIdentity,adapter:SemanticAdapter,signal?:AbortSignal){
+async function plan(rows:Published[],generation:string,projectId:string,identity:IndexIdentity,adapter:SemanticAdapter,signal?:AbortSignal,guard?:()=>Promise<void>){
  const atoms=rows.flatMap(row=>{
   const v=row.revision;if(v.category==='sales_rules')return [];
   const context=[v.title,v.applicability??'',...(v.products??[])].filter(Boolean).join('\n');
@@ -78,7 +78,7 @@ async function plan(rows:Published[],generation:string,projectId:string,identity
  });
  const items=[];let ordinal=0;
  for(let offset=0;offset<atoms.length;offset+=16){
-  const segmented=await adapter.run({command:'segment',projectId,atoms:atoms.slice(offset,offset+16).map((atom,index)=>({key:String(offset+index),text:atom.text}))},identity,signal);
+  const segmented=await adapter.run({command:'segment',projectId,atoms:atoms.slice(offset,offset+16).map((atom,index)=>({key:String(offset+index),text:atom.text}))},identity,signal,guard);
   if(!segmented.segments)throw new IndexError('segment_failed','未生成检索片段');
   for(const window of segmented.segments){
    const atom=atoms[Number(window.key)],row=atom.row,v=row.revision,content=window.text,contentHash=sha(content),refs=v.sourceRefs??[];
@@ -111,18 +111,19 @@ export async function processKnowledgeIndex(id?:string,adapter:SemanticAdapter=l
   if(g.identity.id!==identity.id||g.identity.dimension!==identity.dimension)throw new IndexError('model_changed','模型配置已变化，请建立新索引代次');
   const snapshot=await published(String(g.projectId));
   if(snapshot.manifest!==g.manifest)throw new IndexError('publication_changed','已发布资料已变化，请使用最新重建任务');
-  const items=await plan(snapshot.rows,g.id,String(g.projectId),identity,adapter,abort.signal);
+  const guard=async()=>{requireAdmin(await indexActor(original));if(abort.signal.aborted||!await Gen.exists(fence))throw new IndexError('cancelled','权限或租约已变化');if((await published(String(g.projectId))).manifest!==g.manifest)throw new IndexError('publication_changed','已发布资料已变化');};
+  const items=await plan(snapshot.rows,g.id,String(g.projectId),identity,adapter,abort.signal,guard);
   if(items.length)await Item.bulkWrite(items.map(item=>({updateOne:{filter:{generation:g._id,itemId:item.itemId},update:{$setOnInsert:item},upsert:true}})));
   if(!(await Gen.updateOne(fence,{$set:{total:items.length}})).matchedCount)throw new IndexError('cancelled','任务已停止');
   for(let offset=g.done;offset<items.length;offset+=16){
    if(abort.signal.aborted)throw new IndexError('cancelled','索引权限或租约已变化');
    const batch=items.slice(offset,offset+16);
    const result=await adapter.run({command:'upsert',projectId:String(g.projectId),generation:g.id,
-    items:batch.map(i=>({id:i.itemId,text:i.content,hash:i.contentHash,scope:i.scope,parent:String(i.knowledgeId)}))},identity,abort.signal);
+    items:batch.map(i=>({id:i.itemId,text:i.content,hash:i.contentHash,scope:i.scope,parent:String(i.knowledgeId)}))},identity,abort.signal,guard);
    if(result.count!==batch.length)throw new IndexError('incomplete_batch','本地索引批次未完整写入');
    if(!(await Gen.updateOne(fence,{$set:{done:offset+batch.length,metrics:{elapsedMs:result.elapsedMs,rssMiB:result.rssMiB}},$inc:{embedded:result.embedded??0,reused:result.reused??0}})).matchedCount)throw new IndexError('cancelled','索引租约已变化');
   }
-  const verified=await adapter.run({command:'verify',projectId:String(g.projectId),generation:g.id},identity,abort.signal);
+  const verified=await adapter.run({command:'verify',projectId:String(g.projectId),generation:g.id},identity,abort.signal,guard);
   if(verified.count!==items.length||verified.checksum!==checksum(items))throw new IndexError('incomplete_generation','索引校验不完整，尚未切换');
   requireAdmin(await indexActor(original));
   if((await published(String(g.projectId))).manifest!==g.manifest)throw new IndexError('publication_changed','构建期间资料已变化，未切换旧政策');
@@ -196,12 +197,15 @@ export async function semanticKnowledge(actor:AuthUser,query:string,options:{top
    return {...base,status:g?'index_stale':'index_not_ready',issues:[{code:g?'index_stale':'index_not_ready',message:'当前有效知识的语义索引尚未就绪，请管理员在知识库更新检索资料；未使用旧索引'}]};
   }
   const allowed=snapshot.rows.filter(r=>visible(r,current)&&options.productApplies(r.revision.products,query));
-  const rows=await Item.find({projectId,generation:g._id,knowledgeId:{$in:allowed.map(r=>objectId(r.id))},identity:identity.id,dimension:identity.dimension}).sort({ordinal:1}).lean();
+  const rows=await Item.find({projectId,generation:g._id,knowledgeId:{$in:allowed.map(r=>objectId(r.id))},identity:identity.id,dimension:identity.dimension}).sort({ordinal:1}).select('itemId knowledgeId publicationVersion ordinal').lean();
   // No query-vector cache in S2. Embedding reuse key is (project, visibility, model identity, full content hash).
   const diagnostics=await diagnosticMetadata(projectId,current);
-  const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',expectedCount:g.total,expectedChecksum:g.checksum},identity);
+  const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',expectedCount:g.total,expectedChecksum:g.checksum},identity,undefined,async()=>{const now=await indexActor(actor);if(now.role!==current.role||(await published(projectId)).manifest!==snapshot.manifest||String((await State.findOne({projectId}))?.activeGeneration)!==g.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,now))))throw new IndexError('authority_changed','排队期间资料或权限已变化，请重新查询');});
   const again=await indexActor(actor),after=await published(projectId),pointer=await State.findOne({projectId}),afterIdentity=await embeddingIdentity();
   if(after.manifest!==snapshot.manifest||String(pointer?.activeGeneration)!==g.id||again.role!==current.role||afterIdentity.id!==identity.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,again))))return {...base,status:'index_stale',issues:[{code:'index_stale',message:'检索期间知识或权限发生变化，请重新查询'}]};
+  const selectedIds=new Set([...(result.hits??[]).map(h=>h.id),...rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId)]);
+  const parents=rows.filter(i=>selectedIds.has(i.itemId)).map(i=>i.knowledgeId);
+  const details=await Item.find({projectId,generation:g._id,knowledgeId:{$in:parents},identity:identity.id}).sort({ordinal:1}).lean();
   const sources:KnowledgeSource[]=[];
   const rules=allowed.filter(r=>r.revision.category==='sales_rules');
   for(const row of rules.slice(0,4))sources.push({...options.sourceOf(row.id,row.revision),content:row.revision.content});
@@ -210,15 +214,15 @@ export async function semanticKnowledge(actor:AuthUser,query:string,options:{top
   const hits=[...explicit,...(result.hits??[]).map(h=>h.id)];
   for(const hitId of hits){
    if(!explicit.has(hitId)&&!(result.hits?.find(h=>h.id===hitId)?.accepted??false))continue;
-   const item=rows.find(i=>i.itemId===hitId),row=item&&after.rows.find(r=>r.id===String(item.knowledgeId)&&r.version===item.publicationVersion&&visible(r,again));
+   const item=details.find(i=>i.itemId===hitId),row=item&&after.rows.find(r=>r.id===String(item.knowledgeId)&&r.version===item.publicationVersion&&visible(r,again));
    if(!item||!row||seen.has(row.id))continue;seen.add(row.id);
    const source=options.sourceOf(row.id,row.revision);
    sources.push({...source,content:row.revision.content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:result.hits?.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,
-    chunks:rows.filter(i=>String(i.knowledgeId)===row.id).map(i=>({id:i.itemId,contentHash:i.contentHash,location:i.location,sourceRefs:i.sourceRefs}))}});
+    chunks:details.filter(i=>String(i.knowledgeId)===row.id).map(i=>({id:i.itemId,contentHash:i.contentHash,location:i.location,sourceRefs:i.sourceRefs}))}});
    if(seen.size>=10)break;
   }
   const diagnosticIssues=(result.trace?.diagnostics??[]).map(d=>({code:d.code,message:({expired:'相关资料已过期：',disabled:'相关资料已停用：',not_effective:'相关资料尚未生效：',draft_only:'相关资料尚未发布：'} as Record<string,string>)[d.code]+d.title,sourceIds:[d.sourceId]}));
-  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&(!sources.some(s=>s.category!=='sales_rules')||/expired|过期|失效/i.test(query))?'expired':sources.some(s=>s.category!=='sales_rules')?'ready':'no_match',sources,issues:[...diagnosticIssues,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=rows.find(i=>i.itemId===h.id),row=allowed.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
+  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&(!sources.some(s=>s.category!=='sales_rules')||/expired|过期|失效/i.test(query))?'expired':sources.some(s=>s.category!=='sales_rules')?'ready':'no_match',sources,issues:[...diagnosticIssues,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=details.find(i=>i.itemId===h.id),row=allowed.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
  }catch(e){return {...base,status:'retrieval_failed',sources:[],issues:[{code:e instanceof IndexError?e.code:'retrieval_failed',message:e instanceof IndexError?e.message:'语义检索或权限核对失败，请检查后重试；不能据此作出交易承诺'}]};}
 }
 let timer:NodeJS.Timeout|undefined,busy=false,cursor='';
@@ -244,3 +248,5 @@ export function startKnowledgeIndexWorker(){
   })().catch(()=>undefined).finally(()=>{busy=false;});
  },3000);timer.unref();
 }
+
+export function stopKnowledgeIndexWorker(){if(timer)clearInterval(timer);timer=undefined;}
