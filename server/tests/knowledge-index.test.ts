@@ -169,9 +169,9 @@ test('17 S1 document → reviewed draft → approved revision → semantic evide
 
 test('18 condition-backed inquiry reply uses real indexed policy; missing freight stays unconfirmed',async()=>{
  const id=await appendKnowledge(undefined,{...policy('Fictional standard pouch policy','Velvet pouches for jewelry.'),category:'trade',terms:[
- {topic:'moq',value:'73',conditions:'standard velvet pouch only',unit:'pcs',mode:'confirmed'},
- {topic:'lead_time',value:'19',conditions:'after artwork approval; standard velvet pouch',unit:'working days',mode:'confirmed'},
- {topic:'sample',value:'Stock samples available',conditions:'courier charge requires confirmation',mode:'confirmed'},
+ {topic:'moq',value:'73',conditions:'standard velvet pouch only',unit:'pcs',mode:'confirmed',scope:{reviewed:true,products:['velvet pouch'],processes:[],exclusions:[],polarity:'affirmed'}},
+ {topic:'lead_time',value:'19',conditions:'after artwork approval; standard velvet pouch',unit:'working days',mode:'confirmed',scope:{reviewed:true,products:['velvet pouch'],processes:[],startsAfter:'artwork approval',exclusions:[],polarity:'affirmed'}},
+ {topic:'sample',value:'Stock samples available',conditions:'courier charge requires confirmation',mode:'confirmed',scope:{reviewed:true,products:['velvet pouch'],processes:[],exclusions:[],polarity:'affirmed'}},
  ]},actor);await build();
  const {buildKnowledgeBundle,auditGroundedEmail}=await import('../src/services/agent/knowledge-grounding');
  const bundle=await buildKnowledgeBundle(actor,'velvet pouch MOQ lead time sample and freight',{ids:[id]});

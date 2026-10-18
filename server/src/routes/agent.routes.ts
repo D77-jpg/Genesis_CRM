@@ -1,4 +1,5 @@
-import {regenerateKnowledgeDraft} from '../services/agent/knowledge-draft.service';
+import {agreementInput,listCustomerAgreements,saveCustomerAgreement,disableCustomerAgreement} from '../services/agent/customer-agreement.service';
+import {regenerateKnowledgeDraft,recheckKnowledgeDraft} from '../services/agent/knowledge-draft.service';
 import { Router } from 'express';
 import { z } from 'zod';
 import { getAgentTask, listAgentTasks, controlAgentTask } from '../services/agent/task.service';
@@ -88,6 +89,13 @@ router.get('/skills',(_req,res)=>sendSuccess(res,BUSINESS_SKILLS));
 router.post('/knowledge/import-preview',requireRole('admin'),validate({body:importPreviewInput}),asyncHandler(async(req,res)=>sendSuccess(res,previewKnowledgeImport(req.body))));
 router.post('/knowledge/import',requireRole('admin'),validate({body:importCommitInput}),asyncHandler(async(req,res)=>sendSuccess(res,await importKnowledge(req.body.entries,req.user!),201)));
 router.post('/knowledge-drafts/:id/regenerate',messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({requestKey:z.string().uuid()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await regenerateKnowledgeDraft(req.params.id,req.user!,req.body.requestKey),201)));
+
+const agreementParams=z.object({customerId:z.string().regex(/^[a-f\d]{24}$/i),id:z.string().regex(/^[a-f\d]{24}$/i).optional()});
+router.get('/customers/:customerId/agreements',validate({params:agreementParams}),asyncHandler(async(req,res)=>sendSuccess(res,await listCustomerAgreements(req.params.customerId,req.user!))));
+router.post('/customers/:customerId/agreements',requireRole('admin'),validate({params:agreementParams,body:agreementInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await saveCustomerAgreement(req.params.customerId,undefined,req.body,req.user!)},201)));
+router.post('/customers/:customerId/agreements/:id/revisions',requireRole('admin'),validate({params:agreementParams,body:agreementInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await saveCustomerAgreement(req.params.customerId,req.params.id,req.body,req.user!)})));
+router.post('/customers/:customerId/agreements/:id/disable',requireRole('admin'),validate({params:agreementParams,body:z.object({version:z.number().int().positive()}).strict()}),asyncHandler(async(req,res)=>{await disableCustomerAgreement(req.params.customerId,req.params.id,req.body.version,req.user!);sendSuccess(res,{disabled:true});}));
+router.post('/knowledge-drafts/:id/recheck',messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({requestKey:z.string().uuid(),bodyText:z.string().max(20000).optional(),subject:z.string().max(300).optional()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await recheckKnowledgeDraft(req.params.id,req.body,req.user!))));
 router.get('/knowledge',asyncHandler(async(req,res)=>sendSuccess(res,await listKnowledge(req.user!))));
 router.get('/knowledge/:id',validate({params:agentSessionParamsSchema}),asyncHandler(async(req,res)=>sendSuccess(res,await getKnowledgeHistory(req.params.id,req.user!))));
 router.post('/knowledge',requireRole('admin'),validate({body:knowledgeInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await appendKnowledge(undefined,req.body,req.user!)},201)));

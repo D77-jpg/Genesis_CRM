@@ -1,3 +1,4 @@
+import {ConditionalScopeEditor} from './conditional-scope-editor';
 import * as React from 'react';
 import {BookOpen,Plus,Upload,ArrowLeft,Loader2} from 'lucide-react';
 import {apiGet,apiPost,toErrorMessage,ApiClientError} from '@/lib/api';
@@ -32,7 +33,7 @@ export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{a
  React.useEffect(()=>{setAttachments([]);setAttachmentText(null);if(customerId)void apiGet<typeof attachments>('/customers/'+customerId+'/attachments').then(setAttachments).catch(e=>setError(knowledgeError(e)));},[customerId]);
  React.useEffect(()=>{if(initialKnowledgeId&&openedKnowledge.current!==initialKnowledgeId){const row=rows.find(r=>r.id===initialKnowledgeId);if(row){openedKnowledge.current=initialKnowledgeId;if(admin)edit(row);else setSelected(row);}}},[initialKnowledgeId,rows,admin]);
  function edit(row?:ProjectKnowledge){const v=row?.revisions.at(-1);setEditing(row??null);setSelected(null);setForm(v?{accessScope:v.accessScope??'project',title:v.title,category:v.category??'product',tags:v.tags.join(', '),content:v.content,source:v.source,applicability:v.applicability??'',products:(v.products??[]).join(', '),validFrom:localDate(v.validFrom),validUntil:v.validUntil?localDate(v.validUntil):'',terms:v.terms??[]}:newForm());setFormOpen(true);}
- function patchTerm(index:number,patch:Partial<KnowledgeTerm>){setForm(f=>({...f,terms:f.terms.map((term,i)=>i===index?{...term,...patch}:term)}));}
+ function patchTerm(index:number,patch:Partial<KnowledgeTerm>){setForm(f=>({...f,terms:f.terms.map((term,i)=>i===index?{...term,...patch,...(!patch.scope&&term.scope?{scope:{...term.scope,reviewed:false}}:{})}:term)}));}
  async function save(approved:boolean){
   setBusy(true);setError('');
   try{await apiPost('/agent/knowledge'+(editing?'/'+editing.id+'/revisions':''),{accessScope:form.accessScope,expectedVersion:editing?.version??0,title:form.title,category:form.category,content:form.content,source:form.source,approved,
@@ -91,6 +92,7 @@ export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{a
      <div className="grid gap-4 sm:grid-cols-2">{inputField('term-unit-'+index,'单位（如 pcs / working days）',term.unit??'',v=>patchTerm(index,{unit:v}))}{inputField('term-currency-'+index,'币种（价格需填，如 USD）',term.currency??'',v=>patchTerm(index,{currency:v.trim()?v.toUpperCase():undefined}))}</div>
      <div className="grid gap-4 sm:grid-cols-2">{inputField('term-min-'+index,'区间下限（可选）',term.min===undefined?'':String(term.min),v=>patchTerm(index,{min:v===''?undefined:Number(v)}),'number')}{inputField('term-max-'+index,'区间上限（可选）',term.max===undefined?'':String(term.max),v=>patchTerm(index,{max:v===''?undefined:Number(v)}),'number')}</div>
      {inputField('term-condition-'+index,'适用条件（产品、数量、费用边界等）',term.conditions,v=>patchTerm(index,{conditions:v}))}
+     <ConditionalScopeEditor term={term} products={form.products.split(/[,，]/).map(x=>x.trim()).filter(Boolean)} onChange={scope=>patchTerm(index,{scope})}/>
      <Button variant="ghost" className="min-h-11 text-muted-foreground" onClick={()=>setForm(f=>({...f,terms:f.terms.filter((_,i)=>i!==index)}))}>移除此条件</Button>
     </fieldset>)}
     <Button variant="outline" className="min-h-11" disabled={form.terms.length>=25} onClick={()=>setForm(f=>({...f,terms:[...f.terms,{topic:'moq',value:'',conditions:'',mode:'needs_confirmation'}]}))}>添加条件记录</Button>

@@ -67,6 +67,7 @@ export interface LetterCustomerSummary {
 /** 对外输出的开发信 DTO（id 为字符串，customerId 已扁平化） */
 export interface LetterDto {
   knowledgeReview?:KnowledgeReview;
+  knowledgeRechecks?:Record<string,unknown>[];
   knowledgeFreshness?:KnowledgeFreshness;
   reviewBodyChanged?:boolean;
   id: string;
@@ -218,6 +219,7 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     recipientName: String(doc.recipientName ?? ''),
     recipientEmail: String(doc.recipientEmail ?? ''),
     knowledgeReview:doc.knowledgeReview as KnowledgeReview|undefined,
+    knowledgeRechecks:doc.knowledgeRechecks as Record<string,unknown>[]|undefined,
     subject: String(doc.subject ?? ''),
     content: String(doc.content ?? ''),
     contentText: String(doc.contentText ?? ''),
@@ -338,6 +340,7 @@ async function persistAndSend(options: {
   templateAttribution?: TemplateAttribution;
   agentTaskId?:Types.ObjectId;
   knowledgeReview?:KnowledgeReview;
+  knowledgeRechecks?:Record<string,unknown>[];
   agentOutreachId?: Types.ObjectId;
 }): Promise<SendLetterResult> {
   const {

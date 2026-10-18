@@ -1,3 +1,4 @@
+import {CustomerAgreements} from '@/components/agent/customer-agreements';
 import { customerTextPatch } from '@/lib/customer-payload';
 /**
  * 客户详情页
@@ -939,6 +940,7 @@ export function CustomerDetailPage(): React.JSX.Element {
       {/* ---------------------------- 报价单 ---------------------------- */}
 
       <CustomerQuotations customerId={customer.id} onCustomerChanged={() => void reloadCustomer()} />
+      <CustomerAgreements customerId={customer.id} admin={isAdmin}/>
 
       {/* ---------------------------- 开发信历史 ---------------------------- */}
 

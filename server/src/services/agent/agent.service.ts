@@ -1,5 +1,6 @@
 import {knowledgeForModel} from './knowledge-types';
-import {buildKnowledgeBundle,auditGroundedEmail,needsKnowledge,isBusinessMailCommand,languageOnly,guardLanguageTransform} from './knowledge-grounding';
+import {verifyGroundedEmail,providerFactVerifier,verifyLanguageTransform} from './fact-verifier';
+import {buildKnowledgeBundle,needsKnowledge,isBusinessMailCommand,languageOnly} from './knowledge-grounding';
 import { Types } from 'mongoose';
 import env from '../../config/env';
 import { agentFailure } from './agent-errors';
@@ -430,9 +431,9 @@ export async function sendAgentMessage(
       }
     }
 
-    if(languageOnly(content))text=guardLanguageTransform(text,content);
+    if(languageOnly(content))text=await verifyLanguageTransform(text,content,providerFactVerifier(activeProvider,actor));
     if(knowledge){
-      const checked=auditGroundedEmail(text,knowledge,{taskType:'business_answer',customerId:session.context.type==='customer'?session.context.resourceId:undefined,request:content});
+      const checked=await verifyGroundedEmail(text,knowledge,{taskType:'business_answer',customerId:session.context.type==='customer'?session.context.resourceId:undefined,request:content},providerFactVerifier(activeProvider,actor),actor);
       text=checked.bodyText+'\n\n'+(checked.review.completeness==='partial'?'【资料待确认】':'【已核对项目知识】')+'\n'+checked.review.sources.map(source=>source.title+' · v'+source.version).join('\n');
       if(checked.review.issues.length)text+='\n'+checked.review.issues.map(issue=>issue.message).join('\n');
     }

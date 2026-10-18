@@ -23,7 +23,7 @@ const policy=(value='73')=>({expectedVersion:0,title:'Fixture velvet pouch polic
  {topic:'moq' as const,value,unit:'pcs',conditions:'standard velvet pouches',mode:'confirmed' as const},
  {topic:'lead_time' as const,value:'19',unit:'working days',conditions:'after artwork and order confirmation; standard velvet pouches',mode:'confirmed' as const},
  {topic:'sample' as const,value:'existing stock samples available; courier charges require confirmation',conditions:'stock samples only; custom samples quoted separately',mode:'confirmed' as const},
- ]});
+ ].map(t=>({...t,scope:{reviewed:true,products:['velvet pouch'],processes:[],startsAfter:t.topic==='lead_time'?'artwork and order confirmation':undefined,exclusions:[],polarity:'affirmed' as const}}))});
 before(async()=>{
  memory=await MongoMemoryServer.create();mongoose=await import('mongoose');await mongoose.default.connect(memory.getUri(),{dbName:'project-knowledge-tests'});
  const {Project,User,Customer}=await import('../src/models');
@@ -170,7 +170,8 @@ test('11 TXT/Markdown import is previewed, draft-only, idempotent and project-bo
 test('12 translation/polishing preserves supplied facts without irrelevant retrieval or new commitments',()=>{
  assert.equal(grounding.needsKnowledge('请翻译为英文：MOQ 73 pcs，交期 19 days。'),false);
  const result=grounding.guardLanguageTransform('MOQ 73 pcs. Lead time 19 days. Free shipping USD 999.', '请翻译：MOQ 73 pcs，交期 19 days。');
- assert.match(result,/73/);assert.match(result,/19/);assert.doesNotMatch(result,/999/);
+ assert.match(result,/未能确认/);assert.doesNotMatch(result,/999/);
+ assert.equal(grounding.guardLanguageTransform('MOQ 73 pcs. Lead time 19 days.', '请翻译：MOQ 73 pcs，交期 19 days。'),'MOQ 73 pcs. Lead time 19 days.');
  assert.equal(grounding.needsKnowledge('统计逾期客户数量'),false);
  assert.equal(grounding.needsKnowledge('请回复客户并补充最新交期政策'),true);
  assert.deepEqual(knowledge.policyTopics('首封开发信不要提价格、MOQ 和交期'),[]);
@@ -181,8 +182,8 @@ test('13 rewriting policy prose leaves no orphaned list numbers or internal revi
  const bundle=await grounding.buildKnowledgeBundle(actor,'velvet pouch MOQ, sample, lead time, price and freight');
  const result=grounding.auditGroundedEmail('Dear Buyer,\n\nPlease find our confirmed information below.\n1. MOQ is 999 pieces.\n2. Shipping is free.\n3. Our team will review the draft.\nThis is a draft reply prepared for our sales team review and has not been sent.\nPlease confirm the final size.',bundle,{taskType:'inquiry_reply'});
  assert.doesNotMatch(result.bodyText,/999|Shipping is free|review the draft|draft reply|not been sent|information below|^\d+\.$/m);
- assert.match(result.bodyText,/74 pcs/);assert.match(result.bodyText,/final size/);
- assert.ok(result.bodyText.indexOf('74 pcs')<result.bodyText.indexOf('Please confirm'));
+ assert.match(result.bodyText,/74 pcs/);assert.match(result.bodyText,/final specifications/);
+ assert.ok(result.bodyText.indexOf('74 pcs')<result.bodyText.indexOf('Could you please confirm'));
 });
 
 test('14 Markdown preview preserves parent product/industry headings in child entries',()=>{

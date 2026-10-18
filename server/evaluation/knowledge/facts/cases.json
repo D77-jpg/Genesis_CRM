@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "fictional": true,
+  "cases": [
+    {
+      "id": "dev-01-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "We manufacture cotton bags. We do not manufacture steel racks.",
+      "claim": "Our company makes cotton bags.",
+      "supported": true
+    },
+    {
+      "id": "dev-01-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "We manufacture cotton bags. We do not manufacture steel racks.",
+      "claim": "We manufacture steel racks.",
+      "supported": false
+    },
+    {
+      "id": "dev-02-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Cotton bags can be reused. Their handles are made from cotton.",
+      "claim": "The cotton bags are reusable.",
+      "supported": true
+    },
+    {
+      "id": "dev-02-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Cotton bags can be reused. Their handles are made from cotton.",
+      "claim": "The handles are leather.",
+      "supported": false
+    },
+    {
+      "id": "dev-03-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "We offer printing on fabric bags only. Embroidery is outsourced.",
+      "claim": "We can print fabric bags.",
+      "supported": true
+    },
+    {
+      "id": "dev-03-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "We offer printing on fabric bags only. Embroidery is outsourced.",
+      "claim": "Embroidery is done in our own factory.",
+      "supported": false
+    },
+    {
+      "id": "dev-04-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Blank canvas bags are available. Dyed colors require a separate check.",
+      "claim": "Blank canvas bags are available.",
+      "supported": true
+    },
+    {
+      "id": "dev-04-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Blank canvas bags are available. Dyed colors require a separate check.",
+      "claim": "Every dyed color is available.",
+      "supported": false
+    },
+    {
+      "id": "dev-05-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Paper gift boxes can have a removable lid. Magnets are optional and require approval.",
+      "claim": "A removable lid is an option for the paper gift boxes.",
+      "supported": true
+    },
+    {
+      "id": "dev-05-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Paper gift boxes can have a removable lid. Magnets are optional and require approval.",
+      "claim": "Magnets are included in all gift boxes.",
+      "supported": false
+    },
+    {
+      "id": "dev-06-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "The pouch lining is polyester. The outer fabric is cotton.",
+      "claim": "Cotton is used on the outside of the pouch.",
+      "supported": true
+    },
+    {
+      "id": "dev-06-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "The pouch lining is polyester. The outer fabric is cotton.",
+      "claim": "The lining is cotton.",
+      "supported": false
+    },
+    {
+      "id": "dev-07-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Our team can review customer artwork. Design ownership stays with the customer.",
+      "claim": "We can review artwork provided by customers.",
+      "supported": true
+    },
+    {
+      "id": "dev-07-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "Our team can review customer artwork. Design ownership stays with the customer.",
+      "claim": "We own the customer artwork after reviewing it.",
+      "supported": false
+    },
+    {
+      "id": "dev-08-p",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "We supply empty packaging. Jewelry and other contents are not included.",
+      "claim": "We supply packaging without contents.",
+      "supported": true
+    },
+    {
+      "id": "dev-08-n",
+      "split": "dev",
+      "kind": "ordinary",
+      "source": "We supply empty packaging. Jewelry and other contents are not included.",
+      "claim": "Our packaging includes jewelry.",
+      "supported": false
+    },
+    {
+      "id": "holdout-09-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The ceramic mug is glazed inside. The lid is bamboo.",
+      "claim": "The interior of the ceramic mug is glazed.",
+      "supported": true
+    },
+    {
+      "id": "holdout-09-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The ceramic mug is glazed inside. The lid is bamboo.",
+      "claim": "The lid is ceramic.",
+      "supported": false
+    },
+    {
+      "id": "holdout-10-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The metal pen has a removable clip. The ink is blue.",
+      "claim": "The clip can be removed from the metal pen.",
+      "supported": true
+    },
+    {
+      "id": "holdout-10-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The metal pen has a removable clip. The ink is blue.",
+      "claim": "The ink is black.",
+      "supported": false
+    },
+    {
+      "id": "holdout-11-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The notebook cover is cork. Its pages are unprinted.",
+      "claim": "The notebook pages are blank.",
+      "supported": true
+    },
+    {
+      "id": "holdout-11-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The notebook cover is cork. Its pages are unprinted.",
+      "claim": "The notebook has preprinted pages.",
+      "supported": false
+    },
+    {
+      "id": "holdout-12-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The travel cup has a silicone sleeve. It must be washed by hand.",
+      "claim": "The travel cup needs hand washing.",
+      "supported": true
+    },
+    {
+      "id": "holdout-12-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The travel cup has a silicone sleeve. It must be washed by hand.",
+      "claim": "The cup is dishwasher safe.",
+      "supported": false
+    },
+    {
+      "id": "holdout-13-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The fabric apron has an adjustable neck strap. The apron is not waterproof.",
+      "claim": "The apron neck strap can be adjusted.",
+      "supported": true
+    },
+    {
+      "id": "holdout-13-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The fabric apron has an adjustable neck strap. The apron is not waterproof.",
+      "claim": "The fabric apron is waterproof.",
+      "supported": false
+    },
+    {
+      "id": "holdout-14-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The laptop stand can be folded. It does not include a charger.",
+      "claim": "The laptop stand is foldable.",
+      "supported": true
+    },
+    {
+      "id": "holdout-14-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The laptop stand can be folded. It does not include a charger.",
+      "claim": "A charger is included with the stand.",
+      "supported": false
+    },
+    {
+      "id": "holdout-15-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The felt organizer has separate compartments. Its dividers cannot be removed.",
+      "claim": "The organizer contains separate compartments.",
+      "supported": true
+    },
+    {
+      "id": "holdout-15-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The felt organizer has separate compartments. Its dividers cannot be removed.",
+      "claim": "The dividers can be removed.",
+      "supported": false
+    },
+    {
+      "id": "holdout-16-p",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The wooden tray has a natural finish. Painted finishes require separate confirmation.",
+      "claim": "The wooden tray has a natural finish.",
+      "supported": true
+    },
+    {
+      "id": "holdout-16-n",
+      "split": "holdout",
+      "kind": "ordinary",
+      "source": "The wooden tray has a natural finish. Painted finishes require separate confirmation.",
+      "claim": "Painted finishes are already confirmed.",
+      "supported": false
+    },
+    {
+      "id": "dev-critical-1",
+      "split": "dev",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Minimum order quantity: 73 pcs. Conditions: standard product; all products.",
+      "supported": true
+    },
+    {
+      "id": "dev-critical-2",
+      "split": "dev",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Our MOQ is 37 pcs.",
+      "supported": false
+    },
+    {
+      "id": "dev-critical-3",
+      "split": "dev",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Our MOQ is 73 sets.",
+      "supported": false
+    },
+    {
+      "id": "dev-critical-4",
+      "split": "dev",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "We deliver in 19 days without approval.",
+      "supported": false
+    },
+    {
+      "id": "dev-critical-5",
+      "split": "dev",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Freight is free.",
+      "supported": false
+    },
+    {
+      "id": "dev-critical-6",
+      "split": "dev",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Our price is USD 73.",
+      "supported": false
+    },
+    {
+      "id": "holdout-critical-1",
+      "split": "holdout",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Minimum order quantity: 73 pcs. Conditions: standard product; all products.",
+      "supported": true
+    },
+    {
+      "id": "holdout-critical-2",
+      "split": "holdout",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Our MOQ is 37 pcs.",
+      "supported": false
+    },
+    {
+      "id": "holdout-critical-3",
+      "split": "holdout",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Our MOQ is 73 sets.",
+      "supported": false
+    },
+    {
+      "id": "holdout-critical-4",
+      "split": "holdout",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "We deliver in 19 days without approval.",
+      "supported": false
+    },
+    {
+      "id": "holdout-critical-5",
+      "split": "holdout",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Freight is free.",
+      "supported": false
+    },
+    {
+      "id": "holdout-critical-6",
+      "split": "holdout",
+      "kind": "critical",
+      "source": "Fictional test product: MOQ 73 pcs; production lead time 19 days after approval. No confirmed freight or price.",
+      "claim": "Our price is USD 73.",
+      "supported": false
+    }
+  ]
+}

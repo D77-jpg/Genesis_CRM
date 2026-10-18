@@ -1,3 +1,6 @@
+import {collectConditionalEvidence,scopeSummary,normalized,type FactContext} from './conditional-facts';
+import {agreementEvidence} from './customer-agreement.service';
+import {CustomerAgreement} from '../../models/CustomerAgreement';
 import {createHash} from 'node:crypto';
 import {Types} from 'mongoose';
 import {Quotation} from '../../models/Quotation';
@@ -6,7 +9,7 @@ import type {AuthUser} from '../../types/express';
 import {requireProjectId} from '../../utils/access';
 import {getCustomerByIdOrThrow} from '../customer.service';
 import {policyTopics,productApplies,retrieveKnowledge,revisionActive} from './knowledge.service';
-import type {KnowledgeBundle,KnowledgeReview,KnowledgeSource,KnowledgeTerm,KnowledgeFreshness,PolicyTopic} from './knowledge-types';
+import type {KnowledgeBundle,KnowledgeReview,KnowledgeSource,KnowledgeTerm,KnowledgeFreshness,PolicyTopic,CustomerFactProfile} from './knowledge-types';
 
 export const normalizeFact=(s:string)=>s.toLocaleLowerCase().replace(/\s+/g,' ').trim();
 export const draftHash=(s:string)=>createHash('sha256').update(normalizeFact(s)).digest('hex');
@@ -32,14 +35,23 @@ export function needsKnowledge(text:string){
  if(languageOnly(text))return false;
  return policyTopics(text).length>0||/开发信|询盘|邮件|写信|回复|产品|公司|工厂|write.*(?:email|letter)|reply|outreach|product|company/i.test(text);
 }
+export function transformNumbersMatch(text:string,original:string){
+ const numbers=(s:string)=>[...(s.match(/\d+(?:[.,]\d+)*/g)??[])].sort().join('|');
+ const split=(s:string)=>s.split(/[\n。；;，,]|(?<=[.!?])\s+/).filter(Boolean);
+ for(const sentence of split(text)){
+  for(const topic of policyTopics(sentence)){
+   const prior=split(original).filter(x=>policyTopics(x).includes(topic));
+   if(!prior.length||!prior.some(x=>numbers(x)===numbers(sentence)))return false;
+  }
+ }
+ if(numbers(text)!==numbers(original))return false;
+ const tokens=(s:string)=>(s.match(/\b(?:USD|EUR|GBP|CNY|RMB|pcs|pieces|sets|kg|working days|business days|days|weeks)\b/gi)??[]).map(x=>x.toLowerCase().replace('pieces','pcs').replace('business days','working days')).sort().join('|');
+ // Cross-language units need semantic review; matching explicit tokens must not be replaced with another explicit unit.
+ if(tokens(text)&&tokens(original)&&tokens(text)!==tokens(original))return false;
+ return true;
+}
 export function guardLanguageTransform(text:string,original:string){
- const numbers=new Set(original.match(/\d+(?:[.,]\d+)*/g)??[]);
- const topics=new Set(policyTopics(original));
- const kept=text.split(/\n+|(?<=[.!?。！？])\s+(?=[A-Z\u4e00-\u9fff])/).filter(sentence=>{
-  if((sentence.match(/\d+(?:[.,]\d+)*/g)??[]).some(value=>!numbers.has(value)))return false;
-  return policyTopics(sentence).every(topic=>topics.has(topic));
- }).join('\n');
- return kept||'本次文字转换包含无法核对的新增事实，请明确提供需要翻译或润色的原文。';
+ return transformNumbersMatch(text,original)?text:'未能确认译文保留原有数值、单位与条件，请核对原文后重试。';
 }
 export function isBusinessMailCommand(text:string){
  if(/^(为什么|如何|怎么|是否)|不要.{0,6}(写|生成|准备)|不用.{0,6}(写|生成|准备)/.test(text))return false;
@@ -61,131 +73,108 @@ function requestedPriceMissing(bundle:KnowledgeBundle,query:string){
  if(!hasValue)return {...bundle,status:hasOtherAnswer?'ready' as const:'no_match' as const,issues:[...bundle.issues,{code:'missing',message:freight?'尚无适用于本次请求的已确认运费金额；相关物流说明不能当作报价':'尚无适用于本次请求的已确认价格；相关产品介绍不能当作报价'}]};
  return bundle;
 }
-export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{customerId?:string;quantity?:number;ids?:string[];retrievalMode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'}={}){
+function finishFactBundle(bundle:KnowledgeBundle,query:string,options:FactContext={}){
+ bundle.factContext=factContextFromRequest(query,bundle,{...options,customerId:bundle.factContext?.customerId??options.customerId});
+ bundle.facts=collectConditionalEvidence(bundle);
+ return requestedPriceMissing(bundle,query);
+}
+export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{customerId?:string;quantity?:number;products?:string[];processes?:string[];quantityUnit?:string;ids?:string[];retrievalMode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'}={}){
  const bundle=await retrieveKnowledge(actor,query,options.ids,options.retrievalMode);
- if(!options.customerId||bundle.status==='retrieval_failed')return requestedPriceMissing(bundle,query);
+ bundle.factContext=factContextFromRequest(query,bundle,options);
+ if(!options.customerId||['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status))return finishFactBundle(bundle,query,options);
  // A customer's quotation can only enter their own context and only after a fresh ACL check.
  const customer=await getCustomerByIdOrThrow(options.customerId,actor);
- const quantity=options.quantity??quantityOf(query)??(/^\d+$/.test(customer.expectedQuantity??'')?Number(customer.expectedQuantity):undefined);
+ const quantity=options.quantity??quantityOf(query);
+ bundle.factContext={...bundle.factContext,customerId:customer.id};
  try{
   const quotes=await Quotation.find({projectId:requireProjectId(actor),customerId:customer._id,status:'accepted',validityDate:{$gt:new Date()}}).sort({updatedAt:-1}).limit(10);
   for(const q of quotes){
-   const items=q.items.filter(item=>quantity===item.quantity&&productApplies([item.productName],query));
+   const items=q.items.filter(item=>quantity===item.quantity&&productApplies([item.productName],query)&&(!item.model||normalized(query).includes(normalized(item.model))));
    if(!items.length)continue;
    const terms:KnowledgeTerm[]=items.map(item=>({topic:'price',value:String(item.unitPrice),unit:'per piece',currency:q.currency,
-    conditions:item.productName+'; quantity '+item.quantity+'; customer '+customer.name+'; quotation '+q.quotationNo,mode:'confirmed'}));
+    publicationIndex:q.items.indexOf(item),conditions:item.productName+'; quantity '+item.quantity+'; customer '+customer.name+'; quotation '+q.quotationNo,mode:'confirmed',scope:{reviewed:true,measure:'amount',products:[item.productName],processes:[],quantity:{min:item.quantity,max:item.quantity,minInclusive:true,maxInclusive:true,unit:'pcs'},exclusions:[],polarity:'affirmed'}}));
    const conditions=terms.map(t=>t.conditions).join('; ');
-   for(const [topic,value] of [['moq',q.moq],['lead_time',q.leadTime],['payment',q.paymentTerms]] as const)if(value)terms.push({topic,value,conditions,mode:'confirmed'});
+   for(const [topic,value] of [['moq',q.moq],['lead_time',q.leadTime],['payment',q.paymentTerms]] as const)if(value)terms.push({topic,value,conditions,mode:'needs_confirmation'});
    if(bundle.status==='no_match')bundle.status='ready';
-   bundle.sources.push({sourceId:'quotation:'+q.id+':v'+q.version,quotationId:q.id,version:q.version,title:q.quotationNo,category:'trade',kind:'quotation',
+   bundle.sources.push({sourceId:'quotation:'+q.id+':v'+q.version,quotationId:q.id,customerId:customer.id,version:q.version,title:q.quotationNo,category:'trade',kind:'quotation',
     source:'已接受的客户专属报价',content:JSON.stringify(items),applicability:conditions,products:items.map(i=>i.productName),validFrom:q.updatedAt.toISOString(),validUntil:q.validityDate!.toISOString(),terms});
   }
-  return requestedPriceMissing(bundle,query);
+  bundle.sources.push(...await agreementEvidence(customer.id,actor));
+  await getCustomerByIdOrThrow(customer.id,actor); // Recheck ownership after asynchronous reads.
+  return finishFactBundle(bundle,query,options);
  }catch{
   return {...bundle,status:'retrieval_failed' as const,issues:[...bundle.issues,{code:'retrieval_failed',message:'客户专属报价检索失败，不能作出报价承诺'}]};
  }
 }
-function termText(term:KnowledgeTerm,source:KnowledgeSource){
- const numberRange=term.min!==undefined?(term.max!==undefined&&term.max!==term.min?term.min+'–'+term.max:String(term.min)):term.value;
- const embedded=normalizeFact(numberRange);
- const value=[term.currency&&!embedded.includes(term.currency.toLowerCase())?term.currency:undefined,
-  numberRange,term.unit&&!embedded.includes(term.unit.toLowerCase())?term.unit:undefined].filter(Boolean).join(' ');
- return labels[term.topic]+': '+value+(term.mode==='reference'?' (reference only; not a firm quotation)':'')+
-  '. Conditions: '+term.conditions+(source.applicability&&source.applicability!==term.conditions?'; '+source.applicability:'')+'.';
+
+export function factContextFromRequest(query:string,bundle:KnowledgeBundle,options:FactContext={}):FactContext{
+ const explicit=options.products;
+ const products=explicit??[...new Set(bundle.sources.flatMap(s=>[...s.products,...s.terms.flatMap(t=>t.scope?.products??[])])).values()].filter(p=>productApplies([p],query));
+ const route=Object.fromEntries((['origin','destination','incoterm'] as const).flatMap(key=>{const values=[...new Set(bundle.sources.flatMap(s=>s.terms.flatMap(t=>t.scope?.[key]?[t.scope[key]!]:[])))].filter(v=>normalized(query).includes(normalized(v)));return values.length===1?[[key,values[0]]]:[];}));
+ const processes=options.processes??[...new Set(bundle.sources.flatMap(s=>s.terms.flatMap(t=>t.scope?.processes??[])))].filter(p=>normalized(query).includes(normalized(p)));
+ const units=/\b(?:pcs|pieces|units)\b|件|个/i.test(query)?'pcs':options.quantityUnit;
+ return {...route,...options,products,processes,quantity:options.quantity??quantityOf(query),quantityUnit:options.quantityUnit??units};
 }
 export function applicableTerms(bundle:KnowledgeBundle){
- const terms=bundle.sources.filter(source=>!source.validUntil||new Date(source.validUntil)>new Date()).flatMap(source=>(source.terms??[]).filter(term=>term.mode!=='needs_confirmation').map(term=>({source,term})));
- const conflicts=new Set<string>();
- for(const a of terms)for(const b of terms){
-  if(a===b||a.term.topic!==b.term.topic)continue;
-  // Different applicable authoritative values for the same policy need human resolution.
-  // Product/customer-specific quotations never silently override general policies.
-  const conditionClass=(text:string)=>/fully custom|full custom|全定制/i.test(text)?'custom':/standard|stock|标准|现货/i.test(text)?'standard':'unspecified';
-  const left=conditionClass(a.term.conditions),right=conditionClass(b.term.conditions);
-  const explicitlyDisjoint=left!==right&&left!=='unspecified'&&right!=='unspecified';
-  const sameScope=!explicitlyDisjoint;
-  const aValue=JSON.stringify([a.term.value,a.term.min,a.term.max,a.term.unit,a.term.currency,a.term.mode]);
-  const bValue=JSON.stringify([b.term.value,b.term.min,b.term.max,b.term.unit,b.term.currency,b.term.mode]);
-  if(sameScope&&aValue!==bValue){conflicts.add(a.source.sourceId+':'+a.term.topic);conflicts.add(b.source.sourceId+':'+b.term.topic);}
- }
- return {terms:terms.filter(t=>!conflicts.has(t.source.sourceId+':'+t.term.topic)),conflicts,all:terms};
+ const facts=collectConditionalEvidence(bundle);const all=facts.map(f=>({source:bundle.sources.find(s=>s.sourceId===f.sourceId)!,term:f.term}));
+ const conflicts=new Set(facts.filter(f=>f.status==='conflict').map(f=>f.sourceId+':'+f.topic));
+ return {terms:all.filter((_,i)=>facts[i].status==='applicable'),conflicts,all};
 }
-function factWords(text:string){return (text.toLowerCase().match(/[a-z]{3,}|[\u4e00-\u9fff]{2,}/g)??[]).filter(w=>!['the','and','our','with','for','your','that','from','this','have','are','you','can','will','would','could','please','company'].includes(w));}
-function groundedSentence(sentence:string,sources:KnowledgeSource[],customerEvidence:string,identity:string){
- const normalized=normalizeFact(sentence);
- if(normalized.length<8)return true;
- const authority=sources.filter(s=>s.kind==='knowledge'&&['company','product','faq'].includes(s.category)).map(s=>s.content).join(' ');
- const all=[authority,customerEvidence,identity].join(' ');
- const numbers=sentence.match(/\d+(?:[.,]\d+)*/g)??[];
- const evidenceNumbers=new Set((all.replace(/\b[a-f\d]{24}\b/gi,'').match(/\d+(?:[.,]\d+)*/g)??[]));
- if(numbers.some(n=>!evidenceNumbers.has(n)))return false;
- if(/\b(?:we|our|your|you)\b.*(?:manufactur|factor|certif|speciali|export|founded|establish|produce|operate|located|store|capacity|customiz|offer|provide|deliver)|我们.*(?:工厂|生产|提供|产能|制造)|贵司|贵公司/i.test(sentence)){
-  const tokens=factWords(sentence);const supported=tokens.filter(w=>normalizeFact(all).includes(w)).length;
-  return tokens.length>0&&supported/tokens.length>=0.8;
- }
- return true;
+export function conditionalSentence(term:KnowledgeTerm,source:KnowledgeSource){
+ const numberRange=term.min!==undefined?(term.max!==undefined&&term.max!==term.min?term.min+'–'+term.max:String(term.min)):term.value;
+ const embedded=normalizeFact(numberRange);
+ const value=[term.currency&&!embedded.includes(term.currency.toLowerCase())?term.currency:undefined,numberRange,term.unit&&!embedded.includes(term.unit.toLowerCase())?term.unit:undefined].filter(Boolean).join(' ')+(term.min!==undefined&&normalizeFact(term.value)!==normalizeFact(numberRange)?' (recorded policy: '+term.value+')':'');
+ return labels[term.topic]+': '+(term.scope?.polarity==='denied'?'not offered — ':'')+value+(term.mode==='reference'?' (reference only; not a firm quotation)':'')+
+ '. Conditions: '+term.conditions+(source.applicability&&normalizeFact(source.applicability)!==normalizeFact(term.conditions)?'; '+source.applicability:'')+(term.scope?'; '+scopeSummary(term.scope):'')+(source.customerId?'; customer-specific agreement':'')+(source.kind!=='knowledge'&&source.validUntil?'; valid until '+source.validUntil:'')+'.';
 }
-export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:{
- taskType:string;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string;
+export function customerProfileOf(value:{name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}):CustomerFactProfile{return {name:value.name,company:value.company??'',country:value.country??'',industry:value.industry??'',interestedProducts:value.interestedProducts??''};}
+export interface GroundedEmailOptions {
+ customerProfile?:CustomerFactProfile;
+ taskType:string;recipientName?:string;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string;
  customerEvidence?:string;questions?:string[];seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
-}):{bodyText:string;review:KnowledgeReview}{
- const issues=[...bundle.issues];const {terms,conflicts,all}=applicableTerms(bundle);
- if(conflicts.size)issues.push({code:'conflict',message:'有效来源对同一条件给出不同条款，需人工确认',sourceIds:[...new Set(all.filter(t=>conflicts.has(t.source.sourceId+':'+t.term.topic)).map(t=>t.source.sourceId))]});
- const topics=bundle.topics;const claims:KnowledgeReview['claims']=[];const questions:KnowledgeReview['questions']=[];
- const answers:string[]=[];const missing:string[]=[];
- for(const topic of topics){
-  const matches=terms.filter(t=>t.term.topic===topic);
-  if(matches.length&&bundle.status!=='retrieval_failed'){
-   for(const item of matches.slice(0,4)){const text=termText(item.term,item.source);answers.push(text);claims.push({text,topic,sourceIds:[item.source.sourceId]});}
-   questions.push({question:labels[topic],topic,status:'answered',sourceIds:[...new Set(matches.map(t=>t.source.sourceId))]});
+}
+// Conservative whole-message rendering is the bounded fallback, not a chain of regex deletions.
+// The original model message is retained only by the independent semantic verifier below.
+export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:GroundedEmailOptions):{bodyText:string;review:KnowledgeReview}{
+ const issues=[...bundle.issues];const facts=collectConditionalEvidence(bundle);
+ const blocked=['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status);
+ const claims:KnowledgeReview['claims']=[];const questions:KnowledgeReview['questions']=[];
+ const answers:string[]=[];const missing:string[]=[];let remaining=14000;
+ for(const topic of bundle.topics){
+  const rows=facts.filter(f=>f.topic===topic);const matches=blocked?[]:rows.filter(f=>f.status==='applicable');
+  const conflict=rows.some(f=>f.status==='conflict');
+  if(conflict)issues.push({code:'conflict',topic,message:'有效来源对同一请求给出不兼容条款，需人工确认：'+labels[topic],sourceIds:rows.filter(f=>f.status==='conflict').map(f=>f.sourceId)});
+  if(matches.length&&!conflict){
+   const included:string[]=[];let limited=false;
+   for(const fact of matches){const source=bundle.sources.find(s=>s.sourceId===fact.sourceId)!;const text=conditionalSentence(fact.term,source);if(text.length>remaining){limited=true;continue;}remaining-=text.length;answers.push(text);claims.push({text,topic,sourceIds:[source.sourceId]});included.push(source.sourceId);}
+   if(limited){issues.push({code:'fact_budget',topic,message:'完整条件超出单稿范围，请拆分审核；未截断条件'});missing.push(ask[topic]);}
+   questions.push({question:labels[topic],topic,status:limited?'unanswered':'answered',sourceIds:[...new Set(included)]});
   }else{
    missing.push(ask[topic]);questions.push({question:labels[topic],topic,status:'unanswered',sourceIds:[]});
-   issues.push({code:conflicts.size?'conflict':'missing',message:'尚无可直接使用的有效依据：'+labels[topic],topic});
+   issues.push({code:conflict?'conflict':rows.some(f=>f.status==='expired')?'expired':'missing',topic,message:'待确认：'+labels[topic]+(rows.length?'；'+[...new Set(rows.flatMap(f=>f.reasons))].join('；'):''),sourceIds:rows.map(f=>f.sourceId)});
   }
  }
- for(const question of options.questions??[]){
-  const questionTopics=policyTopics(question);
-  if(questionTopics.length)continue;
-  const words=factWords(question);
-  const matching=bundle.sources.filter(s=>['faq','product'].includes(s.category)&&words.length>0&&words.filter(w=>normalizeFact(s.content).includes(w)).length/words.length>=0.8);
-  questions.push({question,status:matching.length?'answered':'unanswered',sourceIds:matching.map(s=>s.sourceId)});
-  if(!matching.length)issues.push({code:'unanswered',message:'需补充回答：'+question});
- }
+ for(const question of options.questions??[])if(!policyTopics(question).length){questions.push({question,status:'unanswered',sourceIds:[]});issues.push({code:'unanswered',message:'该问题需要进一步核对：'+question});}
+ if(body.trim())issues.push({code:'claim_rewritten',message:'原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行'});
+ if(!bundle.sources.length)issues.push({code:bundle.status==='retrieval_failed'?'retrieval_failed':'missing',message:'尚无可用业务依据；请补充或恢复检索后再审核'});
  const seller=options.seller;
- const identity=seller?Object.values(seller).filter(Boolean).join(' '):'';
- // The model writes tone and structure; server-owned policy sentences carry the commitments.
- // Removing policy assertions before inserting reviewed conditional statements prevents fabricated
- // numbers, template examples, customer demands and prompt injection from becoming seller policy.
- const withoutSignature=body.split(/\n\s*(?:best regards|kind regards|sincerely|regards|此致|祝好)\b/i)[0]??body;
- const parts=withoutSignature.replace(/^\s*\d+[.)]\s*/gm,'').split(/\n+|(?<=[.!?。！？])\s+(?=[A-Z\u4e00-\u9fff])/).map(s=>s.trim()).filter(Boolean);
- const removed:string[]=[];
- const kept=parts.filter(sentence=>{
-  if(/review the draft|draft review|draft reply|prepared for.{0,40}review|sales team.{0,12}review|(?:has |have )?not been sent|approval workflow|internal review|sourceId|knowledge.?base|知识库|内部审核|草稿准备|业务员审核|\bCRM\b/i.test(sentence))return false;
-  if(/following (?:confirmed )?(?:points|details|terms)|以下.*(?:信息|要点|政策)/i.test(sentence)&&/:$/.test(sentence))return false;
-  if(/please find (?:our )?(?:confirmed )?information below|^(?:here are|below are) (?:the|our) (?:confirmed )?(?:details|answers)/i.test(sentence))return false;
-  const commercial=policyTopics(sentence).length>0;
-  if(commercial){removed.push(sentence);return false;}
-  if(!groundedSentence(sentence,bundle.sources,options.customerEvidence??'',identity)){removed.push(sentence);return false;}
-  if(/(?:what|confirm|share|provide|let us know).*(?:quantity|order size)/i.test(sentence)&&quantityOf(options.customerEvidence??''))return false;
-  return true;
- });
- if(removed.some(s=>/\d|certif|\bfsc\b|\biso\b|认证|证书/i.test(s)))issues.push({code:'claim_rewritten',message:'已移除或改写模型中的业务承诺；最终条款仅取有效条件记录'});
- if(!bundle.sources.length)issues.push({code:bundle.status==='retrieval_failed'?'retrieval_failed':'missing',message:bundle.status==='retrieval_failed'?'知识检索失败，草稿仅保留可确认部分':'未找到相关有效知识，草稿需补充业务依据'});
- const requestIndex=kept.findIndex(sentence=>/could you|please (?:confirm|share|provide)|to help|let us know|to (?:prepare|proceed)/i.test(sentence));
- const opening=requestIndex<0?kept:kept.slice(0,requestIndex);
- const followup=requestIndex<0?[]:kept.slice(requestIndex);
- const sections=[opening.join('\n\n'),answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(s=>'- '+s).join('\n'):'',followup.join('\n\n')];
- if(seller)sections.push(['Best regards,',seller.senderName,seller.companyName,seller.senderEmail,seller.website].filter(Boolean).join('\n'));
- const bodyText=sections.filter(Boolean).join('\n\n').slice(0,20000)||'Thank you for your inquiry. We need to confirm the relevant details before making a business commitment.';
- const blocking=issues.some(i=>!['claim_rewritten'].includes(i.code));
+ const recipient=options.recipientName?.replace(/[\r\n]/g,' ').trim().slice(0,100);
+ const outreach=options.taskType==='first_outreach';
+ const sections=[recipient?'Dear '+recipient+',':'Hello,',outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.',
+ answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'',
+ outreach?'Would a brief discussion about your requirements be useful?':'Could you please confirm your final specifications so we can agree on the next step?',
+ seller?['Best regards,',seller.senderName,seller.companyName,seller.senderEmail,seller.website].filter(Boolean).join('\n'):''];
+ const bodyText=sections.filter(Boolean).join('\n\n');
+ const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));
  return {bodyText,review:{version:1,projectId:bundle.projectId,taskType:options.taskType,generatedAt:new Date().toISOString(),
-  status:conflicts.size?'conflict':bundle.status,completeness:blocking?'partial':'complete',sources:bundle.sources,claims,questions,issues,
-  context:{customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request},bodyHash:draftHash(bodyText)}};
+ status:facts.some(f=>f.status==='conflict')?'conflict':bundle.status,completeness:issues.some(i=>i.code!=='claim_rewritten')?'partial':'complete',sources:bundle.sources,claims,questions,issues,
+ context:{customerProfile:options.customerProfile,factContext:bundle.factContext,customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request},bodyHash:draftHash(bodyText),factAudit:{contract:'s4.1',mode:'deterministic',attempts:0,checks,facts}}};
 }
 export async function knowledgeFreshness(review:KnowledgeReview,actor:AuthUser):Promise<KnowledgeFreshness>{
  const result:KnowledgeFreshness={checkedAt:new Date().toISOString(),changed:[]};
  if(review.projectId!==String(requireProjectId(actor)))return {...result,failed:true};
  try{
+  if(review.context.customerId){const customer=await getCustomerByIdOrThrow(review.context.customerId,actor);if(review.context.customerProfile&&JSON.stringify(customerProfileOf(customer))!==JSON.stringify(review.context.customerProfile))result.changed.push({sourceId:'profile:'+review.context.customerId,title:'客户资料',reason:'本稿使用的客户事实已变化'});}
   const ids=review.sources.flatMap(s=>s.knowledgeId&&Types.ObjectId.isValid(s.knowledgeId)?[s.knowledgeId]:[]);
   const rows=await AgentKnowledge.find({projectId:requireProjectId(actor),_id:{$in:ids}});
   for(const source of review.sources){
@@ -193,6 +182,12 @@ export async function knowledgeFreshness(review:KnowledgeReview,actor:AuthUser):
     const row=rows.find(k=>k.id===source.knowledgeId);const revision=row?.revisions.find(v=>v.version===row.approvedVersion);
     const reason=revision?.accessScope==='admins'&&actor.role!=='admin'?'依据访问范围已变化':!row?'依据已不可用':row.archived?'依据已停用':row.approvedVersion!==source.version?'已发布新版本':!revisionActive(revision)?'依据已失效':'';
     if(reason)result.changed.push({sourceId:source.sourceId,title:source.title,reason});
+   }else if(source.agreementId){
+    if(!review.context.customerId){result.changed.push({sourceId:source.sourceId,title:source.title,reason:'缺少客户范围'});continue;}
+    await getCustomerByIdOrThrow(review.context.customerId,actor);
+    const a=await CustomerAgreement.findOne({_id:source.agreementId,projectId:requireProjectId(actor),customerId:review.context.customerId,disabled:false});
+    const v=a?.revisions.find(x=>x.version===a.approvedVersion&&x.approved&&x.validFrom<=new Date()&&x.validUntil>new Date());
+    if(!v||v.version!==source.version)result.changed.push({sourceId:source.sourceId,title:source.title,reason:'客户约定已变化、停用或失效'});
    }else if(source.quotationId){
     if(!review.context.customerId){result.changed.push({sourceId:source.sourceId,title:source.title,reason:'缺少客户范围'});continue;}
     await getCustomerByIdOrThrow(review.context.customerId,actor);

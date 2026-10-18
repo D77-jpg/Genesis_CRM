@@ -1,0 +1,81 @@
+{
+  "stage": "S4",
+  "baseMain": "57a3adc",
+  "branch": "codex/knowledge-s4-facts",
+  "engineering": "implemented-and-locally-tested",
+  "qualityGate": "pending-gateway-restoration",
+  "gateTargetsUnchanged": {
+    "ordinaryFactSupportMin": 0.95,
+    "criticalEvidenceConditionLocationCoverage": 1,
+    "unsupportedCriticalReleased": 0
+  },
+  "dataSafety": {
+    "database": "isolated MongoMemoryServer",
+    "customers": "fictional only",
+    "realMailSent": false,
+    "realKnowledgeAutoPublished": false,
+    "legacyDraftsMigrated": false
+  },
+  "suitesPassed": {
+    "s4FactsAndProviderProtocol": 28,
+    "agent": 62,
+    "projectKnowledge": 15,
+    "mailAndPop3": 96,
+    "security": 5,
+    "templateFeedback": 3,
+    "scratchpad": 3,
+    "aiSettings": 6,
+    "integration": 24,
+    "frozenEvaluationContracts": 9,
+    "realS3Retrieval": 13,
+    "realS2IndexLifecycle": 23,
+    "ingestion": 11,
+    "webGuardsAndInput": 33
+  },
+  "checks": {
+    "serverBuild": true,
+    "webBuild": true,
+    "newTestsStrictTypes": true,
+    "ciAuditGate": true,
+    "existingXlsxExceptionExpires": "2026-10-26",
+    "rawNpmAuditClean": false,
+    "newSecurityExemptions": false,
+    "gitleaksFullHistoryExitCode": 0
+  },
+  "liveModel": {
+    "model": "grok-4.7",
+    "destination": "http://124.222.23.70:18744",
+    "authorizedFictionalCases": 44,
+    "attemptedDev": 22,
+    "judged": 0,
+    "ordinaryAccuracy": null,
+    "holdoutAttempted": false,
+    "networkDiagnostic": "ECONNREFUSED",
+    "firstReportPreservedByteForByte": true,
+    "firstReportSha256": "4a34987b539cf373cba3b49a38e54fdcac550a0defa14e07a98db387662d7f23"
+  },
+  "ui": {
+    "backendPort": 5008,
+    "frontendPort": 5188,
+    "fictional": true,
+    "checks": [
+      "condition scope edits clear previous confirmation",
+      "save v2 draft keeps published v1",
+      "customer agreement v2 pending keeps approved v1",
+      "edited body invalidates original audit",
+      "mock semantic service is explicitly unavailable",
+      "recheck does not overwrite original letter",
+      "sending disabled with unconfigured fixture mailbox"
+    ],
+    "screenshots": [
+      "s4-scope.png",
+      "s4-agreement.png",
+      "s4-review.png"
+    ]
+  },
+  "notes": [
+    "Full real-model quality and held-out judgment unmeasurable while authorized gateway refuses connections.",
+    "Loopback HTTP fixture exercises real adapter protocol but has no real semantic model.",
+    "Late UI and subject failure fixes were followed by S4 suite, server types and web build; unchanged heavy S1/S2/S3 suites were not rerun for display-only changes."
+  ]
+}
