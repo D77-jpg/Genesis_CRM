@@ -235,10 +235,22 @@ test('S7 encrypted actual Mongo/raw/version snapshot restores only to empty isol
         const configFile = join(dir, 'maintenance.json'), receiptFile = join(dir, 'receipt.json');
         await writeFile(configFile, JSON.stringify({ mongodbUri: memory.getUri(target), projectId: actor.projectId, actorId: actor.id, receiptFile }), { mode: 0o600 });
         const childEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => ['SystemRoot', 'WINDIR', 'PATH', 'TEMP', 'TMP', 'KNOWLEDGE_PYTHON', 'KNOWLEDGE_TOKENIZER_DIR', 'KNOWLEDGE_EMBEDDING_PYTHON', 'KNOWLEDGE_MODEL_DIR', 'KNOWLEDGE_INDEX_DIR', 'KNOWLEDGE_RERANKER_DIR'].includes(key)));
-        const launch = (action: string) => spawn(process.execPath, ['--require', './tests/os-user-info.cjs', '--import', 'tsx', 'src/scripts/knowledge-maintenance.ts', action, configFile], { cwd: join(__dirname, '..'), env: { ...childEnv, NODE_ENV: 'development' }, windowsHide: true, stdio: 'ignore' });
+        // A clean checkout has no .env. Supply ephemeral fixture secrets explicitly;
+        // never inherit production JWT/mail credentials to make the child pass.
+        const maintenanceEnv = {
+            ...childEnv, NODE_ENV: 'development', MONGODB_URI: memory.getUri(target),
+            JWT_SECRET: randomBytes(32).toString('hex'), ADMIN_PASSWORD: randomBytes(24).toString('base64url'),
+            AI_PROVIDER: 'mock', MAIL_TRANSPORT: 'mock', IMAP_ENABLED: 'false',
+        };
+        let diagnostics = '';
+        const launch = (action: string) => {
+            const child = spawn(process.execPath, ['--require', './tests/os-user-info.cjs', '--import', 'tsx', 'src/scripts/knowledge-maintenance.ts', action, configFile], { cwd: join(__dirname, '..'), env: maintenanceEnv, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+            child.stderr.on('data', (part: Buffer) => { diagnostics = (diagnostics + part.toString('utf8')).slice(-2048); });
+            return child;
+        };
         const preflight = launch('preflight');
         const [exit] = await once(preflight, 'close');
-        assert.equal(exit, 0);
+        assert.equal(exit, 0, 'Maintenance preflight failed: ' + diagnostics);
         assert.equal(JSON.parse(await readFile(receiptFile, 'utf8')).readOnly, true);
         await rm(receiptFile);
         const worker = launch('worker');
