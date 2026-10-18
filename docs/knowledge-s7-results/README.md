@@ -71,3 +71,6 @@ npm run eval:knowledge:operations
 7. 本次不部署生产、不配置域名/TLS、不迁移真实客户、不自动发布真实知识。S8必须在全部PR合入、干净SHA下完整页面验收，业务资料审核与工程验收分开。
 
 [完整操作与回滚说明](../knowledge-s7-operations.md)。
+
+
+归档安全复核：初次全历史扫描在4份报告的mail-access.ts源码摘要字段误报并退出1；逐份重算与跟踪源码字节一致。仅为该既有提交增加4个精确历史指纹，现报告采用显式path/hash数组并保留原报告摘要，观察/标签/分数不改。见H11_AUDIT.md；最终扫描结果在verification.json单列。

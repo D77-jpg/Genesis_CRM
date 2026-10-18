@@ -403,7 +403,7 @@
     "strictNewTestsAndEvaluator": true,
     "serverProductionAudit": "passed with existing xlsx exception through 2026-10-26, no new exception",
     "webProductionAudit": "passed with same existing exception",
-    "gitHistorySecretScan": "pending final evidence commit scan"
+    "gitHistorySecretScan": "Initial exit 1: four individually verified source SHA-256 report fields in b214b77; exact historical fingerprints only, rescan pending"
   },
   "realComponents": {
     "embedding": true,
@@ -427,7 +427,8 @@
     "First scale combined gate false; 1 no_match; sourceHashes reflect disk at run end rather than guaranteed loaded code",
     "Snapshot source_changed refusal while fixture collections were initializing",
     "Guard denial initially reported as invalid_result instead of authority_changed; no data was returned",
-    "Initial fault test asserted provider error message instead of stable code; corrected test"
+    "Initial fault test asserted provider error message instead of stable code; corrected test",
+    "Final history scan initially exited 1 for four verified mail-access.ts source digests; no credentials found; exact historical fingerprints reviewed in H11_AUDIT.md"
   ],
   "sourceHashes": [
     {
