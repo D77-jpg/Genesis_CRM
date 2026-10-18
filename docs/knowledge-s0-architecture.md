@@ -102,3 +102,10 @@ Publication、IndexGeneration、完整 EvidenceBundle/DraftEvidenceSnapshot 的�
 [ADR-004](knowledge-s4-facts.md)定义已人工核对的scope、ConditionalEvidence、不可变CustomerAgreement版本、逐段ClaimCheck和编辑复核ledger。证据事实ID是source/version/原发布条款编号，publication_term位置与S1文档位置不混淆；发布正文和sourceRefs完整保留。客户专属记录只经客户ACL加载，不进入项目通用索引。
 
 旧scope缺失的记录不自动升级为确认承诺；历史修订/原草稿不覆盖，不自动发布82条草稿。核验模型无工具、无SMTP，适用性/关键承诺硬门禁在后端；同一配置模型做受约束语义核验不等于独立NLI保证。质量状态见阶段进度，当前真实网关故障，S4质量门槛未通过。
+
+
+## S5 持久证据工作流（b4e286a之后）
+
+[ADR-005](knowledge-s5-workflow.md)扩展现有AgentTask而非新建调度平台。workflowRecords保存受限的阶段输入哈希/结果/状态/耗时/工具，生成和核验可恢复；检索、授权和有效性永远重新核对。workflowEpoch区分资料变化后的新证据与旧草稿，原人工编辑不覆盖；agentDraftId绑定实际审核过的草稿版本，旧稿发送不能完成新稿任务。任务DTO不返回检查点原始提示词或邮件正文。
+
+条件事实、发布/索引版本、证据包和原草稿快照仍遵守前四阶段合同。步骤完成不是事实质量完成，失败/不足时仍为待审部分稿。S4真实模型门槛仍待，后续治理/规模/最终业务质量不得跳过。

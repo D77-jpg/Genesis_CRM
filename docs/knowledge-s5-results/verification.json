@@ -1,0 +1,157 @@
+{
+  "stage": "S5",
+  "date": "2026-10-18",
+  "baseMain": "b4e286a",
+  "implementationCommit": "5e495b0",
+  "branch": "codex/knowledge-s5-workflow",
+  "engineering": "implemented and locally verified",
+  "finalGenerativeQuality": "not accepted; S4 gateway prerequisite remains open",
+  "machineProfile": "win11-ultra7-cpu4-s0-v1",
+  "node": "v24.19.0",
+  "sourceHashes": [
+    {
+      "path": "server/src/models/AgentTask.ts",
+      "sha256LF": "9875d6c1e8fae7bf6368dab0a060bc0788ea41e12d30b08643ed5d7d84d2fb19"
+    },
+    {
+      "path": "server/src/services/agent/evidence-workflow.ts",
+      "sha256LF": "bd7d8d19a3e19eb64fd2c00c6ff7dbf6cc35027d53ea7bc477f7dcf2c861a038"
+    },
+    {
+      "path": "server/src/services/agent/sales-evidence.ts",
+      "sha256LF": "e510df4cae3e4dec118c18318dc3fe0e9bea44b3d39d21f569e907a404b3e957"
+    },
+    {
+      "path": "server/src/services/agent/task-context.ts",
+      "sha256LF": "aec662d2f8af3e5f4532a1a03e2166d62a434b52aa57987467cd59e1e696dc98"
+    },
+    {
+      "path": "server/src/services/agent/task.service.ts",
+      "sha256LF": "f348ad6b3702c1cc44bb66fb14566ff0d2cc1e9abc1df83b3e5249e83d0c33e9"
+    },
+    {
+      "path": "server/src/services/agent/fact-verifier.ts",
+      "sha256LF": "f105f38f4857b5f3c15c2bb2802b637e8a417197d66bfa91fd855ed95313161a"
+    },
+    {
+      "path": "server/src/services/agent/customer-analysis.service.ts",
+      "sha256LF": "644c7ce432d7b641b531446db5b514b8120f994a01ab52e822d0f781b67aaa3f"
+    },
+    {
+      "path": "server/src/services/agent/mail-thread-analysis.service.ts",
+      "sha256LF": "a0de9ad1b5042822d2f0ce6e34254c96b88381839b8e0639f87c297b74c67789"
+    },
+    {
+      "path": "server/tests/knowledge-workflow.test.ts",
+      "sha256LF": "d7bf1bafb006412bbc582ff7413cfd9598bbea80ce0fe38e92692874df0ca51c"
+    },
+    {
+      "path": "server/tests/fixtures/knowledge-s5/worker.ts",
+      "sha256LF": "03c65e9b6c23ab3967f4135f7a79ae5160f4bd86580f4a9c3462751fd540a343"
+    }
+  ],
+  "testsPassed": {
+    "s5Workflow": 23,
+    "realLocalRetrievalIncludingS5": 14,
+    "agent": 62,
+    "knowledgeFacts": 28,
+    "projectKnowledge": 15,
+    "mailPop3": 96,
+    "security": 5,
+    "integration": 24,
+    "frozenEvaluationContracts": 9,
+    "webGuardsContentWorkflowInput": 33
+  },
+  "validation": {
+    "serverBuild": true,
+    "webBuild": true,
+    "newTestsStrictTypes": true,
+    "productionDependencyGate": true,
+    "existingXlsxExceptionExpiry": "2026-10-26",
+    "newSecurityExceptions": false,
+    "gitleaksFullHistoryExitCode": 0,
+    "gitDiffCheck": true
+  },
+  "realProcessRecovery": {
+    "types": [
+      "first_outreach",
+      "inquiry_reply",
+      "quotation_explanation",
+      "sample_reply",
+      "followup_review"
+    ],
+    "interruption": "actual SIGKILL of separate Node worker after persisted generate_email, during audit request",
+    "recovery": "second OS process after expired lease",
+    "assertions": [
+      "zero analysis before kill",
+      "raw generation checkpoint completed",
+      "replacement process makes zero new generation calls",
+      "one final draft per customer",
+      "zero sent followups"
+    ],
+    "model": "controlled protocol fixture; not a real LLM"
+  },
+  "localSemantic": {
+    "embedding": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "dimension": 384,
+    "reranker": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    "index": "sqlite-vec + FTS5, existing locked components",
+    "fixture": "temporary isolated Mongo/index; no real business material",
+    "qualityClaim": "functional provenance/ACL test only; no new recall score"
+  },
+  "ui": {
+    "backendPort": 5009,
+    "frontendPort": 5189,
+    "taskCount": 5,
+    "types": [
+      "first_outreach",
+      "quotation_explanation",
+      "sample_reply",
+      "followup_review",
+      "inquiry_reply"
+    ],
+    "allAwaitingReview": true,
+    "sentCount": 0,
+    "followupCount": 0,
+    "model": "mock",
+    "retrieval": "explicit keyword fixture",
+    "servicesStopped": true,
+    "screenshots": [
+      "s5-workflow.png",
+      "s5-first-outreach.png",
+      "s5-inquiry.png",
+      "s5-quotation.png",
+      "s5-sample.png",
+      "s5-followup.png"
+    ],
+    "lateChanges": "Final subject wording, empty-error style, stale-metadata guards, invalid-output cache and receipt version checks additionally verified by strict types/build and targeted tests; the five-page fixture itself used the immediately prior functional checkpoint."
+  },
+  "dataSafety": {
+    "realCustomersModified": false,
+    "realMailSent": false,
+    "realKnowledgeAutoPublished": false,
+    "legacy82DraftsMigrated": false,
+    "newS5FixturesSentToExternalModel": false
+  },
+  "gateway": {
+    "reachable": false,
+    "errorCode": "ECONNREFUSED",
+    "checkedAt": "2026-10-18T12:44:58.498Z",
+    "destination": "http://124.222.23.70:18744"
+  },
+  "firstSemanticRun": {
+    "passed": 11,
+    "failed": 3,
+    "reason": "initial probe pointed reranker path at nonexistent cache directory; explicit degradation caught by tests; new S5 positive test also ran after deliberate diagnostic-capacity fixture",
+    "correction": "use existing pinned S0 reranker artifact path; run positive S5 test before deliberate capacity overflow; no production thresholds or model/labels changed",
+    "finalPassed": 14
+  },
+  "limits": [
+    "S4 ordinary/critical real-model quality still unmeasured while authorized gateway ECONNREFUSED",
+    "Bounded deterministic requirement extraction, no universal multilingual coreference resolution",
+    "No new scale/multi-instance performance claim; repeated authorization-stamp reads are conservative",
+    "Paused in-flight network request may finish but fenced results cannot advance or append new model calls",
+    "Crash-retained quota reservations are conservative and not recycled in this stage",
+    "SMTP-accepted followup tests use database or injected transport receipts, not real delivery"
+  ]
+}
