@@ -6,7 +6,7 @@ export interface KnowledgeRevision {
   terms?:KnowledgeTerm[];createdBy:Types.ObjectId;createdAt:Date;
 }
 export interface IAgentKnowledge {
-  projectId:Types.ObjectId;version:number;approvedVersion:number;archived:boolean;importKey?:string;
+  lastGovernanceOperationId?:string;projectId:Types.ObjectId;version:number;approvedVersion:number;archived:boolean;importKey?:string;
   revisions:KnowledgeRevision[];createdAt:Date;updatedAt:Date;
 }
 const termSchema=new Schema<KnowledgeTerm>({
@@ -16,6 +16,8 @@ const termSchema=new Schema<KnowledgeTerm>({
 const schema=new Schema<IAgentKnowledge>({
  projectId:{type:Schema.Types.ObjectId,required:true},version:{type:Number,required:true},
  approvedVersion:{type:Number,default:0},archived:{type:Boolean,default:false},importKey:String,
+
+ lastGovernanceOperationId:String,
  revisions:[{_id:false,sourceRefs:[Schema.Types.Mixed],version:Number,title:String,tags:[String],content:String,source:String,approved:Boolean,
  accessScope:{type:String,enum:['project','admins'],default:'project'},category:String,applicability:String,products:[String],validFrom:Date,validUntil:Date,terms:[termSchema],
  createdBy:Schema.Types.ObjectId,createdAt:Date}],

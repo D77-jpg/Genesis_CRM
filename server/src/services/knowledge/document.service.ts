@@ -74,18 +74,22 @@ export async function listDocuments(actor: AuthUser, before?: string) {
   const result = [];
   for (const d of documents) {
     const parsing = await KnowledgeParsing.findOne({ documentId: d._id, ...scope(actor) }).sort({ revision: -1 }).lean();
-    result.push({ ...d, id: String(d._id), blobKey: undefined, parsing: parsing ? { ...parsing, id: String(parsing._id), artifact: undefined, leaseToken: undefined } : null });
+    const linked=await AgentKnowledge.find({...scope(actor),'revisions.sourceRefs.documentId':String(d._id)}).lean();
+    const products=[...new Set(linked.flatMap(k=>k.revisions.at(-1)?.products??[]))];
+    const reviewState=linked.some(k=>!k.archived&&k.approvedVersion>0)?'published':linked.length?'draft':'unreviewed';
+    result.push({products,reviewState, ...d, id: String(d._id), blobKey: undefined, parsing: parsing ? { ...parsing, id: String(parsing._id), artifact: undefined, leaseToken: undefined } : null });
   }
   return { documents: result, next: documents.length === 30 ? String(documents.at(-1)!._id) : null };
 }
 
-export async function documentDetail(documentId: string, actor: AuthUser, page = 0, revisionId?: string) {
+export async function documentDetail(documentId: string, actor: AuthUser, page = 0, revisionId?: string,chunkId?:string) {
   admin(actor);
   const doc = await KnowledgeDocument.findOne({ _id: id(documentId), ...scope(actor) }).lean();
   if (!doc) throw ApiError.notFound('资料不存在或无权访问');
   const revisions = await KnowledgeParsing.find({ documentId: doc._id, ...scope(actor) }).sort({ revision: -1 }).lean();
   const latest = revisionId ? revisions.find(r => String(r._id) === id(revisionId)) : revisions[0];
   if(revisionId&&!latest)throw ApiError.notFound('解析版本不存在或无权访问');
+  if(chunkId){const target=await KnowledgeChunk.findOne({_id:chunkId,...scope(actor),documentId:doc._id,parsingRevisionId:latest?._id,artifactHash:latest?.artifactHash}).lean();if(!target)throw ApiError.notFound('引用片段不存在于该解析版本');page=Math.floor((target.ordinal??0)/20);}
   const chunks = latest && ['succeeded', 'partial'].includes(latest.state)
     ? await KnowledgeChunk.find({ ...scope(actor), parsingRevisionId: latest._id, artifactHash: latest.artifactHash }).sort({ ordinal: 1 }).skip(page * 20).limit(20).lean() : [];
   const keys = chunks.map(c => 'document-chunk:' + c._id);

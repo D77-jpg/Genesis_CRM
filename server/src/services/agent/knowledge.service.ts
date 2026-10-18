@@ -31,6 +31,10 @@ export const knowledgeInput=z.object({
  validFrom:z.coerce.date().optional(),validUntil:z.coerce.date().optional(),terms:z.array(termInput).max(25).default([]),
 }).strict().superRefine((v,c)=>{
  if(v.validUntil&&v.validUntil<=(v.validFrom??new Date()))c.addIssue({code:'custom',message:'失效时间必须晚于生效时间'});
+ if(v.approved)for(const t of v.terms){
+  if(t.mode==='confirmed'&&!t.scope?.reviewed)c.addIssue({code:'custom',message:'发布已确认的条件前，请完成适用范围审核；未知条件请保留待确认'});
+  if(t.mode==='confirmed'&&t.topic==='certification'&&(!t.scope?.certificate?.products.length||!t.scope?.certificate?.validUntil))c.addIssue({code:'custom',message:'发布认证承诺前，请填写证书覆盖产品与有效期'});
+ }
  if(v.approved&&v.category==='sales_rules'&&v.content.length>3000)c.addIssue({code:'custom',message:'基础销售规则请保持在 3000 字符以内，详细产品政策分条录入'});
  if(v.approved&&v.category==='compliance'&&(!v.products.length||!v.validUntil))c.addIssue({code:'custom',message:'发布合规资料前请填写适用产品和证书有效期'});
 });
