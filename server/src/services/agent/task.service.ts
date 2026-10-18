@@ -223,3 +223,5 @@ export function startAgentTaskWorker() {
  worker=setInterval(()=>{ if(busy || mongoose.connection.readyState!==1)return; busy=true; void observeAgentEvents().then(()=>materializeAgentBatches()).then(()=>processAgentTask()).catch(()=>undefined).finally(()=>{busy=false;}); },2000);
  worker.unref();
 }
+
+export function stopAgentTaskWorker(){if(worker)clearInterval(worker);worker=undefined;}

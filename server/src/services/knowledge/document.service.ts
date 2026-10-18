@@ -261,3 +261,5 @@ export function startKnowledgeDocumentWorker() {
     void recoverUnqueuedDocuments().then(()=>processKnowledgeDocument()).catch(() => undefined).finally(() => { busy = false; });
   }, 2000); timer.unref();
 }
+
+export function stopKnowledgeDocumentWorker(){if(timer)clearInterval(timer);timer=undefined;}

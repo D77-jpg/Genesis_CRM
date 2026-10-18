@@ -1,3 +1,7 @@
+import {stopKnowledgeDocumentWorker} from './services/knowledge/document.service';
+import {stopKnowledgeIndexWorker} from './services/knowledge/index.service';
+import {stopAgentTaskWorker} from './services/agent/task.service';
+import {semanticPool} from './services/knowledge/embedding';
 /**
  * 服务启动入口
  * ------------------------------------------------------------------
@@ -87,6 +91,7 @@ function registerShutdown(server: http.Server): void {
     if (shuttingDown) return;
     shuttingDown = true;
     mailTimers.forEach(clearInterval);
+    stopAgentTaskWorker();stopKnowledgeDocumentWorker();stopKnowledgeIndexWorker();semanticPool.close();
     logger.info(`收到 ${signal}，开始优雅停机...`);
 
     // 给正在处理的请求 10 秒收尾时间

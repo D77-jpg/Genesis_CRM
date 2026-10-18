@@ -36,7 +36,7 @@ export const localEmbedding:EmbeddingAdapter&SemanticAdapter={async embed(texts,
  return {vectors:result.vectors,identity:result.identity,dimension:result.dimension};
 },async run(command,identity,signal,guard){
  try{
-  const raw=await semanticPool.run({...command,identity:identity.id,dimension:identity.dimension},signal,guard) as {ok:boolean;code?:string;result?:unknown};
+  const raw=await semanticPool.run({...command,identity:identity.id,dimension:identity.dimension},signal,guard?async()=>{try{await guard();}catch(e){if(e instanceof IndexError)throw e;throw new IndexError('authority_changed','排队期间资料或权限发生变化，请重新查询');}}:undefined) as {ok:boolean;code?:string;result?:unknown};
   if(!raw.ok)throw new IndexError(raw.code??'local_runtime_failure','本地模型或索引处理失败，请检查固定组件和存储');
   const result=output.parse(raw.result);if(result.identity!==identity.id||result.dimension!==identity.dimension||result.adapter!==identity.adapter)throw new IndexError('invalid_result','本地组件身份无效，未使用旧索引');return result;
  }catch(e){if(e instanceof IndexError)throw e;throw new IndexError(e instanceof RuntimeFailure?e.code:'invalid_result','本地语义服务未完成，请稍后重试或检查运行环境');}

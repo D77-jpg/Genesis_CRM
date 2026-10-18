@@ -32,7 +32,7 @@ export async function parserIdentity() {
     runtimeLockHash: createHash('sha256').update(lock).digest('hex') };
 }
 
-export async function runParser(data: Buffer, extension: string, sha256: string, signal: AbortSignal,
+async function runParserImpl(data: Buffer, extension: string, sha256: string, signal: AbortSignal,
   progress: (value: { stage: string; done: number; total: number }) => Promise<void>): Promise<ParserResult> {
   const python = process.env.KNOWLEDGE_PYTHON;
   if (!python || !process.env.KNOWLEDGE_TOKENIZER_DIR) throw new ParserError('runtime_unavailable', '本地解析环境未配置，请联系管理员完成安装后重试');
@@ -88,4 +88,14 @@ export async function runParser(data: Buffer, extension: string, sha256: string,
       if (signal.aborted) stop();
     });
   } finally { await rm(directory, { recursive: true, force: true }); }
+}
+
+const parserRuntime={active:0,failures:0,openUntil:0,completed:0,failed:0};
+export function parserRuntimeStatus(){return {...parserRuntime,circuitOpen:parserRuntime.openUntil>Date.now(),maxConcurrent:2,timeoutMs:parserConfig.timeoutMs};}
+export async function runParser(...args:Parameters<typeof runParserImpl>):Promise<ParserResult>{
+ if(parserRuntime.openUntil>Date.now())throw new ParserError('circuit_open','本地解析组件连续故障，稍后重试或联系管理员');
+ if(parserRuntime.active>=2)throw new ParserError('capacity_busy','本地解析任务繁忙，请稍后重试');
+ parserRuntime.active++;try{const result=await runParserImpl(...args);parserRuntime.failures=0;parserRuntime.openUntil=0;parserRuntime.completed++;return result;}
+ catch(e){parserRuntime.failed++;if(e instanceof ParserError&&['timeout','resource_or_process_failure','runtime_unavailable','invalid_result','storage_unavailable'].includes(e.code)&&++parserRuntime.failures>=3)parserRuntime.openUntil=Date.now()+30000;throw e;}
+ finally{parserRuntime.active--;}
 }
