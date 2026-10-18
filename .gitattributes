@@ -11,3 +11,6 @@ server/tests/fixtures/knowledge-s2/* text eol=lf
 server/semantic/* text eol=lf
 server/parsers/* text eol=lf
 server/tests/fixtures/knowledge-s1/* text eol=lf
+
+# S4 first-measurement evidence must remain byte-stable on Windows and Linux.
+docs/knowledge-s4-results/*.json text eol=lf
