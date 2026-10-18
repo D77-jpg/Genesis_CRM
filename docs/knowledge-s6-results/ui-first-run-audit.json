@@ -1,0 +1,22 @@
+{
+  "fictional": true,
+  "taskCount": 0,
+  "tasks": [],
+  "letters": [
+    {
+      "id": "6ad4cc66b41f44a7625a6496",
+      "status": "draft",
+      "taskType": "inquiry_reply",
+      "body": "Dear Fictional Buyer,\n\nThank you for getting in touch. Here are the details for the scope below.\n\nMinimum order quantity: 73 pcs. Conditions: standard velvet pouch; 仅用于独立验收; products velvet pouch.\n\nProduction lead time: 19 working days. Conditions: after deposit and artwork approval; 仅用于独立验收; products velvet pouch; counted after deposit and artwork approval.\n\nPrice: USD 4.25 per piece. Conditions: 150 standard velvet pouches; this fictional customer only; 仅适用于当前客户；以逐项条件为准; products velvet pouch; quantity [150, 150] pcs; customer-specific agreement; valid until 2027-01-16T13:40:54.737Z.\n\nTo confirm the remaining details:\n- Freight cost needs confirmation for the destination and shipment details.\n\nCould you please confirm your final specifications so we can agree on the next step?\n\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    },
+    {
+      "id": "6ad4d046638d11c655873842",
+      "status": "draft",
+      "taskType": "first_outreach",
+      "threadId": "26fa8fa6-b59f-402d-a654-4b7539b32199",
+      "body": "Dear Fictional Buyer,\n\nI am reaching out to introduce our team and see whether we could help with your requirements.\n\nWould a brief discussion about your requirements be useful?\n\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    }
+  ],
+  "sentCount": 0,
+  "followupCount": 0
+}

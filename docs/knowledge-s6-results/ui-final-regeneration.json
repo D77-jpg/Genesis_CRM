@@ -1,0 +1,13 @@
+{
+  "fictional": true,
+  "source": "final browser DOM and UI state, not a final database dump",
+  "originalLetterId": "6ad4d1d4f4f2daa1c79ba896",
+  "newLetterId": "6ad4d2ed680be38ef9745efe",
+  "newSubject": "Regarding your inquiry",
+  "observedDrafts": 2,
+  "observedSentCount": 0,
+  "clickedSend": false,
+  "model": "mock",
+  "retrievalMode": "explicit keyword",
+  "limitation": "final fixture processes had already exited before stop request; no final database audit JSON was emitted. First-run audit is preserved separately. Final purpose also verified by six independent Mongo regression tests."
+}

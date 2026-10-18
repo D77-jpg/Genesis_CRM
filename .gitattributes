@@ -17,3 +17,6 @@ docs/knowledge-s4-results/*.json text eol=lf
 
 # S5 acceptance snapshots keep reproducible LF bytes.
 docs/knowledge-s5-results/*.json text eol=lf
+
+# S6 governance acceptance evidence uses stable LF bytes.
+docs/knowledge-s6-results/*.json text eol=lf

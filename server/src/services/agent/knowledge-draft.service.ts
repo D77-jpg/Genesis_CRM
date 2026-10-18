@@ -1,3 +1,4 @@
+import {salesSubjects,type SalesMailKind} from './sales-evidence';
 import {DevelopmentLetter} from '../../models/DevelopmentLetter';
 import {requireProjectId} from '../../utils/access';
 import {draftHash,knowledgeFreshness} from './knowledge-grounding';
@@ -15,13 +16,15 @@ export async function regenerateKnowledgeDraft(id:string,actor:AuthUser,requestK
  const letter=await getLetter(id,actor);
  if(letter.status!=='draft'||!letter.knowledgeReview)throw ApiError.conflict('仅支持重新生成有知识依据的草稿');
  const context=letter.knowledgeReview.context;
+ const originalKind=letter.knowledgeReview.taskType;
+ const taskKind:SalesMailKind=Object.hasOwn(salesSubjects,originalKind)?originalKind as SalesMailKind:'followup_review';
  if(context.mailId){
-  const analysis=await createMailThreadAnalysis({mailId:context.mailId,direction:context.direction??'inbound',idempotencyKey:'kb-regenerate-'+id+'-'+requestKey},actor);
+  const analysis=await createMailThreadAnalysis({mailId:context.mailId,direction:context.direction??'inbound',idempotencyKey:'kb-regenerate-'+id+'-'+requestKey},actor,{taskKind,userRequest:context.request});
   const saved=await saveMailReplyDraft(analysis.id,{expectedVersion:analysis.version,idempotencyKey:'kb-save-'+id+'-'+requestKey},actor);
   return {letterId:saved.letterId,customerId:letter.customerId};
  }
  const analysis=await createCustomerAnalysis({customerId:letter.customerId,idempotencyKey:'kb-regenerate-'+id+'-'+requestKey},actor,
-  {firstOutreach:letter.knowledgeReview.taskType==='first_outreach',userRequest:context.request??'依据当前有效知识重新准备邮件草稿'});
+  {taskKind,firstOutreach:taskKind==='first_outreach',userRequest:context.request??'依据当前有效知识重新准备邮件草稿'});
  const saved=await saveAnalysisEmailDraft(analysis.id,{expectedVersion:analysis.version,idempotencyKey:'kb-save-'+id+'-'+requestKey},actor);
  return {letterId:saved.letterId,customerId:letter.customerId};
 }

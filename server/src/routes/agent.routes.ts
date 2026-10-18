@@ -1,3 +1,4 @@
+import {governanceOverview,versionDiff,previewDisable,commitDisable,bulkInput,draftEvidence} from '../services/agent/knowledge-governance';
 import {agreementInput,listCustomerAgreements,saveCustomerAgreement,disableCustomerAgreement} from '../services/agent/customer-agreement.service';
 import {regenerateKnowledgeDraft,recheckKnowledgeDraft} from '../services/agent/knowledge-draft.service';
 import { Router } from 'express';
@@ -96,6 +97,11 @@ router.post('/customers/:customerId/agreements',requireRole('admin'),validate({p
 router.post('/customers/:customerId/agreements/:id/revisions',requireRole('admin'),validate({params:agreementParams,body:agreementInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await saveCustomerAgreement(req.params.customerId,req.params.id,req.body,req.user!)})));
 router.post('/customers/:customerId/agreements/:id/disable',requireRole('admin'),validate({params:agreementParams,body:z.object({version:z.number().int().positive()}).strict()}),asyncHandler(async(req,res)=>{await disableCustomerAgreement(req.params.customerId,req.params.id,req.body.version,req.user!);sendSuccess(res,{disabled:true});}));
 router.post('/knowledge-drafts/:id/recheck',messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({requestKey:z.string().uuid(),bodyText:z.string().max(20000).optional(),subject:z.string().max(300).optional()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await recheckKnowledgeDraft(req.params.id,req.body,req.user!))));
+router.get('/knowledge-governance',requireRole('admin'),asyncHandler(async(req,res)=>sendSuccess(res,await governanceOverview(req.user!))));
+router.post('/knowledge-governance/disable-preview',requireRole('admin'),messageLimiter,validate({body:bulkInput}),asyncHandler(async(req,res)=>sendSuccess(res,await previewDisable(req.body.ids,req.user!),201)));
+router.post('/knowledge-governance/:id/disable',requireRole('admin'),messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await commitDisable(req.params.id,req.user!))));
+router.get('/knowledge/:id/diff',requireRole('admin'),validate({params:agentSessionParamsSchema,query:z.object({from:z.coerce.number().int().min(1).max(100),to:z.coerce.number().int().min(1).max(100)})}),asyncHandler(async(req,res)=>sendSuccess(res,await versionDiff(req.params.id,Number(req.query.from),Number(req.query.to),req.user!))));
+router.get('/knowledge-drafts/:id/evidence',validate({params:agentSessionParamsSchema,query:z.object({sourceId:z.string().min(1).max(200)}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await draftEvidence(req.params.id,req.query.sourceId as string,req.user!))));
 router.get('/knowledge',asyncHandler(async(req,res)=>sendSuccess(res,await listKnowledge(req.user!))));
 router.get('/knowledge/:id',validate({params:agentSessionParamsSchema}),asyncHandler(async(req,res)=>sendSuccess(res,await getKnowledgeHistory(req.params.id,req.user!))));
 router.post('/knowledge',requireRole('admin'),validate({body:knowledgeInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await appendKnowledge(undefined,req.body,req.user!)},201)));
