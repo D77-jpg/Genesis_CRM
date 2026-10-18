@@ -1,0 +1,194 @@
+{
+  "stage": "S6",
+  "date": "2026-10-18",
+  "baseMain": "4894e47",
+  "implementationCommit": "8fd1b9d",
+  "branch": "codex/knowledge-s6-governance",
+  "machineProfile": "win11-ultra7-cpu4-s0-v1",
+  "engineering": "implemented and locally verified",
+  "finalGenerativeQuality": "not accepted; S4 real model and S5 generative acceptance still pending",
+  "tests": [
+    {
+      "suite": "knowledge-governance",
+      "passed": 24,
+      "failed": 0
+    },
+    {
+      "suite": "knowledge",
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "suite": "knowledge-facts",
+      "passed": 28,
+      "failed": 0
+    },
+    {
+      "suite": "knowledge-workflow",
+      "passed": 23,
+      "failed": 0
+    },
+    {
+      "suite": "agent",
+      "passed": 62,
+      "failed": 0
+    },
+    {
+      "suite": "mail and POP3",
+      "passed": 96,
+      "failed": 0
+    },
+    {
+      "suite": "knowledge-ingestion",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "suite": "knowledge-retrieval (real local components)",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "suite": "security",
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "suite": "web guarded braces",
+      "passed": 20,
+      "failed": 0
+    },
+    {
+      "suite": "web agent-content",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "suite": "web agent-workflow",
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "suite": "web customer-fields",
+      "passed": 5,
+      "failed": 0
+    }
+  ],
+  "total": 311,
+  "builds": {
+    "server": "passed",
+    "web": "passed",
+    "newTestsStrictTypecheck": "passed"
+  },
+  "security": {
+    "existingProductionAuditGate": "passed; existing xlsx exception expires 2026-10-26",
+    "fullGitHistoryScan": "exit 0 before final documentation; repeated on final commit"
+  },
+  "ui": {
+    "widths": [
+      1440,
+      768,
+      375
+    ],
+    "horizontalOverflowObserved": false,
+    "keyboard": "source target focus + Tab; nested citation Escape returns to opener",
+    "darkMode": "visually inspected; original theme restored",
+    "emailPreview": "internal review excluded; sender and recipient visible; send disabled without configured personal mailbox",
+    "newClaimsRecheck": "mock reported unavailable, never quality success",
+    "rawAuditNote": "first run exposed purpose regression, fixed and final UI + six dedicated tests repeated"
+  },
+  "constraints": {
+    "realCustomersChanged": false,
+    "realMailSent": false,
+    "realDraftsAutoPublished": false,
+    "externalS6ModelCalls": 0
+  },
+  "sourceHashes": [
+    {
+      "path": "server/src/services/agent/knowledge-governance.ts",
+      "sha256LF": "5f0354a727a175a9fdfaf23ea8d969215aa206ec2f92faa9314681ac4bf9ee06"
+    },
+    {
+      "path": "server/src/services/agent/knowledge-visibility.ts",
+      "sha256LF": "1af569d65cec67554938c23db6e631a3089a35b915122a6e1103bfcacee0d43c"
+    },
+    {
+      "path": "server/src/services/agent/knowledge-draft.service.ts",
+      "sha256LF": "e7afbcf282ec1155b328547e691292120b7cdeb46e4ae9bef781fd89eb3a9320"
+    },
+    {
+      "path": "server/src/services/agent/knowledge.service.ts",
+      "sha256LF": "7c81a913aa5eae6777a81514c14d8830007186a5f19602a49c4db29a8283c4f7"
+    },
+    {
+      "path": "server/src/services/knowledge/document.service.ts",
+      "sha256LF": "fb56dda93c82e60de979e0bbd953f93cac44802cb5e9cb01c4a17c5c73b5c154"
+    },
+    {
+      "path": "server/src/services/letter.service.ts",
+      "sha256LF": "53faaf52a304ef874490949947a544149ecf714270045b9443b916c891d43f70"
+    },
+    {
+      "path": "server/tests/knowledge-governance.test.ts",
+      "sha256LF": "af0f4a92a7165394eb386d1f9cc98a70c6c8eea3a5b9bea87937ee9f44f19d51"
+    },
+    {
+      "path": "web/src/components/agent/knowledge-governance.tsx",
+      "sha256LF": "98cddd3b3ba157106d5373b290777223ec9e35ee92a4d10c27da52ccac27ce9e"
+    },
+    {
+      "path": "web/src/components/agent/knowledge-citation.tsx",
+      "sha256LF": "c87da0dcd6271d6e18f5805eef48e8362f61b37c570b099a338fff6d109232d9"
+    },
+    {
+      "path": "web/src/components/agent/knowledge-review.tsx",
+      "sha256LF": "deec00e375cc8633dd23b59bce8d234808ae183d2aed923ad0530e858110fd7b"
+    },
+    {
+      "path": "web/src/components/agent/knowledge-documents.tsx",
+      "sha256LF": "3fd1ee34dc8e5399f29d707c6f9aee5ef4b2d359c7f5d69c953e026071790f9c"
+    },
+    {
+      "path": "web/src/components/agent/project-knowledge-manager.tsx",
+      "sha256LF": "a269cc674d2bc6cb26de45af63384ed714e0b02f11052749333ae0357d54e1bb"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "s6-version-1440.png",
+      "sha256": "4370a9940d8ddeae6275fefc363b39726194bed865ec9d1d1e5e8b78cab1b2d5"
+    },
+    {
+      "path": "s6-preview-375.png",
+      "sha256": "6b602d8d56323561c7144f364555e5bf47dbf0af47225fd076c9b558ac6ef374"
+    },
+    {
+      "path": "s6-documents-768.png",
+      "sha256": "29f92e8a693f223f3c19a4b11f84161e9aec0213a25d151e1107a77bd6cbcfea"
+    },
+    {
+      "path": "s6-citation-768.png",
+      "sha256": "2d7189d3bf1d4bbb0c01d4a357ea37aeb27f364dabc2537884c68c452e689900"
+    },
+    {
+      "path": "s6-citation-375.png",
+      "sha256": "013beecf8ca6ea9c3413bb38af701abe900826325172af19a04710c6bf8342a3"
+    },
+    {
+      "path": "s6-source-dark-1440.png",
+      "sha256": "0d0516ce9b14067f00ade8b16b4d6b29fa96d2ac9c9e9e2460d1ca221498e0b0"
+    },
+    {
+      "path": "s6-recheck-1440.png",
+      "sha256": "7e35cd4fc8637c79a667b07501911010afbdaeee104704d7b9bbf0c5d8114854"
+    },
+    {
+      "path": "s6-stale-draft-1440.png",
+      "sha256": "4ee4647bf15f5ffd8ec523752f3bb039bc64789b295f23a6b0e5055d088a024d"
+    },
+    {
+      "path": "s6-regenerate-final.png",
+      "sha256": "8fcc7cd1db0528020724e2ee83ba8b6a8c6283a157ae16b55e1b03de6e7cef2f"
+    }
+  ]
+}
