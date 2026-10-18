@@ -29,11 +29,13 @@ async function published(projectId:string){
  const manifest=sha(JSON.stringify(rows.map(r=>[r.id,r.version,r.revision])));
  return {rows,manifest};
 }
-async function diagnosticMetadata(projectId:string,actor:AuthUser){
- const inactive=await AgentKnowledge.find({projectId,$or:[{archived:true},{approvedVersion:0},{'revisions.validUntil':{$lte:new Date()}},{'revisions.validFrom':{$gt:new Date()}}]}).select('approvedVersion version archived revisions.version revisions.title revisions.validFrom revisions.validUntil revisions.accessScope').sort({_id:1}).limit(10001).lean();
+async function diagnosticMetadata(projectId:string,actor:AuthUser,query='',topics:KnowledgeBundle['topics']=[]){
+ const inactive=await AgentKnowledge.find({projectId,$or:[{archived:true},{approvedVersion:0},{'revisions.validUntil':{$lte:new Date()}},{'revisions.validFrom':{$gt:new Date()}}]}).select('approvedVersion version archived revisions.version revisions.title revisions.validFrom revisions.validUntil revisions.accessScope revisions.category').sort({_id:1}).limit(10001).lean();
  return inactive.flatMap(k=>{
    const v=k.revisions.find(v=>v.version===(k.approvedVersion||k.version));
    if(!v||(!k.approvedVersion&&actor.role!=='admin')||(v.accessScope==='admins'&&actor.role!=='admin'))return [];
+   const specificNonCompliance=!topics.includes('certification')&&(topics.length>0||/材料|材质|工艺|涂层|结构|material|coating|finish|construction/i.test(query));
+   if(v.category==='compliance'&&specificNonCompliance)return [];
    const code=k.archived?'disabled':!k.approvedVersion?'draft_only':v.validFrom&&v.validFrom>new Date()?'not_effective':v.validUntil&&v.validUntil<=new Date()?'expired':null;
    return code?[{code,sourceId:'knowledge:'+String(k._id)+':v'+v.version,title:v.title}]:[];
   });
@@ -199,10 +201,10 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
   const allowed=snapshot.rows.filter(r=>visible(r,current)&&options.productApplies(r.revision.products,query));
   const rows=await Item.find({projectId,generation:g._id,knowledgeId:{$in:allowed.map(r=>objectId(r.id))},identity:identity.id,dimension:identity.dimension}).sort({ordinal:1}).select('itemId knowledgeId publicationVersion ordinal').lean();
   // No query-vector cache in S2. Embedding reuse key is (project, visibility, model identity, full content hash).
-  const diagnostics=await diagnosticMetadata(projectId,current);
-  const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',expectedCount:g.total,expectedChecksum:g.checksum},identity,undefined,async()=>{const now=await indexActor(actor);if((await embeddingIdentity()).id!==identity.id||now.role!==current.role||(await published(projectId)).manifest!==snapshot.manifest||String((await State.findOne({projectId}))?.activeGeneration)!==g.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,now))))throw new IndexError('authority_changed','排队期间资料或权限已变化，请重新查询');});
+  const diagnostics=await diagnosticMetadata(projectId,current,query,options.topics);
+  const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',expectedCount:g.total,expectedChecksum:g.checksum},identity,undefined,async()=>{const now=await indexActor(actor);if((await embeddingIdentity()).id!==identity.id||now.role!==current.role||(await published(projectId)).manifest!==snapshot.manifest||String((await State.findOne({projectId}))?.activeGeneration)!==g.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,now,query,options.topics))))throw new IndexError('authority_changed','排队期间资料或权限已变化，请重新查询');});
   const again=await indexActor(actor),after=await published(projectId),pointer=await State.findOne({projectId}),afterIdentity=await embeddingIdentity();
-  if(after.manifest!==snapshot.manifest||String(pointer?.activeGeneration)!==g.id||again.role!==current.role||afterIdentity.id!==identity.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,again))))return {...base,status:'index_stale',issues:[{code:'index_stale',message:'检索期间知识或权限发生变化，请重新查询'}]};
+  if(after.manifest!==snapshot.manifest||String(pointer?.activeGeneration)!==g.id||again.role!==current.role||afterIdentity.id!==identity.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,again,query,options.topics))))return {...base,status:'index_stale',issues:[{code:'index_stale',message:'检索期间知识或权限发生变化，请重新查询'}]};
   const selectedIds=new Set([...(result.hits??[]).map(h=>h.id),...rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId)]);
   const parents=rows.filter(i=>selectedIds.has(i.itemId)).map(i=>i.knowledgeId);
   const details=await Item.find({projectId,generation:g._id,knowledgeId:{$in:parents},identity:identity.id}).sort({ordinal:1}).lean();

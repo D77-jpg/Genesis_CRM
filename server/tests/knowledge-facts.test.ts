@@ -216,3 +216,11 @@ test('real provider HTTP protocol validates JSON, unique Unicode quotes and reje
   mode='invalid';await assert.rejects(()=>verifier.check(payload));mode='tool';await assert.rejects(()=>verifier.check(payload));
  }finally{await new Promise<void>((resolve,reject)=>http.close(error=>error?reject(error):resolve()));}
 });
+
+test('legacy literal-condition disagreement is visible but never promotes either value to applicable',()=>{
+ const legacy:KnowledgeTerm={topic:'price',value:'28',unit:'per design',currency:'EUR',conditions:'standard debossing on linen packaging',mode:'confirmed'};
+ const first={...source,terms:[legacy]},second={...source,sourceId:'knowledge:legacy-other:v1',terms:[{...legacy,value:'52'}]};
+ const b=bundle([first,second],['price']);assert.ok(collectConditionalEvidence(b).every(f=>f.status==='conflict'));
+ const result=auditGroundedEmail('We promise EUR 28.',b,{taskType:'quotation_explanation'});assert.equal(result.review.status,'conflict');assert.doesNotMatch(result.bodyText,/EUR 28|EUR 52/);
+ const different={...second,terms:[{...legacy,value:'52',conditions:'different embossing method'}]};assert.ok(collectConditionalEvidence(bundle([first,different],['price'])).every(f=>f.status==='needs_confirmation'));
+});
