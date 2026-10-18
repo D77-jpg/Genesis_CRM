@@ -11,7 +11,7 @@ export interface IAgentKnowledge {
 }
 const termSchema=new Schema<KnowledgeTerm>({
  topic:{type:String,required:true},value:{type:String,required:true},conditions:{type:String,required:true},
- unit:String,currency:String,min:Number,max:Number,mode:{type:String,enum:['reference','confirmed','needs_confirmation'],required:true},
+ scope:Schema.Types.Mixed,unit:String,currency:String,min:Number,max:Number,mode:{type:String,enum:['reference','confirmed','needs_confirmation'],required:true},
 },{_id:false});
 const schema=new Schema<IAgentKnowledge>({
  projectId:{type:Schema.Types.ObjectId,required:true},version:{type:Number,required:true},

@@ -1,6 +1,7 @@
+import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
 import {knowledgeForModel} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
-import {buildKnowledgeBundle,auditGroundedEmail,knowledgeFreshness,knowledgeTaskType} from './knowledge-grounding';
+import {buildKnowledgeBundle,knowledgeFreshness,knowledgeTaskType} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
 import {chargeTaskBudget} from './task-budget';
 import { Types } from 'mongoose';
@@ -137,7 +138,7 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   }, { method: followup.method, result: followup.result, content: clipped(followup.content), followUpAt: followup.followUpAt, nextFollowUpAt: followup.nextFollowUpAt });
   const knowledgeContext=await buildKnowledgeBundle(actor,`${customer.interestedProducts??''} ${customer.productCategory??''} ${customer.industry??''} ${goal}`,{customerId,ids:knowledgeIds});
   const knowledge=knowledgeContext.sources;
-  for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...item,approved:true});
+  for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...item,approved:true});
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
   return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,knowledgeContext:knowledgeForModel(knowledgeContext) }, sources };
 }
@@ -196,13 +197,15 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       facts: generated.facts, gaps: generated.gaps, recommendations: generated.recommendations,
       emailDraft: generated.emailDraft, followUpPlan: generated.followUpPlan,
     });
-    const grounded=auditGroundedEmail(parsed.emailDraft.bodyText,context.input.knowledgeContext!,{
+    const grounded=await verifyGroundedEmail(parsed.emailDraft.bodyText,context.input.knowledgeContext!,{
       taskType:knowledgeTaskType(options?.userRequest??'',options?.firstOutreach?'first_outreach':'followup'),
       customerId:input.customerId,request:options?.userRequest,
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
       seller:context.input.seller,
-    });
+    },providerFactVerifier(activeProvider,actor,options?.taskId),actor);
     parsed.emailDraft.bodyText=grounded.bodyText;
+    // A generated subject is not an unchecked channel for numeric commitments.
+    parsed.emailDraft.subject=options?.firstOutreach?'A brief introduction':'Regarding your inquiry';
     const known = new Set(context.sources.map((source) => source.sourceId));
     const facts = verifiedClaims(parsed.facts, known);
     const gaps = verifiedClaims(parsed.gaps, known);

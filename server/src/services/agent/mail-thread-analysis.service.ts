@@ -1,9 +1,10 @@
+import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
 import {knowledgeForModel} from './knowledge-types';
 import {Project} from '../../models';
 import {getCurrentMailSender} from '../mail-account.service';
 import {agentMailOrThrow,inboundAgentScope} from './mail-access';
 import {chargeTaskBudget} from './task-budget';
-import {buildKnowledgeBundle,auditGroundedEmail,knowledgeFreshness} from './knowledge-grounding';
+import {buildKnowledgeBundle,knowledgeFreshness} from './knowledge-grounding';
 import type {AgentProvider} from './provider';
 import env from '../../config/env';
 import { Types } from 'mongoose';
@@ -235,12 +236,12 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     }
     const nextFollowUpAt = !marketingBlocked && generated.followUpSuggestion.nextFollowUpAt
       ? new Date(generated.followUpSuggestion.nextFollowUpAt) : undefined;
-    const grounded=auditGroundedEmail(generated.replyDraft.bodyText,knowledgeContext,{
+    const grounded=await verifyGroundedEmail(generated.replyDraft.bodyText,knowledgeContext,{
       taskType:'inquiry_reply',customerId:context.customer?.id,mailId:input.mailId,direction:input.direction,
       customerEvidence:context.messages.filter(m=>m.direction==='inbound').map(m=>m.text).join('\n'),
       questions:generated.extracted.questions.map(q=>q.text),seller,
-    });
-    if(!marketingBlocked)generated.replyDraft.bodyText=grounded.bodyText;
+    },marketingBlocked?undefined:providerFactVerifier(activeProvider,actor,options?.taskId),actor);
+    if(!marketingBlocked){generated.replyDraft.bodyText=grounded.bodyText;generated.replyDraft.subject='Regarding your inquiry';}
     let analysis: AgentMailThreadAnalysisDocument;
     try {
       analysis = await AgentMailThreadAnalysis.create({

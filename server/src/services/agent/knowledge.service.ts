@@ -1,3 +1,4 @@
+import {factScopeInput} from './conditional-facts';
 import {semanticKnowledge,knowledgeIndexChanged} from '../knowledge/index.service';
 import {createHash} from 'node:crypto';
 import {Types} from 'mongoose';
@@ -9,7 +10,7 @@ import {ApiError} from '../../utils/ApiError';
 import {KNOWLEDGE_CATEGORIES,POLICY_TOPICS,type KnowledgeBundle,type KnowledgeSource,type PolicyTopic} from './knowledge-types';
 
 export const termInput=z.object({
- topic:z.enum(POLICY_TOPICS),value:z.string().trim().min(1).max(1200),
+ scope:factScopeInput.optional(),topic:z.enum(POLICY_TOPICS),value:z.string().trim().min(1).max(1200),
  conditions:z.string().trim().min(1).max(600),unit:z.string().trim().max(60).optional(),
  currency:z.string().trim().regex(/^[A-Z]{3}$/).optional(),min:z.number().finite().optional(),max:z.number().finite().optional(),
  mode:z.enum(['reference','confirmed','needs_confirmation']).default('needs_confirmation'),
@@ -107,9 +108,9 @@ export function productApplies(products:string[]|undefined,text:string):boolean{
 }
 export function sourceOf(id:string,v:KnowledgeRevision):KnowledgeSource{
  return {sourceId:'knowledge:'+id+':v'+v.version,knowledgeId:id,version:v.version,title:v.title,
- category:v.category??'product',kind:'knowledge',content:v.content.slice(0,1800),source:v.source,
+ category:v.category??'product',kind:'knowledge',content:v.content,source:v.source,publication:{contentHash:createHash('sha256').update(v.content).digest('hex'),location:{kind:'published_text',offsetUnit:'unicode_codepoints',start:0,end:Array.from(v.content).length},sourceRefs:v.sourceRefs??[]},
  applicability:v.applicability??'历史资料，适用条件需审核',products:v.products??[],
- validFrom:v.validFrom?.toISOString()??'',validUntil:v.validUntil?.toISOString(),terms:v.terms??[]};
+ validFrom:v.validFrom?.toISOString()??'',validUntil:v.validUntil?.toISOString(),terms:(v.terms??[]).map((t,publicationIndex)=>({...JSON.parse(JSON.stringify(t)),publicationIndex}))};
 }
 export async function retrieveKnowledge(actor:AuthUser,query:string,ids?:string[],mode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'):Promise<KnowledgeBundle>{
  if(process.env.KNOWLEDGE_RETRIEVAL_MODE!=='keyword')return semanticKnowledge(actor,query,{topics:policyTopics(query),productApplies,sourceOf,ids,mode});
@@ -137,11 +138,6 @@ export async function retrieveKeywordKnowledge(actor:AuthUser,query:string,ids?:
    if(!productApplies(v.products,query)){if(score)bundle.issues.push({code:'conditions',message:'需确认适用产品：'+v.title});return [];}
    const source=sourceOf(k.id,v);
    if(base)source.content=v.content;
-   if(!base&&v.content.length>1800){
-    const lines=v.content.split(/\n+/).map((line,index)=>({line,index,score:tokens.filter(token=>line.toLowerCase().includes(token)).length}));
-    const matching=lines.filter(line=>line.score>0).sort((a,b)=>b.score-a.score).slice(0,8).sort((a,b)=>a.index-b.index);
-    if(matching.length)source.content=matching.map(item=>item.line).join('\n').slice(0,1800);
-   }
    source.terms=source.terms.filter(term=>topics.includes(term.topic)).slice(0,8);
    return [{source,score,base}];
   });
