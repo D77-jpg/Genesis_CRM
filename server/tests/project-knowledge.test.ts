@@ -23,7 +23,7 @@ const policy=(value='73')=>({expectedVersion:0,title:'Fixture velvet pouch polic
  {topic:'moq' as const,value,unit:'pcs',conditions:'standard velvet pouches',mode:'confirmed' as const},
  {topic:'lead_time' as const,value:'19',unit:'working days',conditions:'after artwork and order confirmation; standard velvet pouches',mode:'confirmed' as const},
  {topic:'sample' as const,value:'existing stock samples available; courier charges require confirmation',conditions:'stock samples only; custom samples quoted separately',mode:'confirmed' as const},
- ].map(t=>({...t,scope:{products:['velvet pouch'],processes:[],startsAfter:t.topic==='lead_time'?'artwork and order confirmation':undefined,exclusions:[],polarity:'affirmed' as const}}))});
+ ].map(t=>({...t,scope:{reviewed:true,products:['velvet pouch'],processes:[],startsAfter:t.topic==='lead_time'?'artwork and order confirmation':undefined,exclusions:[],polarity:'affirmed' as const}}))});
 before(async()=>{
  memory=await MongoMemoryServer.create();mongoose=await import('mongoose');await mongoose.default.connect(memory.getUri(),{dbName:'project-knowledge-tests'});
  const {Project,User,Customer}=await import('../src/models');

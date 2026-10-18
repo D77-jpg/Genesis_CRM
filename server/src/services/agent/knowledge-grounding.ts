@@ -9,7 +9,7 @@ import type {AuthUser} from '../../types/express';
 import {requireProjectId} from '../../utils/access';
 import {getCustomerByIdOrThrow} from '../customer.service';
 import {policyTopics,productApplies,retrieveKnowledge,revisionActive} from './knowledge.service';
-import type {KnowledgeBundle,KnowledgeReview,KnowledgeSource,KnowledgeTerm,KnowledgeFreshness,PolicyTopic} from './knowledge-types';
+import type {KnowledgeBundle,KnowledgeReview,KnowledgeSource,KnowledgeTerm,KnowledgeFreshness,PolicyTopic,CustomerFactProfile} from './knowledge-types';
 
 export const normalizeFact=(s:string)=>s.toLocaleLowerCase().replace(/\s+/g,' ').trim();
 export const draftHash=(s:string)=>createHash('sha256').update(normalizeFact(s)).digest('hex');
@@ -92,7 +92,7 @@ export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{
    const items=q.items.filter(item=>quantity===item.quantity&&productApplies([item.productName],query)&&(!item.model||normalized(query).includes(normalized(item.model))));
    if(!items.length)continue;
    const terms:KnowledgeTerm[]=items.map(item=>({topic:'price',value:String(item.unitPrice),unit:'per piece',currency:q.currency,
-    publicationIndex:q.items.indexOf(item),conditions:item.productName+'; quantity '+item.quantity+'; customer '+customer.name+'; quotation '+q.quotationNo,mode:'confirmed',scope:{products:[item.productName],processes:[],quantity:{min:item.quantity,max:item.quantity,minInclusive:true,maxInclusive:true,unit:'pcs'},exclusions:[],polarity:'affirmed'}}));
+    publicationIndex:q.items.indexOf(item),conditions:item.productName+'; quantity '+item.quantity+'; customer '+customer.name+'; quotation '+q.quotationNo,mode:'confirmed',scope:{reviewed:true,measure:'amount',products:[item.productName],processes:[],quantity:{min:item.quantity,max:item.quantity,minInclusive:true,maxInclusive:true,unit:'pcs'},exclusions:[],polarity:'affirmed'}}));
    const conditions=terms.map(t=>t.conditions).join('; ');
    for(const [topic,value] of [['moq',q.moq],['lead_time',q.leadTime],['payment',q.paymentTerms]] as const)if(value)terms.push({topic,value,conditions,mode:'needs_confirmation'});
    if(bundle.status==='no_match')bundle.status='ready';
@@ -110,9 +110,10 @@ export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{
 export function factContextFromRequest(query:string,bundle:KnowledgeBundle,options:FactContext={}):FactContext{
  const explicit=options.products;
  const products=explicit??[...new Set(bundle.sources.flatMap(s=>[...s.products,...s.terms.flatMap(t=>t.scope?.products??[])])).values()].filter(p=>productApplies([p],query));
+ const route=Object.fromEntries((['origin','destination','incoterm'] as const).flatMap(key=>{const values=[...new Set(bundle.sources.flatMap(s=>s.terms.flatMap(t=>t.scope?.[key]?[t.scope[key]!]:[])))].filter(v=>normalized(query).includes(normalized(v)));return values.length===1?[[key,values[0]]]:[];}));
  const processes=options.processes??[...new Set(bundle.sources.flatMap(s=>s.terms.flatMap(t=>t.scope?.processes??[])))].filter(p=>normalized(query).includes(normalized(p)));
  const units=/\b(?:pcs|pieces|units)\b|件|个/i.test(query)?'pcs':options.quantityUnit;
- return {...options,products,processes,quantity:options.quantity??quantityOf(query),quantityUnit:options.quantityUnit??units};
+ return {...route,...options,products,processes,quantity:options.quantity??quantityOf(query),quantityUnit:options.quantityUnit??units};
 }
 export function applicableTerms(bundle:KnowledgeBundle){
  const facts=collectConditionalEvidence(bundle);const all=facts.map(f=>({source:bundle.sources.find(s=>s.sourceId===f.sourceId)!,term:f.term}));
@@ -122,12 +123,14 @@ export function applicableTerms(bundle:KnowledgeBundle){
 export function conditionalSentence(term:KnowledgeTerm,source:KnowledgeSource){
  const numberRange=term.min!==undefined?(term.max!==undefined&&term.max!==term.min?term.min+'–'+term.max:String(term.min)):term.value;
  const embedded=normalizeFact(numberRange);
- const value=[term.currency&&!embedded.includes(term.currency.toLowerCase())?term.currency:undefined,numberRange,term.unit&&!embedded.includes(term.unit.toLowerCase())?term.unit:undefined].filter(Boolean).join(' ');
+ const value=[term.currency&&!embedded.includes(term.currency.toLowerCase())?term.currency:undefined,numberRange,term.unit&&!embedded.includes(term.unit.toLowerCase())?term.unit:undefined].filter(Boolean).join(' ')+(term.min!==undefined&&normalizeFact(term.value)!==normalizeFact(numberRange)?' (recorded policy: '+term.value+')':'');
  return labels[term.topic]+': '+(term.scope?.polarity==='denied'?'not offered — ':'')+value+(term.mode==='reference'?' (reference only; not a firm quotation)':'')+
- '. Conditions: '+term.conditions+(term.scope?'; '+scopeSummary(term.scope):'')+(source.customerId?'; customer-specific agreement':'')+'.';
+ '. Conditions: '+term.conditions+(source.applicability&&normalizeFact(source.applicability)!==normalizeFact(term.conditions)?'; '+source.applicability:'')+(term.scope?'; '+scopeSummary(term.scope):'')+(source.customerId?'; customer-specific agreement':'')+(source.kind!=='knowledge'&&source.validUntil?'; valid until '+source.validUntil:'')+'.';
 }
+export function customerProfileOf(value:{name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}):CustomerFactProfile{return {name:value.name,company:value.company??'',country:value.country??'',industry:value.industry??'',interestedProducts:value.interestedProducts??''};}
 export interface GroundedEmailOptions {
- taskType:string;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string;
+ customerProfile?:CustomerFactProfile;
+ taskType:string;recipientName?:string;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string;
  customerEvidence?:string;questions?:string[];seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
 }
 // Conservative whole-message rendering is the bounded fallback, not a chain of regex deletions.
@@ -136,14 +139,16 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  const issues=[...bundle.issues];const facts=collectConditionalEvidence(bundle);
  const blocked=['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status);
  const claims:KnowledgeReview['claims']=[];const questions:KnowledgeReview['questions']=[];
- const answers:string[]=[];const missing:string[]=[];
+ const answers:string[]=[];const missing:string[]=[];let remaining=14000;
  for(const topic of bundle.topics){
   const rows=facts.filter(f=>f.topic===topic);const matches=blocked?[]:rows.filter(f=>f.status==='applicable');
   const conflict=rows.some(f=>f.status==='conflict');
   if(conflict)issues.push({code:'conflict',topic,message:'有效来源对同一请求给出不兼容条款，需人工确认：'+labels[topic],sourceIds:rows.filter(f=>f.status==='conflict').map(f=>f.sourceId)});
   if(matches.length&&!conflict){
-   for(const fact of matches){const source=bundle.sources.find(s=>s.sourceId===fact.sourceId)!;const text=conditionalSentence(fact.term,source);answers.push(text);claims.push({text,topic,sourceIds:[source.sourceId]});}
-   questions.push({question:labels[topic],topic,status:'answered',sourceIds:[...new Set(matches.map(f=>f.sourceId))]});
+   const included:string[]=[];let limited=false;
+   for(const fact of matches){const source=bundle.sources.find(s=>s.sourceId===fact.sourceId)!;const text=conditionalSentence(fact.term,source);if(text.length>remaining){limited=true;continue;}remaining-=text.length;answers.push(text);claims.push({text,topic,sourceIds:[source.sourceId]});included.push(source.sourceId);}
+   if(limited){issues.push({code:'fact_budget',topic,message:'完整条件超出单稿范围，请拆分审核；未截断条件'});missing.push(ask[topic]);}
+   questions.push({question:labels[topic],topic,status:limited?'unanswered':'answered',sourceIds:[...new Set(included)]});
   }else{
    missing.push(ask[topic]);questions.push({question:labels[topic],topic,status:'unanswered',sourceIds:[]});
    issues.push({code:conflict?'conflict':rows.some(f=>f.status==='expired')?'expired':'missing',topic,message:'待确认：'+labels[topic]+(rows.length?'；'+[...new Set(rows.flatMap(f=>f.reasons))].join('；'):''),sourceIds:rows.map(f=>f.sourceId)});
@@ -153,20 +158,23 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  if(body.trim())issues.push({code:'claim_rewritten',message:'原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行'});
  if(!bundle.sources.length)issues.push({code:bundle.status==='retrieval_failed'?'retrieval_failed':'missing',message:'尚无可用业务依据；请补充或恢复检索后再审核'});
  const seller=options.seller;
- const sections=['Hello,',answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.',
+ const recipient=options.recipientName?.replace(/[\r\n]/g,' ').trim().slice(0,100);
+ const outreach=options.taskType==='first_outreach';
+ const sections=[recipient?'Dear '+recipient+',':'Hello,',outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.',
  answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'',
- 'Could you please confirm your final specifications so we can agree on the next step?',
+ outreach?'Would a brief discussion about your requirements be useful?':'Could you please confirm your final specifications so we can agree on the next step?',
  seller?['Best regards,',seller.senderName,seller.companyName,seller.senderEmail,seller.website].filter(Boolean).join('\n'):''];
  const bodyText=sections.filter(Boolean).join('\n\n');
  const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));
  return {bodyText,review:{version:1,projectId:bundle.projectId,taskType:options.taskType,generatedAt:new Date().toISOString(),
  status:facts.some(f=>f.status==='conflict')?'conflict':bundle.status,completeness:issues.some(i=>i.code!=='claim_rewritten')?'partial':'complete',sources:bundle.sources,claims,questions,issues,
- context:{factContext:bundle.factContext,customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request},bodyHash:draftHash(bodyText),factAudit:{contract:'s4.1',mode:'deterministic',attempts:0,checks,facts}}};
+ context:{customerProfile:options.customerProfile,factContext:bundle.factContext,customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request},bodyHash:draftHash(bodyText),factAudit:{contract:'s4.1',mode:'deterministic',attempts:0,checks,facts}}};
 }
 export async function knowledgeFreshness(review:KnowledgeReview,actor:AuthUser):Promise<KnowledgeFreshness>{
  const result:KnowledgeFreshness={checkedAt:new Date().toISOString(),changed:[]};
  if(review.projectId!==String(requireProjectId(actor)))return {...result,failed:true};
  try{
+  if(review.context.customerId){const customer=await getCustomerByIdOrThrow(review.context.customerId,actor);if(review.context.customerProfile&&JSON.stringify(customerProfileOf(customer))!==JSON.stringify(review.context.customerProfile))result.changed.push({sourceId:'profile:'+review.context.customerId,title:'客户资料',reason:'本稿使用的客户事实已变化'});}
   const ids=review.sources.flatMap(s=>s.knowledgeId&&Types.ObjectId.isValid(s.knowledgeId)?[s.knowledgeId]:[]);
   const rows=await AgentKnowledge.find({projectId:requireProjectId(actor),_id:{$in:ids}});
   for(const source of review.sources){

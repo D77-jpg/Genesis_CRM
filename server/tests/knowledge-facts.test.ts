@@ -9,7 +9,7 @@ import type {KnowledgeSource,KnowledgeTerm,KnowledgeBundle} from '../src/service
 import type {AuthUser} from '../src/types/express';
 process.env.KNOWLEDGE_RETRIEVAL_MODE='keyword';process.env.AI_PROVIDER='mock';process.env.MAIL_CHANNEL='mock';
 const past=new Date(Date.now()-86400000).toISOString(),future=new Date(Date.now()+86400000).toISOString();
-const scope=factScopeInput.parse({products:['velvet pouch'],processes:['screen print'],quantity:{min:100,max:200,unit:'pcs'},startsAfter:'artwork and deposit approval'});
+const scope=factScopeInput.parse({reviewed:true,products:['velvet pouch'],processes:['screen print'],quantity:{min:100,max:200,unit:'pcs'},startsAfter:'artwork and deposit approval'});
 const term:KnowledgeTerm={topic:'lead_time',value:'19',unit:'working days',conditions:'standard velvet pouch; after artwork and deposit approval',mode:'confirmed',scope};
 const source:KnowledgeSource={sourceId:'knowledge:test:v1',knowledgeId:'test',title:'Fictional policy',version:1,kind:'knowledge',category:'trade',source:'fixture://independent',content:'Fictional policy only.',products:['velvet pouch'],applicability:'standard only',validFrom:past,validUntil:future,terms:[term]};
 const ctx:FactContext={products:['velvet pouch'],processes:['screen print'],quantity:150,quantityUnit:'pcs'};
@@ -139,4 +139,77 @@ test('pure transforms cannot permute the same numbers between price/MOQ or remov
 });
 test('edited draft inspection reports unsupported assertions without rewriting the body',async()=>{
  const body='We guarantee USD 100.';const result=await inspectEditedDraft(body,bundle(),{model:'fixture',async check(){return [{id:'s0',status:'unsupported',quotes:[],reason:'no price policy'}];}});assert.equal(result.checks[0].text,body);assert.equal(result.checks[0].status,'unsupported');
+});
+
+test('unreviewed structure, ambiguous sample money and route scope are not firm commitments',()=>{
+ assert.equal(factApplies({...term,scope:{...scope,reviewed:false}},source,ctx).status,'needs_confirmation');
+ assert.equal(factApplies({...term,topic:'sample',unit:'per sample',scope:{...scope,measure:'amount'}},source,ctx).status,'needs_confirmation');
+ assert.equal(factApplies({...term,scope:{...scope,destination:'Germany'}},source,ctx).status,'needs_confirmation');
+ assert.equal(factApplies({...term,scope:{...scope,destination:'Germany'}},source,{...ctx,destination:'Germany'}).status,'applicable');
+});
+test('draft recheck is idempotent, owner-scoped and never rewrites body/original snapshot',async()=>{
+ const {appendKnowledge}=await import('../src/services/agent/knowledge.service');const {buildKnowledgeBundle}=await import('../src/services/agent/knowledge-grounding');
+ const {DevelopmentLetter}=await import('../src/models');const {recheckKnowledgeDraft}=await import('../src/services/agent/knowledge-draft.service');const {randomUUID}=await import('node:crypto');
+ await appendKnowledge(undefined,{expectedVersion:0,title:'Fictional S4 review fixture',source:'fixture://review',content:'Fictional terms for isolated audit only.',products:['velvet pouch'],applicability:'screen print',approved:true,category:'trade',terms:[term]},actor);
+ const kb=await buildKnowledgeBundle(actor,'velvet pouch screen print lead time quantity:150 pcs',{customerId:c1});const original=auditGroundedEmail('',kb,{taskType:'inquiry_reply',customerId:c1});
+ const letter=await DevelopmentLetter.create({projectId:project,customerId:c1,recipientName:'Fictional buyer 1',recipientEmail:'one@example.test',subject:'Regarding your inquiry',content:'<p>Unsent fixture.</p>',contentText:original.bodyText,template:'fixture',channel:'mock',status:'draft',knowledgeReview:original.review});
+ const snapshot=JSON.stringify(letter.knowledgeReview),requestKey=randomUUID();let calls=0;
+ const verifier:SemanticVerifier={model:'fixture-protocol-only',async check({segments}){calls++;return segments.map(p=>({id:p.id,status:'unsupported',quotes:[],reason:'unsupported edit'}));}};
+ const record=await recheckKnowledgeDraft(letter.id,{requestKey,bodyText:'We promise USD 999.',subject:'Special price USD 100'},actor,verifier);
+ assert.ok((record.checks as {status:string}[]).every(c=>c.status!=='supported'));
+ const used=calls;await recheckKnowledgeDraft(letter.id,{requestKey,bodyText:'We promise USD 999.',subject:'Special price USD 100'},actor,verifier);assert.equal(calls,used);
+ const current=await DevelopmentLetter.findById(letter.id);assert.equal(current?.knowledgeRechecks?.length,1);assert.equal(current?.contentText,original.bodyText);assert.equal(JSON.stringify(current?.knowledgeReview),snapshot);
+ await assert.rejects(()=>recheckKnowledgeDraft(letter.id,{requestKey,bodyText:'Changed again'},actor,verifier));
+ await assert.rejects(()=>recheckKnowledgeDraft(letter.id,{requestKey:randomUUID()}, {...actor,id:String(stranger),role:'user'},verifier));
+ const {AgentKnowledge}=await import('../src/models/AgentKnowledge');await AgentKnowledge.updateOne({_id:kb.sources[0].knowledgeId},{$set:{archived:true}});
+ const before=calls;await assert.rejects(()=>recheckKnowledgeDraft(letter.id,{requestKey:randomUUID()},actor,verifier));assert.equal(calls,before);
+});
+test('Unicode citation offsets are code points, never silently UTF-16',()=>{
+ const unicode={...prose,content:'😀 We manufacture cotton bags.'};const b=bundle([unicode],[]);const q='We manufacture cotton bags.';
+ const good={sourceId:unicode.sourceId,quote:q,start:2,end:2+Array.from(q).length};
+ assert.equal(checkSemanticResults('We make cotton bags.',b,[{id:'s0',status:'supported',quotes:[good],reason:'paraphrase'}])[0].status,'supported');
+ assert.equal(checkSemanticResults('We make cotton bags.',b,[{id:'s0',status:'supported',quotes:[{...good,start:3,end:3+q.length}],reason:'wrong UTF-16'}])[0].status,'unsupported');
+});
+
+test('independent S4 gold labels and raw fixture hashes are frozen before live evaluation',async()=>{
+ const {loadFactCases,factCaseBundle}=await import('../evaluation/knowledge/fact-evaluation');const fixture=loadFactCases();assert.equal(fixture.cases.length,44);assert.equal(fixture.cases.filter(c=>c.split==='holdout').length,22);
+ for(const c of fixture.cases.filter(c=>c.kind==='critical'&&c.supported)){const b=factCaseBundle(c);assert.equal(c.claim,conditionalSentence(b.sources[0].terms[0],b.sources[0]));}
+});
+
+test('same amounts with incompatible inclusion/refund wording are not silently treated as identical policy',()=>{
+ const a={...source,terms:[{...term,topic:'sample' as const,value:'25',unit:'per sample',currency:'USD',conditions:'Freight included; nonrefundable',scope:{...scope,measure:'amount' as const}}]};
+ const b={...a,sourceId:'knowledge:different-conditions:v1',terms:[{...a.terms[0],conditions:'Freight excluded; refundable'}]};
+ assert.ok(collectConditionalEvidence(bundle([a,b],['sample'])).every(f=>f.status==='conflict'));
+});
+
+test('range rendering keeps original policy wording and global footnotes; budgets never slice a condition',()=>{
+ const t={...term,min:19,max:25,value:'19 to 25 working days; prototypes excluded'};
+ const s={...source,applicability:'No guarantee before artwork confirmation; standard orders only',terms:[t]};
+ const text=conditionalSentence(t,s);assert.match(text,/prototypes excluded/);assert.match(text,/No guarantee before artwork/);
+ const huge={...s,terms:Array.from({length:25},()=>({...t,conditions:'Entire condition '.repeat(35)}))};
+ const result=auditGroundedEmail('',bundle([huge]),{taskType:'inquiry_reply'});assert.ok(result.bodyText.length<20000);assert.ok(result.review.issues.some(i=>i.code==='fact_budget'));assert.equal(result.review.completeness,'partial');
+});
+
+test('recipient profile supports personalization but never supplier capabilities or commitments',()=>{
+ const profile={name:'Fictional Buyer',company:'Fictional Co',country:'Netherlands',industry:'Jewelry',interestedProducts:'velvet pouch'};
+ const text=JSON.stringify(profile);const evidence=proof('Fictional Co',text,'profile:fixture-customer');const checker={id:'s0',status:'supported' as const,quotes:[evidence],reason:'profile identifies company'};
+ assert.equal(checkSemanticResults('Your company is Fictional Co.',bundle([],[]),[checker],{id:'fixture-customer',profile})[0].status,'supported');
+ assert.equal(checkSemanticResults('Our company is Fictional Co.',bundle([],[]),[checker],{id:'fixture-customer',profile})[0].status,'unsupported');
+ assert.equal(checkSemanticResults('Your price is USD 73.',bundle([],[]),[checker],{id:'fixture-customer',profile})[0].status,'unsupported');
+});
+
+
+test('real provider HTTP protocol validates JSON, unique Unicode quotes and rejects tool calls',async()=>{
+ const {createServer}=await import('node:http');const {OpenAIResponsesProvider}=await import('../src/services/agent/openai-provider');const {providerFactVerifier}=await import('../src/services/agent/fact-verifier');
+ const requests:Record<string,unknown>[]=[];let mode:'valid'|'invalid'|'tool'='valid';
+ const http=createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=String(chunk);requests.push(JSON.parse(body));
+  const text=mode==='invalid'?'not JSON':JSON.stringify({checks:[{id:'s0',status:'supported',quotes:[{sourceId:'local-evidence',quote:'cotton bags',start:0,end:1}],reason:'loopback fixture only'}]});
+  res.setHeader('content-type','application/json');res.end(JSON.stringify({status:'completed',output:mode==='tool'?[{type:'function_call',call_id:'forbidden',name:'send_email',arguments:'{}'}]:[{type:'message',content:[{type:'output_text',text}]}],usage:{input_tokens:1,output_tokens:1,total_tokens:2}}));
+ });await new Promise<void>(resolve=>http.listen(0,'127.0.0.1',resolve));
+ try{const address=http.address();assert.ok(address&&typeof address==='object');const provider=new OpenAIResponsesProvider({apiKey:'fictional-loopback-only',baseUrl:`http://127.0.0.1:${address.port}/v1`,model:'loopback-not-a-real-model',timeoutMs:3000});const verifier=providerFactVerifier(provider,actor)!;
+  const payload={segments:[{id:'s0',text:'We make cotton bags.'}],evidence:[{sourceId:'local-evidence',text:'😀 We make cotton bags.'}]};
+  const rows=await verifier.check(payload);assert.equal(rows[0].quotes[0].start,10);assert.equal(rows[0].quotes[0].end,21);
+  assert.deepEqual(requests[0].tools,[]);assert.equal(requests[0].store,false);assert.equal(requests[0].parallel_tool_calls,false);
+  mode='invalid';await assert.rejects(()=>verifier.check(payload));mode='tool';await assert.rejects(()=>verifier.check(payload));
+ }finally{await new Promise<void>((resolve,reject)=>http.close(error=>error?reject(error):resolve()));}
 });

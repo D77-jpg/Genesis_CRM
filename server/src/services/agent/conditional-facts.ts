@@ -1,6 +1,8 @@
 import {z} from 'zod';
 import type {KnowledgeBundle,KnowledgeSource,KnowledgeTerm,PolicyTopic} from './knowledge-types';
 export const factScopeInput=z.object({
+ reviewed:z.boolean().default(false),measure:z.enum(['text','amount','quantity','duration','percentage']).optional(),
+ origin:z.string().trim().max(120).optional(),destination:z.string().trim().max(120).optional(),incoterm:z.string().trim().max(20).optional(),
  products:z.array(z.string().trim().min(1).max(100)).max(20),
  processes:z.array(z.string().trim().min(1).max(100)).max(12).default([]),
  quantity:z.object({min:z.number().finite().nonnegative().optional(),max:z.number().finite().nonnegative().optional(),minInclusive:z.boolean().default(true),maxInclusive:z.boolean().default(true),unit:z.string().trim().min(1).max(40)}).strict().refine(v=>v.min===undefined||v.max===undefined||v.min<=v.max,'数量范围下限不能大于上限').optional(),
@@ -11,7 +13,7 @@ export const factScopeInput=z.object({
  certificate:z.object({number:z.string().trim().min(1).max(120),issuer:z.string().trim().min(1).max(160),products:z.array(z.string().trim().min(1).max(100)).min(1).max(20),validUntil:z.string().datetime({offset:true})}).strict().optional(),
 }).strict().superRefine((v,c)=>{if(v.validUntil&&v.validFrom&&v.validUntil<=v.validFrom)c.addIssue({code:'custom',message:'条件失效时间须晚于生效时间'});});
 export type FactScope=z.infer<typeof factScopeInput>;
-export interface FactContext {products?:string[];processes?:string[];quantity?:number;quantityUnit?:string;customerId?:string;asOf?:string}
+export interface FactContext {products?:string[];processes?:string[];quantity?:number;quantityUnit?:string;origin?:string;destination?:string;incoterm?:string;customerId?:string;asOf?:string}
 export interface ConditionalEvidence {
  id:string;sourceId:string;version:number;topic:PolicyTopic;term:KnowledgeTerm;
  status:'applicable'|'needs_confirmation'|'not_applicable'|'expired'|'conflict';reasons:string[];
@@ -27,7 +29,11 @@ export function factApplies(term:KnowledgeTerm,source:KnowledgeSource,context:Fa
  if(source.customerId&&source.customerId!==context.customerId)return {status:'not_applicable',reasons:['客户范围不符']};
  if(term.mode==='needs_confirmation')return {status:'needs_confirmation',reasons:['资料尚待确认']};
  if(!s)return {status:'needs_confirmation',reasons:['旧版条件尚未结构化审核；不得从自由备注推断适用范围']};
+ if(!s.reviewed)return {status:'needs_confirmation',reasons:['结构化条件尚未经过人工核对']};
+ for(const key of ['origin','destination','incoterm'] as const)if(s[key]&&(!context[key]||!same(s[key]!,context[key]!)))reasons.push('需要确认'+({origin:'发货地',destination:'目的地',incoterm:'贸易条款'}[key]));
+ if((s.measure==='amount'||(term.topic==='sample'&&/\d/.test(term.value)&&!s.measure))&&!term.currency)reasons.push('金额性质或币种需要确认');
  if(!finiteDate(s.validFrom)||!finiteDate(s.validUntil)||!active(s.validFrom,s.validUntil,at))return {status:'expired',reasons:['条件未生效或已失效']};
+ if(source.products.length&&(!context.products?.length||!context.products.every(p=>source.products.some(x=>same(p,x)))))reasons.push('来源适用产品需要确认');
  if(s.products.length&&(!context.products?.length||!context.products.every(p=>s.products.some(x=>same(p,x)))))reasons.push('适用产品需要精确确认');
  if(s.processes.length&&(!context.processes?.length||!s.processes.every(p=>context.processes!.some(x=>same(p,x)))))reasons.push('工艺条件需要确认');
  if(s.quantity){
@@ -50,7 +56,7 @@ export function collectConditionalEvidence(bundle:KnowledgeBundle,context:FactCo
  for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){
   const a=rows[i],b=rows[j];if(a.topic!==b.topic||a.status!=='applicable'||b.status!=='applicable')continue;
   // Only facts proven applicable to the same actual request can conflict. Never silently prefer a quote.
-  const value=(x:ConditionalEvidence)=>JSON.stringify([normalized(x.term.value),x.term.min,x.term.max,normalized(x.term.unit??''),x.term.currency,x.term.mode,x.term.scope?.polarity,x.term.scope?.startsAfter]);
+  const value=(x:ConditionalEvidence)=>JSON.stringify([normalized(x.term.value),x.term.min,x.term.max,normalized(x.term.unit??''),x.term.currency,x.term.mode,x.term.scope?.polarity,x.term.scope?.startsAfter,normalized(x.term.conditions)]);
   if(value(a)!==value(b)){a.reasons.push('与另一有效来源不兼容');b.reasons.push('与另一有效来源不兼容');}
  }
  for(const row of rows)if(row.reasons.includes('与另一有效来源不兼容'))row.status='conflict';
@@ -58,7 +64,7 @@ export function collectConditionalEvidence(bundle:KnowledgeBundle,context:FactCo
 }
 export function scopeSummary(scope:FactScope){
  const q=scope.quantity;
- return [scope.products.length?'products '+scope.products.join(', '):'all products',scope.processes.length?'processes '+scope.processes.join(', '):'',
+ return [scope.origin?'origin '+scope.origin:'',scope.destination?'destination '+scope.destination:'',scope.incoterm?'trade terms '+scope.incoterm:'',scope.products.length?'products '+scope.products.join(', '):'all products',scope.processes.length?'processes '+scope.processes.join(', '):'',
  q?'quantity '+(q.minInclusive?'[':'(')+(q.min??'unspecified')+', '+(q.max??'unbounded')+(q.maxInclusive?']':')')+' '+q.unit:'',
  scope.startsAfter?'counted after '+scope.startsAfter:'',scope.validFrom?'effective from '+scope.validFrom:'',scope.validUntil?'valid until '+scope.validUntil:'',
  scope.certificate?'certificate '+scope.certificate.number+' issued by '+scope.certificate.issuer+', covering '+scope.certificate.products.join(', ')+', valid until '+scope.certificate.validUntil:'',

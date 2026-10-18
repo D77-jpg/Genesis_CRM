@@ -4,7 +4,7 @@ import {Project} from '../../models';
 import {getCurrentMailSender} from '../mail-account.service';
 import {agentMailOrThrow,inboundAgentScope} from './mail-access';
 import {chargeTaskBudget} from './task-budget';
-import {buildKnowledgeBundle,knowledgeFreshness} from './knowledge-grounding';
+import {buildKnowledgeBundle,knowledgeFreshness,customerProfileOf} from './knowledge-grounding';
 import type {AgentProvider} from './provider';
 import env from '../../config/env';
 import { Types } from 'mongoose';
@@ -236,8 +236,9 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     }
     const nextFollowUpAt = !marketingBlocked && generated.followUpSuggestion.nextFollowUpAt
       ? new Date(generated.followUpSuggestion.nextFollowUpAt) : undefined;
+    const factCustomer=context.customer?await getCustomerByIdOrThrow(context.customer.id,actor):undefined;
     const grounded=await verifyGroundedEmail(generated.replyDraft.bodyText,knowledgeContext,{
-      taskType:'inquiry_reply',customerId:context.customer?.id,mailId:input.mailId,direction:input.direction,
+      taskType:'inquiry_reply',customerProfile:factCustomer?customerProfileOf(factCustomer):undefined,recipientName:context.customer?.name,customerId:context.customer?.id,mailId:input.mailId,direction:input.direction,
       customerEvidence:context.messages.filter(m=>m.direction==='inbound').map(m=>m.text).join('\n'),
       questions:generated.extracted.questions.map(q=>q.text),seller,
     },marketingBlocked?undefined:providerFactVerifier(activeProvider,actor,options?.taskId),actor);

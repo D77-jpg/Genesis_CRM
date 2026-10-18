@@ -1,7 +1,7 @@
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
 import {knowledgeForModel} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
-import {buildKnowledgeBundle,knowledgeFreshness,knowledgeTaskType} from './knowledge-grounding';
+import {buildKnowledgeBundle,knowledgeFreshness,knowledgeTaskType,customerProfileOf} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
 import {chargeTaskBudget} from './task-budget';
 import { Types } from 'mongoose';
@@ -199,7 +199,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     });
     const grounded=await verifyGroundedEmail(parsed.emailDraft.bodyText,context.input.knowledgeContext!,{
       taskType:knowledgeTaskType(options?.userRequest??'',options?.firstOutreach?'first_outreach':'followup'),
-      customerId:input.customerId,request:options?.userRequest,
+      customerProfile:customerProfileOf(context.input.sourceCatalog.find(s=>s.kind==='profile')!.content as {name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}),recipientName:context.input.customerName,customerId:input.customerId,request:options?.userRequest,
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
       seller:context.input.seller,
     },providerFactVerifier(activeProvider,actor,options?.taskId),actor);

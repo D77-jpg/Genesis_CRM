@@ -17,6 +17,7 @@ export const termInput=z.object({
 }).strict().superRefine((t,c)=>{
  if(t.min!==undefined&&t.max!==undefined&&t.min>t.max)c.addIssue({code:'custom',message:'区间下限不能大于上限'});
  if(t.mode!=='needs_confirmation'&&/^[\d\s.,–-]+$/.test(t.value)&&!t.unit)c.addIssue({code:'custom',message:'数字型条件必须注明单位或计价口径'});
+ if(t.scope?.measure==='amount'&&t.mode!=='needs_confirmation'&&!t.currency)c.addIssue({code:'custom',message:'金额条件必须注明币种'});
  if(t.topic==='price'&&t.mode!=='needs_confirmation'&&!t.currency)c.addIssue({code:'custom',message:'价格必须注明币种'});
 });
 export const knowledgeInput=z.object({

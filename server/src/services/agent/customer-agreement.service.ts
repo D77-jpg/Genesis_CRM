@@ -9,7 +9,7 @@ import type {KnowledgeSource} from './knowledge-types';
 import {termInput} from './knowledge.service';
 export const agreementInput=z.object({expectedVersion:z.number().int().min(0),title:z.string().trim().min(1).max(160),source:z.string().trim().min(1).max(500),content:z.string().trim().min(1).max(8000),validFrom:z.coerce.date(),validUntil:z.coerce.date(),approved:z.boolean(),terms:z.array(termInput).min(1).max(25)}).strict().superRefine((v,c)=>{
  if(v.validUntil<=v.validFrom)c.addIssue({code:'custom',message:'失效时间必须晚于生效时间'});
- if(v.approved&&v.terms.some(t=>!t.scope))c.addIssue({code:'custom',message:'确认客户约定前请填写各项结构化适用条件'});
+ if(v.approved&&v.terms.some(t=>!t.scope?.reviewed))c.addIssue({code:'custom',message:'确认客户约定前请填写各项结构化适用条件'});
 });
 export async function saveCustomerAgreement(customerId:string,id:string|undefined,input:z.input<typeof agreementInput>,actor:AuthUser){
  if(actor.role!=='admin')throw ApiError.forbidden('客户约定由项目管理员确认；备注或客户要求不自动成为我方约定');

@@ -10,6 +10,7 @@ import { LETTER_STATUS, MAIL_CHANNEL, type LetterStatus, type MailChannel } from
 
 export interface IDevelopmentLetter {
   knowledgeReview?: KnowledgeReview;
+  knowledgeRechecks?:Record<string,unknown>[];
   projectId: Types.ObjectId;
   /** 所属客户 */
   customerId: Types.ObjectId;
@@ -90,6 +91,7 @@ export type DevelopmentLetterModel = Model<IDevelopmentLetter>;
 const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
   {
     knowledgeReview: {type: Schema.Types.Mixed},
+    knowledgeRechecks:[Schema.Types.Mixed],
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     customerId: {
       type: Schema.Types.ObjectId,
