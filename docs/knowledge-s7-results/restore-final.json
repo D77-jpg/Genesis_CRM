@@ -1,0 +1,41 @@
+{
+  "snapshot": {
+    "records": 6,
+    "collections": 34,
+    "bytes": 3566,
+    "configurations": 3
+  },
+  "restored": {
+    "records": 6,
+    "collections": 34,
+    "verified": true,
+    "configurationHashes": [
+      {
+        "name": "model.json",
+        "digest": "1e8ccfeb60123ad36e567c50f0895eed3eb9c283f5a5554aa2eb9730cf4d080d"
+      },
+      {
+        "name": "reranker.json",
+        "digest": "153611ba2745a47c972c4a66e71ebac379d945160e700312b10518482fe2cb30"
+      },
+      {
+        "name": "runtime.py",
+        "digest": "857c2074c9de6a6e3c15e211d6f909a60eacec8e26bf0418aadc58791cb2ab4f"
+      }
+    ],
+    "indexRebuildRequired": true
+  },
+  "rebuildMs": 2026,
+  "retrieval": "ready",
+  "rawHashVerified": true,
+  "publishedVersion": 1,
+  "latestDraftVersion": 2,
+  "sourceUnchanged": true,
+  "externalCalls": 0,
+  "maintenanceWorker": {
+    "started": true,
+    "mailWorkers": false,
+    "agentWorkers": false,
+    "codeSha": "9c77d4bd77264dc95b7b5abbf2d06c0e28c221fa"
+  }
+}

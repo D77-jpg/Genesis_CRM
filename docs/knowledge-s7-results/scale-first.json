@@ -1,0 +1,681 @@
+{
+  "schemaVersion": 1,
+  "fictional": true,
+  "realEmbedding": true,
+  "realRerank": true,
+  "externalLLMCalls": 0,
+  "concurrency": 2,
+  "count": 10000,
+  "startedAt": "2026-10-18T15:08:22.118Z",
+  "machine": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "cpu": "Intel(R) Core(TM) Ultra 7 265F",
+    "logicalCpus": 20,
+    "totalMemory": 33984950272,
+    "node": "v24.19.0",
+    "cpuThreadsPerWorker": 4,
+    "maxWorkers": 2
+  },
+  "samples": [
+    {
+      "phase": "cold_rerank",
+      "n": 1,
+      "elapsedMs": 3873.080900000001,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 31.08,
+        "bm25Ms": 1902.12,
+        "rerankMs": 1085.19,
+        "retrievalMs": 3103.34
+      }
+    },
+    {
+      "phase": "cold_rerank",
+      "n": 0,
+      "elapsedMs": 4767.184100000013,
+      "status": "no_match",
+      "sources": 0,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 353.42,
+        "bm25Ms": 1517.97,
+        "rerankMs": 1145.65,
+        "retrievalMs": 3153.49
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 3,
+      "elapsedMs": 3076.208899999998,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 35.54,
+        "bm25Ms": 2057.8,
+        "rerankMs": 156.67,
+        "retrievalMs": 2348.21
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 2,
+      "elapsedMs": 4572.635999999999,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 347.86,
+        "bm25Ms": 1490.76,
+        "rerankMs": 1122.57,
+        "retrievalMs": 3029.84
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 5,
+      "elapsedMs": 3064.0956000000006,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 37.51,
+        "bm25Ms": 2003.93,
+        "rerankMs": 166.82,
+        "retrievalMs": 2295.9
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 4,
+      "elapsedMs": 4680.478799999983,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 381.17,
+        "bm25Ms": 1524.04,
+        "rerankMs": 1143.01,
+        "retrievalMs": 3125.34
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 7,
+      "elapsedMs": 3081.775900000008,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 42.27,
+        "bm25Ms": 2091.32,
+        "rerankMs": 159.57,
+        "retrievalMs": 2381
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 6,
+      "elapsedMs": 4564.162000000011,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 324.99,
+        "bm25Ms": 1482.93,
+        "rerankMs": 1180.21,
+        "retrievalMs": 3060.85
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 8,
+      "elapsedMs": 3155.570699999982,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 48.51,
+        "bm25Ms": 2065.76,
+        "rerankMs": 152.44,
+        "retrievalMs": 2454.01
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 9,
+      "elapsedMs": 4827.334100000007,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 353.69,
+        "bm25Ms": 1522.8,
+        "rerankMs": 1162.13,
+        "retrievalMs": 3203.55
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 10,
+      "elapsedMs": 3057.834900000016,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 36.82,
+        "bm25Ms": 2067.68,
+        "rerankMs": 148.18,
+        "retrievalMs": 2361.16
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 11,
+      "elapsedMs": 4653.673400000029,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 355.05,
+        "bm25Ms": 1608.06,
+        "rerankMs": 1113.9,
+        "retrievalMs": 3152.19
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 12,
+      "elapsedMs": 3089.2729999999865,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 42.63,
+        "bm25Ms": 2023.53,
+        "rerankMs": 166.81,
+        "retrievalMs": 2370.4
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 13,
+      "elapsedMs": 4780.390399999975,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 326.87,
+        "bm25Ms": 1518.04,
+        "rerankMs": 1175.5,
+        "retrievalMs": 3230.94
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 14,
+      "elapsedMs": 3033.3845000000438,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 41.23,
+        "bm25Ms": 1993.1,
+        "rerankMs": 174.97,
+        "retrievalMs": 2352.78
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 15,
+      "elapsedMs": 4780.979600000021,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 330.79,
+        "bm25Ms": 1552.01,
+        "rerankMs": 1253.2,
+        "retrievalMs": 3267.9
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 17,
+      "elapsedMs": 3109.836899999995,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 34.56,
+        "bm25Ms": 2049.77,
+        "rerankMs": 153.01,
+        "retrievalMs": 2396.75
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 16,
+      "elapsedMs": 4727.742100000032,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 345.74,
+        "bm25Ms": 1485.64,
+        "rerankMs": 1211.55,
+        "retrievalMs": 3175.67
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 18,
+      "elapsedMs": 3089.93120000005,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 43.87,
+        "bm25Ms": 1970.09,
+        "rerankMs": 166.12,
+        "retrievalMs": 2359.24
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 19,
+      "elapsedMs": 4654.52919999999,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 349.59,
+        "bm25Ms": 1494.85,
+        "rerankMs": 1160.16,
+        "retrievalMs": 3082.41
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 20,
+      "elapsedMs": 3234.2651000000187,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 40.68,
+        "bm25Ms": 2111.45,
+        "rerankMs": 161.91,
+        "retrievalMs": 2504.29
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 21,
+      "elapsedMs": 4914.129200000025,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 331.56,
+        "bm25Ms": 1645.28,
+        "rerankMs": 1263.09,
+        "retrievalMs": 3328.69
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 22,
+      "elapsedMs": 3326.919099999999,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 47.46,
+        "bm25Ms": 2174.73,
+        "rerankMs": 155.35,
+        "retrievalMs": 2598.76
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 23,
+      "elapsedMs": 5104.530599999998,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 390.43,
+        "bm25Ms": 1553.53,
+        "rerankMs": 1170.17,
+        "retrievalMs": 3348.53
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 25,
+      "elapsedMs": 3110.239500000025,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 40.51,
+        "bm25Ms": 2093.37,
+        "rerankMs": 163.99,
+        "retrievalMs": 2378.77
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 24,
+      "elapsedMs": 4583.171800000011,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 331.42,
+        "bm25Ms": 1516.32,
+        "rerankMs": 1095.47,
+        "retrievalMs": 3043.07
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 26,
+      "elapsedMs": 3147.3512999999803,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 37.69,
+        "bm25Ms": 2047.23,
+        "rerankMs": 150.93,
+        "retrievalMs": 2417.79
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 27,
+      "elapsedMs": 4607.597500000033,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 344.78,
+        "bm25Ms": 1484.87,
+        "rerankMs": 1133.91,
+        "retrievalMs": 3090.48
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 28,
+      "elapsedMs": 3269.901899999997,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 45.44,
+        "bm25Ms": 2171.65,
+        "rerankMs": 154.25,
+        "retrievalMs": 2497.8
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 29,
+      "elapsedMs": 4600.589500000002,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 356.42,
+        "bm25Ms": 1482.53,
+        "rerankMs": 1087.8,
+        "retrievalMs": 3026.77
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 30,
+      "elapsedMs": 2960.4189999999944,
+      "status": "no_match",
+      "sources": 0,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 31.54,
+        "bm25Ms": 1953.39,
+        "rerankMs": 146.28,
+        "retrievalMs": 2244.12
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 31,
+      "elapsedMs": 4759.819500000041,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 324.99,
+        "bm25Ms": 1649.4,
+        "rerankMs": 1141.29,
+        "retrievalMs": 3243.83
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 32,
+      "elapsedMs": 3152.0336000000243,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 38.68,
+        "bm25Ms": 2036.93,
+        "rerankMs": 156.97,
+        "retrievalMs": 2461.83
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 33,
+      "elapsedMs": 4550.820400000026,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 364.41,
+        "bm25Ms": 1513.81,
+        "rerankMs": 1121.22,
+        "retrievalMs": 3072.18
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 35,
+      "elapsedMs": 2999.024800000014,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 38.43,
+        "bm25Ms": 1993.95,
+        "rerankMs": 172.54,
+        "retrievalMs": 2316.2
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 34,
+      "elapsedMs": 4636.904399999999,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 334.06,
+        "bm25Ms": 1483.53,
+        "rerankMs": 1145.5,
+        "retrievalMs": 3080.29
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 36,
+      "elapsedMs": 3156.1867999999668,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 39.86,
+        "bm25Ms": 2045.79,
+        "rerankMs": 162.87,
+        "retrievalMs": 2418.63
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 37,
+      "elapsedMs": 4649.133199999982,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 352.78,
+        "bm25Ms": 1517.6,
+        "rerankMs": 1134.14,
+        "retrievalMs": 3117.3
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 39,
+      "elapsedMs": 3079.007799999963,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 33.1,
+        "bm25Ms": 2018.68,
+        "rerankMs": 149.04,
+        "retrievalMs": 2348.62
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 38,
+      "elapsedMs": 4680.641600000032,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 347.43,
+        "bm25Ms": 1471.75,
+        "rerankMs": 1142.89,
+        "retrievalMs": 3137.33
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 41,
+      "elapsedMs": 3182.9275999999954,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 44.08,
+        "bm25Ms": 2063.81,
+        "rerankMs": 157.05,
+        "retrievalMs": 2458.15
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 40,
+      "elapsedMs": 4638.9604999999865,
+      "status": "ready",
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 337.92,
+        "bm25Ms": 1479.48,
+        "rerankMs": 1130.62,
+        "retrievalMs": 3027.46
+      }
+    }
+  ],
+  "build": {
+    "elapsedMs": 236776.1563,
+    "state": "ready",
+    "total": 10000,
+    "embedded": 10000,
+    "reused": 0,
+    "stored": 10000,
+    "identity": {
+      "id": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "weightHash": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f",
+      "dimension": 384,
+      "adapter": "genesis-semantic-s3.1",
+      "maxTokens": 128
+    }
+  },
+  "result": {
+    "warmRequests": 40,
+    "warmP50Ms": 3326.919099999999,
+    "warmP95Ms": 4827.334100000007,
+    "warmMaxMs": 5104.530599999998,
+    "failures": 1,
+    "performanceGate": false,
+    "fixedTargetMs": 5000,
+    "qualityGate": "not measured by this synthetic scale run",
+    "pool": {
+      "running": 0,
+      "queued": 0,
+      "dispatching": 0,
+      "workers": [
+        {
+          "pid": 31640,
+          "calls": 24,
+          "rssMiB": 881.58
+        },
+        {
+          "pid": 22176,
+          "calls": 1,
+          "rssMiB": 855.62
+        }
+      ],
+      "circuitOpen": false,
+      "completed": 1293,
+      "failed": 0,
+      "cancelled": 0,
+      "restarts": 61,
+      "queuePeak": 1,
+      "queueWaitMs": 153749
+    },
+    "nodeRssMiB": 632.23046875
+  },
+  "sourceHashes": [
+    {
+      "path": "src/services/knowledge/index.service.ts",
+      "sha256LF": "5dabaaaa4a1abf58a4d80ac946d9e7da30cdb8534e686a916c6209adfd9c294f"
+    },
+    {
+      "path": "src/services/knowledge/process-pool.ts",
+      "sha256LF": "1fe3fa85b09df9b242cbe96125e19813c52eed862a8c5c2318ddbbbb3ca2d6f4"
+    },
+    {
+      "path": "semantic/runtime.py",
+      "sha256LF": "66a1010127cafbd74c5dd10d065f1da6a547c085c307993be5f39501778b9d5d"
+    },
+    {
+      "path": "semantic/retrieval.py",
+      "sha256LF": "e0fad29df4460a9cf69657a84cd57d4b73ced550a430f3421b68a5393589cf62"
+    }
+  ],
+  "finishedAt": "2026-10-18T15:13:58.691Z"
+}

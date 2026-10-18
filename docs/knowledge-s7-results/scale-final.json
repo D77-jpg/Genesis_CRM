@@ -1,0 +1,728 @@
+{
+  "schemaVersion": 1,
+  "fictional": true,
+  "realEmbedding": true,
+  "realRerank": true,
+  "externalLLMCalls": 0,
+  "concurrency": 2,
+  "count": 10000,
+  "startedAt": "2026-10-18T15:44:36.281Z",
+  "machine": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "cpu": "Intel(R) Core(TM) Ultra 7 265F",
+    "logicalCpus": 20,
+    "totalMemory": 33984950272,
+    "node": "v24.19.0",
+    "cpuThreadsPerWorker": 4,
+    "maxWorkers": 2
+  },
+  "samples": [
+    {
+      "phase": "cold",
+      "n": 1,
+      "elapsedMs": 4570.8848,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 344.16,
+        "bm25Ms": 1460.6,
+        "rerankMs": 1105.98,
+        "retrievalMs": 2992.93
+      }
+    },
+    {
+      "phase": "cold",
+      "n": 0,
+      "elapsedMs": 4696.512699999992,
+      "status": "no_match",
+      "expectedHit": false,
+      "sources": 0,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 369.47,
+        "bm25Ms": 1471.88,
+        "rerankMs": 1101.78,
+        "retrievalMs": 3169.68
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 2,
+      "elapsedMs": 2506.662099999987,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 46.84,
+        "bm25Ms": 1496.09,
+        "rerankMs": 146.4,
+        "retrievalMs": 1768.13
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 3,
+      "elapsedMs": 2550.800500000012,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 45.81,
+        "bm25Ms": 1508.89,
+        "rerankMs": 146.63,
+        "retrievalMs": 1797.51
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 4,
+      "elapsedMs": 2514.9527000000235,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 35.99,
+        "bm25Ms": 1515.98,
+        "rerankMs": 149.39,
+        "retrievalMs": 1797.55
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 5,
+      "elapsedMs": 2548.8458999999857,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 41.71,
+        "bm25Ms": 1541.27,
+        "rerankMs": 148.7,
+        "retrievalMs": 1818.9
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 6,
+      "elapsedMs": 2578.7571999999927,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 36.22,
+        "bm25Ms": 1566.52,
+        "rerankMs": 155.46,
+        "retrievalMs": 1844.12
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 7,
+      "elapsedMs": 2609.037699999986,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 32.72,
+        "bm25Ms": 1574.47,
+        "rerankMs": 168.34,
+        "retrievalMs": 1875.71
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 9,
+      "elapsedMs": 2510.8942999999854,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 42.81,
+        "bm25Ms": 1557.78,
+        "rerankMs": 141.38,
+        "retrievalMs": 1849.21
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 8,
+      "elapsedMs": 2634.950899999996,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 38.86,
+        "bm25Ms": 1553.6,
+        "rerankMs": 138.73,
+        "retrievalMs": 1902.63
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 10,
+      "elapsedMs": 2514.9385000000184,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 36.57,
+        "bm25Ms": 1502.78,
+        "rerankMs": 140.38,
+        "retrievalMs": 1805.49
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 11,
+      "elapsedMs": 2613.6707999999926,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 41.88,
+        "bm25Ms": 1482.2,
+        "rerankMs": 144.59,
+        "retrievalMs": 1859.2
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 12,
+      "elapsedMs": 2408.7869000000064,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 38.62,
+        "bm25Ms": 1503.07,
+        "rerankMs": 144.24,
+        "retrievalMs": 1781.54
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 13,
+      "elapsedMs": 2524.7917000000016,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 38.84,
+        "bm25Ms": 1523.51,
+        "rerankMs": 143.88,
+        "retrievalMs": 1858.07
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 14,
+      "elapsedMs": 2625.241299999994,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 38.17,
+        "bm25Ms": 1520.82,
+        "rerankMs": 141.66,
+        "retrievalMs": 1909.33
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 15,
+      "elapsedMs": 2661.7797000000137,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 36.19,
+        "bm25Ms": 1555.03,
+        "rerankMs": 142.49,
+        "retrievalMs": 1927.4
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 17,
+      "elapsedMs": 2510.7890999999945,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 33.07,
+        "bm25Ms": 1551.92,
+        "rerankMs": 141.44,
+        "retrievalMs": 1867.55
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 16,
+      "elapsedMs": 2604.2762999999977,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 32.73,
+        "bm25Ms": 1583.56,
+        "rerankMs": 136.27,
+        "retrievalMs": 1902.47
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 18,
+      "elapsedMs": 2555.3171999999904,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 33.97,
+        "bm25Ms": 1570.3,
+        "rerankMs": 140.67,
+        "retrievalMs": 1833.67
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 19,
+      "elapsedMs": 2581.5679999999993,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 31.23,
+        "bm25Ms": 1567.96,
+        "rerankMs": 148.15,
+        "retrievalMs": 1859.7
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 20,
+      "elapsedMs": 2549.987200000003,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 37.54,
+        "bm25Ms": 1566.96,
+        "rerankMs": 150.43,
+        "retrievalMs": 1834.9
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 21,
+      "elapsedMs": 2550.454800000007,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 32.16,
+        "bm25Ms": 1541.86,
+        "rerankMs": 153.62,
+        "retrievalMs": 1808.69
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 23,
+      "elapsedMs": 2471.693899999984,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 32.91,
+        "bm25Ms": 1516.63,
+        "rerankMs": 149.1,
+        "retrievalMs": 1791.64
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 22,
+      "elapsedMs": 2500.947600000014,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 34.68,
+        "bm25Ms": 1562.61,
+        "rerankMs": 137.05,
+        "retrievalMs": 1822.54
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 25,
+      "elapsedMs": 2621.1239999999816,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 43.52,
+        "bm25Ms": 1566.54,
+        "rerankMs": 150.08,
+        "retrievalMs": 1910.31
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 24,
+      "elapsedMs": 2654.2643999999855,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 36.78,
+        "bm25Ms": 1545,
+        "rerankMs": 145.3,
+        "retrievalMs": 1924.1
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 27,
+      "elapsedMs": 2608.267599999992,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 49.18,
+        "bm25Ms": 1509.19,
+        "rerankMs": 154,
+        "retrievalMs": 1890.61
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 26,
+      "elapsedMs": 2665.2787000000244,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 42.56,
+        "bm25Ms": 1547.05,
+        "rerankMs": 152.72,
+        "retrievalMs": 1911.78
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 29,
+      "elapsedMs": 2510.7458000000042,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 43.11,
+        "bm25Ms": 1532.17,
+        "rerankMs": 144.94,
+        "retrievalMs": 1863.61
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 28,
+      "elapsedMs": 2627.2965999999724,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 37.07,
+        "bm25Ms": 1553.6,
+        "rerankMs": 142.7,
+        "retrievalMs": 1943.5
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 31,
+      "elapsedMs": 2494.7419999999984,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 36.1,
+        "bm25Ms": 1535.31,
+        "rerankMs": 146.8,
+        "retrievalMs": 1808.01
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 30,
+      "elapsedMs": 2520.3831000000064,
+      "status": "no_match",
+      "expectedHit": false,
+      "sources": 0,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 40.04,
+        "bm25Ms": 1534.19,
+        "rerankMs": 145.39,
+        "retrievalMs": 1817.21
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 32,
+      "elapsedMs": 2487.2773999999918,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 40.08,
+        "bm25Ms": 1550.89,
+        "rerankMs": 134.99,
+        "retrievalMs": 1826.38
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 33,
+      "elapsedMs": 2580.08130000002,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 41.43,
+        "bm25Ms": 1532.73,
+        "rerankMs": 145.23,
+        "retrievalMs": 1881.24
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 34,
+      "elapsedMs": 2475.620900000038,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 38,
+        "bm25Ms": 1542.33,
+        "rerankMs": 141.24,
+        "retrievalMs": 1800.24
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 35,
+      "elapsedMs": 2586.233500000031,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 39.73,
+        "bm25Ms": 1559.53,
+        "rerankMs": 146.13,
+        "retrievalMs": 1867.72
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 36,
+      "elapsedMs": 2743.4359000000404,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 40.27,
+        "bm25Ms": 1701.04,
+        "rerankMs": 150.14,
+        "retrievalMs": 2021.53
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 37,
+      "elapsedMs": 2792.495200000005,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 41.8,
+        "bm25Ms": 1657.97,
+        "rerankMs": 156.52,
+        "retrievalMs": 2057.45
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 39,
+      "elapsedMs": 2588.2302999999956,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 39.73,
+        "bm25Ms": 1597.61,
+        "rerankMs": 144.93,
+        "retrievalMs": 1896.31
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 38,
+      "elapsedMs": 2706.237599999993,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 35.95,
+        "bm25Ms": 1587.37,
+        "rerankMs": 144.48,
+        "retrievalMs": 1986.45
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 41,
+      "elapsedMs": 2458.2465000000084,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 34.07,
+        "bm25Ms": 1561.05,
+        "rerankMs": 152.66,
+        "retrievalMs": 1837.21
+      }
+    },
+    {
+      "phase": "warm",
+      "n": 40,
+      "elapsedMs": 2572.2551000000094,
+      "status": "ready",
+      "expectedHit": true,
+      "sources": 1,
+      "issueCodes": [],
+      "trace": {
+        "vectorMs": 35.28,
+        "bm25Ms": 1539.78,
+        "rerankMs": 143.56,
+        "retrievalMs": 1895.76
+      }
+    }
+  ],
+  "sourceHashes": [
+    {
+      "path": "src/services/knowledge/index.service.ts",
+      "sha256LF": "d3e083dc85f517e10479ce85b64ad4ce96eb61df485293edd4e703fbb9d3968b"
+    },
+    {
+      "path": "src/services/knowledge/process-pool.ts",
+      "sha256LF": "08ae07fc2ae9bd36cd5e1d7a4bbe6461ab3d1abbf62034fdaf3bac8b54ee473e"
+    },
+    {
+      "path": "semantic/runtime.py",
+      "sha256LF": "66a1010127cafbd74c5dd10d065f1da6a547c085c307993be5f39501778b9d5d"
+    },
+    {
+      "path": "semantic/retrieval.py",
+      "sha256LF": "e0fad29df4460a9cf69657a84cd57d4b73ced550a430f3421b68a5393589cf62"
+    }
+  ],
+  "build": {
+    "elapsedMs": 216388.10390000002,
+    "state": "ready",
+    "total": 10000,
+    "embedded": 10000,
+    "reused": 0,
+    "stored": 10000,
+    "identity": {
+      "id": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "weightHash": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f",
+      "dimension": 384,
+      "adapter": "genesis-semantic-s3.1",
+      "maxTokens": 128
+    }
+  },
+  "result": {
+    "warmRequests": 40,
+    "warmP50Ms": 2555.3171999999904,
+    "warmP95Ms": 2706.237599999993,
+    "warmMaxMs": 2792.495200000005,
+    "ready": 39,
+    "noMatch": 1,
+    "retrievalFailures": 0,
+    "expectedHitRate": 0.975,
+    "performanceGate": true,
+    "gateDefinition": "S0 latency gate; no_match is a completed answer classification, expected-hit quality reported separately",
+    "fixedTargetMs": 5000,
+    "qualityGate": "not measured by this synthetic scale run",
+    "pool": {
+      "running": 0,
+      "queued": 0,
+      "dispatching": 0,
+      "workers": [
+        {
+          "pid": 28216,
+          "calls": 21,
+          "rssMiB": 867.51
+        },
+        {
+          "pid": 17880,
+          "calls": 21,
+          "rssMiB": 863.39
+        }
+      ],
+      "circuitOpen": false,
+      "completed": 1293,
+      "failed": 0,
+      "cancelled": 0,
+      "restarts": 42,
+      "queuePeak": 1,
+      "queueWaitMs": 142518
+    },
+    "nodeRssMiB": 611.08203125,
+    "nodePeakRssMiB": 652.765625
+  },
+  "finishedAt": "2026-10-18T15:49:10.482Z"
+}
