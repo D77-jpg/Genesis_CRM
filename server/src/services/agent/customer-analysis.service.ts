@@ -1,4 +1,4 @@
-import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesMailKind,type SalesMailKind} from './sales-evidence';
+import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesMailKind,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
 import {knowledgeForModel} from './knowledge-types';
@@ -180,7 +180,8 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
   let reservation: AgentQuotaReservation | undefined;
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
-    const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest,options?.workflow,options?.taskKind);
+    const taskKind=options?.taskKind??(options?.firstOutreach?'first_outreach':options?.userRequest?salesMailKind(options.userRequest):'followup_review');
+    const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest,options?.workflow,taskKind);
     context.input.userRequest=options?.userRequest;
     {
       const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
@@ -193,11 +194,14 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     }
     const serializedInput = JSON.stringify(context.input);
     if (serializedInput.length > env.AI_MAX_INPUT_CHARS) throw new ApiError(413, '客户资料超过 Agent 单次分析上限，请减少历史数据后重试', 'PAYLOAD_TOO_LARGE');
+    let generatedNow=false;
     const generated = await workflowStage(options?.workflow,'generate_email',{input:context.input,model:activeProvider.model},async()=>{
       await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
-      reservation = await reserveAgentQuota(actor, serializedInput.length);
+      generatedNow=true;reservation = await reserveAgentQuota(actor, serializedInput.length);
       await chargeTaskBudget(options?.taskId,serializedInput.length,env.AI_MAX_OUTPUT_TOKENS);
-      return activeProvider.analyzeCustomer({ input: context.input, safetyIdentifier:agentSafetyIdentifier(actor) });
+      const result=await activeProvider.analyzeCustomer({ input: context.input, safetyIdentifier:agentSafetyIdentifier(actor) });
+      outputSchema.parse({facts:result.facts,gaps:result.gaps,recommendations:result.recommendations,emailDraft:result.emailDraft,followUpPlan:result.followUpPlan});
+      return result;
     },{cache:true,tool:'model'});
     const parsed = outputSchema.parse({
       facts: generated.facts, gaps: generated.gaps, recommendations: generated.recommendations,
@@ -208,12 +212,12 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       customerProfile:customerProfileOf(context.input.sourceCatalog.find(s=>s.kind==='profile')!.content as {name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}),recipientName:context.input.customerName,customerId:input.customerId,request:options?.userRequest,
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
       seller:context.input.seller,
-    },providerFactVerifier(activeProvider,actor,options?.taskId),actor),{cache:true,tool:'model'});
+    },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});
     await options?.workflow?.check();
     await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
     parsed.emailDraft.bodyText=grounded.bodyText;
     // A generated subject is not an unchecked channel for numeric commitments.
-    parsed.emailDraft.subject=options?.firstOutreach?'A brief introduction':'Regarding your inquiry';
+    parsed.emailDraft.subject=salesSubjects[taskKind];
     const known = new Set(context.sources.map((source) => source.sourceId));
     const facts = verifiedClaims(parsed.facts, known);
     const gaps = verifiedClaims(parsed.gaps, known);
@@ -242,9 +246,9 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       analysis = raced;
     }
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
-      workflowId: analysis._id, status: 'completed', inputTokens: generated.usage.inputTokens, outputTokens: generated.usage.outputTokens,
-      totalTokens: generated.usage.totalTokens, inputCharacters: serializedInput.length,
-      promptInjectionDetected: containsPromptInjection(serializedInput), estimatedCostUsd: estimateAgentCostUsd(generated.usage, activeProvider.name),
+      workflowId: analysis._id, status: 'completed', inputTokens: generatedNow?generated.usage.inputTokens:0, outputTokens: generatedNow?generated.usage.outputTokens:0,
+      totalTokens: generatedNow?generated.usage.totalTokens:0, inputCharacters: serializedInput.length,
+      promptInjectionDetected: containsPromptInjection(serializedInput), estimatedCostUsd: generatedNow?estimateAgentCostUsd(generated.usage, activeProvider.name):0,
       durationMs: Date.now() - startedAt,
     } });
     await AgentAction.create({

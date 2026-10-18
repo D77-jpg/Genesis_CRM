@@ -95,8 +95,9 @@ export async function recordAgentSendReceipt(letterId:string){
  const letter=await DevelopmentLetter.findById(letterId);if(!letter||letter.channel!=='smtp'||!['sent','opened'].includes(letter.status)||!letter.sentBy)return;
  if(letter.agentTaskId&&!letter.agentOutreachId){
   const task=await AgentTask.findOne({_id:letter.agentTaskId,projectId:letter.projectId});const label=task?({first_outreach:'首封开发信',inquiry_reply:'询盘回复',followup_review:'跟进邮件',quotation_explanation:'报价说明',sample_reply:'样品回复'})[task.kind]:'邮件';
-  await createFollowUp(String(letter.customerId),{method:'email',result:'no_reply',content:`${label}已发送（SMTP 已接受，等待客户回复）。主题：${letter.subject}。`,followUpAt:letter.sentAt??letter.createdAt},String(letter.sentBy),String(letter.projectId),{agentActionKey:`task-sent:${letter.agentTaskId}`});
-  await AgentTask.updateOne({_id:letter.agentTaskId,projectId:letter.projectId,status:{$in:['awaiting_review','cancelled']}},{$set:{status:'completed',sentLetterId:letter._id},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'SMTP 已接受，已记录一次实际发送跟进。'}],$slice:-100}}});
+  const originalDraft=letter.agentDraftId?await DevelopmentLetter.findById(letter.agentDraftId).select('requestKey'):undefined;const versioned=/-e[1-3]$/.test(originalDraft?.requestKey??'');
+  await createFollowUp(String(letter.customerId),{method:'email',result:'no_reply',content:`${label}已发送（SMTP 已接受，等待客户回复）。主题：${letter.subject}。`,followUpAt:letter.sentAt??letter.createdAt},String(letter.sentBy),String(letter.projectId),{agentActionKey:versioned?`task-sent:${letter.agentTaskId}:${letter.agentDraftId}`:`task-sent:${letter.agentTaskId}`});
+  await AgentTask.updateOne({_id:letter.agentTaskId,projectId:letter.projectId,...(letter.agentDraftId?{$or:[{draftId:letter.agentDraftId},{draftId:{$exists:false}}]}:{}),status:{$in:['awaiting_review','cancelled']}},{$set:{status:'completed',sentLetterId:letter._id},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'SMTP 已接受，已记录一次实际发送跟进。'}],$slice:-100}}});
  }
  const rule=await AgentAutomationRule.findOne({projectId:letter.projectId,userId:letter.sentBy,enabled:true,sent:true});if(!rule)return;
  const e=await putEvent(rule,'sent',letter._id,`sent:${letter.id}`,letter.customerId);

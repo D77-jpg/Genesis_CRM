@@ -341,6 +341,7 @@ async function persistAndSend(options: {
   agentTaskId?:Types.ObjectId;
   knowledgeReview?:KnowledgeReview;
   knowledgeRechecks?:Record<string,unknown>[];
+  agentDraftId?:Types.ObjectId;
   agentOutreachId?: Types.ObjectId;
 }): Promise<SendLetterResult> {
   const {
@@ -379,6 +380,7 @@ async function persistAndSend(options: {
   if (saveAsDraft) {
     const payload = {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
+      ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       ...(options.knowledgeReview ? {knowledgeReview:options.knowledgeReview} : {}),
       projectId: customer.projectId,
@@ -452,6 +454,7 @@ async function persistAndSend(options: {
   try {
     letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
+      ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       ...(options.knowledgeReview ? {knowledgeReview:options.knowledgeReview} : {}),
       projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
@@ -588,7 +591,7 @@ export async function resendLetter(
     customer,
     subjectTemplate,
     contentTemplate,
-    agentTaskId:original.agentTaskId,
+    agentTaskId:original.agentTaskId,agentDraftId:original.agentDraftId??(original.status==='draft'?original._id:undefined),
     agentOutreachId: original.agentOutreachId,
     knowledgeReview:original.knowledgeReview,
     recipientEmailOverride: input.recipientEmail ?? original.recipientEmail,

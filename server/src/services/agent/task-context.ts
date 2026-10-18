@@ -17,7 +17,7 @@ export async function taskContextStamp(customerId:string|undefined,mailId:string
  const cid=customerId??mail?.customerId?.toString();const customer=cid?await getCustomerByIdOrThrow(cid,actor):undefined;
  const projectId=requireProjectId(actor);const filter={projectId,customerId:cid?new Types.ObjectId(cid):null};
  const [inbound,outbound,followups,quotes,agreements,knowledge]=await Promise.all([
-  MailMessage.find({...filter,...await inboundAgentScope(actor),deleted:{$ne:true},...(!cid&&mail?{threadId:mail.threadId}: {})}).sort({_id:1}).select('_id updatedAt customerId mailboxUserId accessScope text subject').limit(501).lean(),
+  MailMessage.find({...filter,...await inboundAgentScope(actor),deleted:{$ne:true},...(!cid&&mail?{threadId:mail.threadId}: {})}).sort({_id:1}).select('_id customerId mailboxUserId visibility text subject from fromName to sentAt').limit(501).lean(),
   cid?DevelopmentLetter.find({...filter,status:{$in:['sent','opened']}}).sort({_id:1}).select('_id updatedAt contentText subject').limit(501).lean():[],
   cid?FollowUp.find(filter).sort({_id:1}).select('_id updatedAt content nextFollowUpAt').limit(501).lean():[],
   cid?Quotation.find(filter).sort({_id:1}).select('_id version updatedAt status validityDate').limit(501).lean():[],
@@ -26,6 +26,6 @@ export async function taskContextStamp(customerId:string|undefined,mailId:string
  ]);
  if(inbound.length>=501||outbound.length>=501||followups.length>=501||quotes.length>=501||agreements.length>=101||knowledge.length>=1001)throw new ApiError(413,'任务资料超过本轮恢复核对范围，请缩小范围','PAYLOAD_TOO_LARGE');
  // Customer fields are authoritative, but an unrelated viewer opening a page does not change this stamp.
- const profile=customer?{id:customer.id,name:customer.name,company:customer.company,email:customer.email,ownerId:customer.ownerId,industry:customer.industry,interestedProducts:customer.interestedProducts,productCategory:customer.productCategory,requirementNotes:customer.requirementNotes,expectedQuantity:customer.expectedQuantity}:null;
+ const profile=customer?Object.fromEntries(Object.entries(customer.toObject()).filter(([key])=>!['updatedAt','__v'].includes(key))):null;
  return workflowHash({projectId,actor:actor.id,role:actor.role,profile,root:mail?{id:mail.id,customerId:mail.customerId,text:mail.text,subject:mail.subject}:null,inbound,outbound,followups,quotes,agreements,knowledge});
 }

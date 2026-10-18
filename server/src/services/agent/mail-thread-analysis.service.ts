@@ -1,4 +1,4 @@
-import {prepareSalesEvidence,assertSalesEvidenceCurrent,type SalesMailKind} from './sales-evidence';
+import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
 import {knowledgeForModel} from './knowledge-types';
@@ -128,6 +128,18 @@ const generatedSchema = z.object({
   followUpSuggestion: z.object({ method: z.enum(['email', 'whatsapp', 'phone', 'chat', 'other']), content: z.string().trim().min(1).max(5000), result: z.enum(['no_reply', 'replied', 'interested', 'quoted', 'negotiating', 'won', 'no_need', 'other']), nextFollowUpAt: z.string() }).strict(),
 }).strict();
 
+function parseMailOutput(response:Awaited<ReturnType<AgentProvider['analyzeMailThread']>>){
+    const { usage: _usage, ...providerOutput } = response;void _usage;
+    // Some compatible gateways ignore strict schema and nest the last sibling under statusSuggestion.
+    // Only relocate this exact known field; preserve every other key for strict validation to reject.
+    const statusShape=providerOutput.statusSuggestion as unknown as Record<string,unknown>|undefined;
+    if(!Object.prototype.hasOwnProperty.call(providerOutput,'followUpSuggestion')&&statusShape&&Object.prototype.hasOwnProperty.call(statusShape,'followUpSuggestion')){
+      const {followUpSuggestion,...statusSuggestion}=statusShape;
+      Object.assign(providerOutput,{statusSuggestion,followUpSuggestion});
+    }
+    return generatedSchema.parse(providerOutput);
+}
+
 function verifiedIds(ids: string[], known: Set<string>): string[] { return [...new Set(ids)].filter((id) => known.has(id)); }
 function dto(doc: AgentMailThreadAnalysisDocument) {
   return {
@@ -171,27 +183,18 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     const project=await Project.findById(requireProjectId(actor)).select('companyName website senderName');
     const sender=await getCurrentMailSender(actor.projectId!,actor.id);
     const seller={companyName:project?.companyName??'Company name pending confirmation',senderName:sender.account?.displayName||actor.displayName||project?.senderName||actor.displayName,senderEmail:sender.account?.email,website:project?.website};
-    const overhead=JSON.stringify({knowledgeContext,seller,customer:context.customer}).length+500;
+    const overhead=JSON.stringify({knowledgeContext,seller,customer:context.customer,salesRequirements:prepared.requirements,userRequest:options?.userRequest,taskType:options?.taskKind}).length+500;
     const limited=limitRecentItems(context.messages,m=>m.text,(m,text)=>({...m,text}),Math.max(1000,env.AI_MAX_INPUT_CHARS-overhead));
-    const inputChars=limited.inputCharacters+overhead;
-    if(inputChars>env.AI_MAX_INPUT_CHARS)throw new ApiError(413,'来信及知识超出单次处理范围','PAYLOAD_TOO_LARGE');
     const modelInput={taskType:options?.taskKind??'inquiry_reply' as SalesMailKind,userRequest:options?.userRequest,salesRequirements:prepared.requirements,customer:context.customer,messages:limited.items,productKnowledge:knowledge,seller,knowledgeContext};
+    const inputChars=JSON.stringify(modelInput).length;if(inputChars>env.AI_MAX_INPUT_CHARS)throw new ApiError(413,'来信及知识超出单次处理范围','PAYLOAD_TOO_LARGE');
+    let generatedNow=false;
     const response=await workflowStage(options?.workflow,'generate_email',{input:modelInput,model:activeProvider.model},async()=>{
       await assertSalesEvidenceCurrent(knowledgeContext,actor,context.customer?.id);
-      reservation=await reserveAgentQuota(actor,inputChars);await chargeTaskBudget(options?.taskId,inputChars,env.AI_MAX_OUTPUT_TOKENS);
-      return activeProvider.analyzeMailThread({input:modelInput,safetyIdentifier:agentSafetyIdentifier(actor)});
+      generatedNow=true;reservation=await reserveAgentQuota(actor,inputChars);await chargeTaskBudget(options?.taskId,inputChars,env.AI_MAX_OUTPUT_TOKENS);
+      const result=await activeProvider.analyzeMailThread({input:modelInput,safetyIdentifier:agentSafetyIdentifier(actor)});parseMailOutput(result);return result;
     },{cache:true,tool:'model'});
-    const { usage: _usage, ...providerOutput } = response;
-    // Some compatible gateways ignore strict schema and nest the last sibling under statusSuggestion.
-    // Only relocate this exact known field; preserve every other key for strict validation to reject.
-    const statusShape=providerOutput.statusSuggestion as unknown as Record<string,unknown>|undefined;
-    if(!Object.prototype.hasOwnProperty.call(providerOutput,'followUpSuggestion')&&statusShape&&Object.prototype.hasOwnProperty.call(statusShape,'followUpSuggestion')){
-      const {followUpSuggestion,...statusSuggestion}=statusShape;
-      Object.assign(providerOutput,{statusSuggestion,followUpSuggestion});
-    }
-    const generated = generatedSchema.parse(providerOutput);
+    const generated = parseMailOutput(response);
     if(!generated.replyDraft.bodyText.includes('\n')&&generated.replyDraft.bodyText.includes('\\n'))generated.replyDraft.bodyText=generated.replyDraft.bodyText.replace(/\\r\\n|\\n/g,'\n');
-    void _usage;
     const known = new Set(limited.items.map((item) => item.messageId));
     generated.intent.evidenceMessageIds = verifiedIds(generated.intent.evidenceMessageIds, known);
     generated.safety.evidenceMessageIds = verifiedIds(generated.safety.evidenceMessageIds, known);
@@ -247,10 +250,10 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
       taskType:options?.taskKind??'inquiry_reply',knownRequirements:prepared.requirements.known,request:options?.userRequest,customerProfile:factCustomer?customerProfileOf(factCustomer):undefined,recipientName:context.customer?.name,customerId:context.customer?.id,mailId:input.mailId,direction:input.direction,
       customerEvidence:context.messages.filter(m=>m.direction==='inbound').map(m=>m.text).join('\n'),
       questions:generated.extracted.questions.map(q=>q.text),seller,
-    },marketingBlocked?undefined:providerFactVerifier(activeProvider,actor,options?.taskId),actor),{cache:true,tool:'model'});
+    },marketingBlocked?undefined:providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});
     await options?.workflow?.check();
     await assertSalesEvidenceCurrent(knowledgeContext,actor,context.customer?.id);
-    if(!marketingBlocked){generated.replyDraft.bodyText=grounded.bodyText;generated.replyDraft.subject='Regarding your inquiry';}
+    if(!marketingBlocked){generated.replyDraft.bodyText=grounded.bodyText;generated.replyDraft.subject=salesSubjects[options?.taskKind??'inquiry_reply'];}
     let analysis: AgentMailThreadAnalysisDocument;
     try {
       analysis = await AgentMailThreadAnalysis.create({
@@ -274,10 +277,10 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
       analysis = raced;
     }
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: {
-      workflowId: analysis._id, status: 'completed', inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens,
-      totalTokens: response.usage.totalTokens, inputCharacters: inputChars, inputTruncated: limited.truncated,
+      workflowId: analysis._id, status: 'completed', inputTokens: generatedNow?response.usage.inputTokens:0, outputTokens: generatedNow?response.usage.outputTokens:0,
+      totalTokens: generatedNow?response.usage.totalTokens:0, inputCharacters: inputChars, inputTruncated: limited.truncated,
       promptInjectionDetected: limited.items.some((item) => containsPromptInjection(item.text)),
-      estimatedCostUsd: estimateAgentCostUsd(response.usage, activeProvider.name), durationMs: Date.now() - startedAt,
+      estimatedCostUsd: generatedNow?estimateAgentCostUsd(response.usage, activeProvider.name):0, durationMs: Date.now() - startedAt,
     } });
     await AgentAction.create({
       ...identifiers, runId: run._id, workflowId: analysis._id, toolName: 'analyze_mail_thread', riskLevel: 'read',

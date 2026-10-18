@@ -44,14 +44,15 @@ export async function taskActor(task: Pick<IAgentTask,'projectId'|'userId'|'acto
 async function dto(task: AgentTaskDocument, actor: AuthUser) {
  const customer = task.customerId ? await getCustomerByIdOrThrow(String(task.customerId), actor) : undefined;
  if(task.sourceMailId)await agentMailOrThrow(String(task.sourceMailId),actor);
+ const inputsChanged=Boolean(task.workflowStamp&&task.workflowStamp!==await taskContextStamp(task.customerId?.toString(),task.sourceMailId?.toString(),actor));
  const candidates = task.candidates.length ? await Customer.find({
   ...customerScope(actor), _id: {$in: task.candidates.map(c => c.id)}}).select('_id name company').lean() : [];
  return {id: task.id, sessionId: String(task.sessionId), goal: task.goal, status: task.status, version: task.version,
-  customerId: task.customerId?.toString(), customerName: customer?.name, analysisId: task.analysisId?.toString(), draftId: task.draftId?.toString(),
+  customerId: task.customerId?.toString(), customerName: customer?.name, analysisId: inputsChanged?undefined:task.analysisId?.toString(), draftId: inputsChanged?undefined:task.draftId?.toString(),needsRefresh:inputsChanged&&!['completed','cancelled'].includes(task.status),
   sentLetterId: task.sentLetterId?.toString(), completedSteps: task.completedSteps, currentStep: task.currentStep,
-  workflowEpoch:task.workflowEpoch??0,workflowCalls:task.workflowCalls??0,workflowActiveMs:task.workflowActiveMs??0,previousArtifacts:task.previousArtifacts??[],workflow:(task.workflowRecords??[]).map(({payload:_payload,...record})=>({...record,label:workflowLabels[record.key]??record.key})),
-  events: task.events, error: task.error, attempts: task.attempts,
-  candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), kind:task.kind,sourceMailId:task.sourceMailId?.toString(),mailAnalysisId:task.mailAnalysisId?.toString(),automatic:Boolean(task.automationRuleId),parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};
+  workflowEpoch:task.workflowEpoch??0,workflowCalls:task.workflowCalls??0,workflowActiveMs:task.workflowActiveMs??0,previousArtifacts:inputsChanged?[]:task.previousArtifacts??[],workflow:(task.workflowRecords??[]).map(({payload,...record})=>({...record,label:workflowLabels[record.key]??record.key,partial:record.key==='audit_claims'&&(payload as {review?:{completeness?:string}}|undefined)?.review?.completeness==='partial'})),
+  events: task.events, error: task.error?.code?task.error:undefined, attempts: task.attempts,
+  candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), kind:task.kind,sourceMailId:task.sourceMailId?.toString(),mailAnalysisId:inputsChanged?undefined:task.mailAnalysisId?.toString(),automatic:Boolean(task.automationRuleId),parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:inputsChanged?undefined:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};
 }
 async function owned(id: string, actor: AuthUser) {
  const task = await AgentTask.findOne({_id: validId(id), ...scope(actor)});
@@ -90,7 +91,7 @@ export async function controlAgentTask(id: string, action: 'resume'|'pause'|'can
  const task = await owned(id,actor);
  if (task.version !== input.version) throw ApiError.conflict('任务已变化，请刷新后重试');
  if (['completed','cancelled'].includes(task.status)) throw ApiError.conflict('该任务已经结束');
- if (action === 'resume' && !['paused','waiting_input','failed'].includes(task.status)) throw ApiError.conflict('该任务不需要恢复');
+ if (action === 'resume' && !(['paused','waiting_input','failed'].includes(task.status)||(task.status==='awaiting_review'&&task.workflowStamp!==await taskContextStamp(task.customerId?.toString(),task.sourceMailId?.toString(),actor)))) throw ApiError.conflict('该任务不需要恢复');
  if (action === 'resume' && task.status === 'failed' && (!task.error?.retryable || task.attempts >= 5)) throw ApiError.conflict('请核对信息后新建任务');
  if (action === 'pause' && !['queued','running'].includes(task.status)) throw ApiError.conflict('只能暂停待执行任务');
  const patch: Record<string,unknown> = {status: action === 'resume' ? 'queued' : action === 'pause' ? 'paused' : 'cancelled'};
@@ -116,10 +117,11 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
   {$set:{status:'running',leaseToken:token,leaseUntil:new Date(Date.now()+90_000)},$inc:{version:1,attempts:1}}, {new:true,sort:{createdAt:1}});
  if (!task) return;
  const fence = {_id:task._id,status:'running',leaseToken:token};
+ const deadline=setTimeout(()=>{void AgentTask.updateOne(fence,{$set:{status:'failed',error:{code:'TASK_WORKFLOW_LIMIT',message:'本次处理超过180秒，已保存结果保留，请缩小范围后新建任务。',retryable:false}},$unset:{leaseToken:1,leaseUntil:1},$inc:{version:1}}).catch(()=>undefined);},180000);deadline.unref();
  const heartbeat = setInterval(() => { void AgentTask.updateOne(fence,{$set:{leaseUntil:new Date(Date.now()+90_000)}}).catch(() => undefined); },10_000);
  heartbeat.unref();
  let expectedStamp:string|undefined;
- const check = async () => {if(Date.now()-attemptStarted>180000)throw new ApiError(429,'单次任务处理超过时限','RATE_LIMITED',[{field:'agent',message:'TASK_WORKFLOW_LIMIT'}]); if(task.parentBatchId && !await AgentBatch.exists({_id:task.parentBatchId,status:'active'}))throw new Error('TASK_INTERRUPTED'); if (!await AgentTask.exists(fence)) throw new Error('TASK_INTERRUPTED'); const actor = await taskActor(task); await assertAutomaticTask(task,actor); if(task.customerId) await getCustomerByIdOrThrow(String(task.customerId),actor);if(task.sourceMailId)await agentMailOrThrow(String(task.sourceMailId),actor);if(expectedStamp&&await taskContextStamp(task.customerId?.toString(),task.sourceMailId?.toString(),actor)!==expectedStamp)throw ApiError.conflict('任务期间客户、往来或知识发生变化，请重新准备');return actor; };
+ const check = async () => {if(Date.now()-attemptStarted>180000)throw new ApiError(429,'单次任务处理超过时限','RATE_LIMITED',[{field:'agent',message:'TASK_WORKFLOW_LIMIT'}]); if(task.parentBatchId && !await AgentBatch.exists({_id:task.parentBatchId,status:'active'}))throw new Error('TASK_INTERRUPTED'); if (!await AgentTask.exists(fence)) throw new Error('TASK_INTERRUPTED'); const actor = await taskActor(task); await assertAutomaticTask(task,actor); if(task.customerId) await getCustomerByIdOrThrow(String(task.customerId),actor);if(task.sourceMailId)await agentMailOrThrow(String(task.sourceMailId),actor);if(expectedStamp&&await taskContextStamp(task.customerId?.toString(),task.sourceMailId?.toString(),actor)!==expectedStamp)throw new ApiError(409,'任务期间资料发生变化，请继续以重新核对','CONFLICT',[{field:'agent',message:'TASK_INPUT_CHANGED'}]);return actor; };
  const change = async (set: Record<string,unknown>, message?:string, complete?:TaskStep) => {
   const result = await AgentTask.updateOne(fence, {$set:set,$inc:{version:1},
    ...(message ? {$push:{events:{$each:[{at:new Date(),message,step:task.currentStep}],$slice:-100}}} : {}),
@@ -212,7 +214,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
    taskLogger.warn('Task step failed',{taskId:task.id,step:task.currentStep,code:failure.code,cause:error instanceof Error?error.name:'UnknownError'});
    await AgentTask.updateOne(fence,{$set:{status:'failed',error:failure},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:failure.message,step:task.currentStep}],$slice:-100}}});
   }
- } finally { clearInterval(heartbeat); await AgentTask.updateOne({_id:task._id,leaseToken:token,status:{$ne:'running'}},{$unset:{leaseToken:1,leaseUntil:1}}); }
+ } finally { clearTimeout(deadline);clearInterval(heartbeat); await AgentTask.updateOne({_id:task._id,leaseToken:token,status:{$ne:'running'}},{$unset:{leaseToken:1,leaseUntil:1}}); }
 }
 let worker: ReturnType<typeof setInterval>|undefined;
 let busy=false;

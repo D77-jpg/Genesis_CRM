@@ -52,15 +52,16 @@ function evidenceForCheck(bundle:KnowledgeBundle,customer?:{id:string;profile:Cu
  if(customer)evidence.push({sourceId:'profile:'+customer.id,text:JSON.stringify(customer.profile)});
  return evidence;
 }
-export function providerFactVerifier(provider:AgentProvider,actor:AuthUser,taskId?:string):SemanticVerifier|undefined{
+export function providerFactVerifier(provider:AgentProvider,actor:AuthUser,taskId?:string,guard?:()=>Promise<unknown>):SemanticVerifier|undefined{
  if(provider.name==='mock'||!provider.isAvailable())return undefined;
  async function call(instructions:string,payload:unknown){
+  await guard?.();
   const serialized=JSON.stringify(payload);if(serialized.length>Math.min(env.AI_MAX_INPUT_CHARS,48000))throw Error('FACT_AUDIT_INPUT_LIMIT');
   let quota:Awaited<ReturnType<typeof reserveAgentQuota>>|undefined;
   try{
    quota=await reserveAgentQuota(actor,serialized.length);await chargeTaskBudget(taskId,serialized.length,env.AI_MAX_OUTPUT_TOKENS);
    const result=await provider.createTurn({instructions,input:[{role:'user',content:[{type:'input_text',text:serialized}]}],tools:[],context:{type:'global'},userPrompt:'Check this data only. No tools or actions.',safetyIdentifier:agentSafetyIdentifier(actor)});
-   await settleAgentQuota(quota,result.usage);quota=undefined;
+   await settleAgentQuota(quota,result.usage);quota=undefined;await guard?.();
    if(result.toolCalls.length||result.text.length>60000)throw Error('INVALID_FACT_AUDIT_OUTPUT');return result.text;
   }finally{if(quota)await settleAgentQuota(quota);}
  }
@@ -90,6 +91,7 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
   for(let round=0;round<2;round++){
    const parts=segments(candidate);if(!parts.length||parts.length>64||candidate.length>20000)return fallback('草稿超出逐项核验范围，请拆分审核');
    attempts++;checks=checkSemanticResults(candidate,bundle,await verifier.check({segments:parts,evidence}),customer);
+   checks=checks.map(c=>{const asking=/(?:could you|please (?:confirm|provide|share)|what|how many|请(?:确认|提供)|多少)[^\n]{0,240}[?？.]?/i.test(c.text);const known=options.knownRequirements;return asking&&((known?.quantity!==undefined&&/quantity|how many|数量/i.test(c.text))||(known?.destination&&/destination|ship to|目的地|收货地/i.test(c.text)))?{...c,status:'unsupported' as const,reason:'客户已提供该项需求，请勿重复询问；只集中询问仍缺失的信息'}:c;});
    if(checks.every(c=>c.status==='supported'||c.status==='non_claim')){
     if(actor){const current=await knowledgeFreshness(baseline.review,actor);if(current.failed||current.changed.length)return fallback('核验期间依据发生变化或权限检查失败，请重新生成');}
     const seller=options.seller;const signature=seller?['Best regards,',seller.senderName,seller.companyName,seller.senderEmail,seller.website].filter(Boolean).join('\n'):'';
