@@ -320,6 +320,11 @@ test('S7 rotated file logs retain at most three bounded copies', async () => {
         await rm(dir, { recursive: true, force: true });
     }
 });
+test('S7 stopping local components terminates a real in-flight parser and returns a recoverable shutdown code',async()=>{
+ const {runParser,stopParserProcesses}=await import('../src/services/knowledge/parser-process');const {mkdtemp,readFile,writeFile,rm}=await import('node:fs/promises'),{tmpdir}=await import('node:os');const dir=await mkdtemp(join(tmpdir(),'s7-stop-parser-')),script=join(dir,'parser.py'),marker=join(dir,'started');const saved=process.env.KNOWLEDGE_PARSER_SCRIPT;
+ await writeFile(join(dir,'runtime-lock.json'),await readFile(join(__dirname,'../parsers/runtime-lock.json')));await writeFile(script,'from pathlib import Path\nimport time\nPath('+JSON.stringify(marker)+').write_text("started")\ntime.sleep(30)\n');process.env.KNOWLEDGE_PARSER_SCRIPT=script;
+ try{const parsing=runParser(Buffer.from('synthetic'), 'txt','fictional',new AbortController().signal,async()=>undefined);const rejected=assert.rejects(parsing,{code:'runtime_stopped'});let started=false;const until=Date.now()+5000;while(Date.now()<until){try{await readFile(marker);started=true;break;}catch{await sleep(20);}}assert.ok(started);stopParserProcesses();await rejected;}finally{if(saved)process.env.KNOWLEDGE_PARSER_SCRIPT=saved;else delete process.env.KNOWLEDGE_PARSER_SCRIPT;stopParserProcesses();await rm(dir,{recursive:true,force:true});}
+});
 test('S7 parser repeated local infrastructure failure opens circuit without consuming documents again', async () => {
     const { runParser, parserRuntimeStatus } = await import('../src/services/knowledge/parser-process');
     const saved = process.env.KNOWLEDGE_PYTHON;
@@ -334,3 +339,5 @@ test('S7 parser repeated local infrastructure failure opens circuit without cons
         process.env.KNOWLEDGE_PYTHON = saved;
     }
 });
+
+test('S7 malformed operator invocation never echoes arbitrary command arguments',async()=>{const {spawn}=await import('node:child_process');const child=spawn(process.execPath,['--require','./tests/os-user-info.cjs','--import','tsx','src/scripts/knowledge-maintenance.ts','PRIVATE_COMMAND_SENTINEL'],{cwd:join(__dirname,'..'),env:{...process.env,NODE_ENV:'test'},windowsHide:true,timeout:10000,stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',p=>{output+=p;});child.stderr.on('data',p=>{output+=p;});const [exit]=await once(child,'close');assert.equal(exit,1);assert.ok(!output.includes('PRIVATE_COMMAND_SENTINEL'));assert.ok(output.includes('"action":"invalid"'));});

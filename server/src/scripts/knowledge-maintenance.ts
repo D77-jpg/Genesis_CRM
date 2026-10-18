@@ -34,7 +34,7 @@ async function main() {
     const result = command === 'preflight' ? { readOnly: true, codeSha: codeVersion(), compatibility: 'Existing revisions/82 real drafts are not rewritten', drafts: await AgentKnowledge.countDocuments({ projectId: config.projectId, approvedVersion: 0 }), publications: await AgentKnowledge.countDocuments({ projectId: config.projectId, approvedVersion: { $gt: 0 }, archived: false }), operations: await knowledgeOperations(actor) } : command === 'status' ? await knowledgeOperations(actor) : await requestIndex(actor, crypto.randomUUID());
     await writeFile(config.receiptFile, JSON.stringify(result, null, 2), { mode: 0o600 });
 }
-void main().catch(() => { console.error(JSON.stringify({ event: 'knowledge_maintenance_failed', action: command })); process.exitCode = 1; }).finally(async () => { if (command !== 'worker' || process.exitCode) {
+void main().catch(() => { console.error(JSON.stringify({ event: 'knowledge_maintenance_failed', action: ['status','preflight','rebuild','worker'].includes(command)?command:'invalid' })); process.exitCode = 1; }).finally(async () => { if (command !== 'worker' || process.exitCode) {
     semanticPool.close();
     await mongoose.disconnect();
 } });
