@@ -75,9 +75,15 @@ export async function listDocuments(actor: AuthUser, before?: string) {
   for (const d of documents) {
     const parsing = await KnowledgeParsing.findOne({ documentId: d._id, ...scope(actor) }).sort({ revision: -1 }).lean();
     const linked=await AgentKnowledge.find({...scope(actor),'revisions.sourceRefs.documentId':String(d._id)}).lean();
-    const products=[...new Set(linked.flatMap(k=>k.revisions.at(-1)?.products??[]))];
-    const reviewState=linked.some(k=>!k.archived&&k.approvedVersion>0)?'published':linked.length?'draft':'unreviewed';
-    result.push({products,reviewState, ...d, id: String(d._id), blobKey: undefined, parsing: parsing ? { ...parsing, id: String(parsing._id), artifact: undefined, leaseToken: undefined } : null });
+    const matchesDoc=(v:{sourceRefs?:Record<string,unknown>[]}|undefined)=>v?.sourceRefs?.some(ref=>String(ref.documentId)===String(d._id));
+    const related=linked.flatMap(k=>k.revisions.filter(v=>(v.version===k.version||v.version===k.approvedVersion)&&matchesDoc(v)).map(v=>({v,archived:k.archived,published:v.version===k.approvedVersion})));
+    const products=[...new Set(related.flatMap(({v})=>v.products??[]))];
+    const current=related.filter(x=>!x.archived&&x.published);
+    const effective=current.some(({v})=>!!v.validFrom&&v.validFrom<=new Date()&&(!v.validUntil||v.validUntil>new Date()));
+    const expires=current.flatMap(({v})=>v.validUntil?[v.validUntil]:[]);
+    const validity=effective?(expires.some(d=>d>new Date()&&d<=new Date(Date.now()+30*86400000))?'expiring':'active'):expires.some(d=>d<=new Date())?'expired':'unconfirmed';
+    const reviewState=current.length?'published':related.some(x=>!x.archived)?'draft':related.length?'disabled':'unreviewed';
+    result.push({products,reviewState,validity, ...d, id: String(d._id), blobKey: undefined, parsing: parsing ? { ...parsing, id: String(parsing._id), artifact: undefined, leaseToken: undefined } : null });
   }
   return { documents: result, next: documents.length === 30 ? String(documents.at(-1)!._id) : null };
 }

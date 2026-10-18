@@ -1,3 +1,4 @@
+import {redactPrivateReview} from './agent/knowledge-visibility';
 import type {KnowledgeReview,KnowledgeFreshness} from './agent/knowledge-types';
 import {knowledgeFreshness,draftHash} from './agent/knowledge-grounding';
 import {AgentTask} from '../models/AgentTask';
@@ -270,7 +271,7 @@ export async function listLetters(query: ListLettersQuery, actor?: AuthUser): Pr
   ]);
 
   const items = rawItems as unknown as Record<string, unknown>[];
-  const dtos = items.map((item) => toLetterDto(item));
+  const dtos = items.map((item) => {const dto=toLetterDto(item);if(actor&&actor.role!=='admin'){dto.knowledgeReview=undefined;dto.knowledgeRechecks=undefined;}return dto;});
 
   return buildPaginated(dtos, total, page, limit);
 }
@@ -285,7 +286,7 @@ export async function getLetter(id: string, actor?: AuthUser): Promise<LetterDto
   assertCustomerAccess(actor, customer?.ownerId, doc.projectId);
 
   const result=toLetterDto(doc.toObject({virtuals:false,depopulate:false}) as unknown as Record<string,unknown>);
-  if(result.knowledgeReview&&actor){result.knowledgeFreshness=await knowledgeFreshness(result.knowledgeReview,actor);result.reviewBodyChanged=draftHash(result.contentText)!==result.knowledgeReview.bodyHash;}
+  if(result.knowledgeReview&&actor){result.knowledgeFreshness=await knowledgeFreshness(result.knowledgeReview,actor);const visible=await redactPrivateReview(result.knowledgeReview,actor);const allowed=new Set(visible.sources.map(s=>s.sourceId));result.knowledgeFreshness.changed=result.knowledgeFreshness.changed.map(c=>c.sourceId.startsWith('knowledge:')&&!allowed.has(c.sourceId)?{...c,title:'受限历史依据'}:c);if(visible.sources.length!==result.knowledgeReview.sources.length)result.knowledgeRechecks=undefined;result.knowledgeReview=visible;result.reviewBodyChanged=draftHash(result.contentText)!==result.knowledgeReview.bodyHash;}
   return result;
 }
 
