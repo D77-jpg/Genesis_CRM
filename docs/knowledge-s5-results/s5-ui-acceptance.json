@@ -1,0 +1,361 @@
+{
+  "fictional": true,
+  "taskCount": 5,
+  "tasks": [
+    {
+      "id": "6ad4bdf03bd756e8941ca767",
+      "kind": "first_outreach",
+      "status": "awaiting_review",
+      "draftId": "6ad4bdf13bd756e8941ca768",
+      "epoch": 0,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 9,
+          "reused": 0
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 9,
+          "reused": 0
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 9,
+          "reused": 0
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        }
+      ]
+    },
+    {
+      "id": "6ad4be523bd756e8941ca76a",
+      "kind": "quotation_explanation",
+      "status": "awaiting_review",
+      "draftId": "6ad4be523bd756e8941ca76b",
+      "epoch": 0,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 3,
+          "reused": 0
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 5,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 9,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        }
+      ]
+    },
+    {
+      "id": "6ad4be683bd756e8941ca76d",
+      "kind": "sample_reply",
+      "status": "awaiting_review",
+      "draftId": "6ad4be683bd756e8941ca76e",
+      "epoch": 0,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 3,
+          "reused": 0
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 3,
+          "reused": 0
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 10,
+          "reused": 0
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 6,
+          "reused": 0
+        }
+      ]
+    },
+    {
+      "id": "6ad4be9a3bd756e8941ca770",
+      "kind": "followup_review",
+      "status": "awaiting_review",
+      "draftId": "6ad4be9b3bd756e8941ca771",
+      "epoch": 0,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 3,
+          "reused": 0
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 4,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 7,
+          "reused": 0
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 8,
+          "reused": 0
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 3,
+          "reused": 0
+        }
+      ]
+    },
+    {
+      "id": "6ad4bf2e3bd756e8941ca773",
+      "kind": "inquiry_reply",
+      "status": "awaiting_review",
+      "draftId": "6ad4bf2e3bd756e8941ca774",
+      "epoch": 0,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 6,
+          "reused": 0
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 7,
+          "reused": 0
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 6,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 10,
+          "reused": 0
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 10,
+          "reused": 0
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 6,
+          "reused": 0
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 12,
+          "reused": 0
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 11,
+          "reused": 0
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 5,
+          "reused": 0
+        }
+      ]
+    }
+  ],
+  "letters": [
+    {
+      "id": "6ad4bdb6cd0d5f573c660201",
+      "status": "draft",
+      "taskType": "inquiry_reply",
+      "body": "Dear Fictional Buyer,\n\nThank you for getting in touch. Here are the details for the scope below.\n\nMinimum order quantity: 73 pcs. Conditions: standard velvet pouch; 仅用于独立验收; products velvet pouch.\n\nProduction lead time: 19 working days. Conditions: after deposit and artwork approval; 仅用于独立验收; products velvet pouch; counted after deposit and artwork approval.\n\nPrice: USD 4.25 per piece. Conditions: 150 standard velvet pouches; this fictional customer only; 仅适用于当前客户；以逐项条件为准; products velvet pouch; quantity [150, 150] pcs; customer-specific agreement; valid until 2027-01-16T12:38:14.478Z.\n\nTo confirm the remaining details:\n- Freight cost needs confirmation for the destination and shipment details.\n\nCould you please confirm your final specifications so we can agree on the next step?\n\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    },
+    {
+      "id": "6ad4bdf13bd756e8941ca768",
+      "status": "draft",
+      "taskType": "first_outreach",
+      "threadId": "ca048e44-fde5-4905-b4aa-7af09b926e99",
+      "body": "Dear Fictional Buyer,\nI am reaching out to introduce our team and see whether we could help with your requirements.\nWould a brief discussion about your requirements be useful?\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    },
+    {
+      "id": "6ad4be523bd756e8941ca76b",
+      "status": "draft",
+      "taskType": "quotation_explanation",
+      "threadId": "f9ac4123-9725-4163-a7d5-b8ac5966f0f4",
+      "body": "Dear Fictional Buyer,\nThank you for getting in touch. Here are the details for the scope below.\nMinimum order quantity: 73 pcs. Conditions: standard velvet pouch; 仅用于独立验收; products velvet pouch.\nProduction lead time: 19 working days. Conditions: after deposit and artwork approval; 仅用于独立验收; products velvet pouch; counted after deposit and artwork approval.\nPrice: USD 4.25 per piece. Conditions: 150 standard velvet pouches; this fictional customer only; 仅适用于当前客户；以逐项条件为准; products velvet pouch; quantity [150, 150] pcs; customer-specific agreement; valid until 2027-01-16T12:38:14.478Z.\nTo confirm the remaining details:\n- The sample arrangement and any charges need confirmation.\nWe will review the remaining points and confirm the details with you.\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    },
+    {
+      "id": "6ad4be683bd756e8941ca76e",
+      "status": "draft",
+      "taskType": "sample_reply",
+      "threadId": "ad8f3da8-2020-495e-8f16-cdfa571b6c43",
+      "body": "Dear Fictional Buyer,\nThank you for getting in touch. Here are the details for the scope below.\nMinimum order quantity: 73 pcs. Conditions: standard velvet pouch; 仅用于独立验收; products velvet pouch.\nProduction lead time: 19 working days. Conditions: after deposit and artwork approval; 仅用于独立验收; products velvet pouch; counted after deposit and artwork approval.\nTo confirm the remaining details:\n- The sample arrangement and any charges need confirmation.\nWe will review the remaining points and confirm the details with you.\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    },
+    {
+      "id": "6ad4be9b3bd756e8941ca771",
+      "status": "draft",
+      "taskType": "followup_review",
+      "threadId": "90396ff7-bf99-40d8-945a-e79d65354537",
+      "body": "Dear Fictional Buyer,\nThank you for getting in touch. Here are the details for the scope below.\nMinimum order quantity: 73 pcs. Conditions: standard velvet pouch; 仅用于独立验收; products velvet pouch.\nProduction lead time: 19 working days. Conditions: after deposit and artwork approval; 仅用于独立验收; products velvet pouch; counted after deposit and artwork approval.\nTo confirm the remaining details:\n- The sample arrangement and any charges need confirmation.\nWe will review the remaining points and confirm the details with you.\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    },
+    {
+      "id": "6ad4bf2e3bd756e8941ca774",
+      "status": "draft",
+      "taskType": "inquiry_reply",
+      "inReplyTo": "<s5-ui-inquiry@example.test>",
+      "threadId": "s5-ui-thread",
+      "body": "Dear Fictional Buyer,\nThank you for getting in touch. Here are the details for the scope below.\nMinimum order quantity: 73 pcs. Conditions: standard velvet pouch; 仅用于独立验收; products velvet pouch.\nProduction lead time: 19 working days. Conditions: after deposit and artwork approval; 仅用于独立验收; products velvet pouch; counted after deposit and artwork approval.\nTo confirm the remaining details:\n- The sample arrangement and any charges need confirmation.\nWe will review the remaining points and confirm the details with you.\nBest regards,\n知识管理员（独立测试）\nFICTIONAL ONLY"
+    }
+  ],
+  "sentCount": 0,
+  "followupCount": 0
+}

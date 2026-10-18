@@ -113,6 +113,12 @@ test('S3 12 valid partial evidence is not globally classified as expired by a di
  const b=await semanticKnowledge(sales,'nylon zipper travel pouch',{topics:[],productApplies,sourceOf},{async run(c,i,signal){const r=await localEmbedding.run(c,i,signal);if(c.command==='query'&&r.trace)r.trace.diagnostics.push({code:'expired',sourceId:'knowledge:'+expired.id+':v1',title:'Old diagnostic note'});return r;}});
  assert.equal(b.status,'ready');assert.ok(b.sources.some(s=>s.knowledgeId===target));assert.ok(b.issues.some(i=>i.code==='expired'));
 });
+test('S5 evidence preparation uses real local semantic index and authorized publication provenance',async()=>{
+ const {prepareSalesEvidence}=await import('../src/services/agent/sales-evidence');await build();
+ const result=await prepareSalesEvidence(sales,{request:'请给客户写第一封开发信',history:'Quantity: 150 pcs',productHint:'nylon zipper travel pouch',kind:'first_outreach'});
+ assert.equal(result.bundle.retrieval?.engine,'local_semantic');assert.equal(result.bundle.status,'ready');assert.ok(result.bundle.sources.some(s=>s.index?.dimension===384));assert.ok(result.bundle.sources.every(s=>s.knowledgeId!==privateId));assert.ok(result.bundle.sources.every(s=>s.sourceId.startsWith('knowledge:')));assert.equal(result.requirements.known.quantity,150);
+});
+
 test('S3 13 exceeded historical-state capacity is an explicit failure, never a no-answer or old-policy fallback',async()=>{
  await AgentKnowledge.insertMany(Array.from({length:129},(_,n)=>({projectId:project,version:1,approvedVersion:1,revisions:[{...entry('Historical metadata '+n,'EXPIRED CANARY '+n),version:1,validUntil:new Date('2021-01-01'),createdBy:adminId,createdAt:new Date()}]})));
  const b=await retrieveKnowledge(sales,'nylon zipper travel pouch');assert.equal(b.status,'retrieval_failed');assert.ok(b.issues.some(i=>i.code==='diagnostic_budget'));assert.deepEqual(b.sources,[]);

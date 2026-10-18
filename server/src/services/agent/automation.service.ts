@@ -41,7 +41,7 @@ async function reserveEvent(rule:InstanceType<typeof AgentAutomationRule>,eventI
 }
 async function blockMarketing(customerId:Types.ObjectId,projectId:Types.ObjectId){
  await DevelopmentLetter.updateMany({projectId,customerId,status:{$in:['queued','scheduled','retrying']},$or:[{agentTaskId:{$exists:true}},{agentOutreachId:{$exists:true}}]},{$set:{status:'cancelled',error:'检测到停止营销联系记录，已取消待投递任务'},$push:{history:{at:new Date(),status:'cancelled'}}});
- await AgentTask.updateMany({projectId,customerId,status:{$in:['queued','running','paused','waiting_input','awaiting_review']},$or:[{kind:{$in:['first_outreach','followup_review','inquiry_reply']}},{kind:{$exists:false}}]},{$set:{status:'cancelled'},$unset:{leaseToken:1,leaseUntil:1},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'检测到退订、拒绝、退信或垃圾邮件信号，后续营销任务已停止；已保存草稿保留但禁止继续营销发送。'}],$slice:-100}}});
+ await AgentTask.updateMany({projectId,customerId,status:{$in:['queued','running','paused','waiting_input','awaiting_review']},$or:[{kind:{$in:['first_outreach','followup_review','inquiry_reply','quotation_explanation','sample_reply']}},{kind:{$exists:false}}]},{$set:{status:'cancelled'},$unset:{leaseToken:1,leaseUntil:1},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'检测到退订、拒绝、退信或垃圾邮件信号，后续营销任务已停止；已保存草稿保留但禁止继续营销发送。'}],$slice:-100}}});
 }
 export async function observeAgentEvents(){
  for(const rule of await AgentAutomationRule.find({enabled:true}).limit(100)){
@@ -94,8 +94,10 @@ export async function assertAutomaticTask(task:InstanceType<typeof AgentTask>,ac
 export async function recordAgentSendReceipt(letterId:string){
  const letter=await DevelopmentLetter.findById(letterId);if(!letter||letter.channel!=='smtp'||!['sent','opened'].includes(letter.status)||!letter.sentBy)return;
  if(letter.agentTaskId&&!letter.agentOutreachId){
-  await createFollowUp(String(letter.customerId),{method:'email',result:'no_reply',content:`${letter.inReplyTo?'询盘回复':'跟进邮件'}已发送（SMTP 已接受，等待客户回复）。主题：${letter.subject}。`,followUpAt:letter.sentAt??letter.createdAt},String(letter.sentBy),String(letter.projectId),{agentActionKey:`task-sent:${letter.agentTaskId}`});
-  await AgentTask.updateOne({_id:letter.agentTaskId,projectId:letter.projectId,status:{$in:['awaiting_review','cancelled']}},{$set:{status:'completed',sentLetterId:letter._id},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'SMTP 已接受，已记录一次实际发送跟进。'}],$slice:-100}}});
+  const task=await AgentTask.findOne({_id:letter.agentTaskId,projectId:letter.projectId});const label=task?({first_outreach:'首封开发信',inquiry_reply:'询盘回复',followup_review:'跟进邮件',quotation_explanation:'报价说明',sample_reply:'样品回复'})[task.kind]:'邮件';
+  const originalDraft=letter.agentDraftId?await DevelopmentLetter.findById(letter.agentDraftId).select('requestKey'):undefined;const versioned=/-e[1-3]$/.test(originalDraft?.requestKey??'');
+  await createFollowUp(String(letter.customerId),{method:'email',result:'no_reply',content:`${label}已发送（SMTP 已接受，等待客户回复）。主题：${letter.subject}。`,followUpAt:letter.sentAt??letter.createdAt},String(letter.sentBy),String(letter.projectId),{agentActionKey:versioned?`task-sent:${letter.agentTaskId}:${letter.agentDraftId}`:`task-sent:${letter.agentTaskId}`});
+  await AgentTask.updateOne({_id:letter.agentTaskId,projectId:letter.projectId,...(letter.agentDraftId?{$or:[{draftId:letter.agentDraftId},{draftId:{$exists:false}}]}:{}),status:{$in:['awaiting_review','cancelled']}},{$set:{status:'completed',sentLetterId:letter._id},$inc:{version:1},$push:{events:{$each:[{at:new Date(),message:'SMTP 已接受，已记录一次实际发送跟进。'}],$slice:-100}}});
  }
  const rule=await AgentAutomationRule.findOne({projectId:letter.projectId,userId:letter.sentBy,enabled:true,sent:true});if(!rule)return;
  const e=await putEvent(rule,'sent',letter._id,`sent:${letter.id}`,letter.customerId);

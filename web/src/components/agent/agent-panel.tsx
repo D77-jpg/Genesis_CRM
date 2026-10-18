@@ -108,8 +108,8 @@ function sameContext(left: AgentContext, right: AgentContext): boolean {
 }
 
 function suggestions(context: AgentContext): string[] {
-  if (context.type === 'customer') return ['帮我给这个客户写第一封开发信', '总结客户时间线', '查看最近跟进和报价'];
-  if (context.type === 'mail') return ['总结当前邮件线程', '提取客户需求与待办', '建议下一步回复思路'];
+  if (context.type === 'customer') return ['帮我给这个客户写第一封开发信', '请给这个客户写报价说明邮件，不要发送', '请给这个客户写样品回复邮件，不要发送', '请给这个客户写跟进邮件，不要发送', '总结客户时间线'];
+  if (context.type === 'mail') return ['请回复这封询盘邮件，不要发送', '请写样品回复邮件，不要发送', '请写报价说明邮件，不要发送', '总结当前邮件线程'];
   return ['总结今天的销售工作区', '有哪些逾期客户需要优先处理？', '给我一份今日工作建议'];
 }
 
@@ -174,7 +174,7 @@ export function AgentPanel(): React.JSX.Element | null {
   const [draft, setDraft] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [sending, setSending] = React.useState(false);
-  const [analyzing, setAnalyzing] = React.useState(false);
+  const analyzing=sending;
   const [error, setError] = React.useState('');
   const [tab, setTab] = React.useState('chat');
   const selectedBatchIds=useUiStore(s=>s.agentBatchCustomerIds);
@@ -466,36 +466,8 @@ export function AgentPanel(): React.JSX.Element | null {
     }
   }
 
-  async function startCustomerAnalysis() {
-    if (activeContext.type !== 'customer' || analyzing) return;
-    setAnalyzing(true);
-    setError('');
-    try {
-      const analysis = await apiPost<{ id: string }>('/agent/customer-analyses', {
-        customerId: activeContext.resourceId,
-        idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      });
-      if (!sameContext(activeContext, context)) navigate('/customers/' + activeContext.resourceId);
-      openCustomerAnalysis(analysis.id, activeContext.resourceId);
-      await loadRecords();
-    } catch (reason) {
-      setError(toErrorMessage(reason, '客户分析暂未完成，请重试'));
-    } finally { setAnalyzing(false); }
-  }
-
-  async function startMailAnalysis() {
-    if (activeContext.type !== 'mail' || analyzing) return;
-    setAnalyzing(true); setError('');
-    try {
-      const analysis = await apiPost<{ id: string }>('/agent/mail-analyses', {
-        mailId: activeContext.resourceId, direction: activeContext.direction,
-        idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      });
-      if (!sameContext(activeContext, context)) navigate('/mail?id=' + activeContext.resourceId + '&direction=' + activeContext.direction);
-      openMailAnalysis(analysis.id, activeContext.resourceId, activeContext.direction); await loadRecords();
-    } catch (reason) { setError(toErrorMessage(reason, '邮件分析暂未完成，请重试')); }
-    finally { setAnalyzing(false); }
-  }
+  async function startCustomerAnalysis(){if(activeContext.type==='customer'&&!sending)await sendMessage('请分析这个客户并写第一封开发信，不要发送');}
+  async function startMailAnalysis(){if(activeContext.type==='mail'&&!sending)await sendMessage('请整理当前询盘并准备回复邮件，不要发送');}
 
   if (!open || !user || !project) return null;
 

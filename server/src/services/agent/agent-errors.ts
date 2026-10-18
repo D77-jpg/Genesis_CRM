@@ -5,6 +5,8 @@ export function agentFailure(error: unknown): { code: string; message: string; r
   const marker = error instanceof ApiError ? error.details?.find(item => item.field === 'agent')?.message : undefined;
   const code = error instanceof AgentProviderError ? error.code : marker
     ?? (error instanceof ApiError ? error.code : (error as { name?: string })?.name === 'ZodError' ? 'OPENAI_INVALID_STRUCTURED_OUTPUT' : 'AGENT_RUNTIME_ERROR');
+  if(code==='TASK_INPUT_CHANGED')return {code,message:'准备期间资料发生变化，旧结果未继续交付。点击重新准备会重读权限和最新依据，已保存的原稿保留。',retryable:true};
+  if(code==='TASK_WORKFLOW_LIMIT')return {code,message:'任务处理次数或累计时限已用完，已保存结果保留，请缩小范围后新建任务。',retryable:false};
   if(code==='AUTOMATION_REVOKED')return {code,message:'事件规则、客户归属或跟进时间已变化，本任务已停止，请核对后重新发起。',retryable:false};
   if(code==='MARKETING_BLOCKED')return {code,message:'客户已退订、拒绝或退信，已阻断营销草稿；其余客户继续处理。',retryable:false};
   if (code === 'TASK_BUDGET_EXCEEDED') return {code,message:'本任务的模型预算已用完。已完成结果保留，请缩小资料范围后新建任务。',retryable:false};

@@ -1,3 +1,4 @@
+import type {SalesRequirements,SalesMailKind} from './sales-evidence';
 import type {KnowledgeBundle} from './knowledge-types';
 import type {
   AgentContextType,
@@ -44,9 +45,9 @@ export interface CustomerExtractionResult {
 }
 
 export interface CustomerAnalysisInput {
+  taskType?:SalesMailKind;userRequest?:string;salesRequirements?:SalesRequirements;
   knowledgeContext?: KnowledgeBundle;
   firstOutreach?: boolean;
-  userRequest?: string;
   seller?: { companyName: string; website?: string; moq?: string; senderName: string; senderEmail?: string };
   customerName: string;
   customerEmail?: string;
@@ -68,6 +69,7 @@ export interface CustomerAnalysisRequest {
 }
 
 export interface MailThreadAnalysisInput {
+  taskType?:SalesMailKind;userRequest?:string;salesRequirements?:SalesRequirements;
   knowledgeContext?: KnowledgeBundle;
   seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
   productKnowledge?:{sourceId:string;title:string;content:string;version:number;approved:boolean}[];
