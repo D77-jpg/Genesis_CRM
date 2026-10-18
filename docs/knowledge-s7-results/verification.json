@@ -403,7 +403,14 @@
     "strictNewTestsAndEvaluator": true,
     "serverProductionAudit": "passed with existing xlsx exception through 2026-10-26, no new exception",
     "webProductionAudit": "passed with same existing exception",
-    "gitHistorySecretScan": "Initial exit 1: four individually verified source SHA-256 report fields in b214b77; exact historical fingerprints only, rescan pending"
+    "gitHistorySecretScan": {
+      "scanner": "gitleaks 8.24.0",
+      "scope": "all available git history through be208f0",
+      "exitCode": 0,
+      "findingCount": 0,
+      "review": "Four exact source-digest historical fingerprints reviewed in H11_AUDIT.md; no blanket exemptions",
+      "finalEvidenceCommitRescan": "same gate rerun before push"
+    }
   },
   "realComponents": {
     "embedding": true,
