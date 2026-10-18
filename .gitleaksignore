@@ -10,3 +10,9 @@ e4f08faf1b5eb3db07907033b5cae50170b213d6:scripts/smoke-test.ps1:generic-api-key:
 # S2 fixed public model vocabulary file SHA-256 values; see H11_AUDIT.md.
 8ff0e335cf25bbfce7f46b586de2bb161de1f79d:server/semantic/model.json:generic-api-key:13
 8ff0e335cf25bbfce7f46b586de2bb161de1f79d:server/semantic/model.json:generic-api-key:14
+
+# S7 frozen reports: individually verified source-byte digests; see H11_AUDIT.md.
+b214b775e91a68c31a83ef49951dc055e360d28a:docs/knowledge-s7-results/frozen-original-final.json:generic-api-key:52
+b214b775e91a68c31a83ef49951dc055e360d28a:docs/knowledge-s7-results/frozen-original.json:generic-api-key:52
+b214b775e91a68c31a83ef49951dc055e360d28a:docs/knowledge-s7-results/frozen-transfer-final.json:generic-api-key:52
+b214b775e91a68c31a83ef49951dc055e360d28a:docs/knowledge-s7-results/frozen-transfer.json:generic-api-key:52

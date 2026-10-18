@@ -14,7 +14,7 @@ import morgan from 'morgan';
 import { rateLimit } from 'express-rate-limit';
 
 import env from './config/env';
-import { createLogger } from './config/logger';
+import { createLogger, safeLog } from './config/logger';
 import { ApiError } from './utils/ApiError';
 import apiRoutes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
@@ -115,14 +115,7 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
   /* ---------- 访问日志 ---------- */
-  // Morgan's default :url includes the query string (possibly service credentials).
-  morgan.token('safe-url', (req) => req.url?.startsWith('/api/integrations/') ? '/api/integrations/[redacted]' : req.url?.split('?')[0] || '/');
-  app.use(morgan(env.isProd
-    ? ':remote-addr - - [:date[clf]] ":method :safe-url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'
-    : ':method :safe-url :status :response-time ms', {
-    // Tracking tokens authorize event writes; do not persist them in access logs.
-    skip: (req) => req.path === '/api/health' || req.originalUrl.startsWith('/api/tracking/'),
-  }));
+  app.use(morgan((tokens,req,res)=>{safeLog('info','http',{status:Number(tokens.status(req,res)),durationMs:Number(tokens['response-time'](req,res))});return undefined;},{skip:req=>req.path==='/api/health'||req.originalUrl.startsWith('/api/tracking/')}));
 
   /* ---------- 路由 ---------- */
   app.use('/api', apiLimiter, apiRoutes);

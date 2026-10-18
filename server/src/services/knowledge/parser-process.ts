@@ -32,7 +32,10 @@ export async function parserIdentity() {
     runtimeLockHash: createHash('sha256').update(lock).digest('hex') };
 }
 
-export async function runParser(data: Buffer, extension: string, sha256: string, signal: AbortSignal,
+const parserStops=new Set<()=>void>();
+export function stopParserProcesses(){for(const stop of [...parserStops])stop();}
+
+async function runParserImpl(data: Buffer, extension: string, sha256: string, signal: AbortSignal,
   progress: (value: { stage: string; done: number; total: number }) => Promise<void>): Promise<ParserResult> {
   const python = process.env.KNOWLEDGE_PYTHON;
   if (!python || !process.env.KNOWLEDGE_TOKENIZER_DIR) throw new ParserError('runtime_unavailable', '本地解析环境未配置，请联系管理员完成安装后重试');
@@ -49,6 +52,7 @@ export async function runParser(data: Buffer, extension: string, sha256: string,
       const child = spawn(python, ['-I', script], { env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
       let output = '', bytes = 0, result: ParserResult | undefined, error: Error | undefined;
       let updates = Promise.resolve();
+      const shutdown=()=>{error=new ParserError('runtime_stopped','服务正在停止，任务保留并等待重启');child.kill();};parserStops.add(shutdown);
       const stop = () => { error ??= new ParserError('cancelled', '任务已取消或权限已变化'); child.kill(); };
       signal.addEventListener('abort', stop, { once: true });
       const timer = setTimeout(() => { error = new ParserError('timeout', '解析超过 180 秒，请拆分资料后重试'); child.kill(); }, parserConfig.timeoutMs);
@@ -77,7 +81,7 @@ export async function runParser(data: Buffer, extension: string, sha256: string,
       child.stdin.on('error', () => undefined);
       child.on('error', () => { error = new ParserError('runtime_unavailable', '无法启动本地解析进程，请检查安装配置'); });
       child.on('close', (code) => {
-        clearTimeout(timer); signal.removeEventListener('abort', stop); accept(output);
+        parserStops.delete(shutdown);clearTimeout(timer); signal.removeEventListener('abort', stop); accept(output);
         void updates.then(() => {
           if (error) reject(error);
           else if (code !== 0 || !result) reject(new ParserError('resource_or_process_failure', '解析进程退出或超过资源限制，请拆分文件并检查本地组件'));
@@ -88,4 +92,14 @@ export async function runParser(data: Buffer, extension: string, sha256: string,
       if (signal.aborted) stop();
     });
   } finally { await rm(directory, { recursive: true, force: true }); }
+}
+
+const parserRuntime={active:0,failures:0,openUntil:0,completed:0,failed:0};
+export function parserRuntimeStatus(){return {...parserRuntime,circuitOpen:parserRuntime.openUntil>Date.now(),maxConcurrent:2,timeoutMs:parserConfig.timeoutMs};}
+export async function runParser(...args:Parameters<typeof runParserImpl>):Promise<ParserResult>{
+ if(parserRuntime.openUntil>Date.now())throw new ParserError('circuit_open','本地解析组件连续故障，稍后重试或联系管理员');
+ if(parserRuntime.active>=2)throw new ParserError('capacity_busy','本地解析任务繁忙，请稍后重试');
+ parserRuntime.active++;try{const result=await runParserImpl(...args);parserRuntime.failures=0;parserRuntime.openUntil=0;parserRuntime.completed++;return result;}
+ catch(e){parserRuntime.failed++;if(e instanceof ParserError&&['timeout','resource_or_process_failure','runtime_unavailable','invalid_result','storage_unavailable'].includes(e.code)&&++parserRuntime.failures>=3)parserRuntime.openUntil=Date.now()+30000;throw e;}
+ finally{parserRuntime.active--;}
 }

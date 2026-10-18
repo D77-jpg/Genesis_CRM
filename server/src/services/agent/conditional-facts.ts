@@ -54,8 +54,15 @@ export function factApplies(term:KnowledgeTerm,source:KnowledgeSource,context:Fa
 export function collectConditionalEvidence(bundle:KnowledgeBundle,context:FactContext=bundle.factContext??{}):ConditionalEvidence[]{
  const rows=bundle.sources.flatMap(source=>source.terms.map((term,index):ConditionalEvidence=>({id:source.sourceId+':term:'+(term.publicationIndex??index),sourceId:source.sourceId,version:source.version,topic:term.topic,term,...factApplies(term,source,context),location:{kind:source.kind==='quotation'?'quotation_item':source.kind==='agreement'?'agreement_term':'publication_term',index:term.publicationIndex??index}})));
  for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){
-  const a=rows[i],b=rows[j];if(a.topic!==b.topic||a.status!=='applicable'||b.status!=='applicable')continue;
-  // Only facts proven applicable to the same actual request can conflict. Never silently prefer a quote.
+  const a=rows[i],b=rows[j];if(a.topic!==b.topic)continue;
+  const sourceA=bundle.sources.find(s=>s.sourceId===a.sourceId)!,sourceB=bundle.sources.find(s=>s.sourceId===b.sourceId)!;
+  // Historical identical literal conditions with incompatible values are a warning,
+  // never an inference that those unreviewed conditions apply to this customer.
+  const legacyCollision=a.status==='needs_confirmation'&&b.status==='needs_confirmation'&&!a.term.scope&&!b.term.scope&&a.term.mode==='confirmed'&&b.term.mode==='confirmed'
+   &&sourceA.kind==='knowledge'&&sourceB.kind==='knowledge'&&!!a.term.conditions.trim()&&same(a.term.conditions,b.term.conditions)
+   &&same(sourceA.applicability,sourceB.applicability)&&JSON.stringify(sourceA.products.map(normalized).sort())===JSON.stringify(sourceB.products.map(normalized).sort());
+  if(!legacyCollision&&(a.status!=='applicable'||b.status!=='applicable'))continue;
+  // Reviewed facts must both apply. Legacy identical-condition collisions only block use pending review; never silently prefer a value.
   const value=(x:ConditionalEvidence)=>JSON.stringify([normalized(x.term.value),x.term.min,x.term.max,normalized(x.term.unit??''),x.term.currency,x.term.mode,x.term.scope?.polarity,x.term.scope?.startsAfter,normalized(x.term.conditions)]);
   if(value(a)!==value(b)){a.reasons.push('与另一有效来源不兼容');b.reasons.push('与另一有效来源不兼容');}
  }

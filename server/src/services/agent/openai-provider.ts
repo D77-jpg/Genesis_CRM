@@ -1,3 +1,4 @@
+import {guardedModelFetch} from './model-transport';
 import env from '../../config/env';
 import { AGENT_CUSTOMER_FIELDS } from '../../models';
 import {
@@ -43,6 +44,7 @@ function outputText(response: OpenAIResponse): string {
 }
 
 function transportErrorCode(error: unknown): string {
+  if(error instanceof AgentProviderError)return error.code;
   if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) return 'OPENAI_TIMEOUT';
   return 'OPENAI_UNREACHABLE';
 }
@@ -171,7 +173,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
     let response: Response;
     try {
-      response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
+      response = await guardedModelFetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
         redirect: 'error',
         headers: {
@@ -203,7 +205,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
       throw new AgentProviderError('OPENAI_INVALID_RESPONSE');
     }
     if (!response.ok || body.status === 'failed') {
-      throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+      throw new AgentProviderError(`OPENAI_HTTP_${response.status}`);
     }
 
     const output = Array.isArray(body.output) ? body.output : [];
@@ -231,7 +233,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
     let response: Response;
     try {
-      response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
+      response = await guardedModelFetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
         redirect: 'error',
         headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
@@ -257,7 +259,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     }
     let body: OpenAIResponse;
     try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
-    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_HTTP_${response.status}`);
     if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
     try {
       const parsed = JSON.parse(outputText(body)) as Omit<CustomerExtractionResult, 'usage'>;
@@ -278,7 +280,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
     let response: Response;
     try {
-      response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
+      response = await guardedModelFetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
         redirect: 'error',
         headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
@@ -311,7 +313,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     }
     let body: OpenAIResponse;
     try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
-    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_HTTP_${response.status}`);
     if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
     try {
       const parsed = JSON.parse(outputText(body)) as Omit<CustomerAnalysisResult, 'usage'>;
@@ -328,7 +330,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
     let response: Response;
     try {
-      response = await fetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
+      response = await guardedModelFetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
         method: 'POST',
         redirect: 'error',
         headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
@@ -361,7 +363,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
     }
     let body: OpenAIResponse;
     try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
-    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_${String(body.error?.code ?? response.status).toUpperCase()}`);
+    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_HTTP_${response.status}`);
     if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
     try {
       const parsed = JSON.parse(outputText(body)) as Omit<MailThreadAnalysisResult, 'usage'>;

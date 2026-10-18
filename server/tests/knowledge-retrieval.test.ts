@@ -119,6 +119,14 @@ test('S5 evidence preparation uses real local semantic index and authorized publ
  assert.equal(result.bundle.retrieval?.engine,'local_semantic');assert.equal(result.bundle.status,'ready');assert.ok(result.bundle.sources.some(s=>s.index?.dimension===384));assert.ok(result.bundle.sources.every(s=>s.knowledgeId!==privateId));assert.ok(result.bundle.sources.every(s=>s.sourceId.startsWith('knowledge:')));assert.equal(result.requirements.known.quantity,150);
 });
 
+test('S7 state discovery distinguishes a process/price question from same-product expired certification',async()=>{
+ await AgentKnowledge.create({projectId:project,version:1,approvedVersion:1,archived:false,revisions:[{...entry('ZP-29 Expired optical certificate','Must not be sent to a model as active evidence.'),category:'compliance',version:1,validUntil:new Date('2020-02-01'),createdBy:adminId,createdAt:new Date()}]});
+ await AgentKnowledge.create({projectId:project,version:1,approvedVersion:1,archived:true,revisions:[{...entry('Retired optical protective coating','Inactive process text must remain private.'),version:1,createdBy:adminId,createdAt:new Date()}]});
+ const price=await retrieveKnowledge(actor,'What is the price for ZP-29 logo setup?');assert.ok(!price.issues.some(i=>i.code==='expired'));
+ const process=await retrieveKnowledge(actor,'Can optical protective coating still be used?');assert.ok(process.issues.some(i=>i.code==='disabled'));assert.ok(!process.issues.some(i=>i.code==='expired'));
+ const certificate=await retrieveKnowledge(actor,'Is the ZP-29 certificate still valid?');assert.ok(certificate.issues.some(i=>i.code==='expired'));
+});
+
 test('S3 13 exceeded historical-state capacity is an explicit failure, never a no-answer or old-policy fallback',async()=>{
  await AgentKnowledge.insertMany(Array.from({length:129},(_,n)=>({projectId:project,version:1,approvedVersion:1,revisions:[{...entry('Historical metadata '+n,'EXPIRED CANARY '+n),version:1,validUntil:new Date('2021-01-01'),createdBy:adminId,createdAt:new Date()}]})));
  const b=await retrieveKnowledge(sales,'nylon zipper travel pouch');assert.equal(b.status,'retrieval_failed');assert.ok(b.issues.some(i=>i.code==='diagnostic_budget'));assert.deepEqual(b.sources,[]);

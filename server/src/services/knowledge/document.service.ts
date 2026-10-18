@@ -1,3 +1,4 @@
+import {stopParserProcesses} from './parser-process';
 import { createHash, randomUUID } from 'node:crypto';
 import mongoose, { Types } from 'mongoose';
 import { z } from 'zod';
@@ -231,7 +232,7 @@ export async function processKnowledgeDocument(parsingId?: string): Promise<void
       artifactHash, artifact, chunkCount: chunks.length, warnings: result.warnings }, $unset: { leaseToken: 1, leaseUntil: 1, error: 1 } });
   } catch (e) {
     const error = e instanceof ParserError ? { code: e.code, message: e.message } : { code: 'processing_failed', message: '资料处理失败，请检查本地解析环境与存储后重试' };
-    await KnowledgeParsing.updateOne(fence, { $set: { state: 'failed', stage: '解析未完成', error }, $unset: { leaseToken: 1, leaseUntil: 1 } });
+    await KnowledgeParsing.updateOne(fence, { $set: { state: error.code==='runtime_stopped'?'queued':'failed', stage: error.code==='runtime_stopped'?'等待服务重启':'解析未完成', error }, $unset: { leaseToken: 1, leaseUntil: 1 } });
   } finally { clearInterval(heartbeat); abort.abort(); }
 }
 
@@ -261,3 +262,5 @@ export function startKnowledgeDocumentWorker() {
     void recoverUnqueuedDocuments().then(()=>processKnowledgeDocument()).catch(() => undefined).finally(() => { busy = false; });
   }, 2000); timer.unref();
 }
+
+export function stopKnowledgeDocumentWorker(){if(timer)clearInterval(timer);timer=undefined;stopParserProcesses();}

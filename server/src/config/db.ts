@@ -39,6 +39,7 @@ export async function connectDatabase(): Promise<typeof mongoose> {
     try {
       await mongoose.connect(env.MONGODB_URI, {
         serverSelectionTimeoutMS: 8000,
+        socketTimeoutMS:30000,waitQueueTimeoutMS:5000,
         maxPoolSize: 20,
         autoIndex: !env.isProd, // 生产环境建议离线建索引
       });

@@ -20,3 +20,7 @@ docs/knowledge-s5-results/*.json text eol=lf
 
 # S6 governance acceptance evidence uses stable LF bytes.
 docs/knowledge-s6-results/*.json text eol=lf
+
+# S7 reproducible operation reports and child fixtures.
+docs/knowledge-s7-results/*.json text eol=lf
+server/tests/fixtures/knowledge-s7/* text eol=lf

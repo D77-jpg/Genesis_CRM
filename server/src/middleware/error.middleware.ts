@@ -79,9 +79,9 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const requestPath = req.path.startsWith('/api/integrations/') ? '/api/integrations/[redacted]' : safeRequestPath(req);
   const logLine = `${req.method} ${requestPath} -> ${apiError.statusCode} ${apiError.code}`;
   if (apiError.statusCode >= 500) {
-    logger.error(logLine, { message: err?.message, stack: env.isProd ? undefined : err?.stack });
+    logger.error(logLine, { status:apiError.statusCode,code:apiError.code });
   } else {
-    logger.warn(logLine, { message: apiError.message });
+    logger.warn(logLine, { status:apiError.statusCode,code:apiError.code });
   }
 
   // 供集成 API 审计日志记录稳定错误码（仅错误码，不含敏感内容）

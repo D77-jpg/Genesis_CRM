@@ -72,18 +72,26 @@ def restrict():
 
 
 
-def main():
-    restrict()
+def main(request=None):
+    if not globals().get("_restricted"):
+        restrict()
+        globals()["_restricted"] = True
     started = time.perf_counter()
-    request = json.loads(sys.stdin.buffer.readline(8 * 1024**2))
+    request = request if request is not None else json.loads(sys.stdin.buffer.readline(8 * 1024**2))
     lock = json.loads(Path(__file__).with_name("model.json").read_text("utf-8"))
     model_dir = Path(os.environ["KNOWLEDGE_MODEL_DIR"]).resolve()
     for key, expected in lock["packages"].items():
         if importlib.metadata.version(key) != expected:
             raise Failure("runtime_changed", "本地语义组件版本与锁定版本不一致，请检查安装")
-    for name, expected in lock["files"].items():
-        if digest((model_dir / name).read_bytes()) != expected:
-            raise Failure("model_changed", "本地模型文件校验失败，请恢复锁定版本后重建")
+    stamps = tuple((name,(model_dir/name).stat().st_size,(model_dir/name).stat().st_mtime_ns) for name in lock['files'])
+    model_key = (str(model_dir),digest(json.dumps(lock,sort_keys=True).encode()),stamps)
+    if globals().get('_model_key') != model_key:
+        for name, expected in lock['files'].items():
+            if digest((model_dir/name).read_bytes()) != expected:
+                raise Failure('model_changed','本地模型文件校验失败，请恢复锁定版本后重建')
+        globals()['_model_key'] = model_key
+        globals().pop('_session',None)
+        globals().pop('_tokenizer',None)
     import numpy as np
     import onnxruntime as ort
     from tokenizers import Tokenizer
@@ -93,17 +101,22 @@ def main():
     def audit(event, args):
         if event.startswith(("socket.", "subprocess.")) or event in ("os.system", "os.exec", "os.posix_spawn"):
             raise Failure("network_denied", "本地向量进程不允许访问网络或启动其他程序")
-    sys.addaudithook(audit)
+    if not globals().get("_native_audit"):
+        sys.addaudithook(audit)
+        globals()["_native_audit"] = True
     options = ort.SessionOptions()
     options.intra_op_num_threads = 4
     options.inter_op_num_threads = 1
     options.enable_mem_pattern = False
     options.log_severity_level = 3
     ort.disable_telemetry_events()
-    tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+    tokenizer = globals().get("_tokenizer")
+    if tokenizer is None:
+        tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        globals()["_tokenizer"] = tokenizer
     tokenizer.no_truncation()
     tokenizer.enable_padding()
-    session = None
+    session = globals().get("_session")
     def embed(texts):
         nonlocal session
         tokenizer.no_padding()
@@ -114,6 +127,7 @@ def main():
         enc = tokenizer.encode_batch(texts)
         if session is None:
             session = ort.InferenceSession(str(model_dir / lock["weight"]), options, providers=["CPUExecutionProvider"])
+            globals()["_session"] = session
         arrays = {"input_ids": np.array([e.ids for e in enc], dtype=np.int64),
                   "attention_mask": np.array([e.attention_mask for e in enc], dtype=np.int64),
                   "token_type_ids": np.array([e.type_ids for e in enc], dtype=np.int64)}
@@ -219,15 +233,28 @@ def main():
     db.close()
     result.update({"adapter": VERSION, "dimension": lock["dimension"], "identity": identity,
                    "elapsedMs": round((time.perf_counter()-started)*1000, 2), "rssMiB": round(psutil.Process().memory_info().rss/1024**2, 2)})
-    print(json.dumps({"ok": True, "result": result}, ensure_ascii=False), flush=True)
+    print(json.dumps({"ok": True, "result": result, "requestId":request.get("requestId")}, ensure_ascii=False), flush=True)
 
 
-if __name__ == "__main__":
+def execute(request=None):
     try:
-        main()
+        main(request)
     except Failure as error:
-        print(json.dumps({"ok": False, "code": error.code, "message": error.message}, ensure_ascii=False), flush=True)
-        sys.exit(2)
+        print(json.dumps({'ok':False,'code':error.code,'message':error.message,'requestId':(request or {}).get('requestId')},ensure_ascii=False),flush=True)
+        return 2
     except Exception:
-        print(json.dumps({"ok": False, "code": "local_runtime_failure", "message": "本地模型或索引不可用，请检查路径、固定依赖和磁盘后重试"}, ensure_ascii=False), flush=True)
-        sys.exit(3)
+        print(json.dumps({'ok':False,'code':'local_runtime_failure','message':'本地模型或索引不可用，请检查固定组件与存储','requestId':(request or {}).get('requestId')},ensure_ascii=False),flush=True)
+        return 3
+    return 0
+
+if __name__ == '__main__':
+    if '--worker' in sys.argv:
+        while True:
+            line=sys.stdin.buffer.readline(8*1024**2+1)
+            if not line: break
+            if len(line)>8*1024**2: sys.exit(4)
+            try: request=json.loads(line)
+            except Exception: sys.exit(4)
+            execute(request)
+    else:
+        sys.exit(execute())
