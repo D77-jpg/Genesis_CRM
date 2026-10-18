@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {FileSearch,Loader2,RefreshCw,ChevronRight,TriangleAlert} from 'lucide-react';
 import {apiGet,apiPost,toErrorMessage} from '@/lib/api';
+import {createClientId} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {policyTopics} from '@/types/knowledge';
@@ -11,18 +12,19 @@ export function KnowledgeReviewPanel({review,freshness,letterId,analysisId,curre
  const [audit,setAudit]=React.useState<{mode:string;checks:FactCheck[];bodyHash:string}|null>(null);
  const [editingChanged,setEditingChanged]=React.useState(false);
  const [auditing,setAuditing]=React.useState(false);
+ const editingIdentity=JSON.stringify([letterId,currentSubject,currentBody]);const latestEditing=React.useRef(editingIdentity);latestEditing.current=editingIdentity;
  React.useEffect(()=>setAudit(null),[currentBody,currentSubject,letterId]);
  const [loaded,setLoaded]=React.useState<EvidenceResult>({});const [error,setError]=React.useState('');const [busy,setBusy]=React.useState(false);
  const [next,setNext]=React.useState<{letterId:string;customerId:string}|null>(null);
- const requestKey=React.useRef(crypto.randomUUID());
- React.useEffect(()=>{setLoaded({});setNext(null);setError('');requestKey.current=crypto.randomUUID();if(!letterId&&!analysisId)return;let active=true;
+ const requestKey=React.useRef(createClientId());
+ React.useEffect(()=>{setLoaded({});setNext(null);setError('');requestKey.current=createClientId();if(!letterId&&!analysisId)return;let active=true;
   void apiGet<EvidenceResult>(letterId?'/letters/'+letterId:'/agent/customer-analyses/'+analysisId).then(data=>{if(active)setLoaded(data);}).catch(e=>{if(active)setError(toErrorMessage(e,'无法读取草稿依据，请稍后重试'));});
   return()=>{active=false;};
  },[letterId,analysisId]);
  const value=loaded.knowledgeReview??review;const current=loaded.knowledgeFreshness??freshness;
  React.useEffect(()=>{let active=true;if(currentBody===undefined||!value){setEditingChanged(false);return;}if(!globalThis.crypto?.subtle){setEditingChanged(true);return;}const normalized=currentBody.toLocaleLowerCase().replace(/\s+/g,' ').trim();void crypto.subtle.digest('SHA-256',new TextEncoder().encode(normalized)).then(bytes=>{if(active)setEditingChanged(Array.from(new Uint8Array(bytes)).map(b=>b.toString(16).padStart(2,'0')).join('')!==value.bodyHash);}).catch(()=>{if(active)setEditingChanged(true);});return()=>{active=false;};},[currentBody,value?.bodyHash]);
  async function regenerate(){if(!letterId)return;setBusy(true);setError('');try{setNext(await apiPost('/agent/knowledge-drafts/'+letterId+'/regenerate',{requestKey:requestKey.current}));}catch(e){setError(toErrorMessage(e,'重新生成尚未完成，原草稿仍保留'));}finally{setBusy(false);}}
- async function recheck(){if(!letterId)return;setAuditing(true);setError('');try{setAudit(await apiPost('/agent/knowledge-drafts/'+letterId+'/recheck',{requestKey:crypto.randomUUID(),bodyText:currentBody,subject:currentSubject}));}catch(e){setError(toErrorMessage(e,'复核尚未完成，原草稿保留'));}finally{setAuditing(false);}}
+ async function recheck(){if(!letterId)return;const submittedIdentity=editingIdentity;setAuditing(true);setError('');try{const result=await apiPost<{mode:string;checks:FactCheck[];bodyHash:string}>('/agent/knowledge-drafts/'+letterId+'/recheck',{requestKey:createClientId(),bodyText:currentBody,subject:currentSubject});if(latestEditing.current===submittedIdentity)setAudit(result);}catch(e){if(latestEditing.current===submittedIdentity)setError(toErrorMessage(e,'复核尚未完成，原草稿保留'));}finally{setAuditing(false);}}
  if(!value&&!error)return null;
  const sourceLabel=(id:string)=>{const source=value?.sources.find(s=>s.sourceId===id);return source?source.title+' · v'+source.version:id==='profile:'+value?.context.customerId?'客户档案（不是我方政策）':'未确认来源';};
  const stateLabels:Record<string,string>={index_not_ready:'检索资料尚未就绪',index_stale:'检索资料需要更新',ready:'已检索有效知识',no_match:'没有匹配的有效知识',expired:'相关知识已过期',conflict:'存在来源冲突',retrieval_failed:'检索暂时失败'};

@@ -160,6 +160,9 @@ test('draft recheck is idempotent, owner-scoped and never rewrites body/original
  const used=calls;await recheckKnowledgeDraft(letter.id,{requestKey,bodyText:'We promise USD 999.',subject:'Special price USD 100'},actor,verifier);assert.equal(calls,used);
  const current=await DevelopmentLetter.findById(letter.id);assert.equal(current?.knowledgeRechecks?.length,1);assert.equal(current?.contentText,original.bodyText);assert.equal(JSON.stringify(current?.knowledgeReview),snapshot);
  await assert.rejects(()=>recheckKnowledgeDraft(letter.id,{requestKey,bodyText:'Changed again'},actor,verifier));
+ const subjectFault:SemanticVerifier={model:'fixture-subject-failure',async check({segments}){if(segments[0].text==='Subject fixture')throw Error('subject transport failure');return segments.map(p=>({id:p.id,status:'unsupported',quotes:[],reason:'fixture only'}));}};
+ const subjectRecord=await recheckKnowledgeDraft(letter.id,{requestKey:randomUUID(),bodyText:'Body fixture',subject:'Subject fixture'},actor,subjectFault);assert.equal(subjectRecord.mode,'unavailable');
+
  await assert.rejects(()=>recheckKnowledgeDraft(letter.id,{requestKey:randomUUID()}, {...actor,id:String(stranger),role:'user'},verifier));
  const {AgentKnowledge}=await import('../src/models/AgentKnowledge');await AgentKnowledge.updateOne({_id:kb.sources[0].knowledgeId},{$set:{archived:true}});
  const before=calls;await assert.rejects(()=>recheckKnowledgeDraft(letter.id,{requestKey:randomUUID()},actor,verifier));assert.equal(calls,before);

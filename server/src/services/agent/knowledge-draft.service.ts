@@ -42,7 +42,7 @@ export async function recheckKnowledgeDraft(id:string,input:{requestKey:string;b
  const profile=review.context.customerId&&review.context.customerProfile?{id:review.context.customerId,profile:review.context.customerProfile}:undefined;
  const result:{mode:'unavailable'|'semantic';checks:ClaimCheck[]}=stale?{mode:'unavailable' as const,checks:[{id:'stale',text:'依据状态',status:'unverifiable' as const,sourceIds:[],reason:'旧依据已变化或无法核对，请重新生成'}]}:await inspectEditedDraft(body,bundle,verifierOverride??providerFactVerifier(await resolveAgentProvider(),actor),profile);
  // A recheck includes the subject; it cannot be an unchecked channel for new commitments.
- if(subject){const subjectResult=await inspectEditedDraft(subject,bundle,stale?undefined:verifierOverride??providerFactVerifier(await resolveAgentProvider(),actor),profile);result.checks.unshift(...subjectResult.checks.map(c=>({...c,id:'subject-'+c.id})));}
+ if(subject){const subjectResult=await inspectEditedDraft(subject,bundle,stale?undefined:verifierOverride??providerFactVerifier(await resolveAgentProvider(),actor),profile);result.checks.unshift(...subjectResult.checks.map(c=>({...c,id:'subject-'+c.id})));if(subjectResult.mode==='unavailable')result.mode='unavailable';}
  await getLetter(id,actor);
  const after=await knowledgeFreshness(review,actor);if(after.failed||after.changed.length)throw ApiError.conflict('复核期间依据已变化，结果未保存，请重新生成');
  const record={requestKey:input.requestKey,bodyHash,checkedAt:new Date().toISOString(),mode:result.mode,checks:result.checks,freshness};

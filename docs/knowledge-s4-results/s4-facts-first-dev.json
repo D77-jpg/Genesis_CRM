@@ -1,0 +1,232 @@
+{
+  "contract": "s4-eval-v1",
+  "fictional": true,
+  "split": "dev",
+  "independentHoldout": false,
+  "datasetSha256": "0c6a23356b59b105e19de0e2c5b29c9620f004982f2b811cec9a8c1120a99bc0",
+  "measuredAt": "2026-10-18T08:30:29.139Z",
+  "model": "grok-4.7",
+  "destination": "http://124.222.23.70:18744",
+  "sourceHashes": [
+    {
+      "path": "src/services/agent/fact-verifier.ts",
+      "sha256": "2eb959ef5bdfd3419875b8fc4eeeeb6637d8b72ef8f18451ff14f7e7204f3fad"
+    },
+    {
+      "path": "src/services/agent/conditional-facts.ts",
+      "sha256": "772c9d9e450346a1911edc95110c7720b2e44e899f26c69c02b145db7e3c9c0c"
+    },
+    {
+      "path": "src/services/agent/knowledge-grounding.ts",
+      "sha256": "e389dfbea299dff62fbe90c856d2e279c1313d9c98158fb4b5a4173c9cab546a"
+    }
+  ],
+  "sourceUnchanged": true,
+  "metrics": {
+    "ordinaryAccuracy": 0,
+    "unsupportedCriticalReleased": 0,
+    "criticalPositiveCoverage": 0,
+    "verificationFailures": 22
+  },
+  "gatesPassed": false,
+  "rows": [
+    {
+      "id": "dev-01-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2301
+    },
+    {
+      "id": "dev-01-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2137
+    },
+    {
+      "id": "dev-02-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2142
+    },
+    {
+      "id": "dev-02-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2146
+    },
+    {
+      "id": "dev-03-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2146
+    },
+    {
+      "id": "dev-03-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2143
+    },
+    {
+      "id": "dev-04-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2148
+    },
+    {
+      "id": "dev-04-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2139
+    },
+    {
+      "id": "dev-05-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2141
+    },
+    {
+      "id": "dev-05-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2143
+    },
+    {
+      "id": "dev-06-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2158
+    },
+    {
+      "id": "dev-06-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2144
+    },
+    {
+      "id": "dev-07-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2145
+    },
+    {
+      "id": "dev-07-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2141
+    },
+    {
+      "id": "dev-08-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2140
+    },
+    {
+      "id": "dev-08-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2139
+    },
+    {
+      "id": "dev-critical-1",
+      "kind": "critical",
+      "expectedSupported": true,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2142
+    },
+    {
+      "id": "dev-critical-2",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2149
+    },
+    {
+      "id": "dev-critical-3",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2137
+    },
+    {
+      "id": "dev-critical-4",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2142
+    },
+    {
+      "id": "dev-critical-5",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2141
+    },
+    {
+      "id": "dev-critical-6",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": false,
+      "error": "verification_failed",
+      "durationMs": 2146
+    }
+  ]
+}

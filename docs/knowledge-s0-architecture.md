@@ -95,3 +95,10 @@ Publication、IndexGeneration、完整 EvidenceBundle/DraftEvidenceSnapshot 的�
 [ADR-003](knowledge-s3-retrieval.md) 定义检索窗口和完整发布依据分离、授权范围内 FTS5/BM25、来源去重/RRF/固定本地重排、显式降级与状态发现。IndexIdentity 升级为 genesis-semantic-s3.1，必须建立新代次；原文/解析/知识修订/旧草稿不重写。
 
 标题状态元数据同样受二次权限复核；管理员检索 trace 不进入销售模型上下文。来源分数不是事实置信度；完整条件核对与邮件逐项语义支持仍由 S4 完成，不把高召回当成最终承诺支持率。
+
+
+## S4 条件与核验合同（57a3adc 之后）
+
+[ADR-004](knowledge-s4-facts.md)定义已人工核对的scope、ConditionalEvidence、不可变CustomerAgreement版本、逐段ClaimCheck和编辑复核ledger。证据事实ID是source/version/原发布条款编号，publication_term位置与S1文档位置不混淆；发布正文和sourceRefs完整保留。客户专属记录只经客户ACL加载，不进入项目通用索引。
+
+旧scope缺失的记录不自动升级为确认承诺；历史修订/原草稿不覆盖，不自动发布82条草稿。核验模型无工具、无SMTP，适用性/关键承诺硬门禁在后端；同一配置模型做受约束语义核验不等于独立NLI保证。质量状态见阶段进度，当前真实网关故障，S4质量门槛未通过。
