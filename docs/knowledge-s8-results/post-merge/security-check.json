@@ -1,0 +1,10 @@
+{
+  "scanner": "gitleaks",
+  "version": "8.24.0",
+  "newArtifactDirectoryExit": 0,
+  "fullHistoryBeforeArchiveCommit": "8da9f6f",
+  "fullHistoryBeforeArchiveExit": 0,
+  "newIgnoreEntries": 0,
+  "postArchiveHistoryScan": "checked after commit; private local scan receipt and final handoff are authoritative",
+  "remoteCI": "unverified"
+}

@@ -1,0 +1,4647 @@
+{
+  "fictional": true,
+  "gitHead": "f3240d214c4782c6e1d4af09c6d47b5e11eb6977",
+  "dirty": false,
+  "model": "deepseek-flash",
+  "retrieval": "real-local-hybrid-rerank",
+  "smtp": "loopback-sink-no-relay",
+  "deliveries": [
+    {
+      "sha256": "68165c9ab3e778493f501a27249914af5729dd27775860dc0b96b68a77dcbf5c",
+      "bytes": 1874,
+      "recipient": "<avery@example.test>",
+      "receivedAt": "2026-10-19T06:48:41.894Z"
+    }
+  ],
+  "followups": [
+    {
+      "_id": "6ad5bd49c229aecb38a7eeb8",
+      "content": "首封开发信已发送（SMTP 已接受，等待客户回复）。主题：Lyocell pouch packaging introduction；收件人：avery@example.test。",
+      "customerId": "6ad5b5ecbd6881f0139d25ac",
+      "method": "email",
+      "result": "no_reply"
+    }
+  ],
+  "quota": [
+    {
+      "_id": "6ad5b800bd6881f0139d3b66",
+      "requestCount": 27,
+      "reservedTokens": 0,
+      "inputTokens": 75115,
+      "outputTokens": 16505,
+      "totalTokens": 91620
+    }
+  ],
+  "knowledge": [
+    {
+      "_id": "6ad5b5ecbd6881f0139d25af",
+      "projectId": "6ad5b5ecbd6881f0139d2563",
+      "version": 1,
+      "approvedVersion": 1,
+      "archived": false
+    },
+    {
+      "_id": "6ad5b5edbd6881f0139d25c5",
+      "projectId": "6ad5b5ecbd6881f0139d2563",
+      "version": 1,
+      "approvedVersion": 1,
+      "archived": false
+    },
+    {
+      "_id": "6ad5b5edbd6881f0139d25c8",
+      "projectId": "6ad5b5ecbd6881f0139d2589",
+      "version": 1,
+      "approvedVersion": 1,
+      "archived": false
+    },
+    {
+      "_id": "6ad5b725bd6881f0139d30e5",
+      "projectId": "6ad5b5ecbd6881f0139d2563",
+      "version": 3,
+      "approvedVersion": 3,
+      "archived": false
+    }
+  ],
+  "tasks": [
+    {
+      "id": "6ad5b7ffc229aecb38a7eea8",
+      "kind": "first_outreach",
+      "status": "completed",
+      "draftId": "6ad5b80cc229aecb38a7eea9",
+      "epoch": 0,
+      "error": {},
+      "budget": 60000,
+      "budgetCharged": 17813,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 5
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 6
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 1553
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 4
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 6421
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 4839
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 6
+        }
+      ]
+    },
+    {
+      "id": "6ad5b95bc229aecb38a7eeab",
+      "kind": "quotation_explanation",
+      "status": "awaiting_review",
+      "draftId": "6ad5b96ac229aecb38a7eeac",
+      "epoch": 0,
+      "error": {},
+      "budget": 60000,
+      "budgetCharged": 19741,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 3
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 4
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 5
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 56
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 47
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 3
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 6276
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 8170
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 4
+        }
+      ]
+    },
+    {
+      "id": "6ad5b9c9c229aecb38a7eeae",
+      "kind": "sample_reply",
+      "status": "awaiting_review",
+      "draftId": "6ad5b9d7c229aecb38a7eeaf",
+      "epoch": 0,
+      "error": {},
+      "budget": 60000,
+      "budgetCharged": 19568,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 7
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 6
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 12
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 89
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 65
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 5
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 7243
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 5780
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 5
+        }
+      ]
+    },
+    {
+      "id": "6ad5ba0bc229aecb38a7eeb1",
+      "kind": "followup_review",
+      "status": "awaiting_review",
+      "draftId": "6ad5ba1ac229aecb38a7eeb2",
+      "epoch": 0,
+      "error": {},
+      "budget": 60000,
+      "budgetCharged": 19724,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 4
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 4
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 6
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 78
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 61
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 4
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 7692
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 6243
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 4
+        }
+      ]
+    },
+    {
+      "id": "6ad5bb26c229aecb38a7eeb4",
+      "kind": "inquiry_reply",
+      "status": "failed",
+      "draftId": "6ad5be94c229aecb38a7eec2",
+      "epoch": 1,
+      "error": {
+        "code": "TASK_WORKFLOW_LIMIT",
+        "message": "任务处理次数或累计时限已用完，已保存结果保留，请缩小范围后新建任务。",
+        "retryable": false
+      },
+      "budget": 60000,
+      "budgetCharged": 46725,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 10
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 89
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 64
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 7
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 4671
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 7102
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 10
+        },
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 7
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 89
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 75
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 10
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 4832
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 7592
+        }
+      ]
+    }
+  ],
+  "letters": [
+    {
+      "id": "6ad5b80cc229aecb38a7eea9",
+      "status": "draft",
+      "taskType": "first_outreach",
+      "agentTaskId": "6ad5b7ffc229aecb38a7eea8",
+      "body": "Dear Fictional Avery,\nThank you for your inquiry regarding lyocell pouches for jewelry packaging.\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.\nI am reaching out to introduce our team and see whether we could help with your requirements.\nWould a brief discussion about your requirements be useful?\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+      "review": {
+        "version": 1,
+        "projectId": "6ad5b5ecbd6881f0139d2563",
+        "taskType": "first_outreach",
+        "generatedAt": "2026-10-19T06:26:15.239Z",
+        "status": "ready",
+        "completeness": "partial",
+        "sources": [
+          {
+            "sourceId": "knowledge:6ad5b5edbd6881f0139d25c5:v1",
+            "knowledgeId": "6ad5b5edbd6881f0139d25c5",
+            "version": 1,
+            "title": "S8 基础销售规则",
+            "category": "sales_rules",
+            "kind": "knowledge",
+            "content": "Use only approved applicable facts. Do not invent price, freight, certifications or buyer needs. Human review is required before sending.",
+            "source": "fixture://s8-rules",
+            "publication": {
+              "contentHash": "b6bbf21326db67635d484baa7a1dcd9d73fdb160e398e33f7c96cba1972162fe",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 137
+              },
+              "sourceRefs": []
+            },
+            "applicability": "一般资料；具体产品及交易条件须核对",
+            "products": [],
+            "validFrom": "2026-10-19T06:17:17.015Z",
+            "terms": []
+          },
+          {
+            "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+            "knowledgeId": "6ad5b725bd6881f0139d30e5",
+            "version": 2,
+            "title": "S8 main 虚构莱赛尔袋能力",
+            "category": "product",
+            "kind": "knowledge",
+            "content": "## Lyocell pouch / 莱赛尔袋\r\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "source": "fixture://s8-main-product · s8-company.md",
+            "publication": {
+              "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 165
+              },
+              "sourceRefs": [
+                {
+                  "documentId": "6ad5b6b8bd6881f0139d2d19",
+                  "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                  "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                  "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                  "location": {
+                    "kind": "text",
+                    "offsetUnit": "unicode_codepoints",
+                    "start": 41,
+                    "end": 207
+                  },
+                  "parserVersion": "genesis-parser-s1.1",
+                  "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                  "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                }
+              ]
+            },
+            "applicability": "Fictional S8 lyocell pouch only. No price or freight commitment.",
+            "products": [
+              "lyocell pouch",
+              "莱赛尔袋"
+            ],
+            "validFrom": "2026-10-19T06:22:00Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.8054147660732269,
+                "vectorRank": 1,
+                "bm25": 5.264886822861349,
+                "bm25Rank": 1,
+                "rrf": 0.03278688524590164,
+                "rerank": 7.637035846710205
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "f2e58e815469442c7e8e1f46c79389d4e339f69ca8f6d2b7d7edeb7eadd3f7bc",
+                  "contentHash": "42b9dd8f499e15cb21dd0f1713ff777d0b062240a5348fece59a1e680ba94540",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 165,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c"
+                  },
+                  "sourceRefs": [
+                    {
+                      "documentId": "6ad5b6b8bd6881f0139d2d19",
+                      "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                      "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                      "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                      "location": {
+                        "kind": "text",
+                        "offsetUnit": "unicode_codepoints",
+                        "start": 41,
+                        "end": 207
+                      },
+                      "parserVersion": "genesis-parser-s1.1",
+                      "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                      "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+            "knowledgeId": "6ad5b5ecbd6881f0139d25af",
+            "version": 1,
+            "title": "S8 虚构莱赛尔袋交易条件",
+            "category": "trade",
+            "kind": "knowledge",
+            "content": "Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.",
+            "source": "fixture://s8-synthetic-approval",
+            "publication": {
+              "contentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 82
+              },
+              "sourceRefs": []
+            },
+            "applicability": "Fictional S8 lyocell pouch only",
+            "products": [
+              "lyocell pouch"
+            ],
+            "validFrom": "2026-10-19T06:17:16.966Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.5993692576885223,
+                "vectorRank": 2,
+                "bm25": 0.000005927967985771455,
+                "bm25Rank": 2,
+                "rrf": 0.03225806451612903,
+                "rerank": 0.6316524147987366
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "85262e15dc86348dab37d65110514ecae1f99f37e310c9af39b67304ccb24859",
+                  "contentHash": "a0afb7c909a1fffb523bd848b8947b274196784783b8fc1d351087b61cdea29a",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 82,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 142,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "617a0d99055e9a448e13cb9effda530057ca29293c63c7455a46dd60d24974d6",
+                  "contentHash": "9241994af8d84ca6fbe96d3f1ada77300456252bbf21f5d489cd90519f50a79b",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 252,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "488be47700152da8797b161646a85c68daefb955d820e7cf25c2ed8cb92715b8",
+                  "contentHash": "4dad4ef893a00413840adfa89544ea72c29d98fe23d333f82d789009ef38677c",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 228,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "76aebebfc2902548f73a5d9b6251829cc927f08caa501670430815b976fa16d0",
+                  "contentHash": "92da576bbaf720e69eadd627bb12f1ab08da4186aaa889f1eea13a462d57283f",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 280,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "7634fa87d1df984cfff8f4b772d560f6532f200bfc570201418b51f61ed8fc67",
+                  "contentHash": "5b4d260821b3de0f1c6c774fa3786516f6c360757ca614b27abfed0cc44f19f3",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 256,
+                      "end": 338,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "c77ae8644881ab062d20a2e6c51ab9eaae168e7f71859220b44e4a1f3f17bf52",
+                  "contentHash": "6131b033d7552253a1b80533a2df0ed16828cb70baf2f7420a05fc750863cb58",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 272,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "6329a7a7e2ccb1663ea23407b048fe3167aaa53af029d395d15d1cefb4a58e5b",
+                  "contentHash": "d0d8cebb572408a9b373ca6b9f49ff6fddea4afa4f3cdf0beab42a64ba46b889",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 248,
+                      "end": 343,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                }
+              ]
+            }
+          }
+        ],
+        "claims": [
+          {
+            "text": "Thank you for your inquiry regarding lyocell pouches for jewelry packaging.",
+            "sourceIds": [
+              "profile:6ad5b5ecbd6881f0139d25ac",
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          },
+          {
+            "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "sourceIds": [
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          }
+        ],
+        "questions": [],
+        "issues": [
+          {
+            "code": "claim_rewritten",
+            "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+          },
+          {
+            "code": "semantic_partial",
+            "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+          }
+        ],
+        "context": {
+          "customerProfile": {
+            "name": "Fictional Avery",
+            "company": "S8 Independent Jewelry Buyer",
+            "country": "Germany",
+            "industry": "jewelry",
+            "interestedProducts": "lyocell pouch"
+          },
+          "factContext": {
+            "quantity": 180,
+            "quantityUnit": "pcs",
+            "destination": "Germany",
+            "customerId": "6ad5b5ecbd6881f0139d25ac",
+            "products": [
+              "lyocell pouch"
+            ],
+            "processes": []
+          },
+          "customerId": "6ad5b5ecbd6881f0139d25ac",
+          "request": "帮我给这个客户写第一封开发信，不要发送"
+        },
+        "bodyHash": "a35a87ac91d015444381cdc076fdade6e724f70efd2bf1c6134ae935e620818c",
+        "factAudit": {
+          "contract": "s4.1",
+          "mode": "semantic",
+          "attempts": 2,
+          "checks": [
+            {
+              "id": "s0",
+              "text": "Dear Fictional Avery,",
+              "status": "non_claim",
+              "sourceIds": [],
+              "reason": "礼貌语或不含交易承诺的询问"
+            },
+            {
+              "id": "s1",
+              "text": "Thank you for your inquiry regarding lyocell pouches for jewelry packaging.",
+              "status": "supported",
+              "sourceIds": [
+                "profile:6ad5b5ecbd6881f0139d25ac",
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "profile:6ad5b5ecbd6881f0139d25ac",
+                  "quote": "lyocell pouch",
+                  "start": 130,
+                  "end": 143
+                },
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging.",
+                  "start": 25,
+                  "end": 81
+                }
+              ],
+              "reason": "Profile lists interest in lyocell pouch and industry jewelry; evidence describes lyocell pouches for jewelry packaging."
+            },
+            {
+              "id": "s2",
+              "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+                  "start": 25,
+                  "end": 165
+                }
+              ],
+              "reason": "All three assertions match the evidence verbatim."
+            },
+            {
+              "id": "s3",
+              "text": "Could you share the pouch size, preferred color, whether you need a logo or printing, and your required packaging format?",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "A request for information, not an assertion of fact."
+            }
+          ],
+          "facts": []
+        }
+      }
+    },
+    {
+      "id": "6ad5b96ac229aecb38a7eeac",
+      "status": "draft",
+      "taskType": "quotation_explanation",
+      "agentTaskId": "6ad5b95bc229aecb38a7eeab",
+      "body": "Dear Fictional Avery,\nThank you for your interest in lyocell pouches for the German market.\nWe supply unlined lyocell pouches for jewelry packaging. Each pouch has a drawstring closure and is supplied without jewelry contents.\nHere are the quotation details available for review and any points still requiring confirmation.\nMinimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.\nProduction lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.\nSample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.\nTo confirm the remaining details:\n- A firm price needs confirmation after reviewing your specifications and quantity.\n- Freight cost needs confirmation for the destination and shipment details.\nWe will review the remaining points and confirm the details with you.\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+      "review": {
+        "version": 1,
+        "projectId": "6ad5b5ecbd6881f0139d2563",
+        "taskType": "quotation_explanation",
+        "generatedAt": "2026-10-19T06:32:02.074Z",
+        "status": "ready",
+        "completeness": "partial",
+        "sources": [
+          {
+            "sourceId": "knowledge:6ad5b5edbd6881f0139d25c5:v1",
+            "knowledgeId": "6ad5b5edbd6881f0139d25c5",
+            "version": 1,
+            "title": "S8 基础销售规则",
+            "category": "sales_rules",
+            "kind": "knowledge",
+            "content": "Use only approved applicable facts. Do not invent price, freight, certifications or buyer needs. Human review is required before sending.",
+            "source": "fixture://s8-rules",
+            "publication": {
+              "contentHash": "b6bbf21326db67635d484baa7a1dcd9d73fdb160e398e33f7c96cba1972162fe",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 137
+              },
+              "sourceRefs": []
+            },
+            "applicability": "一般资料；具体产品及交易条件须核对",
+            "products": [],
+            "validFrom": "2026-10-19T06:17:17.015Z",
+            "terms": []
+          },
+          {
+            "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+            "knowledgeId": "6ad5b5ecbd6881f0139d25af",
+            "version": 1,
+            "title": "S8 虚构莱赛尔袋交易条件",
+            "category": "trade",
+            "kind": "knowledge",
+            "content": "Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.",
+            "source": "fixture://s8-synthetic-approval",
+            "publication": {
+              "contentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 82
+              },
+              "sourceRefs": []
+            },
+            "applicability": "Fictional S8 lyocell pouch only",
+            "products": [
+              "lyocell pouch"
+            ],
+            "validFrom": "2026-10-19T06:17:16.966Z",
+            "terms": [
+              {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              }
+            ],
+            "index": {
+              "scores": {
+                "vector": 0.5054208338260651,
+                "vectorRank": 2,
+                "bm25": 8.003371719720786,
+                "bm25Rank": 1,
+                "rrf": 0.03252247488101534,
+                "rerank": -1.0227959156036377
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "85262e15dc86348dab37d65110514ecae1f99f37e310c9af39b67304ccb24859",
+                  "contentHash": "a0afb7c909a1fffb523bd848b8947b274196784783b8fc1d351087b61cdea29a",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 82,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 142,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "617a0d99055e9a448e13cb9effda530057ca29293c63c7455a46dd60d24974d6",
+                  "contentHash": "9241994af8d84ca6fbe96d3f1ada77300456252bbf21f5d489cd90519f50a79b",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 252,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "488be47700152da8797b161646a85c68daefb955d820e7cf25c2ed8cb92715b8",
+                  "contentHash": "4dad4ef893a00413840adfa89544ea72c29d98fe23d333f82d789009ef38677c",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 228,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "76aebebfc2902548f73a5d9b6251829cc927f08caa501670430815b976fa16d0",
+                  "contentHash": "92da576bbaf720e69eadd627bb12f1ab08da4186aaa889f1eea13a462d57283f",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 280,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "7634fa87d1df984cfff8f4b772d560f6532f200bfc570201418b51f61ed8fc67",
+                  "contentHash": "5b4d260821b3de0f1c6c774fa3786516f6c360757ca614b27abfed0cc44f19f3",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 256,
+                      "end": 338,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "c77ae8644881ab062d20a2e6c51ab9eaae168e7f71859220b44e4a1f3f17bf52",
+                  "contentHash": "6131b033d7552253a1b80533a2df0ed16828cb70baf2f7420a05fc750863cb58",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 272,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "6329a7a7e2ccb1663ea23407b048fe3167aaa53af029d395d15d1cefb4a58e5b",
+                  "contentHash": "d0d8cebb572408a9b373ca6b9f49ff6fddea4afa4f3cdf0beab42a64ba46b889",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 248,
+                      "end": 343,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                }
+              ]
+            }
+          },
+          {
+            "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+            "knowledgeId": "6ad5b725bd6881f0139d30e5",
+            "version": 2,
+            "title": "S8 main 虚构莱赛尔袋能力",
+            "category": "product",
+            "kind": "knowledge",
+            "content": "## Lyocell pouch / 莱赛尔袋\r\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "source": "fixture://s8-main-product · s8-company.md",
+            "publication": {
+              "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 165
+              },
+              "sourceRefs": [
+                {
+                  "documentId": "6ad5b6b8bd6881f0139d2d19",
+                  "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                  "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                  "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                  "location": {
+                    "kind": "text",
+                    "offsetUnit": "unicode_codepoints",
+                    "start": 41,
+                    "end": 207
+                  },
+                  "parserVersion": "genesis-parser-s1.1",
+                  "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                  "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                }
+              ]
+            },
+            "applicability": "Fictional S8 lyocell pouch only. No price or freight commitment.",
+            "products": [
+              "lyocell pouch",
+              "莱赛尔袋"
+            ],
+            "validFrom": "2026-10-19T06:22:00Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.6327526569366455,
+                "vectorRank": 1,
+                "bm25": 5.264886822861349,
+                "bm25Rank": 2,
+                "rrf": 0.03252247488101534,
+                "rerank": -3.782752752304077
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "f2e58e815469442c7e8e1f46c79389d4e339f69ca8f6d2b7d7edeb7eadd3f7bc",
+                  "contentHash": "42b9dd8f499e15cb21dd0f1713ff777d0b062240a5348fece59a1e680ba94540",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 165,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c"
+                  },
+                  "sourceRefs": [
+                    {
+                      "documentId": "6ad5b6b8bd6881f0139d2d19",
+                      "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                      "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                      "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                      "location": {
+                        "kind": "text",
+                        "offsetUnit": "unicode_codepoints",
+                        "start": 41,
+                        "end": 207
+                      },
+                      "parserVersion": "genesis-parser-s1.1",
+                      "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                      "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "claims": [
+          {
+            "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "moq",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+            "topic": "lead_time",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "sample",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Thank you for your interest in lyocell pouches for the German market.",
+            "sourceIds": [
+              "profile:6ad5b5ecbd6881f0139d25ac"
+            ]
+          },
+          {
+            "text": "We supply unlined lyocell pouches for jewelry packaging. Each pouch has a drawstring closure and is supplied without jewelry contents.",
+            "sourceIds": [
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "question": "Minimum order quantity",
+            "topic": "moq",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Production lead time",
+            "topic": "lead_time",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Sample policy",
+            "topic": "sample",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Price",
+            "topic": "price",
+            "status": "unanswered",
+            "sourceIds": []
+          },
+          {
+            "question": "Shipping",
+            "topic": "shipping",
+            "status": "unanswered",
+            "sourceIds": []
+          }
+        ],
+        "issues": [
+          {
+            "code": "missing",
+            "message": "尚无适用于本次请求的已确认运费金额；相关物流说明不能当作报价"
+          },
+          {
+            "code": "missing",
+            "topic": "price",
+            "message": "待确认：Price",
+            "sourceIds": []
+          },
+          {
+            "code": "missing",
+            "topic": "shipping",
+            "message": "待确认：Shipping",
+            "sourceIds": []
+          },
+          {
+            "code": "claim_rewritten",
+            "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+          },
+          {
+            "code": "semantic_partial",
+            "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+          }
+        ],
+        "context": {
+          "customerProfile": {
+            "name": "Fictional Avery",
+            "company": "S8 Independent Jewelry Buyer",
+            "country": "Germany",
+            "industry": "jewelry",
+            "interestedProducts": "lyocell pouch"
+          },
+          "factContext": {
+            "quantity": 180,
+            "quantityUnit": "pcs",
+            "destination": "Germany",
+            "customerId": "6ad5b5ecbd6881f0139d25ac",
+            "products": [
+              "lyocell pouch"
+            ],
+            "processes": []
+          },
+          "customerId": "6ad5b5ecbd6881f0139d25ac",
+          "request": "请给这个客户写报价说明邮件，不要发送"
+        },
+        "bodyHash": "62c36ba2506dd5bebdad71b1e24a1afae3f1bc9a475067440b3ee9357258be84",
+        "factAudit": {
+          "contract": "s4.1",
+          "mode": "semantic",
+          "attempts": 2,
+          "checks": [
+            {
+              "id": "s0",
+              "text": "Dear Fictional Avery,",
+              "status": "non_claim",
+              "sourceIds": [],
+              "reason": "礼貌语或不含交易承诺的询问"
+            },
+            {
+              "id": "s1",
+              "text": "Thank you for your interest in lyocell pouches for the German market.",
+              "status": "supported",
+              "sourceIds": [
+                "profile:6ad5b5ecbd6881f0139d25ac"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "profile:6ad5b5ecbd6881f0139d25ac",
+                  "quote": "Germany",
+                  "start": 78,
+                  "end": 85
+                },
+                {
+                  "sourceId": "profile:6ad5b5ecbd6881f0139d25ac",
+                  "quote": "lyocell pouch",
+                  "start": 130,
+                  "end": 143
+                }
+              ],
+              "reason": "Profile shows interest in lyocell pouch and country Germany, matching the stated interest."
+            },
+            {
+              "id": "s2",
+              "text": "We supply unlined lyocell pouches for jewelry packaging. Each pouch has a drawstring closure and is supplied without jewelry contents.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+                  "start": 25,
+                  "end": 165
+                }
+              ],
+              "reason": "Directly matches the product description evidence."
+            },
+            {
+              "id": "s3",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+                  "quote": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 124
+                }
+              ],
+              "reason": "Matches the MOQ term with its conditions verbatim."
+            },
+            {
+              "id": "s4",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+                  "quote": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+                  "start": 0,
+                  "end": 187
+                }
+              ],
+              "reason": "Matches the lead time term with its conditions verbatim."
+            },
+            {
+              "id": "s5",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+                  "quote": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 157
+                }
+              ],
+              "reason": "Matches the sample policy term with its conditions verbatim."
+            },
+            {
+              "id": "s6",
+              "text": "Pricing and freight have not yet been confirmed, and we will follow up separately once verified.",
+              "status": "unsupported",
+              "sourceIds": [],
+              "reason": "关键承诺的数值、单位或完整条件不能被语义相似替代"
+            },
+            {
+              "id": "s7",
+              "text": "To confirm the sample and lead time apply correctly, could you share the pouch dimensions, color, and any logo or printing requirements? If you would like a sample, please also confirm the delivery address for courier arrangement.",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "Requests for dimensions, color, logo/printing requirements and delivery address are not established by any source; they are recipient inquiries, not verifiable commitments."
+            },
+            {
+              "id": "f0",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f1",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f2",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            }
+          ],
+          "facts": [
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "moq",
+              "term": {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 0
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "lead_time",
+              "term": {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 1
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "sample",
+              "term": {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 2
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6ad5b9d7c229aecb38a7eeaf",
+      "status": "draft",
+      "taskType": "sample_reply",
+      "agentTaskId": "6ad5b9c9c229aecb38a7eeae",
+      "body": "Dear Fictional Avery,\nThank you for your inquiry about our lyocell pouches for jewelry packaging. We supply unlined lyocell pouches with a drawstring closure, and the packaging is supplied without jewelry contents.\nHere is the available information for your sample request.\nMinimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.\nProduction lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.\nSample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.\nTo confirm the remaining details:\n- Freight cost needs confirmation for the destination and shipment details.\nWe will review the remaining points and confirm the details with you.\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+      "review": {
+        "version": 1,
+        "projectId": "6ad5b5ecbd6881f0139d2563",
+        "taskType": "sample_reply",
+        "generatedAt": "2026-10-19T06:33:53.227Z",
+        "status": "ready",
+        "completeness": "partial",
+        "sources": [
+          {
+            "sourceId": "knowledge:6ad5b5edbd6881f0139d25c5:v1",
+            "knowledgeId": "6ad5b5edbd6881f0139d25c5",
+            "version": 1,
+            "title": "S8 基础销售规则",
+            "category": "sales_rules",
+            "kind": "knowledge",
+            "content": "Use only approved applicable facts. Do not invent price, freight, certifications or buyer needs. Human review is required before sending.",
+            "source": "fixture://s8-rules",
+            "publication": {
+              "contentHash": "b6bbf21326db67635d484baa7a1dcd9d73fdb160e398e33f7c96cba1972162fe",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 137
+              },
+              "sourceRefs": []
+            },
+            "applicability": "一般资料；具体产品及交易条件须核对",
+            "products": [],
+            "validFrom": "2026-10-19T06:17:17.015Z",
+            "terms": []
+          },
+          {
+            "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+            "knowledgeId": "6ad5b5ecbd6881f0139d25af",
+            "version": 1,
+            "title": "S8 虚构莱赛尔袋交易条件",
+            "category": "trade",
+            "kind": "knowledge",
+            "content": "Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.",
+            "source": "fixture://s8-synthetic-approval",
+            "publication": {
+              "contentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 82
+              },
+              "sourceRefs": []
+            },
+            "applicability": "Fictional S8 lyocell pouch only",
+            "products": [
+              "lyocell pouch"
+            ],
+            "validFrom": "2026-10-19T06:17:16.966Z",
+            "terms": [
+              {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              }
+            ],
+            "index": {
+              "scores": {
+                "vector": 0.5054208338260651,
+                "vectorRank": 2,
+                "bm25": 8.003371719720786,
+                "bm25Rank": 1,
+                "rrf": 0.03252247488101534,
+                "rerank": -1.0227959156036377
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "85262e15dc86348dab37d65110514ecae1f99f37e310c9af39b67304ccb24859",
+                  "contentHash": "a0afb7c909a1fffb523bd848b8947b274196784783b8fc1d351087b61cdea29a",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 82,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 142,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "617a0d99055e9a448e13cb9effda530057ca29293c63c7455a46dd60d24974d6",
+                  "contentHash": "9241994af8d84ca6fbe96d3f1ada77300456252bbf21f5d489cd90519f50a79b",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 252,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "488be47700152da8797b161646a85c68daefb955d820e7cf25c2ed8cb92715b8",
+                  "contentHash": "4dad4ef893a00413840adfa89544ea72c29d98fe23d333f82d789009ef38677c",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 228,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "76aebebfc2902548f73a5d9b6251829cc927f08caa501670430815b976fa16d0",
+                  "contentHash": "92da576bbaf720e69eadd627bb12f1ab08da4186aaa889f1eea13a462d57283f",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 280,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "7634fa87d1df984cfff8f4b772d560f6532f200bfc570201418b51f61ed8fc67",
+                  "contentHash": "5b4d260821b3de0f1c6c774fa3786516f6c360757ca614b27abfed0cc44f19f3",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 256,
+                      "end": 338,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "c77ae8644881ab062d20a2e6c51ab9eaae168e7f71859220b44e4a1f3f17bf52",
+                  "contentHash": "6131b033d7552253a1b80533a2df0ed16828cb70baf2f7420a05fc750863cb58",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 272,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "6329a7a7e2ccb1663ea23407b048fe3167aaa53af029d395d15d1cefb4a58e5b",
+                  "contentHash": "d0d8cebb572408a9b373ca6b9f49ff6fddea4afa4f3cdf0beab42a64ba46b889",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 248,
+                      "end": 343,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                }
+              ]
+            }
+          },
+          {
+            "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+            "knowledgeId": "6ad5b725bd6881f0139d30e5",
+            "version": 2,
+            "title": "S8 main 虚构莱赛尔袋能力",
+            "category": "product",
+            "kind": "knowledge",
+            "content": "## Lyocell pouch / 莱赛尔袋\r\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "source": "fixture://s8-main-product · s8-company.md",
+            "publication": {
+              "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 165
+              },
+              "sourceRefs": [
+                {
+                  "documentId": "6ad5b6b8bd6881f0139d2d19",
+                  "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                  "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                  "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                  "location": {
+                    "kind": "text",
+                    "offsetUnit": "unicode_codepoints",
+                    "start": 41,
+                    "end": 207
+                  },
+                  "parserVersion": "genesis-parser-s1.1",
+                  "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                  "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                }
+              ]
+            },
+            "applicability": "Fictional S8 lyocell pouch only. No price or freight commitment.",
+            "products": [
+              "lyocell pouch",
+              "莱赛尔袋"
+            ],
+            "validFrom": "2026-10-19T06:22:00Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.6327526569366455,
+                "vectorRank": 1,
+                "bm25": 5.264886822861349,
+                "bm25Rank": 2,
+                "rrf": 0.03252247488101534,
+                "rerank": -3.782752752304077
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "f2e58e815469442c7e8e1f46c79389d4e339f69ca8f6d2b7d7edeb7eadd3f7bc",
+                  "contentHash": "42b9dd8f499e15cb21dd0f1713ff777d0b062240a5348fece59a1e680ba94540",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 165,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c"
+                  },
+                  "sourceRefs": [
+                    {
+                      "documentId": "6ad5b6b8bd6881f0139d2d19",
+                      "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                      "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                      "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                      "location": {
+                        "kind": "text",
+                        "offsetUnit": "unicode_codepoints",
+                        "start": 41,
+                        "end": 207
+                      },
+                      "parserVersion": "genesis-parser-s1.1",
+                      "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                      "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "claims": [
+          {
+            "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "moq",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+            "topic": "lead_time",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "sample",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Thank you for your inquiry about our lyocell pouches for jewelry packaging. We supply unlined lyocell pouches with a drawstring closure, and the packaging is supplied without jewelry contents.",
+            "sourceIds": [
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "question": "Minimum order quantity",
+            "topic": "moq",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Production lead time",
+            "topic": "lead_time",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Sample policy",
+            "topic": "sample",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Shipping",
+            "topic": "shipping",
+            "status": "unanswered",
+            "sourceIds": []
+          }
+        ],
+        "issues": [
+          {
+            "code": "missing",
+            "topic": "shipping",
+            "message": "待确认：Shipping",
+            "sourceIds": []
+          },
+          {
+            "code": "claim_rewritten",
+            "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+          },
+          {
+            "code": "semantic_partial",
+            "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+          }
+        ],
+        "context": {
+          "customerProfile": {
+            "name": "Fictional Avery",
+            "company": "S8 Independent Jewelry Buyer",
+            "country": "Germany",
+            "industry": "jewelry",
+            "interestedProducts": "lyocell pouch"
+          },
+          "factContext": {
+            "quantity": 180,
+            "quantityUnit": "pcs",
+            "destination": "Germany",
+            "customerId": "6ad5b5ecbd6881f0139d25ac",
+            "products": [
+              "lyocell pouch"
+            ],
+            "processes": []
+          },
+          "customerId": "6ad5b5ecbd6881f0139d25ac",
+          "request": "请给这个客户写样品回复邮件，不要发送"
+        },
+        "bodyHash": "afad258925780bb3f1f506208df0c91a2661c7d10ef0e45e0706d4fb6d33a8fc",
+        "factAudit": {
+          "contract": "s4.1",
+          "mode": "semantic",
+          "attempts": 2,
+          "checks": [
+            {
+              "id": "s0",
+              "text": "Dear Fictional Avery,",
+              "status": "non_claim",
+              "sourceIds": [],
+              "reason": "礼貌语或不含交易承诺的询问"
+            },
+            {
+              "id": "s1",
+              "text": "Thank you for your inquiry about our lyocell pouches for jewelry packaging. We supply unlined lyocell pouches with a drawstring closure, and the packaging is supplied without jewelry contents.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+                  "start": 25,
+                  "end": 165
+                }
+              ],
+              "reason": "All product assertions match the product source verbatim in substance."
+            },
+            {
+              "id": "s2",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+                  "quote": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 124
+                }
+              ],
+              "reason": "MOQ and stated conditions reproduce the term exactly."
+            },
+            {
+              "id": "s3",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+                  "quote": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+                  "start": 0,
+                  "end": 187
+                }
+              ],
+              "reason": "Lead time and conditions reproduce the term exactly."
+            },
+            {
+              "id": "s4",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+                  "quote": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 157
+                }
+              ],
+              "reason": "Sample price and conditions reproduce the term exactly."
+            },
+            {
+              "id": "s5",
+              "text": "To prepare an accurate quotation, could you confirm the pouch size, color, whether you need a logo printed, and your preferred packaging?",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "Follow-up questions requesting buyer details are not factual assertions requiring evidence."
+            },
+            {
+              "id": "f0",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f1",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f2",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            }
+          ],
+          "facts": [
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "moq",
+              "term": {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 0
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "lead_time",
+              "term": {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 1
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "sample",
+              "term": {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 2
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6ad5ba1ac229aecb38a7eeb2",
+      "status": "draft",
+      "taskType": "followup_review",
+      "agentTaskId": "6ad5ba0bc229aecb38a7eeb1",
+      "body": "Dear Fictional Avery,\nThank you for your interest in lyocell pouches for jewelry packaging.\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.\nI wanted to check whether you have any updates on your current requirements.\nMinimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.\nProduction lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.\nSample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.\nTo confirm the remaining details:\n- Freight cost needs confirmation for the destination and shipment details.\nWe will review the remaining points and confirm the details with you.\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+      "review": {
+        "version": 1,
+        "projectId": "6ad5b5ecbd6881f0139d2563",
+        "taskType": "followup_review",
+        "generatedAt": "2026-10-19T06:35:00.12Z",
+        "status": "ready",
+        "completeness": "partial",
+        "sources": [
+          {
+            "sourceId": "knowledge:6ad5b5edbd6881f0139d25c5:v1",
+            "knowledgeId": "6ad5b5edbd6881f0139d25c5",
+            "version": 1,
+            "title": "S8 基础销售规则",
+            "category": "sales_rules",
+            "kind": "knowledge",
+            "content": "Use only approved applicable facts. Do not invent price, freight, certifications or buyer needs. Human review is required before sending.",
+            "source": "fixture://s8-rules",
+            "publication": {
+              "contentHash": "b6bbf21326db67635d484baa7a1dcd9d73fdb160e398e33f7c96cba1972162fe",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 137
+              },
+              "sourceRefs": []
+            },
+            "applicability": "一般资料；具体产品及交易条件须核对",
+            "products": [],
+            "validFrom": "2026-10-19T06:17:17.015Z",
+            "terms": []
+          },
+          {
+            "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+            "knowledgeId": "6ad5b5ecbd6881f0139d25af",
+            "version": 1,
+            "title": "S8 虚构莱赛尔袋交易条件",
+            "category": "trade",
+            "kind": "knowledge",
+            "content": "Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.",
+            "source": "fixture://s8-synthetic-approval",
+            "publication": {
+              "contentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 82
+              },
+              "sourceRefs": []
+            },
+            "applicability": "Fictional S8 lyocell pouch only",
+            "products": [
+              "lyocell pouch"
+            ],
+            "validFrom": "2026-10-19T06:17:16.966Z",
+            "terms": [
+              {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              }
+            ],
+            "index": {
+              "scores": {
+                "vector": 0.5054208338260651,
+                "vectorRank": 2,
+                "bm25": 8.003371719720786,
+                "bm25Rank": 1,
+                "rrf": 0.03252247488101534,
+                "rerank": -1.0227959156036377
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "85262e15dc86348dab37d65110514ecae1f99f37e310c9af39b67304ccb24859",
+                  "contentHash": "a0afb7c909a1fffb523bd848b8947b274196784783b8fc1d351087b61cdea29a",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 82,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 142,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "617a0d99055e9a448e13cb9effda530057ca29293c63c7455a46dd60d24974d6",
+                  "contentHash": "9241994af8d84ca6fbe96d3f1ada77300456252bbf21f5d489cd90519f50a79b",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 252,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "488be47700152da8797b161646a85c68daefb955d820e7cf25c2ed8cb92715b8",
+                  "contentHash": "4dad4ef893a00413840adfa89544ea72c29d98fe23d333f82d789009ef38677c",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 228,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "76aebebfc2902548f73a5d9b6251829cc927f08caa501670430815b976fa16d0",
+                  "contentHash": "92da576bbaf720e69eadd627bb12f1ab08da4186aaa889f1eea13a462d57283f",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 280,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "7634fa87d1df984cfff8f4b772d560f6532f200bfc570201418b51f61ed8fc67",
+                  "contentHash": "5b4d260821b3de0f1c6c774fa3786516f6c360757ca614b27abfed0cc44f19f3",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 256,
+                      "end": 338,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "c77ae8644881ab062d20a2e6c51ab9eaae168e7f71859220b44e4a1f3f17bf52",
+                  "contentHash": "6131b033d7552253a1b80533a2df0ed16828cb70baf2f7420a05fc750863cb58",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 272,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "6329a7a7e2ccb1663ea23407b048fe3167aaa53af029d395d15d1cefb4a58e5b",
+                  "contentHash": "d0d8cebb572408a9b373ca6b9f49ff6fddea4afa4f3cdf0beab42a64ba46b889",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 248,
+                      "end": 343,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                }
+              ]
+            }
+          },
+          {
+            "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+            "knowledgeId": "6ad5b725bd6881f0139d30e5",
+            "version": 2,
+            "title": "S8 main 虚构莱赛尔袋能力",
+            "category": "product",
+            "kind": "knowledge",
+            "content": "## Lyocell pouch / 莱赛尔袋\r\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "source": "fixture://s8-main-product · s8-company.md",
+            "publication": {
+              "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 165
+              },
+              "sourceRefs": [
+                {
+                  "documentId": "6ad5b6b8bd6881f0139d2d19",
+                  "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                  "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                  "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                  "location": {
+                    "kind": "text",
+                    "offsetUnit": "unicode_codepoints",
+                    "start": 41,
+                    "end": 207
+                  },
+                  "parserVersion": "genesis-parser-s1.1",
+                  "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                  "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                }
+              ]
+            },
+            "applicability": "Fictional S8 lyocell pouch only. No price or freight commitment.",
+            "products": [
+              "lyocell pouch",
+              "莱赛尔袋"
+            ],
+            "validFrom": "2026-10-19T06:22:00Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.6327526569366455,
+                "vectorRank": 1,
+                "bm25": 5.264886822861349,
+                "bm25Rank": 2,
+                "rrf": 0.03252247488101534,
+                "rerank": -3.782752752304077
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "f2e58e815469442c7e8e1f46c79389d4e339f69ca8f6d2b7d7edeb7eadd3f7bc",
+                  "contentHash": "42b9dd8f499e15cb21dd0f1713ff777d0b062240a5348fece59a1e680ba94540",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 165,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c"
+                  },
+                  "sourceRefs": [
+                    {
+                      "documentId": "6ad5b6b8bd6881f0139d2d19",
+                      "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                      "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                      "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                      "location": {
+                        "kind": "text",
+                        "offsetUnit": "unicode_codepoints",
+                        "start": 41,
+                        "end": 207
+                      },
+                      "parserVersion": "genesis-parser-s1.1",
+                      "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                      "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "claims": [
+          {
+            "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "moq",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+            "topic": "lead_time",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "sample",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Thank you for your interest in lyocell pouches for jewelry packaging.",
+            "sourceIds": [
+              "profile:6ad5b5ecbd6881f0139d25ac"
+            ]
+          },
+          {
+            "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "sourceIds": [
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "question": "Minimum order quantity",
+            "topic": "moq",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Production lead time",
+            "topic": "lead_time",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Sample policy",
+            "topic": "sample",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Shipping",
+            "topic": "shipping",
+            "status": "unanswered",
+            "sourceIds": []
+          }
+        ],
+        "issues": [
+          {
+            "code": "missing",
+            "topic": "shipping",
+            "message": "待确认：Shipping",
+            "sourceIds": []
+          },
+          {
+            "code": "claim_rewritten",
+            "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+          },
+          {
+            "code": "semantic_partial",
+            "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+          }
+        ],
+        "context": {
+          "customerProfile": {
+            "name": "Fictional Avery",
+            "company": "S8 Independent Jewelry Buyer",
+            "country": "Germany",
+            "industry": "jewelry",
+            "interestedProducts": "lyocell pouch"
+          },
+          "factContext": {
+            "quantity": 180,
+            "quantityUnit": "pcs",
+            "destination": "Germany",
+            "customerId": "6ad5b5ecbd6881f0139d25ac",
+            "products": [
+              "lyocell pouch"
+            ],
+            "processes": []
+          },
+          "customerId": "6ad5b5ecbd6881f0139d25ac",
+          "request": "请给这个客户写跟进邮件，不要发送"
+        },
+        "bodyHash": "d3bc0b6dc6cb82a1ba5932be4c90ebc3e91237b60773993ae42e9a5128e098e3",
+        "factAudit": {
+          "contract": "s4.1",
+          "mode": "semantic",
+          "attempts": 2,
+          "checks": [
+            {
+              "id": "s0",
+              "text": "Dear Fictional Avery,",
+              "status": "non_claim",
+              "sourceIds": [],
+              "reason": "礼貌语或不含交易承诺的询问"
+            },
+            {
+              "id": "s1",
+              "text": "Thank you for your interest in lyocell pouches for jewelry packaging.",
+              "status": "supported",
+              "sourceIds": [
+                "profile:6ad5b5ecbd6881f0139d25ac"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "profile:6ad5b5ecbd6881f0139d25ac",
+                  "quote": "interestedProducts\":\"lyocell pouch",
+                  "start": 109,
+                  "end": 143
+                }
+              ],
+              "reason": "Recipient profile shows interest in lyocell pouch; thank-you framing matches interest."
+            },
+            {
+              "id": "s2",
+              "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+                  "start": 25,
+                  "end": 165
+                }
+              ],
+              "reason": "Directly matches product description evidence."
+            },
+            {
+              "id": "s3",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+                  "quote": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 124
+                }
+              ],
+              "reason": "Exact match to MOQ term including conditions."
+            },
+            {
+              "id": "s4",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+                  "quote": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+                  "start": 0,
+                  "end": 187
+                }
+              ],
+              "reason": "Exact match to lead time term."
+            },
+            {
+              "id": "s5",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+                  "quote": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 157
+                }
+              ],
+              "reason": "Exact match to sample policy term."
+            },
+            {
+              "id": "s6",
+              "text": "To prepare an accurate proposal, could you let me know your preferred pouch size, any logo or printing requirements, and the delivery address?",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "Request for information from buyer; no factual assertion."
+            },
+            {
+              "id": "f0",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f1",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f2",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            }
+          ],
+          "facts": [
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "moq",
+              "term": {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 0
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "lead_time",
+              "term": {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 1
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "sample",
+              "term": {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 2
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6ad5bbedc229aecb38a7eeb5",
+      "status": "draft",
+      "taskType": "inquiry_reply",
+      "agentTaskId": "6ad5bb26c229aecb38a7eeb4",
+      "body": "Dear Fictional Avery,\nOur lyocell pouch is unlined, intended for jewelry packaging, with a drawstring closure, and supplied without jewelry contents.\nThank you for getting in touch. Here are the details for the scope below.\nMinimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.\nProduction lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.\nSample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.\nTo confirm the remaining details:\n- Freight cost needs confirmation for the destination and shipment details.\nWe will review the remaining points and confirm the details with you.\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+      "review": {
+        "version": 1,
+        "projectId": "6ad5b5ecbd6881f0139d2563",
+        "taskType": "inquiry_reply",
+        "generatedAt": "2026-10-19T06:42:46.101Z",
+        "status": "ready",
+        "completeness": "partial",
+        "sources": [
+          {
+            "sourceId": "knowledge:6ad5b5edbd6881f0139d25c5:v1",
+            "knowledgeId": "6ad5b5edbd6881f0139d25c5",
+            "version": 1,
+            "title": "S8 基础销售规则",
+            "category": "sales_rules",
+            "kind": "knowledge",
+            "content": "Use only approved applicable facts. Do not invent price, freight, certifications or buyer needs. Human review is required before sending.",
+            "source": "fixture://s8-rules",
+            "publication": {
+              "contentHash": "b6bbf21326db67635d484baa7a1dcd9d73fdb160e398e33f7c96cba1972162fe",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 137
+              },
+              "sourceRefs": []
+            },
+            "applicability": "一般资料；具体产品及交易条件须核对",
+            "products": [],
+            "validFrom": "2026-10-19T06:17:17.015Z",
+            "terms": []
+          },
+          {
+            "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+            "knowledgeId": "6ad5b5ecbd6881f0139d25af",
+            "version": 1,
+            "title": "S8 虚构莱赛尔袋交易条件",
+            "category": "trade",
+            "kind": "knowledge",
+            "content": "Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.",
+            "source": "fixture://s8-synthetic-approval",
+            "publication": {
+              "contentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 82
+              },
+              "sourceRefs": []
+            },
+            "applicability": "Fictional S8 lyocell pouch only",
+            "products": [
+              "lyocell pouch"
+            ],
+            "validFrom": "2026-10-19T06:17:16.966Z",
+            "terms": [
+              {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              }
+            ],
+            "index": {
+              "scores": {
+                "vector": 0.4224410653114319,
+                "vectorRank": 1,
+                "bm25": 8.003371719720786,
+                "bm25Rank": 1,
+                "rrf": 0.03278688524590164,
+                "rerank": -0.6704367399215698
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "85262e15dc86348dab37d65110514ecae1f99f37e310c9af39b67304ccb24859",
+                  "contentHash": "a0afb7c909a1fffb523bd848b8947b274196784783b8fc1d351087b61cdea29a",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 82,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 142,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "617a0d99055e9a448e13cb9effda530057ca29293c63c7455a46dd60d24974d6",
+                  "contentHash": "9241994af8d84ca6fbe96d3f1ada77300456252bbf21f5d489cd90519f50a79b",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 252,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "488be47700152da8797b161646a85c68daefb955d820e7cf25c2ed8cb92715b8",
+                  "contentHash": "4dad4ef893a00413840adfa89544ea72c29d98fe23d333f82d789009ef38677c",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 228,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "76aebebfc2902548f73a5d9b6251829cc927f08caa501670430815b976fa16d0",
+                  "contentHash": "92da576bbaf720e69eadd627bb12f1ab08da4186aaa889f1eea13a462d57283f",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 280,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "7634fa87d1df984cfff8f4b772d560f6532f200bfc570201418b51f61ed8fc67",
+                  "contentHash": "5b4d260821b3de0f1c6c774fa3786516f6c360757ca614b27abfed0cc44f19f3",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 256,
+                      "end": 338,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "c77ae8644881ab062d20a2e6c51ab9eaae168e7f71859220b44e4a1f3f17bf52",
+                  "contentHash": "6131b033d7552253a1b80533a2df0ed16828cb70baf2f7420a05fc750863cb58",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 272,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "6329a7a7e2ccb1663ea23407b048fe3167aaa53af029d395d15d1cefb4a58e5b",
+                  "contentHash": "d0d8cebb572408a9b373ca6b9f49ff6fddea4afa4f3cdf0beab42a64ba46b889",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 248,
+                      "end": 343,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                }
+              ]
+            }
+          },
+          {
+            "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+            "knowledgeId": "6ad5b725bd6881f0139d30e5",
+            "version": 2,
+            "title": "S8 main 虚构莱赛尔袋能力",
+            "category": "product",
+            "kind": "knowledge",
+            "content": "## Lyocell pouch / 莱赛尔袋\r\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "source": "fixture://s8-main-product · s8-company.md",
+            "publication": {
+              "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 165
+              },
+              "sourceRefs": [
+                {
+                  "documentId": "6ad5b6b8bd6881f0139d2d19",
+                  "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                  "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                  "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                  "location": {
+                    "kind": "text",
+                    "offsetUnit": "unicode_codepoints",
+                    "start": 41,
+                    "end": 207
+                  },
+                  "parserVersion": "genesis-parser-s1.1",
+                  "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                  "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                }
+              ]
+            },
+            "applicability": "Fictional S8 lyocell pouch only. No price or freight commitment.",
+            "products": [
+              "lyocell pouch",
+              "莱赛尔袋"
+            ],
+            "validFrom": "2026-10-19T06:22:00Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.6881305873394012,
+                "vectorRank": 1,
+                "bm25": 1.5628657319477095,
+                "bm25Rank": 2,
+                "rrf": 0.03252247488101534,
+                "rerank": 1.4566653966903687
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "f2e58e815469442c7e8e1f46c79389d4e339f69ca8f6d2b7d7edeb7eadd3f7bc",
+                  "contentHash": "42b9dd8f499e15cb21dd0f1713ff777d0b062240a5348fece59a1e680ba94540",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 165,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c"
+                  },
+                  "sourceRefs": [
+                    {
+                      "documentId": "6ad5b6b8bd6881f0139d2d19",
+                      "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                      "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                      "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                      "location": {
+                        "kind": "text",
+                        "offsetUnit": "unicode_codepoints",
+                        "start": 41,
+                        "end": 207
+                      },
+                      "parserVersion": "genesis-parser-s1.1",
+                      "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                      "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "claims": [
+          {
+            "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "moq",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+            "topic": "lead_time",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "sample",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Our lyocell pouch is unlined, intended for jewelry packaging, with a drawstring closure, and supplied without jewelry contents.",
+            "sourceIds": [
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "question": "Minimum order quantity",
+            "topic": "moq",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Production lead time",
+            "topic": "lead_time",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Sample policy",
+            "topic": "sample",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Shipping",
+            "topic": "shipping",
+            "status": "unanswered",
+            "sourceIds": []
+          }
+        ],
+        "issues": [
+          {
+            "code": "missing",
+            "topic": "shipping",
+            "message": "待确认：Shipping",
+            "sourceIds": []
+          },
+          {
+            "code": "claim_rewritten",
+            "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+          },
+          {
+            "code": "semantic_partial",
+            "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+          }
+        ],
+        "context": {
+          "customerProfile": {
+            "name": "Fictional Avery",
+            "company": "S8 Independent Jewelry Buyer",
+            "country": "Germany",
+            "industry": "jewelry",
+            "interestedProducts": "lyocell pouch"
+          },
+          "factContext": {
+            "quantity": 180,
+            "quantityUnit": "pcs",
+            "destination": "Germany",
+            "customerId": "6ad5b5ecbd6881f0139d25ac",
+            "products": [
+              "lyocell pouch"
+            ],
+            "processes": []
+          },
+          "customerId": "6ad5b5ecbd6881f0139d25ac",
+          "mailId": "6ad5b5edbd6881f0139d25e1",
+          "direction": "inbound",
+          "request": "请回复这封询盘邮件，不要发送"
+        },
+        "bodyHash": "425feca8f333001120862488b786b08a95b841ca33f64f5391e71fe11297a4dd",
+        "factAudit": {
+          "contract": "s4.1",
+          "mode": "semantic",
+          "attempts": 2,
+          "checks": [
+            {
+              "id": "s0",
+              "text": "Dear Avery,",
+              "status": "non_claim",
+              "sourceIds": [],
+              "reason": "礼貌语或不含交易承诺的询问"
+            },
+            {
+              "id": "s1",
+              "text": "Thank you for your interest in our lyocell pouch for Germany.",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "Interest in lyocell pouch and Germany origin are supported by profile, but 'our' supplier relationship and the assertion of thanks are not evidence-backed facts; overall segment is a courtesy claim, unverifiable."
+            },
+            {
+              "id": "s2",
+              "text": "Our lyocell pouch is unlined, intended for jewelry packaging, with a drawstring closure, and supplied without jewelry contents.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+                  "start": 25,
+                  "end": 165
+                }
+              ],
+              "reason": "All product attributes (unlined, jewelry packaging, drawstring, no jewelry contents) match evidence."
+            },
+            {
+              "id": "s3",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+                  "quote": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 124
+                }
+              ],
+              "reason": "MOQ and conditions match term exactly."
+            },
+            {
+              "id": "s4",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+                  "quote": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+                  "start": 0,
+                  "end": 187
+                }
+              ],
+              "reason": "Lead time and conditions match term exactly."
+            },
+            {
+              "id": "s5",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+                  "quote": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 157
+                }
+              ],
+              "reason": "Sample price and conditions match term exactly."
+            },
+            {
+              "id": "s6",
+              "text": "We cannot confirm freight to Germany or product pricing at this stage. Could you please let us know your preferred pouch size and whether any logo or printing is required?",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "Inability to confirm freight/price and the clarifying questions are not evidenced facts; no evidence establishes availability of freight or pricing commitments."
+            },
+            {
+              "id": "f0",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f1",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f2",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            }
+          ],
+          "facts": [
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "moq",
+              "term": {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 0
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "lead_time",
+              "term": {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 1
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "sample",
+              "term": {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 2
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6ad5bd49c229aecb38a7eeb6",
+      "status": "sent",
+      "taskType": "first_outreach",
+      "agentTaskId": "6ad5b7ffc229aecb38a7eea8",
+      "agentDraftId": "6ad5b80cc229aecb38a7eea9",
+      "body": "Dear Fictional Avery,\nThank you for your inquiry regarding lyocell pouches for jewelry packaging.\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.\nI am reaching out to introduce our team and see whether we could help with your requirements.\nWould a brief discussion about your requirements be useful?\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+      "review": {
+        "version": 1,
+        "projectId": "6ad5b5ecbd6881f0139d2563",
+        "taskType": "first_outreach",
+        "generatedAt": "2026-10-19T06:26:15.239Z",
+        "status": "ready",
+        "completeness": "partial",
+        "sources": [
+          {
+            "sourceId": "knowledge:6ad5b5edbd6881f0139d25c5:v1",
+            "knowledgeId": "6ad5b5edbd6881f0139d25c5",
+            "version": 1,
+            "title": "S8 基础销售规则",
+            "category": "sales_rules",
+            "kind": "knowledge",
+            "content": "Use only approved applicable facts. Do not invent price, freight, certifications or buyer needs. Human review is required before sending.",
+            "source": "fixture://s8-rules",
+            "publication": {
+              "contentHash": "b6bbf21326db67635d484baa7a1dcd9d73fdb160e398e33f7c96cba1972162fe",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 137
+              },
+              "sourceRefs": []
+            },
+            "applicability": "一般资料；具体产品及交易条件须核对",
+            "products": [],
+            "validFrom": "2026-10-19T06:17:17.015Z",
+            "terms": []
+          },
+          {
+            "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+            "knowledgeId": "6ad5b725bd6881f0139d30e5",
+            "version": 2,
+            "title": "S8 main 虚构莱赛尔袋能力",
+            "category": "product",
+            "kind": "knowledge",
+            "content": "## Lyocell pouch / 莱赛尔袋\r\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "source": "fixture://s8-main-product · s8-company.md",
+            "publication": {
+              "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 165
+              },
+              "sourceRefs": [
+                {
+                  "documentId": "6ad5b6b8bd6881f0139d2d19",
+                  "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                  "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                  "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                  "location": {
+                    "kind": "text",
+                    "offsetUnit": "unicode_codepoints",
+                    "start": 41,
+                    "end": 207
+                  },
+                  "parserVersion": "genesis-parser-s1.1",
+                  "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                  "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                }
+              ]
+            },
+            "applicability": "Fictional S8 lyocell pouch only. No price or freight commitment.",
+            "products": [
+              "lyocell pouch",
+              "莱赛尔袋"
+            ],
+            "validFrom": "2026-10-19T06:22:00Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.8054147660732269,
+                "vectorRank": 1,
+                "bm25": 5.264886822861349,
+                "bm25Rank": 1,
+                "rrf": 0.03278688524590164,
+                "rerank": 7.637035846710205
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "f2e58e815469442c7e8e1f46c79389d4e339f69ca8f6d2b7d7edeb7eadd3f7bc",
+                  "contentHash": "42b9dd8f499e15cb21dd0f1713ff777d0b062240a5348fece59a1e680ba94540",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 165,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c"
+                  },
+                  "sourceRefs": [
+                    {
+                      "documentId": "6ad5b6b8bd6881f0139d2d19",
+                      "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                      "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                      "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                      "location": {
+                        "kind": "text",
+                        "offsetUnit": "unicode_codepoints",
+                        "start": 41,
+                        "end": 207
+                      },
+                      "parserVersion": "genesis-parser-s1.1",
+                      "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                      "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+            "knowledgeId": "6ad5b5ecbd6881f0139d25af",
+            "version": 1,
+            "title": "S8 虚构莱赛尔袋交易条件",
+            "category": "trade",
+            "kind": "knowledge",
+            "content": "Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.",
+            "source": "fixture://s8-synthetic-approval",
+            "publication": {
+              "contentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 82
+              },
+              "sourceRefs": []
+            },
+            "applicability": "Fictional S8 lyocell pouch only",
+            "products": [
+              "lyocell pouch"
+            ],
+            "validFrom": "2026-10-19T06:17:16.966Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.5993692576885223,
+                "vectorRank": 2,
+                "bm25": 0.000005927967985771455,
+                "bm25Rank": 2,
+                "rrf": 0.03225806451612903,
+                "rerank": 0.6316524147987366
+              },
+              "selection": "semantic",
+              "generation": "6ad5b734c229aecb38a7ee9e",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "abaae8dea2727b8e64ea4e8563ddf0ec107df3b621e2cf46063105939d87a0e3",
+              "chunks": [
+                {
+                  "id": "85262e15dc86348dab37d65110514ecae1f99f37e310c9af39b67304ccb24859",
+                  "contentHash": "a0afb7c909a1fffb523bd848b8947b274196784783b8fc1d351087b61cdea29a",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 82,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 142,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "617a0d99055e9a448e13cb9effda530057ca29293c63c7455a46dd60d24974d6",
+                  "contentHash": "9241994af8d84ca6fbe96d3f1ada77300456252bbf21f5d489cd90519f50a79b",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 252,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "488be47700152da8797b161646a85c68daefb955d820e7cf25c2ed8cb92715b8",
+                  "contentHash": "4dad4ef893a00413840adfa89544ea72c29d98fe23d333f82d789009ef38677c",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 228,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "76aebebfc2902548f73a5d9b6251829cc927f08caa501670430815b976fa16d0",
+                  "contentHash": "92da576bbaf720e69eadd627bb12f1ab08da4186aaa889f1eea13a462d57283f",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 280,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "7634fa87d1df984cfff8f4b772d560f6532f200bfc570201418b51f61ed8fc67",
+                  "contentHash": "5b4d260821b3de0f1c6c774fa3786516f6c360757ca614b27abfed0cc44f19f3",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 256,
+                      "end": 338,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "c77ae8644881ab062d20a2e6c51ab9eaae168e7f71859220b44e4a1f3f17bf52",
+                  "contentHash": "6131b033d7552253a1b80533a2df0ed16828cb70baf2f7420a05fc750863cb58",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 272,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "6329a7a7e2ccb1663ea23407b048fe3167aaa53af029d395d15d1cefb4a58e5b",
+                  "contentHash": "d0d8cebb572408a9b373ca6b9f49ff6fddea4afa4f3cdf0beab42a64ba46b889",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 248,
+                      "end": 343,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                }
+              ]
+            }
+          }
+        ],
+        "claims": [
+          {
+            "text": "Thank you for your inquiry regarding lyocell pouches for jewelry packaging.",
+            "sourceIds": [
+              "profile:6ad5b5ecbd6881f0139d25ac",
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          },
+          {
+            "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "sourceIds": [
+              "knowledge:6ad5b725bd6881f0139d30e5:v2"
+            ]
+          }
+        ],
+        "questions": [],
+        "issues": [
+          {
+            "code": "claim_rewritten",
+            "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+          },
+          {
+            "code": "semantic_partial",
+            "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+          }
+        ],
+        "context": {
+          "customerProfile": {
+            "name": "Fictional Avery",
+            "company": "S8 Independent Jewelry Buyer",
+            "country": "Germany",
+            "industry": "jewelry",
+            "interestedProducts": "lyocell pouch"
+          },
+          "factContext": {
+            "quantity": 180,
+            "quantityUnit": "pcs",
+            "destination": "Germany",
+            "customerId": "6ad5b5ecbd6881f0139d25ac",
+            "products": [
+              "lyocell pouch"
+            ],
+            "processes": []
+          },
+          "customerId": "6ad5b5ecbd6881f0139d25ac",
+          "request": "帮我给这个客户写第一封开发信，不要发送"
+        },
+        "bodyHash": "a35a87ac91d015444381cdc076fdade6e724f70efd2bf1c6134ae935e620818c",
+        "factAudit": {
+          "contract": "s4.1",
+          "mode": "semantic",
+          "attempts": 2,
+          "checks": [
+            {
+              "id": "s0",
+              "text": "Dear Fictional Avery,",
+              "status": "non_claim",
+              "sourceIds": [],
+              "reason": "礼貌语或不含交易承诺的询问"
+            },
+            {
+              "id": "s1",
+              "text": "Thank you for your inquiry regarding lyocell pouches for jewelry packaging.",
+              "status": "supported",
+              "sourceIds": [
+                "profile:6ad5b5ecbd6881f0139d25ac",
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "profile:6ad5b5ecbd6881f0139d25ac",
+                  "quote": "lyocell pouch",
+                  "start": 130,
+                  "end": 143
+                },
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging.",
+                  "start": 25,
+                  "end": 81
+                }
+              ],
+              "reason": "Profile lists interest in lyocell pouch and industry jewelry; evidence describes lyocell pouches for jewelry packaging."
+            },
+            {
+              "id": "s2",
+              "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b725bd6881f0139d30e5:v2"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v2",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+                  "start": 25,
+                  "end": 165
+                }
+              ],
+              "reason": "All three assertions match the evidence verbatim."
+            },
+            {
+              "id": "s3",
+              "text": "Could you share the pouch size, preferred color, whether you need a logo or printing, and your required packaging format?",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "A request for information, not an assertion of fact."
+            }
+          ],
+          "facts": []
+        }
+      }
+    },
+    {
+      "id": "6ad5be94c229aecb38a7eec2",
+      "status": "draft",
+      "taskType": "inquiry_reply",
+      "agentTaskId": "6ad5bb26c229aecb38a7eeb4",
+      "body": "Dear Fictional Avery,\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.\nThank you for getting in touch. Here are the details for the scope below.\nMinimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.\nProduction lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.\nSample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.\nTo confirm the remaining details:\n- Freight cost needs confirmation for the destination and shipment details.\nWe will review the remaining points and confirm the details with you.\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+      "review": {
+        "version": 1,
+        "projectId": "6ad5b5ecbd6881f0139d2563",
+        "taskType": "inquiry_reply",
+        "generatedAt": "2026-10-19T06:54:04.415Z",
+        "status": "ready",
+        "completeness": "partial",
+        "sources": [
+          {
+            "sourceId": "knowledge:6ad5b5edbd6881f0139d25c5:v1",
+            "knowledgeId": "6ad5b5edbd6881f0139d25c5",
+            "version": 1,
+            "title": "S8 基础销售规则",
+            "category": "sales_rules",
+            "kind": "knowledge",
+            "content": "Use only approved applicable facts. Do not invent price, freight, certifications or buyer needs. Human review is required before sending.",
+            "source": "fixture://s8-rules",
+            "publication": {
+              "contentHash": "b6bbf21326db67635d484baa7a1dcd9d73fdb160e398e33f7c96cba1972162fe",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 137
+              },
+              "sourceRefs": []
+            },
+            "applicability": "一般资料；具体产品及交易条件须核对",
+            "products": [],
+            "validFrom": "2026-10-19T06:17:17.015Z",
+            "terms": []
+          },
+          {
+            "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+            "knowledgeId": "6ad5b5ecbd6881f0139d25af",
+            "version": 1,
+            "title": "S8 虚构莱赛尔袋交易条件",
+            "category": "trade",
+            "kind": "knowledge",
+            "content": "Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.",
+            "source": "fixture://s8-synthetic-approval",
+            "publication": {
+              "contentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 82
+              },
+              "sourceRefs": []
+            },
+            "applicability": "Fictional S8 lyocell pouch only",
+            "products": [
+              "lyocell pouch"
+            ],
+            "validFrom": "2026-10-19T06:17:16.966Z",
+            "terms": [
+              {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              }
+            ],
+            "index": {
+              "scores": {
+                "vector": 0.4224410653114319,
+                "vectorRank": 1,
+                "bm25": 8.023539553038914,
+                "bm25Rank": 1,
+                "rrf": 0.03278688524590164,
+                "rerank": -1.4314035177230835
+              },
+              "selection": "semantic",
+              "generation": "6ad5be20c229aecb38a7eeb9",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "dffbd4c1bd1b489b6511a58ddfd972105b0f1b00be0b428a06e9f8d1c730e2d0",
+              "chunks": [
+                {
+                  "id": "85262e15dc86348dab37d65110514ecae1f99f37e310c9af39b67304ccb24859",
+                  "contentHash": "a0afb7c909a1fffb523bd848b8947b274196784783b8fc1d351087b61cdea29a",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 82,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 142,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "1e84360a0519c6435a6452d9e1c17db6c41f9f0919e5aa278cba8c61956d95d4"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "617a0d99055e9a448e13cb9effda530057ca29293c63c7455a46dd60d24974d6",
+                  "contentHash": "9241994af8d84ca6fbe96d3f1ada77300456252bbf21f5d489cd90519f50a79b",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 252,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "488be47700152da8797b161646a85c68daefb955d820e7cf25c2ed8cb92715b8",
+                  "contentHash": "4dad4ef893a00413840adfa89544ea72c29d98fe23d333f82d789009ef38677c",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 0,
+                    "retrievalWindow": {
+                      "start": 228,
+                      "end": 266,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "4e2b5a083d5597daced2900cde76eb9dd3f419eb19a5a5fde41dcfa2a6deadbd"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "76aebebfc2902548f73a5d9b6251829cc927f08caa501670430815b976fa16d0",
+                  "contentHash": "92da576bbaf720e69eadd627bb12f1ab08da4186aaa889f1eea13a462d57283f",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 280,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "7634fa87d1df984cfff8f4b772d560f6532f200bfc570201418b51f61ed8fc67",
+                  "contentHash": "5b4d260821b3de0f1c6c774fa3786516f6c360757ca614b27abfed0cc44f19f3",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 1,
+                    "retrievalWindow": {
+                      "start": 256,
+                      "end": 338,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "024ba3926ec1ce3e7e41279c93cb1867f7e7df0b149be8c5b68c0d6cd17d3a3a"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "c77ae8644881ab062d20a2e6c51ab9eaae168e7f71859220b44e4a1f3f17bf52",
+                  "contentHash": "6131b033d7552253a1b80533a2df0ed16828cb70baf2f7420a05fc750863cb58",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 272,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                },
+                {
+                  "id": "6329a7a7e2ccb1663ea23407b048fe3167aaa53af029d395d15d1cefb4a58e5b",
+                  "contentHash": "d0d8cebb572408a9b373ca6b9f49ff6fddea4afa4f3cdf0beab42a64ba46b889",
+                  "location": {
+                    "kind": "conditional_fact",
+                    "termIndex": 2,
+                    "retrievalWindow": {
+                      "start": 248,
+                      "end": 343,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "036eeb2815118856b48eecdb41c50e7724eec131d4bc455fd5f650759817f6ad"
+                  },
+                  "sourceRefs": []
+                }
+              ]
+            }
+          },
+          {
+            "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v3",
+            "knowledgeId": "6ad5b725bd6881f0139d30e5",
+            "version": 3,
+            "title": "S8 main 虚构莱赛尔袋能力（复核）",
+            "category": "product",
+            "kind": "knowledge",
+            "content": "## Lyocell pouch / 莱赛尔袋\r\nWe supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "source": "fixture://s8-main-product · s8-company.md",
+            "publication": {
+              "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+              "location": {
+                "kind": "published_text",
+                "offsetUnit": "unicode_codepoints",
+                "start": 0,
+                "end": 165
+              },
+              "sourceRefs": [
+                {
+                  "documentId": "6ad5b6b8bd6881f0139d2d19",
+                  "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                  "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                  "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                  "location": {
+                    "kind": "text",
+                    "offsetUnit": "unicode_codepoints",
+                    "start": 41,
+                    "end": 207
+                  },
+                  "parserVersion": "genesis-parser-s1.1",
+                  "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                  "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                }
+              ]
+            },
+            "applicability": "Fictional S8 lyocell pouch only. No price or freight commitment.",
+            "products": [
+              "lyocell pouch",
+              "莱赛尔袋"
+            ],
+            "validFrom": "2026-10-19T06:22:00Z",
+            "terms": [],
+            "index": {
+              "scores": {
+                "vector": 0.6459683179855347,
+                "vectorRank": 1,
+                "bm25": 1.546413303675496,
+                "bm25Rank": 2,
+                "rrf": 0.03252247488101534,
+                "rerank": 0.7421489357948303
+              },
+              "selection": "semantic",
+              "generation": "6ad5be20c229aecb38a7eeb9",
+              "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+              "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+              "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+              "dimension": 384,
+              "manifest": "dffbd4c1bd1b489b6511a58ddfd972105b0f1b00be0b428a06e9f8d1c730e2d0",
+              "chunks": [
+                {
+                  "id": "d5ec4543d115b1f7fc55b9686ae807b5963a3c11c1b199a0a03e834c35e0fe50",
+                  "contentHash": "bf805f2c7040513ed8f6d9c0e692b3ac4c14d25228ded14087390fc7f7534143",
+                  "location": {
+                    "kind": "published_text",
+                    "start": 0,
+                    "end": 165,
+                    "offsetUnit": "unicode_codepoints",
+                    "retrievalWindow": {
+                      "start": 0,
+                      "end": 270,
+                      "offsetUnit": "unicode_codepoints",
+                      "includesContext": true,
+                      "standaloneFact": false
+                    },
+                    "parentContentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c"
+                  },
+                  "sourceRefs": [
+                    {
+                      "documentId": "6ad5b6b8bd6881f0139d2d19",
+                      "parsingRevisionId": "6ad5b6b8c229aecb38a7ee9b",
+                      "chunkId": "90811e1cde7031148ee49031a738bbc449ae0476b1ca5c868961274384ecb0ec",
+                      "contentHash": "14b8c98b7c5e259e25b8adbb5abe204dec610de2187f7757d693c14f50312c8c",
+                      "location": {
+                        "kind": "text",
+                        "offsetUnit": "unicode_codepoints",
+                        "start": 41,
+                        "end": 207
+                      },
+                      "parserVersion": "genesis-parser-s1.1",
+                      "artifactHash": "2fdc7e1e1467b1e273cd2412643f03834072faa7d6ba1b95e953ebbd4d94f7f8",
+                      "originalSha256": "8ddd83f5b45617028e2d4bc01c0afd3616bc327e1c8ef3de2424f49e30043c27"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "claims": [
+          {
+            "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "moq",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+            "topic": "lead_time",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+            "topic": "sample",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+            "sourceIds": [
+              "knowledge:6ad5b725bd6881f0139d30e5:v3"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "question": "Minimum order quantity",
+            "topic": "moq",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Production lead time",
+            "topic": "lead_time",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Sample policy",
+            "topic": "sample",
+            "status": "answered",
+            "sourceIds": [
+              "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+            ]
+          },
+          {
+            "question": "Shipping",
+            "topic": "shipping",
+            "status": "unanswered",
+            "sourceIds": []
+          }
+        ],
+        "issues": [
+          {
+            "code": "missing",
+            "topic": "shipping",
+            "message": "待确认：Shipping",
+            "sourceIds": []
+          },
+          {
+            "code": "claim_rewritten",
+            "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+          },
+          {
+            "code": "semantic_partial",
+            "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+          }
+        ],
+        "context": {
+          "customerProfile": {
+            "name": "Fictional Avery",
+            "company": "S8 Independent Jewelry Buyer",
+            "country": "Germany",
+            "industry": "jewelry",
+            "interestedProducts": "lyocell pouch"
+          },
+          "factContext": {
+            "quantity": 180,
+            "quantityUnit": "pcs",
+            "destination": "Germany",
+            "customerId": "6ad5b5ecbd6881f0139d25ac",
+            "products": [
+              "lyocell pouch"
+            ],
+            "processes": []
+          },
+          "customerId": "6ad5b5ecbd6881f0139d25ac",
+          "mailId": "6ad5b5edbd6881f0139d25e1",
+          "direction": "inbound",
+          "request": "请回复这封询盘邮件，不要发送"
+        },
+        "bodyHash": "d2cce9426f89a9e68ce11f80b71b4c50b2e11d75fe5566cead56d48b7db127aa",
+        "factAudit": {
+          "contract": "s4.1",
+          "mode": "semantic",
+          "attempts": 2,
+          "checks": [
+            {
+              "id": "s0",
+              "text": "Dear Avery,",
+              "status": "non_claim",
+              "sourceIds": [],
+              "reason": "礼貌语或不含交易承诺的询问"
+            },
+            {
+              "id": "s1",
+              "text": "Thank you for your interest in our lyocell pouches.",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "Thanking for interest presupposes an inquiry not established in the evidence."
+            },
+            {
+              "id": "s2",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+                  "quote": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 124
+                }
+              ],
+              "reason": "MOQ and all stated conditions match the fact verbatim."
+            },
+            {
+              "id": "s3",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+                  "quote": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+                  "start": 0,
+                  "end": 187
+                }
+              ],
+              "reason": "Lead time and conditions match the fact verbatim."
+            },
+            {
+              "id": "s4",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+                  "quote": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+                  "start": 0,
+                  "end": 157
+                }
+              ],
+              "reason": "Sample price and conditions match the fact verbatim."
+            },
+            {
+              "id": "s5",
+              "text": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b725bd6881f0139d30e5:v3"
+              ],
+              "quotes": [
+                {
+                  "sourceId": "knowledge:6ad5b725bd6881f0139d30e5:v3",
+                  "quote": "We supply unlined lyocell pouches for jewelry packaging. The pouch has a drawstring closure. Packaging is supplied without jewelry contents.",
+                  "start": 25,
+                  "end": 165
+                }
+              ],
+              "reason": "All three product descriptions match the knowledge entry verbatim."
+            },
+            {
+              "id": "s6",
+              "text": "Freight and unit price are not yet confirmed; I will follow up with those details separately. Could you please share your delivery city/postcode in Germany and your preferred delivery timing?",
+              "status": "unverifiable",
+              "sourceIds": [],
+              "reason": "Price/freight not confirmed is consistent with no data, but the follow-up promise and request for delivery city/postcode and timing are not established in evidence; the profile gives country only, not city/postcode or timing."
+            },
+            {
+              "id": "f0",
+              "text": "Minimum order quantity: 61 pcs. Conditions: standard lyocell pouch; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f1",
+              "text": "Production lead time: 23 working days. Conditions: after deposit and artwork approval; Fictional S8 lyocell pouch only; products lyocell pouch; counted after deposit and artwork approval.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            },
+            {
+              "id": "f2",
+              "text": "Sample policy: USD 8 per prototype. Conditions: one plain lyocell pouch prototype, courier excluded; Fictional S8 lyocell pouch only; products lyocell pouch.",
+              "status": "supported",
+              "sourceIds": [
+                "knowledge:6ad5b5ecbd6881f0139d25af:v1"
+              ],
+              "reason": "仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现"
+            }
+          ],
+          "facts": [
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:0",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "moq",
+              "term": {
+                "topic": "moq",
+                "value": "61",
+                "conditions": "standard lyocell pouch",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "pcs",
+                "mode": "confirmed",
+                "publicationIndex": 0
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 0
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:1",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "lead_time",
+              "term": {
+                "topic": "lead_time",
+                "value": "23",
+                "conditions": "after deposit and artwork approval",
+                "scope": {
+                  "reviewed": true,
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "startsAfter": "deposit and artwork approval",
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "working days",
+                "mode": "confirmed",
+                "publicationIndex": 1
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 1
+              }
+            },
+            {
+              "id": "knowledge:6ad5b5ecbd6881f0139d25af:v1:term:2",
+              "sourceId": "knowledge:6ad5b5ecbd6881f0139d25af:v1",
+              "version": 1,
+              "topic": "sample",
+              "term": {
+                "topic": "sample",
+                "value": "8",
+                "conditions": "one plain lyocell pouch prototype, courier excluded",
+                "scope": {
+                  "reviewed": true,
+                  "measure": "amount",
+                  "products": [
+                    "lyocell pouch"
+                  ],
+                  "processes": [],
+                  "exclusions": [],
+                  "polarity": "affirmed"
+                },
+                "unit": "per prototype",
+                "currency": "USD",
+                "mode": "confirmed",
+                "publicationIndex": 2
+              },
+              "status": "applicable",
+              "reasons": [],
+              "location": {
+                "kind": "publication_term",
+                "index": 2
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

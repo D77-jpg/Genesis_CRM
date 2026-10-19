@@ -1,6 +1,6 @@
 # S8 local acceptance operator guide
 
-This file accompanies `knowledge-agent-roadmap.md`, `knowledge-evaluation.md` and the S0-S7 reports. It does not authorize production deployment or real email delivery. Current S8 fixes are on `codex/knowledge-s8-acceptance`; human PR creation/merge and a main-SHA smoke test remain required.
+This file accompanies `knowledge-agent-roadmap.md`, `knowledge-evaluation.md` and the S0-S7 reports. It does not authorize production deployment or real email delivery. PR39 is merged as main `f3240d2`. Post-merge replay found a cumulative-time accounting defect; fix `8da9f6f` is on `codex/s8-main-verification`, awaiting human PR/merge and a targeted clean-main recheck. See the current [post-merge report](knowledge-s8-results/post-merge/README.md).
 
 ## Reproducible isolated UI host
 
@@ -46,6 +46,6 @@ A business owner must confirm: company/signature authority; each product/process
 
 ## Current handoff
 
-See [results and failures](knowledge-s8-results/README.md). The isolated acceptance hosts were gracefully stopped after saving final snapshots; their in-memory accounts/data are disposable. Restarting creates new IDs. The main UI run was eb7d3d5; final missing-question increment was 4658f74. Human PR/merge, merged-main replay, business policy approval and independent whole-email quality confirmation remain required. No production deployment is authorized by this guide.
+See [results and failures](knowledge-s8-results/README.md). The isolated acceptance hosts were gracefully stopped after saving final snapshots; their in-memory accounts/data are disposable. Restarting creates new IDs. The original branch runs were eb7d3d5/4658f74. PR39 merged as f3240d2; its clean-main five-task/send replay passed those portions but failed version-regeneration handoff. Incremental accounting fix 8da9f6f passed its targeted isolated replay. Human merge of that fix, targeted clean-main recheck, remote CI confirmation, business policy approval and independent whole-email quality confirmation remain required. Historical terminal tasks with inflated counters are not silently reset; retain their results and create a new smaller task. No production deployment is authorized by this guide.
 
 Recovery: use the existing [S7 operations and migration guide](knowledge-s7-operations.md) for knowledge-only backup/preflight/restore/index rebuild. Do not replace real MongoDB configuration with fixture receipts or restore a test snapshot into the real database. Verify the intended target and empty restore destination. SMTP sink acceptance proves only the isolated send/follow-up transaction.

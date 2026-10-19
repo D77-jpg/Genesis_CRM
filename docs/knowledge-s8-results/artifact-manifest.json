@@ -2,8 +2,92 @@
   {
     "file": "README.md",
     "normalization": "UTF-8 without BOM, CRLF normalized to LF",
-    "canonicalBytes": 10699,
-    "sha256": "9f9447766568cef47d41cf9fc07d4cfb3b0a05343134a5f1f4e849ef733ed396"
+    "canonicalBytes": 10952,
+    "sha256": "b443427da9d312b91b3aff0087cffa48c585463f74b5b312c273d830ac53e84f"
+  },
+  {
+    "file": "post-merge/README.md",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 5433,
+    "sha256": "7d57a202fed8abe28c54934c0ef5525dee8536bdf9e8e7b94beb6e75e9ff25df"
+  },
+  {
+    "file": "post-merge/artifact-manifest.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 2691,
+    "sha256": "4dced73667552b50ff148a1b3005e3efb192c005d95395cc6f33373161c2bdcb"
+  },
+  {
+    "file": "post-merge/failures.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 4536,
+    "sha256": "ffe69ea665d07a0406621c98cb69abba938d200164173e83c97a2c842fe7f62c"
+  },
+  {
+    "file": "post-merge/fixed-final.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 75840,
+    "sha256": "f1f0c35f45d71607a38c155c5dd213c54a48150accd6cd74bd940a6769c7f63e"
+  },
+  {
+    "file": "post-merge/main-after-version-update.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 195336,
+    "sha256": "45cdbb144f8f926a704bc23076248a5e13cd284dba50793ae3909ee22221d7c4"
+  },
+  {
+    "file": "post-merge/main-five-ready.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 145596,
+    "sha256": "3fac9fb8f34aa47d5301a0fe7a599bf7cf0774b9c2353fed93d844677ddc6488"
+  },
+  {
+    "file": "post-merge/s8-main-cross-language.png",
+    "normalization": "raw bytes",
+    "canonicalBytes": 49669,
+    "sha256": "05b5fe60402e1ccf49b18bbc21181da9fb264963cd28529be7343c49a0329915"
+  },
+  {
+    "file": "post-merge/s8-main-inquiry-first-failure.png",
+    "normalization": "raw bytes",
+    "canonicalBytes": 76709,
+    "sha256": "8102c05f82ed2c7966756d3d614933c524682cfc6898b879f06fbb9eb88521ea"
+  },
+  {
+    "file": "post-merge/s8-main-send-followup.png",
+    "normalization": "raw bytes",
+    "canonicalBytes": 55168,
+    "sha256": "1349f6e2388b04264d4ca36d3b8cc3aeba02d0bd5ee67163dc31357f43224c66"
+  },
+  {
+    "file": "post-merge/s8-main-stale.png",
+    "normalization": "raw bytes",
+    "canonicalBytes": 76642,
+    "sha256": "b70dfe847223cd0cd2da14d7e0441ba69871a4eadf58cf744c52cc202b8ff6a6"
+  },
+  {
+    "file": "post-merge/s8-time-fix-task-ready.png",
+    "normalization": "raw bytes",
+    "canonicalBytes": 70254,
+    "sha256": "53c0709f7c40403e0dc5541df0ae9db2c8e96d26f1a7fb4dd54ea4aa66b923d3"
+  },
+  {
+    "file": "post-merge/s8-time-fix-v2-review.png",
+    "normalization": "raw bytes",
+    "canonicalBytes": 67083,
+    "sha256": "328395555b082c59ad8e104ff0e6ed9197ad46cf0d1fd82aac1947ce431a0734"
+  },
+  {
+    "file": "post-merge/security-check.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 337,
+    "sha256": "1c27ae589f4b2e31b8d4e609cb1c4924e2be13a56e35009003e19f716a0142a8"
+  },
+  {
+    "file": "post-merge/verification.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 10602,
+    "sha256": "f4149379cd80ae2ebe49374b3b3278000b29faff2b51648b3bfdc7c43ca7f00d"
   },
   {
     "file": "s8-facts-dev-first.json",
@@ -55,49 +139,49 @@
   },
   {
     "file": "s8-ui-cross-project-excluded.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 54269,
     "sha256": "0c6a911ad5e06d7d015cfdeb48f253d347a101c15e841e7b363410be98e43c21"
   },
   {
     "file": "s8-ui-edited-claim-rejected.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 74708,
     "sha256": "1d2db5479b5b5e12df77d6b47d027884bd5b76736b6a2b6958b2f7a912f03604"
   },
   {
     "file": "s8-ui-file-failure.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 74255,
     "sha256": "f36d8e6b9e941d0e7e3a38f2fd8be657bde3c806932ba993ca80dc0dcdd1ad78"
   },
   {
     "file": "s8-ui-final-cross-language.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 52086,
     "sha256": "f96478d8954e80f3237f72efdddf882fe6f87195d933bdffb85f1e1b04b9e805"
   },
   {
     "file": "s8-ui-final-missing-notices.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 79524,
     "sha256": "193d27f823c401c3b140d2dbea28020f8768a79e3794b79e991ef72f09a3a91f"
   },
   {
     "file": "s8-ui-final-ocr.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 75515,
     "sha256": "4dd6ecc92c9225f086f92312b6d17dbfc58ce2068a1fee491e15b4449f539581"
   },
   {
     "file": "s8-ui-local-send-followup.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 45570,
     "sha256": "5632cb7698fb745f4a7df0ebf78698c7e6d89fb1f6f00c46068f002a79594af9"
   },
   {
     "file": "s8-ui-stale-drafts.png",
-    "normalization": "binary",
+    "normalization": "raw bytes",
     "canonicalBytes": 75172,
     "sha256": "afd71cea7d610fbdd436de700bdda1cd2937fc36b306728f05cbfdace49dedaa"
   },
@@ -122,7 +206,7 @@
   {
     "file": "verification.json",
     "normalization": "UTF-8 without BOM, CRLF normalized to LF",
-    "canonicalBytes": 8938,
-    "sha256": "5b5d1d10098c7bceee5cce69eebeb7b7bcefd8e9530edc70b1e2f8d83ff46348"
+    "canonicalBytes": 9075,
+    "sha256": "8b7bec644430d022b79a0a44563419df8ad56bae658ec405386e977b18752e2e"
   }
 ]
