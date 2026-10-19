@@ -233,6 +233,9 @@ test('real provider HTTP protocol validates JSON, unique Unicode quotes and reje
   const payload={segments:[{id:'s0',text:'We make cotton bags.'}],evidence:[{sourceId:'local-evidence',text:'😀 We make cotton bags.'}]};
   const rows=await verifier.check(payload);assert.equal(rows[0].quotes[0].start,10);assert.equal(rows[0].quotes[0].end,21);
   assert.deepEqual(requests[0].tools,[]);assert.equal(requests[0].store,false);assert.equal(requests[0].parallel_tool_calls,false);
+  assert.equal((requests[0].text as {format:{type:string;name:string}}).format.type,'json_schema');
+  assert.equal((requests[0].text as {format:{name:string}}).format.name,'evidence_entailment');
+  await verifier.rewrite!({body:'Fictional only',allowed:[],issues:[]});assert.deepEqual(requests[1].text,{format:{type:'text'}});
   mode='invalid';await assert.rejects(()=>verifier.check(payload));mode='tool';await assert.rejects(()=>verifier.check(payload));
  }finally{await new Promise<void>((resolve,reject)=>http.close(error=>error?reject(error):resolve()));}
 });

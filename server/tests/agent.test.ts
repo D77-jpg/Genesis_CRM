@@ -952,6 +952,12 @@ test('DeepSeek structured tasks reserve output for JSON and include the current 
     assert.equal(bodies[3].reasoning, undefined);
     await adapter.createTurn({ instructions: 'Read only', input: [], tools: [], context: { type: 'global' }, userPrompt: 'Hi', safetyIdentifier: 'fixture' });
     assert.equal(bodies[4].reasoning, undefined);
+    const outputFormat={type:'json_schema' as const,name:'fixture_verdict',strict:true as const,schema:{type:'object',properties:{},required:[],additionalProperties:false}};
+    await adapter.createTurn({instructions:'Check synthetic evidence only',input:[],tools:[],context:{type:'global'},userPrompt:'Check',safetyIdentifier:'fixture',outputFormat});
+    assert.deepEqual(bodies[5].reasoning,{effort:'none'});assert.deepEqual(bodies[5].text,{format:outputFormat});
+    await adapter.createTurn({instructions:'Rewrite using evidence only',input:[],tools:[],context:{type:'global'},userPrompt:'Rewrite',safetyIdentifier:'fixture',outputFormat:{type:'text'}});
+    assert.deepEqual(bodies[6].reasoning,{effort:'none'});assert.deepEqual(bodies[6].text,{format:{type:'text'}});
+
   } finally { globalThis.fetch = originalFetch; }
 });
 
@@ -962,6 +968,7 @@ test('incomplete structured responses are rejected even when their JSON happens 
   try {
     const adapter = new OpenAIResponsesProvider({ apiKey: 'fixture-key', model: 'deepseek-flash', baseUrl: 'https://api.deepseek.com', timeoutMs: 5000 });
     const expected = { code: 'OPENAI_INCOMPLETE_RESPONSE' };
+    await assert.rejects(adapter.createTurn({instructions:'Fixture',input:[],tools:[],context:{type:'global'},userPrompt:'Fixture',safetyIdentifier:'fixture'}),expected);
     await assert.rejects(adapter.extractCustomer({ content: 'Fixture', safetyIdentifier: 'fixture' }), expected);
     await assert.rejects(adapter.analyzeCustomer({ input: { customerName: 'Fixture', sourceCatalog: [] }, safetyIdentifier: 'fixture' }), expected);
     await assert.rejects(adapter.analyzeMailThread({ input: { messages: [] }, safetyIdentifier: 'fixture' }), expected);
