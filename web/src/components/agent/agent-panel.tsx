@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {acceptsKnowledgeHandoff} from '@/lib/knowledge-sales';
 import { WorkspaceDrawer } from '@/components/common/workspace';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -211,7 +212,7 @@ export function AgentPanel(): React.JSX.Element | null {
   };
 
   React.useEffect(() => {
-    if (!open || !user || !project) return;
+    if (!open || !user?.id || !project?.id) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
     setWorkflowTasks([]);
@@ -238,7 +239,7 @@ export function AgentPanel(): React.JSX.Element | null {
       .then(customer => { if (active) setCustomerInfo({ key: contextKey, customer }); })
       .catch(() => { if (active) setCustomerInfo(null); });
     return () => { active = false; };
-  }, [open, contextKey, activeContext.type]);
+  }, [open, contextKey, activeContext]);
 
   const loadRecords = React.useCallback(async () => {
     const [nextUsage, nextActions] = await Promise.all([
@@ -264,7 +265,11 @@ export function AgentPanel(): React.JSX.Element | null {
     return visibleSessions;
   }, []);
 
+  const panelLoad = React.useRef(0);
+  const cancelPanelLoad = React.useCallback(() => { panelLoad.current++; }, []);
   const loadPanel = React.useCallback(async () => {
+    const loadId = ++panelLoad.current;
+    const handoff = useUiStore.getState().agentKnowledgeHandoff;
     setLoading(true);
     setError('');
     try {
@@ -273,19 +278,30 @@ export function AgentPanel(): React.JSX.Element | null {
         loadSessions(),
         loadRecords(),
       ]);
+      if (loadId !== panelLoad.current) return;
       setStatus(nextStatus);
-      const matching = nextSessions.find((item) => sameContext(item.context, context));
-      setActiveSessionId(matching?.id ?? '');
+      if (handoff && acceptsKnowledgeHandoff(handoff, project?.id, user?.id, context)) {
+        setActiveSessionId('');
+        setMessages([]);
+        setDraft(handoff.prompt);
+        setTab('chat');
+        useUiStore.getState().clearKnowledgeHandoff(handoff.requestId);
+      } else {
+        const matching = nextSessions.find((item) => sameContext(item.context, context));
+        setActiveSessionId(matching?.id ?? '');
+        if (handoff) useUiStore.getState().clearKnowledgeHandoff(handoff.requestId);
+      }
     } catch (reason) {
-      setError(toErrorMessage(reason, '销售助手暂时无法加载，请重试'));
+      if (loadId === panelLoad.current) setError(toErrorMessage(reason, '销售助手暂时无法加载，请重试'));
     } finally {
-      setLoading(false);
+      if (loadId === panelLoad.current) setLoading(false);
     }
-  }, [context, loadRecords, loadSessions]);
+  }, [context, loadRecords, loadSessions, project?.id, user?.id]);
 
   React.useEffect(() => {
     if (open && user && project) void loadPanel();
-  }, [open, user, project, loadPanel]);
+    return cancelPanelLoad;
+  }, [open, user, project, loadPanel, cancelPanelLoad]);
 
   React.useEffect(() => {
     if (!activeSessionId) {

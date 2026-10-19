@@ -5,6 +5,7 @@
  * 因此这里的读写格式必须与那段脚本兼容（JSON 字符串，脚本侧做了去引号处理）。
  */
 import { create } from 'zustand';
+import type {KnowledgeHandoff} from '@/lib/knowledge-sales';
 import { STORAGE_KEYS } from '@/constants';
 import { readStorage, writeStorage } from '@/lib/utils';
 
@@ -34,6 +35,9 @@ interface UiState {
   scratchpadOpen: boolean;
   /** 全局只读 Agent 面板是否展开 */
   agentOpen: boolean;
+  agentKnowledgeHandoff: KnowledgeHandoff | null;
+  prepareKnowledgeEmail: (value: Omit<KnowledgeHandoff, 'requestId'>) => void;
+  clearKnowledgeHandoff: (requestId: string) => void;
   agentBatchCustomerIds:string[];
   openAgentBatch:(ids:string[])=>void;
   clearAgentBatchSelection:()=>void;
@@ -69,6 +73,9 @@ export const useUiStore = create<UiState>()((set, get) => ({
   mobileNavOpen: false,
   scratchpadOpen: false,
   agentOpen: false,
+  agentKnowledgeHandoff: null,
+  prepareKnowledgeEmail: value => set({agentKnowledgeHandoff:{...value,requestId:crypto.randomUUID()},agentOpen:true,scratchpadOpen:false,agentCustomerPreviewId:null,agentCustomerAnalysisId:null,agentCustomerAnalysisCustomerId:null,agentMailAnalysisId:null,agentMailAnalysisMailId:null,agentMailAnalysisDirection:null}),
+  clearKnowledgeHandoff: requestId => set(state=>state.agentKnowledgeHandoff?.requestId===requestId?{agentKnowledgeHandoff:null}:{}),
   agentBatchCustomerIds:[],
   openAgentBatch:(ids)=>set({agentOpen:true,agentBatchCustomerIds:ids}),
   clearAgentBatchSelection:()=>set({agentBatchCustomerIds:[]}),

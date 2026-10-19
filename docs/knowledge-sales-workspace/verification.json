@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-19",
+  "baseMain": "8a5dafb",
+  "implementation": "a1502e8",
+  "branch": "codex/knowledge-sales-workspace",
+  "engineering": {
+    "webTests": 41,
+    "pass": 41,
+    "fail": 0,
+    "skip": 0,
+    "productionBuildExit": 0,
+    "changedFilesEslintExit": 0,
+    "fullGitHistoryScanAtImplementationExit": 0,
+    "backendChanged": false,
+    "remoteCI": "not checked; human PR pending"
+  },
+  "scope": {
+    "readOnlyRealDatabaseInspection": true,
+    "realCustomerWrites": 0,
+    "realKnowledgePublications": 0,
+    "realEmailDeliveries": 0,
+    "externalModelRequests": 0,
+    "fixture": "independent MongoMemory; mock LLM; no generation requested"
+  },
+  "handoffCheckpoint": {
+    "source": "knowledge-sales-after-handoff.json (private local raw)",
+    "sha256RawBytes": "796b59ba8ced6a8584047418053f065e6b1f2397212370532ee7c96d64a76ba9",
+    "tasks": 0,
+    "letters": 0,
+    "deliveries": 0,
+    "followups": 0
+  },
+  "observedUI": [
+    "real account sees 82 pending drafts and zero usable publications; no real publication performed",
+    "admin catalog separates approved v1 from later draft v2",
+    "keyword search and category counts use approved content; source and conditions readable",
+    "choose permitted fictional customer, navigate to exact customer and prefill a fresh assistant conversation without submit",
+    "non-admin direct manage URL renders sales-only view; no admin actions",
+    "non-admin customer picker has no results for the administrator-owned fixture customer",
+    "wide two-column and narrow single-detail/back control inspected",
+    "light/dark conditions inspected; no text overflow observed in captured states"
+  ],
+  "runProvenance": {
+    "backendStartupHead": "8a5dafba41cbfe8b056e20dd38476c9f67389f39",
+    "backendStartupDirty": true,
+    "backendSourceChanged": false,
+    "frontend": "Vite HMR uses implementation source; this was not a clean-main replay"
+  },
+  "limits": [
+    "catalog filters at most the 500 records returned by the existing endpoint; not a new semantic Q&A feature",
+    "selected material is a writing reference; backend must retrieve current, applicable evidence again; not forcibly pinned to a stale version",
+    "first-outreach handoff only; inquiry reply remains in the existing mail-thread workflow",
+    "no new email quality measurement, publishing of 82 real drafts, or S8 closure",
+    "final fixture snapshot unavailable after unexpected process exit; last valid checkpoint only; absence is not counted as zero"
+  ],
+  "sourceHashes": [
+    {
+      "file": "web/src/pages/knowledge.tsx",
+      "sha256LF": "f330ab1a03cff1b39da61619006c805fe49b428b216e7b81d5d151c259cb1141"
+    },
+    {
+      "file": "web/src/components/agent/knowledge-sales-library.tsx",
+      "sha256LF": "c775577d8a22a6bbd2c50c5c818626e68b07d67660e15a5fc525055ce2e10c2b"
+    },
+    {
+      "file": "web/src/components/agent/project-knowledge-manager.tsx",
+      "sha256LF": "666a98246af1620ef059ccaf93cdbfdb85bddd0ace33322ddcfbb28404d7440c"
+    },
+    {
+      "file": "web/src/lib/knowledge-sales.ts",
+      "sha256LF": "386e101a38dd56ea2d00093e9e02a06e83fdbec8f03c58f4e19fe3ae44eae1fe"
+    },
+    {
+      "file": "web/src/store/ui.store.ts",
+      "sha256LF": "2efcbf6e59aab09e266c42e44c1cb59a1cc3da73f371bf23f1383c0f1f25d96b"
+    },
+    {
+      "file": "web/src/components/agent/agent-panel.tsx",
+      "sha256LF": "678f6d34b8200178adc494055c9f22068ddeac9bca0b4b15cedea27792b9e1ce"
+    },
+    {
+      "file": "web/tests/knowledge-sales.test.cjs",
+      "sha256LF": "50074df225e34861f7adcc8e89b8f067638da01d41573b64398aacdfc1dbca2c"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "knowledge-sales-published.png",
+      "widthPixels": 65536,
+      "heightPixels": 4292542531,
+      "sha256RawBytes": "a73a54148d9d381c0265c1825e3cd798304de1a18ba3414036fb3ac7c4e90194"
+    },
+    {
+      "file": "knowledge-sales-library-full.png",
+      "widthPixels": 65536,
+      "heightPixels": 4292542531,
+      "sha256RawBytes": "f8942e347b4c66adf16db8e46660d5087e8cad14a0102c5b552420ef9f0c5777"
+    },
+    {
+      "file": "knowledge-sales-pick-customer.png",
+      "widthPixels": 65536,
+      "heightPixels": 4292542531,
+      "sha256RawBytes": "496de3669a29e7f5236d46e84a18931f33103a8e8b5473990f37e4621857bca5"
+    },
+    {
+      "file": "knowledge-sales-narrow.png",
+      "widthPixels": 65536,
+      "heightPixels": 4292542531,
+      "sha256RawBytes": "7db572241d72861897cf44b97ed5cf6d70e38eeb30e7ef068d234a551f6beab0"
+    },
+    {
+      "file": "knowledge-sales-dark-conditions.png",
+      "widthPixels": 65536,
+      "heightPixels": 4292542531,
+      "sha256RawBytes": "93ade886605fcc3ae3ce54594f8d246dc61119fa14646e0a3c4d501312cfdcc6"
+    },
+    {
+      "file": "knowledge-sales-employee.png",
+      "widthPixels": 65536,
+      "heightPixels": 4292542531,
+      "sha256RawBytes": "f13bfd15c616522582f942177366b96a4466e904335efbe92f54e933b78d58f7"
+    }
+  ]
+}
