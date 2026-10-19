@@ -158,3 +158,12 @@ S0 PR 合并后，更新状态并核对实际 main SHA，再从新 main 开 S1 �
 - 原提交6d5c5b7的CI run39143990324，security/web/operations/hygiene通过；server在恢复演练的维护preflight子进程断言处退出1。
 - 根因：隔离子进程的环境白名单没有JWT_SECRET/ADMIN_PASSWORD，干净Linux runner没有本地.env兜底；本机.env掩盖了夹具缺项。恢复与检索此前步骤并未失败，不能把该断言失败描述为数据恢复损坏。
 - 修复为显式生成仅本次进程使用的随机测试配置，指定隔离数据库和mock模型/邮件、禁用收件同步；不继承真实密钥，不放宽服务配置校验。子进程保留有限诊断，避免今后只看到退出码。修复后本地专项15/15和新测试严格类型检查通过；新提交的远端CI单独确认，不用本地通过代替。
+
+
+### S8 in progress (2026-10-19)
+
+- Base: main a450e84 (S7 merge). Independent memory database, fictional projects/users and loopback-only SMTP acceptance host; no real customer writes, real mail or publication of the 82 drafts.
+- DeepSeek Responses endpoint/model deepseek-flash verified. User explicitly authorized the frozen 44 synthetic fact cases and two fictional projects/five mail-task acceptance data to https://api.deepseek.com. Key remains only in protected local configuration, never in Git/reports.
+- First development measurement: ordinary accuracy 15/16, critical false releases 0, supported critical coverage 1/1; gate failed. A lexical negation-count check rejected an equivalent description. Replaced it with a literal same-proposition reversal guard; semantic paraphrases still require exact authorized citations and whole-claim entailment, critical promises still require complete fact cards. Independent English/Chinese cases added. Development retest 16/16, critical 0 false releases and 1/1 coverage.
+- First unseen holdout: ordinary 15/16, critical 0 false releases and 1/1 coverage; gate FAILED. One overly conservative semantic verdict hypothesized later modifications to an ordinary supplied-product description. General supplied-product interpretation clarified, without adding test-specific words or changing frozen labels. Subsequent holdout runs are regression, not a new independent measurement. Final quality status pending.
+- Initial all-server regression: 363 tests, 362 passed, first keyword project-isolation assertion failed. Standalone passed; repeated diagnostic and final full run pending. No blanket engineering/quality completion claim.

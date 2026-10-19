@@ -111,6 +111,26 @@ test('negation cannot be dropped by a permissive model checker',()=>{
  const sentence='We manufacture steel racks.';const quote=proof('We do not manufacture steel racks.',prose.content,prose.sourceId);
  assert.equal(checkSemanticResults(sentence,bundle([prose],[]),[{id:'s0',status:'supported',quotes:[quote],reason:'permissive'}])[0].status,'contradicted');
 });
+test('lexical polarity guards allow evidence-backed equivalent phrasing and cross-language paraphrases',()=>{
+ for(const [authority,text] of [
+  ['The display unit is wireless.','The display unit works without wires.'],
+  ['该袋不提供内衬。','The pouch is unlined.'],
+  ['The pouch is unlined.','该袋不含内衬。'],
+ ]){
+  const src={...prose,content:authority};
+  const checked=checkSemanticResults(text,bundle([src],[]),[{id:'s0',status:'supported',quotes:[proof(authority,authority,src.sourceId)],reason:'whole-claim equivalent meaning'}]);
+  assert.equal(checked[0].status,'supported');
+ }
+ for(const [authority,text] of [
+  ['We do not supply foam inserts.','We supply foam inserts.'],
+  ['We supply foam inserts.','We do not supply foam inserts.'],
+  ['该袋不提供内衬。','该袋提供内衬。'],
+ ]){
+  const src={...prose,content:authority};
+  assert.equal(checkSemanticResults(text,bundle([src],[]),[{id:'s0',status:'supported',quotes:[proof(authority,authority,src.sourceId)],reason:'permissive checker'}])[0].status,'contradicted');
+ }
+});
+
 test('every paragraph needs a verdict; omissions, duplicate IDs and source injection fail closed',()=>{
  assert.equal(checkSemanticResults('We make velvet pouches.',bundle([prose],[]),[])[0].status,'unverifiable');
  const row={id:'s0',status:'non_claim' as const,quotes:[],reason:'just prose'};
