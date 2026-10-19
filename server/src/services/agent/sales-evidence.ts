@@ -38,7 +38,10 @@ function mergeSource(a:KnowledgeSource,b:KnowledgeSource){
 export async function prepareSalesEvidence(actor:AuthUser,input:{request:string;history:string;productHint:string;kind:SalesMailKind;customerId?:string;ids?:string[]},workflow?:EvidenceWorkflow){
  const requirements=await workflowStage(workflow,'extract_requirements',input,async()=>extractSalesRequirements(input.request,input.history,input.kind));
  const rules=await workflowStage(workflow,'load_rules',{projectId:actor.projectId,role:actor.role},()=>rulesFor(actor),{tool:'rules'});
- const query=[input.productHint,input.request,requirements.topics.map(t=>topicQuery[t]).join(' '),requirements.known.quantity!==undefined?'quantity:'+requirements.known.quantity+' '+requirements.known.quantityUnit:'',requirements.known.destination?'destination: '+requirements.known.destination:''].join(' ');
+ // Search for business evidence, not the user's workflow verbs or recipient/location
+ // boilerplate. Quantity/destination remain explicit scope inputs, not relevance noise.
+ const query=[input.productHint,requirements.topics.slice(0,3).map(t=>topicQuery[t]).join(' ')].filter(Boolean).join(' ')||input.request;
+ const contextQuery=[query,input.request].join(' ');
  let bundle=await workflowStage(workflow,'retrieve_0',{query,customerId:input.customerId},()=>buildKnowledgeBundle(actor,query,{customerId:input.customerId,ids:input.ids,...requirements.known}),{tool:'knowledge'});
  const sources=new Map<string,KnowledgeSource>();for(const s of [...rules,...bundle.sources])sources.set(s.sourceId,sources.has(s.sourceId)?mergeSource(sources.get(s.sourceId)!,s):s);
  const supplemental=()=>requirements.topics.filter(topic=>!collectConditionalEvidence({...bundle,sources:[...sources.values()]}).some(f=>f.topic===topic&&f.status==='applicable'));
@@ -46,12 +49,12 @@ export async function prepareSalesEvidence(actor:AuthUser,input:{request:string;
  const queried=new Set<PolicyTopic>();
  for(let round=1;round<=2&&!['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status);round++){
   const missing=supplemental().filter(t=>!queried.has(t));if(!missing.length)break;const selected=missing.slice(0,3);selected.forEach(t=>queried.add(t));if(!selected.length)break;
-  const supplementQuery=[input.productHint,...selected.map(t=>topicQuery[t]),requirements.known.quantity!==undefined?'quantity:'+requirements.known.quantity+' '+requirements.known.quantityUnit:''].join(' ');
+  const supplementQuery=[input.productHint,...selected.map(t=>topicQuery[t])].join(' ');
   const extra=await workflowStage(workflow,'retrieve_'+round,{query:supplementQuery,customerId:input.customerId},()=>buildKnowledgeBundle(actor,supplementQuery,{customerId:input.customerId,ids:input.ids,...requirements.known}),{tool:'knowledge'});
   bundle.issues.push(...extra.issues);if(['retrieval_failed','index_stale','index_not_ready'].includes(extra.status)){bundle.status=extra.status;break;}
   for(const s of extra.sources)sources.set(s.sourceId,sources.has(s.sourceId)?mergeSource(sources.get(s.sourceId)!,s):s);
  }
- bundle.sources=[...sources.values()];if(['no_match','expired'].includes(bundle.status)&&bundle.sources.length)bundle.status='ready';bundle.topics=requirements.topics;bundle.factContext=factContextFromRequest(query,bundle,{...requirements.known,customerId:input.customerId});bundle.facts=collectConditionalEvidence(bundle);
+ bundle.sources=[...sources.values()];if(['no_match','expired'].includes(bundle.status)&&bundle.sources.some(s=>s.category!=='sales_rules'))bundle.status='ready';bundle.topics=requirements.topics;bundle.factContext=factContextFromRequest(contextQuery,bundle,{...requirements.known,customerId:input.customerId});bundle.facts=collectConditionalEvidence(bundle);
  if(bundle.sources.length>16||JSON.stringify(bundle).length>48000)throw new ApiError(413,'完整依据超过单稿上限，请缩小问题范围；未截断条件','PAYLOAD_TOO_LARGE');
  if(requirements.historyLimited)bundle.issues.push({code:'history_limit',message:'历史资料超出本轮整理范围，请核对更早往来'});
  await assertSalesEvidenceCurrent(bundle,actor,input.customerId);

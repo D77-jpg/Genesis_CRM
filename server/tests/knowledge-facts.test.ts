@@ -247,3 +247,17 @@ test('legacy literal-condition disagreement is visible but never promotes either
  const result=auditGroundedEmail('We promise EUR 28.',b,{taskType:'quotation_explanation'});assert.equal(result.review.status,'conflict');assert.doesNotMatch(result.bodyText,/EUR 28|EUR 52/);
  const different={...second,terms:[{...legacy,value:'52',conditions:'different embossing method'}]};assert.ok(collectConditionalEvidence(bundle([first,different],['price'])).every(f=>f.status==='needs_confirmation'));
 });
+
+
+test('live evaluation and production share exactly the authorized semantic evidence boundary',async()=>{
+ const {evidenceForCheck}=await import('../src/services/agent/fact-verifier');
+ const {factCaseBundle,loadFactCases}=await import('../evaluation/knowledge/fact-evaluation');
+ for(const row of loadFactCases().cases){const b=factCaseBundle(row);const allowed=evidenceForCheck(b);assert.ok(allowed.length);if(row.kind==='critical'){assert.ok(allowed.every(e=>e.sourceId.includes(':term:')));assert.ok(allowed.every(e=>!e.text.includes('No confirmed freight')));}else assert.equal(allowed[0].text,row.source);}
+});
+
+
+test('bounded address questions and standard closings are non-claims; disguised commitments stay blocked',()=>{
+ const text='Could you please share your delivery address?\nWe look forward to hearing from you.';
+ assert.ok(checkSemanticResults(text,bundle([],[]),[]).every(c=>c.status==='non_claim'));
+ for(const unsafe of ['Could you please confirm our free shipping?','Could you please confirm our delivery in 7 days?','We look forward to guaranteeing free samples.'])assert.ok(checkSemanticResults(unsafe,bundle([],[]),[]).every(c=>c.status!=='non_claim'));
+});

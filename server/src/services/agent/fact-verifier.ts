@@ -35,8 +35,8 @@ function literalPolarityConflict(claim:string,evidence:string){
   negative(sentence)!==negative(claim)&&proposition(sentence)===proposition(claim));
 }
 
-const courtesy=(s:string)=>/^(?:hello|hi|dear [\p{L} .'-]{1,80}|best regards|kind regards|regards|thank you(?: for (?:your inquiry|getting in touch|your interest))?|thanks)[,.!！。\s]*$/iu.test(s);
-const request=(s:string)=>/^(?:could you please|please (?:confirm|share|provide)|would you (?:please |mind )?|请(?:确认|提供|告知))[^.!。！]{0,500}[?？.]?$/i.test(s)&&!critical(s);
+const courtesy=(s:string)=>/^(?:hello|hi|dear [\p{L} .'-]{1,80}|best regards|kind regards|regards|we look forward to (?:hearing from you|your reply)|thank you(?: for (?:your inquiry|getting in touch|your interest))?|thanks)[,.!！。\s]*$/iu.test(s);
+const request=(s:string)=>/^(?:could you please|please (?:confirm|share|provide)|would you (?:please |mind )?|请(?:确认|提供|告知))[^.!。！]{0,500}[?？.]?$/i.test(s)&&!critical(s.replace(/\b(?:delivery|shipping) address\b/gi,'address'));
 function segments(body:string){
  return body.split(/\n+/).map(x=>x.trim()).filter(Boolean).map((text,i)=>({id:'s'+i,text}));
 }
@@ -63,7 +63,7 @@ export function checkSemanticResults(body:string,bundle:KnowledgeBundle,result:S
   return {...part,status:'supported',sourceIds:[...new Set(quotes.map(q=>facts.find(f=>f.id===q.sourceId)?.sourceId??q.sourceId))],quotes,reason:check.reason};
  });
 }
-function evidenceForCheck(bundle:KnowledgeBundle,customer?:{id:string;profile:CustomerFactProfile}){
+export function evidenceForCheck(bundle:KnowledgeBundle,customer?:{id:string;profile:CustomerFactProfile}){
  const evidence=bundle.sources.filter(s=>s.kind==='knowledge'&&['company','product','faq','sales_rules'].includes(s.category)).map(s=>({sourceId:s.sourceId,text:s.content}));
  for(const fact of collectConditionalEvidence(bundle).filter(f=>f.status==='applicable'))evidence.push({sourceId:fact.id,text:conditionalSentence(fact.term,bundle.sources.find(s=>s.sourceId===fact.sourceId)!)});
  if(customer)evidence.push({sourceId:'profile:'+customer.id,text:JSON.stringify(customer.profile)});

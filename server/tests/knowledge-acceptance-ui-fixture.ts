@@ -49,7 +49,7 @@ async function main(){
  const customer=await Customer.create({projectId:bags._id,ownerId:user._id,name:'Fictional Avery',company:'S8 Independent Jewelry Buyer',email:'avery@example.test',industry:'jewelry',interestedProducts:'lyocell pouch',expectedQuantity:'180',country:'Germany'});
  const actor={id:user.id,projectId:bags.id,username:user.username,displayName:user.displayName,role:'admin' as const};
  const {appendKnowledge}=await import('../src/services/agent/knowledge.service');
- const policy={title:'S8 虚构莱赛尔袋交易条件',category:'trade' as const,content:'Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.',source:'fixture://s8-synthetic-approval',approved:true,products:['lyocell pouch'],applicability:'仅限S8独立虚构样本',terms:[
+ const policy={title:'S8 虚构莱赛尔袋交易条件',category:'trade' as const,content:'Fictional lyocell pouch policy. Price, freight and certifications are unconfirmed.',source:'fixture://s8-synthetic-approval',approved:true,products:['lyocell pouch'],applicability:'Fictional S8 lyocell pouch only',terms:[
  {topic:'moq' as const,value:'61',unit:'pcs',conditions:'standard lyocell pouch',mode:'confirmed' as const,scope:{reviewed:true,products:['lyocell pouch']}},
  {topic:'lead_time' as const,value:'23',unit:'working days',conditions:'after deposit and artwork approval',mode:'confirmed' as const,scope:{reviewed:true,products:['lyocell pouch'],startsAfter:'deposit and artwork approval'}},
  {topic:'sample' as const,value:'8',currency:'USD',unit:'per prototype',conditions:'one plain lyocell pouch prototype, courier excluded',mode:'confirmed' as const,scope:{reviewed:true,products:['lyocell pouch'],exclusions:['courier'],measure:'amount' as const}}]};
