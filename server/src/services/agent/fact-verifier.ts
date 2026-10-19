@@ -100,7 +100,12 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
   // Keep only whole non-critical paragraphs that the exact-evidence check accepted.
   // Never salvage a clause from a rejected paragraph or promote customer facts into
   // supplier promises. The deterministic renderer still owns all conditional terms.
-  const verified=checks.filter(c=>c.status==='supported'&&!critical(c.text));
+  const verified:ClaimCheck[]=[];let remaining=20000-baseline.bodyText.length-4;
+  for(const item of checks.filter(c=>c.status==='supported'&&!critical(c.text))){
+   if(verified.some(c=>c.text===item.text))continue;
+   if(item.text.length+2<=remaining){verified.push(item);remaining-=item.text.length+2;}
+   else baseline.review.issues.push({code:'fact_budget',message:'部分已核验段落超过单稿长度上限，已整段保留待另稿处理，未截断条件。'});
+  }
   if(verified.length){
    const prose=[...new Set(verified.map(c=>c.text))].join('\n\n');
    baseline.bodyText=baseline.bodyText.replace('\n\n','\n\n'+prose+'\n\n');

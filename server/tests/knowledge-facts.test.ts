@@ -270,3 +270,11 @@ test('a partial email retains whole verified product paragraphs without rescuing
  assert.match(kept.bodyText,/We manufacture velvet pouches/);assert.doesNotMatch(kept.bodyText,/signed purchase/);assert.equal(kept.review.factAudit?.mode,'semantic');assert.equal(kept.review.completeness,'partial');assert.ok(kept.review.issues.some(i=>i.code==='semantic_partial'));assert.equal(kept.review.bodyHash,draftHash(kept.bodyText));assert.ok(kept.review.claims.some(c=>c.text===valid));
  const rejected=await verifyGroundedEmail(valid+' '+invalid,b,{taskType:'first_outreach'},verifier);assert.doesNotMatch(rejected.bodyText,/manufacture velvet|signed purchase/);assert.equal(rejected.review.factAudit?.mode,'unavailable');
 });
+
+
+test('partial composition respects the body limit by omitting a whole verified paragraph',async()=>{
+ const paragraph='Fictional reusable material description. '.repeat(220);const src={...prose,content:paragraph};
+ const longPolicy={...source,terms:Array.from({length:25},()=>({...term,conditions:'Entire applicability wording '.repeat(18)}))};const b=bundle([src,longPolicy]);
+ const result=await verifyGroundedEmail(paragraph+'\nUnsupported purchase assertion.',b,{taskType:'inquiry_reply'},{model:'independent-body-limit',async check({segments}){return segments.map(p=>({id:p.id,status:p.text===paragraph.trim()?'supported' as const:'unsupported' as const,quotes:p.text===paragraph.trim()?[proof(paragraph.trim(),paragraph,src.sourceId)]:[],reason:'whole paragraph only'}));}});
+ assert.ok(result.bodyText.length<=20000);assert.ok(result.review.issues.some(i=>i.code==='fact_budget'));assert.doesNotMatch(result.bodyText,/Fictional reusable/);
+});
