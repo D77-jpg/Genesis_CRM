@@ -131,7 +131,9 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
     const bodyText=[candidate,signature].filter(Boolean).join('\n\n');const review:KnowledgeReview={...baseline.review,bodyHash:draftHash(bodyText),claims:checks.filter(c=>c.status==='supported').map(c=>({text:c.text,sourceIds:c.sourceIds})),issues:baseline.review.issues.filter(i=>i.code!=='claim_rewritten'),factAudit:{contract:'s4.1',mode:'semantic',attempts,checks,facts:collectConditionalEvidence(bundle)}};
     // Question coverage is based on actual checked claims, never just the existence of retrieved sources.
     review.questions=review.questions.map(q=>({...q,status:checks.some(c=>c.status==='supported'&&c.quotes?.some(quote=>collectConditionalEvidence(bundle).some(f=>f.id===quote.sourceId&&f.topic===q.topic)))?q.status:'unanswered'}));
-    if(review.questions.some(q=>q.status==='unanswered'))review.completeness='partial';
+    // A factually safe message can still omit a customer's question. Render the
+    // checked paragraphs with all applicable answers and explicit missing-policy notices.
+    if(review.questions.some(q=>q.status==='unanswered'))return fallback('部分客户问题尚未回答，已补齐有依据的条件并列出待确认事项');
     return {bodyText,review};
    }
    if(round===0&&verifier.rewrite)candidate=await verifier.rewrite({body:candidate,allowed:evidence,issues:checks.filter(c=>c.status!=='supported'&&c.status!=='non_claim')});else break;

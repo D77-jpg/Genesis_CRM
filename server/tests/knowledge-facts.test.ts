@@ -147,10 +147,11 @@ test('semantic failure is distinct from no answer; a valid partial email stays r
  assert.equal(result.review.factAudit?.mode,'unavailable');assert.ok(result.review.issues.some(i=>i.code==='semantic_unverified'));
  assert.match(result.bodyText,/Hello,[\s\S]*Thank you[\s\S]*19 working days[\s\S]*Could you please/);
 });
-test('question coverage follows the actually checked fact, not another fact with the same source ID',async()=>{
+test('an omitted topic is answered only after rendering its complete applicable fact, never by shared source ID',async()=>{
  const moq={...term,topic:'moq' as const,value:'73',unit:'pcs'};const b=bundle([{...source,terms:[moq,term]}],['moq','lead_time']);const card=conditionalSentence(moq,b.sources[0]);
  const result=await verifyGroundedEmail(card,b,{taskType:'inquiry_reply'},{model:'fixture',async check(){return [{id:'s0',status:'supported',quotes:[proof(card,card,source.sourceId+':term:0')],reason:'only MOQ answered'}];}});
- assert.equal(result.review.questions.find(q=>q.topic==='moq')?.status,'answered');assert.equal(result.review.questions.find(q=>q.topic==='lead_time')?.status,'unanswered');
+ assert.equal(result.review.questions.find(q=>q.topic==='moq')?.status,'answered');assert.equal(result.review.questions.find(q=>q.topic==='lead_time')?.status,'answered');
+ assert.ok(result.bodyText.includes(conditionalSentence(term,b.sources[0])));assert.ok(result.review.factAudit?.checks.some(c=>c.id.startsWith('f')&&c.text===conditionalSentence(term,b.sources[0])));assert.equal(result.review.completeness,'partial');
 });
 test('pure transforms cannot permute the same numbers between price/MOQ or remove semantic conditions',async()=>{
  assert.equal(transformNumbersMatch('MOQ 19 pcs. Lead time 73 days.','MOQ 73 pcs. Lead time 19 days.'),false);
@@ -277,4 +278,13 @@ test('partial composition respects the body limit by omitting a whole verified p
  const longPolicy={...source,terms:Array.from({length:25},()=>({...term,conditions:'Entire applicability wording '.repeat(18)}))};const b=bundle([src,longPolicy]);
  const result=await verifyGroundedEmail(paragraph+'\nUnsupported purchase assertion.',b,{taskType:'inquiry_reply'},{model:'independent-body-limit',async check({segments}){return segments.map(p=>({id:p.id,status:p.text===paragraph.trim()?'supported' as const:'unsupported' as const,quotes:p.text===paragraph.trim()?[proof(paragraph.trim(),paragraph,src.sourceId)]:[],reason:'whole paragraph only'}));}});
  assert.ok(result.bodyText.length<=20000);assert.ok(result.review.issues.some(i=>i.code==='fact_budget'));assert.doesNotMatch(result.bodyText,/Fictional reusable/);
+});
+
+test('safe model prose cannot hide unanswered price or freight questions in internal review only',async()=>{
+ const b=bundle([prose],['price','shipping']);const text='We manufacture velvet pouches.';
+ const result=await verifyGroundedEmail(text,b,{taskType:'quotation_explanation'},{model:'independent-question-completeness',async check({segments}){return segments.map(p=>({id:p.id,status:'supported' as const,quotes:[proof(text,prose.content,prose.sourceId)],reason:'whole product paragraph supported'}));}});
+ assert.match(result.bodyText,/We manufacture velvet pouches/);
+ assert.match(result.bodyText,/firm price needs confirmation/);assert.match(result.bodyText,/Freight cost needs confirmation/);
+ assert.equal(result.review.completeness,'partial');assert.ok(result.review.questions.every(q=>q.status==='unanswered'));
+ assert.equal(result.review.bodyHash,draftHash(result.bodyText));assert.doesNotMatch(result.bodyText,/USD\s*\d/);
 });
