@@ -158,3 +158,31 @@ S0 PR 合并后，更新状态并核对实际 main SHA，再从新 main 开 S1 �
 - 原提交6d5c5b7的CI run39143990324，security/web/operations/hygiene通过；server在恢复演练的维护preflight子进程断言处退出1。
 - 根因：隔离子进程的环境白名单没有JWT_SECRET/ADMIN_PASSWORD，干净Linux runner没有本地.env兜底；本机.env掩盖了夹具缺项。恢复与检索此前步骤并未失败，不能把该断言失败描述为数据恢复损坏。
 - 修复为显式生成仅本次进程使用的随机测试配置，指定隔离数据库和mock模型/邮件、禁用收件同步；不继承真实密钥，不放宽服务配置校验。子进程保留有限诊断，避免今后只看到退出码。修复后本地专项15/15和新测试严格类型检查通过；新提交的远端CI单独确认，不用本地通过代替。
+
+
+### S8 in progress (2026-10-19)
+
+- Base: main a450e84 (S7 merge). Independent memory database, fictional projects/users and loopback-only SMTP acceptance host; no real customer writes, real mail or publication of the 82 drafts.
+- DeepSeek Responses endpoint/model deepseek-flash verified. User explicitly authorized the frozen 44 synthetic fact cases and two fictional projects/five mail-task acceptance data to https://api.deepseek.com. Key remains only in protected local configuration, never in Git/reports.
+- First development measurement: ordinary accuracy 15/16, critical false releases 0, supported critical coverage 1/1; gate failed. A lexical negation-count check rejected an equivalent description. Replaced it with a literal same-proposition reversal guard; semantic paraphrases still require exact authorized citations and whole-claim entailment, critical promises still require complete fact cards. Independent English/Chinese cases added. Development retest 16/16, critical 0 false releases and 1/1 coverage.
+- First unseen holdout: ordinary 15/16, critical 0 false releases and 1/1 coverage; gate FAILED. One overly conservative semantic verdict hypothesized later modifications to an ordinary supplied-product description. General supplied-product interpretation clarified, without adding test-specific words or changing frozen labels. Subsequent holdout runs are regression, not a new independent measurement. Final quality status pending.
+- Initial all-server regression: 363 tests, 362 passed, first keyword project-isolation assertion failed. Standalone passed; repeated diagnostic and final full run pending. No blanket engineering/quality completion claim.
+
+- S8 follow-up: full backend regression 364/364 passed; the earlier isolated keyword assertion did not recur in three standalone repetitions or the full run. Original/transfer 120-case retrieval reruns passed the frozen gates (Recall@10 95%/100%, negative states 97.5%/97.5%, leaks 0). Final frozen semantic regressions dev/holdout 16/16 ordinary, critical false releases 0 and positive coverage 1/1; first holdout failure remains recorded.
+- Actual UI surfaced a separate full-email limitation: generation completed but semantic checking fell back to an unverified partial draft. Evidence checks now explicitly request strict JSON-schema output, rewrites request plain text, and DeepSeek uses its existing no-reasoning option for these bounded outputs. Ordinary chat is unchanged; incomplete Responses turns are rejected. Provider/fact regressions 92/92 and strict fixture types passed; actual full-email rerun pending.
+
+- Full-email tracing confirmed structured calls now return complete checks. A second functional issue remained: workflow wording and recipient metadata diluted product retrieval, leaving only rules; ordinary address requests and standard closing courtesy were also incorrectly treated as unsupported promises. Sales queries now use product/policy evidence terms while keeping quantity/destination as scope inputs; only-rules results retain no_match. Bounded address questions/closings are recognized without permitting numeric/free-shipping commitments. Independent crowd-out and negative controls added; fact/workflow tests and types passed.
+- S8 scale rerun: 10000 distinct real vectors, cache reuse 0, build 266.47 seconds, concurrency 2 warm P95 3320ms (target 5000ms); retrieval service failures 0, expected source 39/40. The one no_match remains visible and scale hit rate is not substituted for frozen quality.
+- Strict-output evaluation exposed an adapter discrepancy: the evaluator sent raw trade prose that production intentionally excludes. It now shares production evidenceForCheck; frozen data/labels and conservative verifier unchanged. Pre-fix adapter failure retained; corrected dev/holdout reruns each ordinary 16/16, critical false releases 0, supported critical 1/1.
+
+- Actual c5fca95 UI now retrieves all relevant product evidence, but an unverified acknowledgment in the generated email still caused the fallback to discard an otherwise fully verified product paragraph. Fallback now retains only whole, non-critical paragraphs accepted with exact authorized quotes, alongside deterministic conditional replies; rejected paragraphs are never sliced or rescued. Review remains explicitly partial. Critical commitments still require complete approved cards. Independent mixed-valid/invalid and whole-paragraph rejection tests passed (facts 33/33, server types passed). Full five-task UI rerun remains required.
+
+
+### S8 本地工程交付与未关闭门槛（2026-10-19）
+
+- 最终实现4658f74，干净最新main仍a450e84，S0–S7已合入；S8短分支已逐步提交推送，人创建/合并PR。完整UI加载eb7d3d5且dirty=false；正文缺项追加修复在干净4658f74真实页面再验。
+- 实际MD/PNG解析、OCR部分识别、片段审核发布、跨语言检索及两项目反例、五类持久草稿、编辑复核/保存、版本变化/重生成旧稿保留、本地不转发SMTP=1及跟进=1均有证据。没有真实邮件发送/客户改动/82条知识发布。
+- 首轮sample模型格式失败保留；修订夹具适用范围后sample/询盘3/3已知政策回答，未知价格/运费明确待确认。新增发现安全正文遗漏问题提示，4658f74补齐正文并新增回归。新增测试先触发旧覆盖断言，改为检查完整条件实际补入后再计回答；没有删除安全检查。
+- 最终完整后端370/370、前端33/33、根运维7/7，构建/严格类型/依赖门禁通过。冻结原集/transfer各120题回归Recall95%/100%、负例97.5%、越权0；真实1万向量并发2热P95=3320ms。44事实检查最终回归通过，首次独立保留93.75%失败仍保留，不能把同集修复复测称新独立质量。
+- S8总状态仍未完成：本轮尚未合main并复验、真实业务政策待负责人审核、整封邮件独立质量确认待补。模型仍会保守误判过渡语/签名、偶尔格式失败；安全部分稿不是完整语义通过。最终增量没有保留非关键语义段落，unavailable模式与实际网络成功请求分开解释。
+- [完整报告](knowledge-s8-results/README.md)、[机器可读记录](knowledge-s8-results/verification.json)、[操作与下一阶段入口](knowledge-s8-acceptance.md)已归档；不自行上线。

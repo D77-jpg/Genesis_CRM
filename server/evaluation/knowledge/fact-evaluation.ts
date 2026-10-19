@@ -3,9 +3,8 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {z} from 'zod';
 import type {KnowledgeBundle,KnowledgeSource,KnowledgeTerm} from '../../src/services/agent/knowledge-types';
-import {factScopeInput,collectConditionalEvidence} from '../../src/services/agent/conditional-facts';
-import {conditionalSentence} from '../../src/services/agent/knowledge-grounding';
-import {checkSemanticResults,providerFactVerifier} from '../../src/services/agent/fact-verifier';
+import {factScopeInput} from '../../src/services/agent/conditional-facts';
+import {checkSemanticResults,providerFactVerifier,evidenceForCheck} from '../../src/services/agent/fact-verifier';
 const caseInput=z.object({id:z.string(),split:z.enum(['dev','holdout']),kind:z.enum(['ordinary','critical']),source:z.string().min(1),claim:z.string().min(1),supported:z.boolean()}).strict();
 export function loadFactCases(directory=join(__dirname,'facts')){
  const bytes=readFileSync(join(directory,'cases.json'));const lock=JSON.parse(readFileSync(join(directory,'manifest.json'),'utf8')) as {sha256:string;cases:number};
@@ -39,11 +38,11 @@ async function main(){
  const rows=[];
  try{
   for(const row of fixture.cases.filter(c=>c.split===split)){
-   const bundle=factCaseBundle(row);const source=bundle.sources[0];const facts=collectConditionalEvidence(bundle);const evidence=[{sourceId:source.sourceId,text:source.content},...facts.map(f=>({sourceId:f.id,text:conditionalSentence(f.term,source)}))];
-   const started=Date.now();let checked;let error:string|undefined;
-   try{checked=checkSemanticResults(row.claim,bundle,await verifier.check({segments:[{id:'s0',text:row.claim}],evidence}))[0];}catch(e){const code=(e as {code?:unknown})?.code;error=typeof code==='string'&&/^[A-Z0-9_]{1,80}$/.test(code)?code:'verification_failed';}
+   const bundle=factCaseBundle(row);const evidence=evidenceForCheck(bundle);
+   const started=Date.now();let checked;let modelChecks;let error:string|undefined;
+   try{modelChecks=await verifier.check({segments:[{id:'s0',text:row.claim}],evidence});checked=checkSemanticResults(row.claim,bundle,modelChecks)[0];}catch(e){const code=(e as {code?:unknown})?.code;error=typeof code==='string'&&/^[A-Z0-9_]{1,80}$/.test(code)?code:'verification_failed';}
    const supported=checked?.status==='supported';const correct=!error&&supported===row.supported;
-   rows.push({id:row.id,kind:row.kind,expectedSupported:row.supported,observed:checked?.status??'unverifiable',correct,error,durationMs:Date.now()-started,check:checked});
+   rows.push({id:row.id,kind:row.kind,expectedSupported:row.supported,observed:checked?.status??'unverifiable',correct,error,durationMs:Date.now()-started,check:checked,modelChecks});
    console.log(JSON.stringify({id:row.id,correct,observed:checked?.status??error}));
   }
   const ordinary=rows.filter(r=>r.kind==='ordinary'),critical=rows.filter(r=>r.kind==='critical');

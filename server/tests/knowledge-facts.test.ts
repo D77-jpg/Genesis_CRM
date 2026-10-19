@@ -91,7 +91,7 @@ test('accepted quote model and explicit quantity are required; fallback profile 
 });
 
 import {checkSemanticResults,verifyGroundedEmail,verifyLanguageTransform,type SemanticVerifier,inspectEditedDraft} from '../src/services/agent/fact-verifier';
-import {conditionalSentence,transformNumbersMatch} from '../src/services/agent/knowledge-grounding';
+import {conditionalSentence,transformNumbersMatch,draftHash} from '../src/services/agent/knowledge-grounding';
 const prose={...source,sourceId:'knowledge:prose:v1',knowledgeId:undefined,category:'company' as const,content:'We manufacture velvet pouches. We do not manufacture steel racks.',terms:[]};
 function proof(text:string,authority:string,sourceId:string){const start=Array.from(authority).join('').indexOf(text);return {sourceId,quote:text,start,end:start+Array.from(text).length};}
 test('ordinary paraphrases require whole-claim semantic support plus exact evidence offsets',()=>{
@@ -111,6 +111,26 @@ test('negation cannot be dropped by a permissive model checker',()=>{
  const sentence='We manufacture steel racks.';const quote=proof('We do not manufacture steel racks.',prose.content,prose.sourceId);
  assert.equal(checkSemanticResults(sentence,bundle([prose],[]),[{id:'s0',status:'supported',quotes:[quote],reason:'permissive'}])[0].status,'contradicted');
 });
+test('lexical polarity guards allow evidence-backed equivalent phrasing and cross-language paraphrases',()=>{
+ for(const [authority,text] of [
+  ['The display unit is wireless.','The display unit works without wires.'],
+  ['该袋不提供内衬。','The pouch is unlined.'],
+  ['The pouch is unlined.','该袋不含内衬。'],
+ ]){
+  const src={...prose,content:authority};
+  const checked=checkSemanticResults(text,bundle([src],[]),[{id:'s0',status:'supported',quotes:[proof(authority,authority,src.sourceId)],reason:'whole-claim equivalent meaning'}]);
+  assert.equal(checked[0].status,'supported');
+ }
+ for(const [authority,text] of [
+  ['We do not supply foam inserts.','We supply foam inserts.'],
+  ['We supply foam inserts.','We do not supply foam inserts.'],
+  ['该袋不提供内衬。','该袋提供内衬。'],
+ ]){
+  const src={...prose,content:authority};
+  assert.equal(checkSemanticResults(text,bundle([src],[]),[{id:'s0',status:'supported',quotes:[proof(authority,authority,src.sourceId)],reason:'permissive checker'}])[0].status,'contradicted');
+ }
+});
+
 test('every paragraph needs a verdict; omissions, duplicate IDs and source injection fail closed',()=>{
  assert.equal(checkSemanticResults('We make velvet pouches.',bundle([prose],[]),[])[0].status,'unverifiable');
  const row={id:'s0',status:'non_claim' as const,quotes:[],reason:'just prose'};
@@ -127,10 +147,11 @@ test('semantic failure is distinct from no answer; a valid partial email stays r
  assert.equal(result.review.factAudit?.mode,'unavailable');assert.ok(result.review.issues.some(i=>i.code==='semantic_unverified'));
  assert.match(result.bodyText,/Hello,[\s\S]*Thank you[\s\S]*19 working days[\s\S]*Could you please/);
 });
-test('question coverage follows the actually checked fact, not another fact with the same source ID',async()=>{
+test('an omitted topic is answered only after rendering its complete applicable fact, never by shared source ID',async()=>{
  const moq={...term,topic:'moq' as const,value:'73',unit:'pcs'};const b=bundle([{...source,terms:[moq,term]}],['moq','lead_time']);const card=conditionalSentence(moq,b.sources[0]);
  const result=await verifyGroundedEmail(card,b,{taskType:'inquiry_reply'},{model:'fixture',async check(){return [{id:'s0',status:'supported',quotes:[proof(card,card,source.sourceId+':term:0')],reason:'only MOQ answered'}];}});
- assert.equal(result.review.questions.find(q=>q.topic==='moq')?.status,'answered');assert.equal(result.review.questions.find(q=>q.topic==='lead_time')?.status,'unanswered');
+ assert.equal(result.review.questions.find(q=>q.topic==='moq')?.status,'answered');assert.equal(result.review.questions.find(q=>q.topic==='lead_time')?.status,'answered');
+ assert.ok(result.bodyText.includes(conditionalSentence(term,b.sources[0])));assert.ok(result.review.factAudit?.checks.some(c=>c.id.startsWith('f')&&c.text===conditionalSentence(term,b.sources[0])));assert.equal(result.review.completeness,'partial');
 });
 test('pure transforms cannot permute the same numbers between price/MOQ or remove semantic conditions',async()=>{
  assert.equal(transformNumbersMatch('MOQ 19 pcs. Lead time 73 days.','MOQ 73 pcs. Lead time 19 days.'),false);
@@ -213,6 +234,9 @@ test('real provider HTTP protocol validates JSON, unique Unicode quotes and reje
   const payload={segments:[{id:'s0',text:'We make cotton bags.'}],evidence:[{sourceId:'local-evidence',text:'😀 We make cotton bags.'}]};
   const rows=await verifier.check(payload);assert.equal(rows[0].quotes[0].start,10);assert.equal(rows[0].quotes[0].end,21);
   assert.deepEqual(requests[0].tools,[]);assert.equal(requests[0].store,false);assert.equal(requests[0].parallel_tool_calls,false);
+  assert.equal((requests[0].text as {format:{type:string;name:string}}).format.type,'json_schema');
+  assert.equal((requests[0].text as {format:{name:string}}).format.name,'evidence_entailment');
+  await verifier.rewrite!({body:'Fictional only',allowed:[],issues:[]});assert.deepEqual(requests[1].text,{format:{type:'text'}});
   mode='invalid';await assert.rejects(()=>verifier.check(payload));mode='tool';await assert.rejects(()=>verifier.check(payload));
  }finally{await new Promise<void>((resolve,reject)=>http.close(error=>error?reject(error):resolve()));}
 });
@@ -223,4 +247,44 @@ test('legacy literal-condition disagreement is visible but never promotes either
  const b=bundle([first,second],['price']);assert.ok(collectConditionalEvidence(b).every(f=>f.status==='conflict'));
  const result=auditGroundedEmail('We promise EUR 28.',b,{taskType:'quotation_explanation'});assert.equal(result.review.status,'conflict');assert.doesNotMatch(result.bodyText,/EUR 28|EUR 52/);
  const different={...second,terms:[{...legacy,value:'52',conditions:'different embossing method'}]};assert.ok(collectConditionalEvidence(bundle([first,different],['price'])).every(f=>f.status==='needs_confirmation'));
+});
+
+
+test('live evaluation and production share exactly the authorized semantic evidence boundary',async()=>{
+ const {evidenceForCheck}=await import('../src/services/agent/fact-verifier');
+ const {factCaseBundle,loadFactCases}=await import('../evaluation/knowledge/fact-evaluation');
+ for(const row of loadFactCases().cases){const b=factCaseBundle(row);const allowed=evidenceForCheck(b);assert.ok(allowed.length);if(row.kind==='critical'){assert.ok(allowed.every(e=>e.sourceId.includes(':term:')));assert.ok(allowed.every(e=>!e.text.includes('No confirmed freight')));}else assert.equal(allowed[0].text,row.source);}
+});
+
+
+test('bounded address questions and standard closings are non-claims; disguised commitments stay blocked',()=>{
+ const text='Could you please share your delivery address?\nWe look forward to hearing from you.';
+ assert.ok(checkSemanticResults(text,bundle([],[]),[]).every(c=>c.status==='non_claim'));
+ for(const unsafe of ['Could you please confirm our free shipping?','Could you please confirm our delivery in 7 days?','We look forward to guaranteeing free samples.'])assert.ok(checkSemanticResults(unsafe,bundle([],[]),[]).every(c=>c.status!=='non_claim'));
+});
+
+
+test('a partial email retains whole verified product paragraphs without rescuing unsupported clauses',async()=>{
+ const valid='We manufacture velvet pouches.';const invalid='Your inquiry confirmed a signed purchase contract.';
+ const b=bundle([prose],[]);const verifier:SemanticVerifier={model:'independent-partial',async check({segments}){return segments.map(p=>({id:p.id,status:p.text===valid?'supported' as const:'unsupported' as const,quotes:p.text===valid?[proof(valid,prose.content,prose.sourceId)]:[],reason:p.text===valid?'whole paragraph entailed':'unconfirmed customer assertion'}));}};
+ const kept=await verifyGroundedEmail(valid+'\n'+invalid,b,{taskType:'first_outreach'},verifier);
+ assert.match(kept.bodyText,/We manufacture velvet pouches/);assert.doesNotMatch(kept.bodyText,/signed purchase/);assert.equal(kept.review.factAudit?.mode,'semantic');assert.equal(kept.review.completeness,'partial');assert.ok(kept.review.issues.some(i=>i.code==='semantic_partial'));assert.equal(kept.review.bodyHash,draftHash(kept.bodyText));assert.ok(kept.review.claims.some(c=>c.text===valid));
+ const rejected=await verifyGroundedEmail(valid+' '+invalid,b,{taskType:'first_outreach'},verifier);assert.doesNotMatch(rejected.bodyText,/manufacture velvet|signed purchase/);assert.equal(rejected.review.factAudit?.mode,'unavailable');
+});
+
+
+test('partial composition respects the body limit by omitting a whole verified paragraph',async()=>{
+ const paragraph='Fictional reusable material description. '.repeat(220);const src={...prose,content:paragraph};
+ const longPolicy={...source,terms:Array.from({length:25},()=>({...term,conditions:'Entire applicability wording '.repeat(18)}))};const b=bundle([src,longPolicy]);
+ const result=await verifyGroundedEmail(paragraph+'\nUnsupported purchase assertion.',b,{taskType:'inquiry_reply'},{model:'independent-body-limit',async check({segments}){return segments.map(p=>({id:p.id,status:p.text===paragraph.trim()?'supported' as const:'unsupported' as const,quotes:p.text===paragraph.trim()?[proof(paragraph.trim(),paragraph,src.sourceId)]:[],reason:'whole paragraph only'}));}});
+ assert.ok(result.bodyText.length<=20000);assert.ok(result.review.issues.some(i=>i.code==='fact_budget'));assert.doesNotMatch(result.bodyText,/Fictional reusable/);
+});
+
+test('safe model prose cannot hide unanswered price or freight questions in internal review only',async()=>{
+ const b=bundle([prose],['price','shipping']);const text='We manufacture velvet pouches.';
+ const result=await verifyGroundedEmail(text,b,{taskType:'quotation_explanation'},{model:'independent-question-completeness',async check({segments}){return segments.map(p=>({id:p.id,status:'supported' as const,quotes:[proof(text,prose.content,prose.sourceId)],reason:'whole product paragraph supported'}));}});
+ assert.match(result.bodyText,/We manufacture velvet pouches/);
+ assert.match(result.bodyText,/firm price needs confirmation/);assert.match(result.bodyText,/Freight cost needs confirmation/);
+ assert.equal(result.review.completeness,'partial');assert.ok(result.review.questions.every(q=>q.status==='unanswered'));
+ assert.equal(result.review.bodyHash,draftHash(result.bodyText));assert.doesNotMatch(result.bodyText,/USD\s*\d/);
 });

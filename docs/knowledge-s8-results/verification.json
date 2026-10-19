@@ -1,0 +1,331 @@
+{
+  "stage": "S8",
+  "date": "2026-10-19",
+  "baseMain": "a450e84",
+  "branch": "codex/knowledge-s8-acceptance",
+  "finalImplementation": "4658f749b584ad3e158e55dc6d06dca01abe947f",
+  "localEngineeringChecksPassed": true,
+  "overallStageComplete": false,
+  "pending": [
+    "human PR and merge",
+    "clean merged-main relevant-scope replay",
+    "real business policy approval",
+    "independent whole-email quality confirmation"
+  ],
+  "boundaries": {
+    "fictionalDB": true,
+    "externalOrigin": "https://api.deepseek.com",
+    "authorizedSyntheticOnly": true,
+    "realCustomerWrites": 0,
+    "realEmailDeliveries": 0,
+    "realKnowledgePublications": 0
+  },
+  "engineering": {
+    "backend": {
+      "total": 370,
+      "pass": 370,
+      "fail": 0,
+      "skipped": 0
+    },
+    "web": {
+      "total": 33,
+      "pass": 33
+    },
+    "operations": {
+      "total": 7,
+      "pass": 7
+    },
+    "productionBuild": true,
+    "strictTypes": true,
+    "dependencyGate": true,
+    "remoteCI": "not run; PR not created"
+  },
+  "retrieval": [
+    {
+      "report": "s8-retrieval-original.json",
+      "summary": {
+        "cases": 120,
+        "answerable": 80,
+        "negative": 40,
+        "recallAt10": 0.95,
+        "mrrAt10": 0.95625,
+        "classificationAccuracy": 0.95,
+        "negativeStateAccuracy": 0.975,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 168.924,
+          "p95": 194.237,
+          "max": 2179.654
+        },
+        "unexpectedErrors": []
+      },
+      "bySplit": {
+        "dev": {
+          "cases": 60,
+          "answerable": 40,
+          "negative": 20,
+          "recallAt10": 0.9375,
+          "mrrAt10": 0.95,
+          "classificationAccuracy": 0.95,
+          "negativeStateAccuracy": 1,
+          "forbiddenHits": 0,
+          "latencyMs": {
+            "p50": 169.926,
+            "p95": 275.174,
+            "max": 2179.654
+          },
+          "unexpectedErrors": []
+        },
+        "holdout": {
+          "cases": 60,
+          "answerable": 40,
+          "negative": 20,
+          "recallAt10": 0.9625,
+          "mrrAt10": 0.9625,
+          "classificationAccuracy": 0.95,
+          "negativeStateAccuracy": 0.95,
+          "forbiddenHits": 0,
+          "latencyMs": {
+            "p50": 168.656,
+            "p95": 188.067,
+            "max": 2093.018
+          },
+          "unexpectedErrors": []
+        }
+      }
+    },
+    {
+      "report": "s8-retrieval-transfer.json",
+      "summary": {
+        "cases": 120,
+        "answerable": 80,
+        "negative": 40,
+        "recallAt10": 1,
+        "mrrAt10": 1,
+        "classificationAccuracy": 0.9916666666666667,
+        "negativeStateAccuracy": 0.975,
+        "forbiddenHits": 0,
+        "latencyMs": {
+          "p50": 191.642,
+          "p95": 340.727,
+          "max": 2115.389
+        },
+        "unexpectedErrors": []
+      },
+      "bySplit": {
+        "dev": {
+          "cases": 60,
+          "answerable": 40,
+          "negative": 20,
+          "recallAt10": 1,
+          "mrrAt10": 1,
+          "classificationAccuracy": 1,
+          "negativeStateAccuracy": 1,
+          "forbiddenHits": 0,
+          "latencyMs": {
+            "p50": 191.232,
+            "p95": 345.617,
+            "max": 2073.675
+          },
+          "unexpectedErrors": []
+        },
+        "holdout": {
+          "cases": 60,
+          "answerable": 40,
+          "negative": 20,
+          "recallAt10": 1,
+          "mrrAt10": 1,
+          "classificationAccuracy": 0.9833333333333333,
+          "negativeStateAccuracy": 0.95,
+          "forbiddenHits": 0,
+          "latencyMs": {
+            "p50": 191.642,
+            "p95": 328.054,
+            "max": 2115.389
+          },
+          "unexpectedErrors": []
+        }
+      }
+    }
+  ],
+  "facts": [
+    {
+      "report": "s8-facts-dev-first.json",
+      "metrics": {
+        "ordinaryAccuracy": 0.9375,
+        "unsupportedCriticalReleased": 0,
+        "criticalPositiveCoverage": 1,
+        "verificationFailures": 0
+      },
+      "gatesPassed": false,
+      "independentHoldout": false,
+      "independentS8Holdout": false
+    },
+    {
+      "report": "s8-facts-holdout-first.json",
+      "metrics": {
+        "ordinaryAccuracy": 0.9375,
+        "unsupportedCriticalReleased": 0,
+        "criticalPositiveCoverage": 1,
+        "verificationFailures": 0
+      },
+      "gatesPassed": false,
+      "independentHoldout": true,
+      "independentS8Holdout": true
+    },
+    {
+      "report": "s8-facts-dev-structured.json",
+      "metrics": {
+        "ordinaryAccuracy": 1,
+        "unsupportedCriticalReleased": 0,
+        "criticalPositiveCoverage": 0,
+        "verificationFailures": 0
+      },
+      "gatesPassed": false,
+      "independentHoldout": false,
+      "independentS8Holdout": false
+    },
+    {
+      "report": "s8-facts-dev-production-boundary.json",
+      "metrics": {
+        "ordinaryAccuracy": 1,
+        "unsupportedCriticalReleased": 0,
+        "criticalPositiveCoverage": 1,
+        "verificationFailures": 0
+      },
+      "gatesPassed": true,
+      "independentHoldout": false,
+      "independentS8Holdout": false
+    },
+    {
+      "report": "s8-facts-holdout-production-boundary.json",
+      "metrics": {
+        "ordinaryAccuracy": 1,
+        "unsupportedCriticalReleased": 0,
+        "criticalPositiveCoverage": 1,
+        "verificationFailures": 0
+      },
+      "gatesPassed": true,
+      "independentHoldout": true,
+      "independentS8Holdout": false
+    }
+  ],
+  "performance": {
+    "machine": {
+      "platform": "win32",
+      "release": "10.0.26200",
+      "cpu": "Intel(R) Core(TM) Ultra 7 265F",
+      "logicalCpus": 20,
+      "totalMemory": 33984950272,
+      "node": "v24.19.0",
+      "cpuThreadsPerWorker": 4,
+      "maxWorkers": 2
+    },
+    "build": {
+      "elapsedMs": 266467.7955,
+      "state": "ready",
+      "total": 10000,
+      "embedded": 10000,
+      "reused": 0,
+      "stored": 10000,
+      "identity": {
+        "id": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+        "weightHash": "98a01d88b7de996cdea58c32ca71208c09968d143798814b2ea09d3439dc334f",
+        "dimension": 384,
+        "adapter": "genesis-semantic-s3.1",
+        "maxTokens": 128
+      }
+    },
+    "result": {
+      "warmRequests": 40,
+      "warmP50Ms": 3175.900800000003,
+      "warmP95Ms": 3320.0305999999982,
+      "warmMaxMs": 3400.5076000000117,
+      "ready": 39,
+      "noMatch": 1,
+      "retrievalFailures": 0,
+      "expectedHitRate": 0.975,
+      "performanceGate": true,
+      "gateDefinition": "S0 latency gate; no_match is a completed answer classification, expected-hit quality reported separately",
+      "fixedTargetMs": 5000,
+      "qualityGate": "not measured by this synthetic scale run",
+      "pool": {
+        "running": 0,
+        "queued": 0,
+        "dispatching": 0,
+        "workers": [
+          {
+            "pid": 33388,
+            "calls": 21,
+            "rssMiB": 856.17
+          },
+          {
+            "pid": 30804,
+            "calls": 21,
+            "rssMiB": 856.14
+          }
+        ],
+        "circuitOpen": false,
+        "completed": 1293,
+        "failed": 0,
+        "cancelled": 0,
+        "restarts": 42,
+        "queuePeak": 1,
+        "queueWaitMs": 188155
+      },
+      "nodeRssMiB": 638.5546875,
+      "nodePeakRssMiB": 711.50390625
+    }
+  },
+  "ui": {
+    "mainRun": {
+      "commit": "eb7d3d59e2a82663f4472c389d92f74922739dbb",
+      "dirty": false,
+      "report": "ui-business-run.json",
+      "deliveries": 1,
+      "followups": 1,
+      "quota": [
+        {
+          "_id": "6ad5a9149414c2c88280bafa",
+          "requestCount": 34,
+          "reservedTokens": 0,
+          "inputTokens": 99616,
+          "outputTokens": 21719,
+          "totalTokens": 121335
+        }
+      ]
+    },
+    "finalIncrement": {
+      "commit": "4658f749b584ad3e158e55dc6d06dca01abe947f",
+      "dirty": false,
+      "report": "ui-final-increment.json",
+      "deliveries": 0,
+      "followups": 0,
+      "quota": [
+        {
+          "_id": "6ad5afcef84436355379f8c3",
+          "requestCount": 4,
+          "reservedTokens": 0,
+          "inputTokens": 9718,
+          "outputTokens": 2585,
+          "totalTokens": 12303
+        }
+      ]
+    }
+  },
+  "monetaryCost": null,
+  "costLimitation": "No supplier invoice/settlement; per-instance token counts are not total project cost. Task reserved budget is not actual billing.",
+  "secretScan": "Pinned Gitleaks v8.24.0 full Git history exit 0 at archive commit 98b1ed8; no rule/path/credential allowlist added. See security-check.json.",
+  "realPackage": {
+    "localOnly": true,
+    "members": 12,
+    "structurallyReadable": 12,
+    "crcValid": true,
+    "scriptsExecuted": 0,
+    "published": 0,
+    "externalRequests": 0,
+    "businessApproved": false
+  }
+}

@@ -184,6 +184,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
         body: JSON.stringify({
           model: this.config.model,
           store: false,
+          ...(request.outputFormat?{text:{format:request.outputFormat},...this.structuredOutputOptions()}:{}),
           instructions: request.instructions,
           input: request.input,
           tools: request.tools,
@@ -207,6 +208,8 @@ export class OpenAIResponsesProvider implements AgentProvider {
     if (!response.ok || body.status === 'failed') {
       throw new AgentProviderError(`OPENAI_HTTP_${response.status}`);
     }
+
+    if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
 
     const output = Array.isArray(body.output) ? body.output : [];
     const toolCalls = output

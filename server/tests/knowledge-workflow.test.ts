@@ -106,3 +106,14 @@ test('each semantic check/rewrite revalidates the running lease before calling i
  const {providerFactVerifier}=await import('../src/services/agent/fact-verifier');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');const base=new MockAgentProvider();const provider=Object.create(base);Object.defineProperty(provider,'name',{value:'openai'});let allowed=true,calls=0;provider.createTurn=async()=>{calls++;return {text:JSON.stringify({checks:[]}),toolCalls:[],output:[],usage:{inputTokens:1,outputTokens:1,totalTokens:2}};};const verifier=providerFactVerifier(provider,actor,undefined,async()=>{if(!allowed)throw Error('lease revoked');})!;
  await verifier.check({segments:[],evidence:[]});allowed=false;await assert.rejects(()=>verifier.check({segments:[],evidence:[]}));await assert.rejects(()=>verifier.rewrite!({body:'',allowed:[],issues:[]}));assert.equal(calls,1);
 });
+
+
+test('workflow instructions cannot crowd product evidence out of bounded lookup; scope facts remain explicit',async()=>{
+ const {appendKnowledge}=await import('../src/services/agent/knowledge.service');const {prepareSalesEvidence}=await import('../src/services/agent/sales-evidence');const admin={...actor,role:'admin' as const};
+ const id=await appendKnowledge(undefined,{expectedVersion:0,title:'Independent hemp sleeve construction',category:'product',source:'fixture://independent-lookup',content:'The hemp sleeve has a fold-over flap.',products:['hemp sleeve'],approved:true},admin);
+ for(let n=0;n<8;n++)await appendKnowledge(undefined,{expectedVersion:0,title:'Write first outreach email help workflow '+n,category:'company',source:'fixture://lookup-noise',content:'Write first outreach email help workflow. This is irrelevant operational noise.',approved:true},admin);
+ const result=await prepareSalesEvidence(actor,{request:'Help write first outreach email please',productHint:'hemp sleeve',kind:'first_outreach',history:'Quantity: 320 pcs\nDestination: Sweden'});
+ assert.ok(result.bundle.sources.some(s=>s.knowledgeId===id));assert.equal(result.bundle.factContext?.quantity,320);assert.equal(result.bundle.factContext?.destination,'Sweden');
+ assert.ok(result.bundle.sources.every(s=>!s.source.includes('lookup-noise')));
+ const none=await prepareSalesEvidence(actor,{request:'write first outreach email',productHint:'unmatched aquarium cover',kind:'first_outreach',history:''});assert.equal(none.bundle.status,'no_match');
+});

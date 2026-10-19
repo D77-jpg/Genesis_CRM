@@ -24,6 +24,7 @@ export interface AgentProviderRequest {
   context: { type: AgentContextType; resourceId?: string; direction?: 'inbound' | 'outbound' };
   userPrompt: string;
   safetyIdentifier: string;
+  outputFormat?: {type:'json_schema';name:string;strict:true;schema:Record<string,unknown>}|{type:'text'};
 }
 
 export interface AgentProviderTurn {
