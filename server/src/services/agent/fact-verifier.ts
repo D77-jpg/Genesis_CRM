@@ -97,7 +97,18 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
  const fallback=async(reason:string,mode:'unavailable'|'deterministic'='unavailable')=>{
   baseline.review.factAudit={contract:'s4.1',mode,attempts,checks:[...checks,...(baseline.review.factAudit?.checks??[])],facts:collectConditionalEvidence(bundle)};
   if(actor){const fresh=await knowledgeFreshness(baseline.review,actor);if(fresh.failed||fresh.changed.length)return auditGroundedEmail('',{...bundle,status:'index_stale',sources:[],facts:[],issues:[{code:'index_stale',message:'依据已变化或当前无权读取，请重新检索'}]},options);}
-  baseline.review.completeness='partial';baseline.review.issues.push({code:'semantic_unverified',message:reason});return baseline;
+  // Keep only whole non-critical paragraphs that the exact-evidence check accepted.
+  // Never salvage a clause from a rejected paragraph or promote customer facts into
+  // supplier promises. The deterministic renderer still owns all conditional terms.
+  const verified=checks.filter(c=>c.status==='supported'&&!critical(c.text));
+  if(verified.length){
+   const prose=[...new Set(verified.map(c=>c.text))].join('\n\n');
+   baseline.bodyText=baseline.bodyText.replace('\n\n','\n\n'+prose+'\n\n');
+   baseline.review.bodyHash=draftHash(baseline.bodyText);
+   baseline.review.claims.push(...verified.map(c=>({text:c.text,sourceIds:c.sourceIds})));
+   baseline.review.factAudit.mode='semantic';
+  }
+  baseline.review.completeness='partial';baseline.review.issues.push({code:verified.length?'semantic_partial':'semantic_unverified',message:verified.length?'部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。':reason});return baseline;
  };
  if(['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status))return fallback('检索未就绪或失败，已保留安全的不完整答复');
  if(!verifier)return fallback('语义核验服务未启用；本稿仅使用结构化已确认事实，普通事实待人工审核');

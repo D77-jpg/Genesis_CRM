@@ -91,7 +91,7 @@ test('accepted quote model and explicit quantity are required; fallback profile 
 });
 
 import {checkSemanticResults,verifyGroundedEmail,verifyLanguageTransform,type SemanticVerifier,inspectEditedDraft} from '../src/services/agent/fact-verifier';
-import {conditionalSentence,transformNumbersMatch} from '../src/services/agent/knowledge-grounding';
+import {conditionalSentence,transformNumbersMatch,draftHash} from '../src/services/agent/knowledge-grounding';
 const prose={...source,sourceId:'knowledge:prose:v1',knowledgeId:undefined,category:'company' as const,content:'We manufacture velvet pouches. We do not manufacture steel racks.',terms:[]};
 function proof(text:string,authority:string,sourceId:string){const start=Array.from(authority).join('').indexOf(text);return {sourceId,quote:text,start,end:start+Array.from(text).length};}
 test('ordinary paraphrases require whole-claim semantic support plus exact evidence offsets',()=>{
@@ -260,4 +260,13 @@ test('bounded address questions and standard closings are non-claims; disguised 
  const text='Could you please share your delivery address?\nWe look forward to hearing from you.';
  assert.ok(checkSemanticResults(text,bundle([],[]),[]).every(c=>c.status==='non_claim'));
  for(const unsafe of ['Could you please confirm our free shipping?','Could you please confirm our delivery in 7 days?','We look forward to guaranteeing free samples.'])assert.ok(checkSemanticResults(unsafe,bundle([],[]),[]).every(c=>c.status!=='non_claim'));
+});
+
+
+test('a partial email retains whole verified product paragraphs without rescuing unsupported clauses',async()=>{
+ const valid='We manufacture velvet pouches.';const invalid='Your inquiry confirmed a signed purchase contract.';
+ const b=bundle([prose],[]);const verifier:SemanticVerifier={model:'independent-partial',async check({segments}){return segments.map(p=>({id:p.id,status:p.text===valid?'supported' as const:'unsupported' as const,quotes:p.text===valid?[proof(valid,prose.content,prose.sourceId)]:[],reason:p.text===valid?'whole paragraph entailed':'unconfirmed customer assertion'}));}};
+ const kept=await verifyGroundedEmail(valid+'\n'+invalid,b,{taskType:'first_outreach'},verifier);
+ assert.match(kept.bodyText,/We manufacture velvet pouches/);assert.doesNotMatch(kept.bodyText,/signed purchase/);assert.equal(kept.review.factAudit?.mode,'semantic');assert.equal(kept.review.completeness,'partial');assert.ok(kept.review.issues.some(i=>i.code==='semantic_partial'));assert.equal(kept.review.bodyHash,draftHash(kept.bodyText));assert.ok(kept.review.claims.some(c=>c.text===valid));
+ const rejected=await verifyGroundedEmail(valid+' '+invalid,b,{taskType:'first_outreach'},verifier);assert.doesNotMatch(rejected.bodyText,/manufacture velvet|signed purchase/);assert.equal(rejected.review.factAudit?.mode,'unavailable');
 });
