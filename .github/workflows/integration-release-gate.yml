@@ -56,7 +56,7 @@ jobs:
           npm run test:knowledge-facts
           npm run test:knowledge-governance
           npm run test:knowledge-workflow
-          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node evaluation/knowledge/schema.ts evaluation/knowledge/metrics.ts evaluation/knowledge/baseline.ts evaluation/knowledge/retrieval.ts evaluation/knowledge/fact-evaluation.ts tests/knowledge-facts.test.ts tests/knowledge-governance.test.ts tests/knowledge-governance-ui-fixture.ts tests/knowledge-workflow.test.ts tests/fixtures/knowledge-s5/worker.ts tests/knowledge-workflow-ui-fixture.ts
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node evaluation/knowledge/schema.ts evaluation/knowledge/metrics.ts evaluation/knowledge/baseline.ts evaluation/knowledge/retrieval.ts evaluation/knowledge/fact-evaluation.ts tests/knowledge-facts.test.ts tests/knowledge-governance.test.ts tests/knowledge-governance-ui-fixture.ts tests/knowledge-workflow.test.ts tests/fixtures/knowledge-s5/worker.ts tests/knowledge-workflow-ui-fixture.ts tests/knowledge-acceptance-ui-fixture.ts
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
