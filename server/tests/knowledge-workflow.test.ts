@@ -117,3 +117,32 @@ test('workflow instructions cannot crowd product evidence out of bounded lookup;
  assert.ok(result.bundle.sources.every(s=>!s.source.includes('lookup-noise')));
  const none=await prepareSalesEvidence(actor,{request:'write first outreach email',productHint:'unmatched aquarium cover',kind:'first_outreach',history:''});assert.equal(none.bundle.status,'no_match');
 });
+
+test('completed model work settles actual time instead of exhausting cumulative limit with reservations',async()=>{
+ const {taskEvidenceWorkflow}=await import('../src/services/agent/evidence-workflow');const {AgentTask}=await import('../src/models/AgentTask');
+ const created=await task('请写跟进邮件');const row=await AgentTask.findById(created.task.id);assert.ok(row);
+ await AgentTask.updateOne({_id:row._id},{$set:{status:'running',leaseToken:'settled-time'}});
+ const workflow=taskEvidenceWorkflow(row,'settled-time',async()=>{});let invoked=0;
+ for(let n=0;n<6;n++)await workflow.run(n%2?'audit_claims':'generate_email',{independentInput:n},async()=>{invoked++;await new Promise(r=>setTimeout(r,10));return {done:n};},{tool:'model'});
+ const saved=await AgentTask.findById(row._id);assert.equal(invoked,6);assert.equal(saved?.workflowCalls,6);assert.ok(saved!.workflowActiveMs<10000);assert.ok(saved!.workflowActiveMs>=60);
+ await AgentTask.updateOne({_id:row._id},{$set:{workflowActiveMs:600000}});
+ await assert.rejects(()=>workflow.run('load_rules',{},async()=>{throw Error('must not execute after actual budget is exhausted');}));
+});
+
+test('lost lease keeps its conservative time reservation and cannot settle another owner checkpoint',async()=>{
+ const {taskEvidenceWorkflow}=await import('../src/services/agent/evidence-workflow');const {AgentTask}=await import('../src/models/AgentTask');
+ const created=await task('请写跟进邮件');const row=await AgentTask.findById(created.task.id);assert.ok(row);
+ await AgentTask.updateOne({_id:row._id},{$set:{status:'running',leaseToken:'lost-time'}});
+ const workflow=taskEvidenceWorkflow(row,'lost-time',async()=>{});
+ await assert.rejects(()=>workflow.run('generate_email',{},async()=>{await AgentTask.updateOne({_id:row._id},{$set:{status:'paused',leaseToken:'new-owner'}});return {done:true};},{tool:'model'}));
+ const saved=await AgentTask.findById(row._id);assert.equal(saved?.workflowActiveMs,120000);assert.equal(saved?.workflowCalls,1);assert.equal(saved?.workflowRecords[0]?.state,'running');
+});
+
+test('finished failed attempts settle elapsed time but retain retry and work counters',async()=>{
+ const {taskEvidenceWorkflow}=await import('../src/services/agent/evidence-workflow');const {AgentTask}=await import('../src/models/AgentTask');
+ const created=await task('请写跟进邮件');const row=await AgentTask.findById(created.task.id);assert.ok(row);
+ await AgentTask.updateOne({_id:row._id},{$set:{status:'running',leaseToken:'failed-time'}});
+ const workflow=taskEvidenceWorkflow(row,'failed-time',async()=>{});let invoked=0;
+ for(let n=0;n<2;n++)await assert.rejects(()=>workflow.run('generate_email',{independentAttempt:n},async()=>{invoked++;await new Promise(r=>setTimeout(r,10));throw Error('independent bounded transport failure');},{tool:'model'}));
+ const saved=await AgentTask.findById(row._id);assert.equal(invoked,2);assert.equal(saved?.workflowCalls,2);assert.ok(saved!.workflowActiveMs>=20&&saved!.workflowActiveMs<10000);assert.equal(saved?.workflowRecords[0]?.attempts,2);assert.equal(saved?.workflowRecords[0]?.state,'failed');
+});

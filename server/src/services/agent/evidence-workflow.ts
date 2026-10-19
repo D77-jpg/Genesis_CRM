@@ -20,11 +20,15 @@ export function taskEvidenceWorkflow(task:AgentTaskDocument,token:string,check:(
   const attempts=(record?.attempts??0)+1;if(attempts>5)throw new ApiError(429,'该步骤已达重试上限','RATE_LIMITED',[{field:'agent',message:'TASK_WORKFLOW_LIMIT'}]);
   if(!record){if(records.length>=60)throw ApiError.conflict('任务检查点过多，请新建任务');record={key,epoch,inputHash,state:'running',startedAt:new Date().toISOString(),attempts,reused:0};records.push(record);}
   Object.assign(record,{inputHash,state:'running',startedAt:new Date().toISOString(),attempts,payload:undefined,tool:options?.tool,error:undefined});
-  const reserved=await AgentTask.updateOne(fence,{$set:{workflowRecords:records},$inc:{version:1,workflowCalls:1,workflowActiveMs:options?.tool==='model'?120000:1000}});if(!reserved.matchedCount)throw Error('TASK_INTERRUPTED');
-  const start=Date.now();try{
+  const reservationMs=options?.tool==='model'?120000:1000;
+  const reserved=await AgentTask.updateOne(fence,{$set:{workflowRecords:records},$inc:{version:1,workflowCalls:1,workflowActiveMs:reservationMs}});if(!reserved.matchedCount)throw Error('TASK_INTERRUPTED');
+  // Keep the full reservation if the process or lease is lost. A finished attempt
+  // settles once against its exact running checkpoint; retries never reset totals.
+  const settlementFence={...fence,workflowRecords:{$elemMatch:{key,epoch,inputHash,state:'running',attempts,startedAt:record.startedAt}}};
+  const start=performance.now();const elapsed=()=>Math.max(1,Math.ceil(performance.now()-start));try{
    const result=await action();await check();const serialized=JSON.stringify(result);if(serialized.length>160000)throw new ApiError(413,'步骤证据超过单次保留范围，请缩小资料','PAYLOAD_TOO_LARGE');
-   Object.assign(record,{state:'completed',completedAt:new Date().toISOString(),durationMs:Date.now()-start,payload:clone(result)});
-   const saved=await AgentTask.updateOne(fence,{$set:{workflowRecords:records},$inc:{version:1}});if(!saved.matchedCount)throw Error('TASK_INTERRUPTED');return result;
-  }catch(error){record.state='failed';record.durationMs=Date.now()-start;record.error='步骤未完成，结果未交付';delete record.payload;await AgentTask.updateOne(fence,{$set:{workflowRecords:records},$inc:{version:1}});throw error;}
+   Object.assign(record,{state:'completed',completedAt:new Date().toISOString(),durationMs:elapsed(),payload:clone(result)});
+   const saved=await AgentTask.updateOne(settlementFence,{$set:{workflowRecords:records},$inc:{version:1,workflowActiveMs:record.durationMs!-reservationMs}});if(!saved.matchedCount)throw Error('TASK_INTERRUPTED');return result;
+  }catch(error){record.state='failed';record.durationMs=elapsed();record.error='步骤未完成，结果未交付';delete record.payload;await AgentTask.updateOne(settlementFence,{$set:{workflowRecords:records},$inc:{version:1,workflowActiveMs:record.durationMs-reservationMs}});throw error;}
  }};
 }
