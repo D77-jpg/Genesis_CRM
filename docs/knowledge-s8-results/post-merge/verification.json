@@ -1,0 +1,409 @@
+{
+  "stage": "S8 post-merge verification",
+  "date": "2026-10-19",
+  "overallStageComplete": false,
+  "mergedMain": "f3240d214c4782c6e1d4af09c6d47b5e11eb6977",
+  "mergedPullRequest": 39,
+  "mergeAncestryVerified": true,
+  "mainRunClean": true,
+  "fixBranch": "codex/s8-main-verification",
+  "fixImplementation": "8da9f6f5f7ed02caf0a91abe7a8a8d29cbf82bc7",
+  "fixRunClean": true,
+  "remoteCI": "unverified; local results do not substitute for remote CI",
+  "mainReplay": {
+    "fiveTaskTypes": [
+      "first_outreach",
+      "quotation_explanation",
+      "sample_reply",
+      "followup_review",
+      "inquiry_reply"
+    ],
+    "fiveSemantic": true,
+    "beforeManualSend": {
+      "deliveries": 0,
+      "followups": 0
+    },
+    "afterManualSend": {
+      "deliveries": 1,
+      "followups": 1
+    },
+    "firstProviderFailurePreserved": true,
+    "versionChangeOldBodiesPreserved": true,
+    "regenerationHandoff": "FAILED TASK_WORKFLOW_LIMIT after new draft saved; not a passed main replay"
+  },
+  "fixReplay": {
+    "task": {
+      "id": "6ad5f1868c7f4d4b863d4667",
+      "kind": "inquiry_reply",
+      "status": "awaiting_review",
+      "draftId": "6ad5f2f88c7f4d4b863d4673",
+      "epoch": 1,
+      "error": {},
+      "budget": 60000,
+      "budgetCharged": 42389,
+      "workflowCalls": 25,
+      "workflowActiveMs": 28460,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 10
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 1246
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 60
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 13
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 4167
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 5798
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 73
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 76
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 4861
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 7072
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 13
+        }
+      ]
+    },
+    "initial": {
+      "id": "6ad5f1868c7f4d4b863d4667",
+      "kind": "inquiry_reply",
+      "status": "awaiting_review",
+      "draftId": "6ad5f1928c7f4d4b863d4669",
+      "epoch": 0,
+      "error": {},
+      "budget": 60000,
+      "budgetCharged": 17559,
+      "workflowCalls": 9,
+      "workflowActiveMs": 11320,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 10
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 1246
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 60
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 13
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 4167
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 5798
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 8
+        }
+      ]
+    },
+    "providerFailure": {
+      "id": "6ad5f1868c7f4d4b863d4667",
+      "kind": "inquiry_reply",
+      "status": "failed",
+      "draftId": null,
+      "epoch": 1,
+      "error": {
+        "code": "OPENAI_INVALID_STRUCTURED_OUTPUT",
+        "message": "模型返回的内容不完整、格式不合规或依据不足，请重试；未执行未确认的业务操作。",
+        "retryable": true
+      },
+      "budget": 60000,
+      "budgetCharged": 24175,
+      "workflowCalls": 16,
+      "workflowActiveMs": 16331,
+      "stages": [
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 10
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 1246
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 60
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 13
+        },
+        {
+          "key": "generate_email",
+          "state": "completed",
+          "durationMs": 4167
+        },
+        {
+          "key": "audit_claims",
+          "state": "completed",
+          "durationMs": 5798
+        },
+        {
+          "key": "handoff",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "read_context",
+          "state": "completed",
+          "durationMs": 7
+        },
+        {
+          "key": "extract_requirements",
+          "state": "completed",
+          "durationMs": 8
+        },
+        {
+          "key": "load_rules",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "retrieve_0",
+          "state": "completed",
+          "durationMs": 59
+        },
+        {
+          "key": "retrieve_1",
+          "state": "completed",
+          "durationMs": 49
+        },
+        {
+          "key": "assess_evidence",
+          "state": "completed",
+          "durationMs": 9
+        },
+        {
+          "key": "generate_email",
+          "state": "failed",
+          "durationMs": 4870
+        }
+      ]
+    },
+    "draftCount": 3,
+    "oldBodiesPreserved": true,
+    "currentDraftPolicyVersion": 2,
+    "deliveries": 0,
+    "followups": 0,
+    "currentAuditMode": "unavailable",
+    "currentKnownQuestions": [
+      {
+        "question": "Minimum order quantity",
+        "topic": "moq",
+        "status": "answered",
+        "sourceIds": [
+          "knowledge:6ad5f061ca37b332373cf39a:v2"
+        ]
+      },
+      {
+        "question": "Production lead time",
+        "topic": "lead_time",
+        "status": "answered",
+        "sourceIds": [
+          "knowledge:6ad5f061ca37b332373cf39a:v2"
+        ]
+      },
+      {
+        "question": "Sample policy",
+        "topic": "sample",
+        "status": "answered",
+        "sourceIds": [
+          "knowledge:6ad5f061ca37b332373cf39a:v2"
+        ]
+      },
+      {
+        "question": "Shipping",
+        "topic": "shipping",
+        "status": "unanswered",
+        "sourceIds": []
+      }
+    ],
+    "note": "Direct draft regeneration is separately observed and does not increment the persistent task counters. Persistent resume after title-only policy v2 and one provider-format failure completed handoff. No counters or limits were reset."
+  },
+  "engineering": {
+    "mergedMainRelevantRegression": {
+      "total": 149,
+      "pass": 149,
+      "fail": 0
+    },
+    "fixedFullBackend": {
+      "total": 373,
+      "pass": 373,
+      "fail": 0,
+      "skipped": 0,
+      "durationMs": 146127.7291
+    },
+    "workflowSubset": {
+      "total": 27,
+      "pass": 27,
+      "fail": 0
+    },
+    "serverBuildExit": 0,
+    "strictTypesExit": 0,
+    "countsOverlap": true,
+    "frontendChanged": false,
+    "previousWebRegression": 33,
+    "previousRootOperationsRegression": 7
+  },
+  "boundaries": {
+    "isolatedMemoryDatabase": true,
+    "realCustomerWrites": 0,
+    "realExternalEmailDeliveries": 0,
+    "realKnowledgePublications": 0,
+    "authorizedSyntheticDestination": "https://api.deepseek.com",
+    "realLocalEmbeddingIndexOCRRerank": true
+  },
+  "pending": [
+    "human PR/merge of accounting fix and clean-main targeted recheck",
+    "remote CI confirmation",
+    "business owner approval of real policies",
+    "independent whole-email quality gold labels and fixed gates"
+  ],
+  "rawSourceIntegrity": [
+    {
+      "file": "s8-main-five-ready.json",
+      "sha256RawBytes": "548702da0c6774c96c0e1a5a531cfc7d2bbe691fe4f5dcfdc4f866b11ea0603a"
+    },
+    {
+      "file": "s8-main-final-checkpoint.json",
+      "sha256RawBytes": "f1905b3d75e3ea55d3c6bd78def92c0ced9f19d25254ec339d5677cae765ea23"
+    },
+    {
+      "file": "s8-main-inquiry-first-failure.json",
+      "sha256RawBytes": "239e17add31aff783278979e84b00fe1a5234d092d788d31c40a978723c443f7"
+    },
+    {
+      "file": "s8-time-fix-first-ready.json",
+      "sha256RawBytes": "dd7e0c6a800769cc002dfd2d787f1cf1901a1a9a18e1e199f15cc1621fcdf743"
+    },
+    {
+      "file": "s8-time-fix-format-failure.json",
+      "sha256RawBytes": "56b7cdc2cc1f9fe0c45004ef418f1d74e4449077bbdf258bf27e12886034a888"
+    },
+    {
+      "file": "s8-time-fix-state.json",
+      "sha256RawBytes": "3da28abb61e20a13d8854952c3a201d959fcac3ffa79ae0337f846c91a497d97"
+    },
+    {
+      "file": "s8-time-fix-full-regression.log",
+      "sha256RawBytes": "ae62f5505273883bf3e98bd4ffbea6a3637219cd8e9901416b1dcb00665b5970"
+    },
+    {
+      "file": "s8-main-time-settled.log",
+      "sha256RawBytes": "53633ab117fecd4f65b2d6afaaa7484a9cde16d58ddfaa63af0eb62c99d97ac6"
+    }
+  ]
+}

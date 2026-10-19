@@ -327,5 +327,7 @@
     "published": 0,
     "externalRequests": 0,
     "businessApproved": false
-  }
+  },
+  "originalReportScope": "pre-PR39 measurements; original fields preserved",
+  "currentStatusReference": "post-merge/verification.json"
 }

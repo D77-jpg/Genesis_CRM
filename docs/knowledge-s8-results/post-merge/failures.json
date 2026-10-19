@@ -1,0 +1,178 @@
+{
+  "mainProviderFormat": {
+    "gitHead": "f3240d214c4782c6e1d4af09c6d47b5e11eb6977",
+    "dirty": false,
+    "tasks": [
+      {
+        "id": "6ad5bb26c229aecb38a7eeb4",
+        "kind": "inquiry_reply",
+        "status": "failed",
+        "epoch": 0,
+        "error": {
+          "code": "OPENAI_INVALID_STRUCTURED_OUTPUT",
+          "message": "模型返回的内容不完整、格式不合规或依据不足，请重试；未执行未确认的业务操作。",
+          "retryable": true
+        },
+        "budget": 60000,
+        "budgetCharged": 8037,
+        "stages": [
+          {
+            "key": "read_context",
+            "state": "completed",
+            "durationMs": 6
+          },
+          {
+            "key": "extract_requirements",
+            "state": "completed",
+            "durationMs": 6
+          },
+          {
+            "key": "load_rules",
+            "state": "completed",
+            "durationMs": 7
+          },
+          {
+            "key": "retrieve_0",
+            "state": "completed",
+            "durationMs": 77
+          },
+          {
+            "key": "retrieve_1",
+            "state": "completed",
+            "durationMs": 70
+          },
+          {
+            "key": "assess_evidence",
+            "state": "completed",
+            "durationMs": 14
+          },
+          {
+            "key": "generate_email",
+            "state": "failed",
+            "durationMs": 5014
+          }
+        ]
+      }
+    ],
+    "deliveries": 0,
+    "followups": 0
+  },
+  "fixedProviderFormat": {
+    "gitHead": "8da9f6f5f7ed02caf0a91abe7a8a8d29cbf82bc7",
+    "dirty": false,
+    "tasks": [
+      {
+        "id": "6ad5f1868c7f4d4b863d4667",
+        "kind": "inquiry_reply",
+        "status": "failed",
+        "draftId": null,
+        "epoch": 1,
+        "error": {
+          "code": "OPENAI_INVALID_STRUCTURED_OUTPUT",
+          "message": "模型返回的内容不完整、格式不合规或依据不足，请重试；未执行未确认的业务操作。",
+          "retryable": true
+        },
+        "budget": 60000,
+        "budgetCharged": 24175,
+        "workflowCalls": 16,
+        "workflowActiveMs": 16331,
+        "stages": [
+          {
+            "key": "read_context",
+            "state": "completed",
+            "durationMs": 9
+          },
+          {
+            "key": "extract_requirements",
+            "state": "completed",
+            "durationMs": 10
+          },
+          {
+            "key": "load_rules",
+            "state": "completed",
+            "durationMs": 9
+          },
+          {
+            "key": "retrieve_0",
+            "state": "completed",
+            "durationMs": 1246
+          },
+          {
+            "key": "retrieve_1",
+            "state": "completed",
+            "durationMs": 60
+          },
+          {
+            "key": "assess_evidence",
+            "state": "completed",
+            "durationMs": 13
+          },
+          {
+            "key": "generate_email",
+            "state": "completed",
+            "durationMs": 4167
+          },
+          {
+            "key": "audit_claims",
+            "state": "completed",
+            "durationMs": 5798
+          },
+          {
+            "key": "handoff",
+            "state": "completed",
+            "durationMs": 8
+          },
+          {
+            "key": "read_context",
+            "state": "completed",
+            "durationMs": 7
+          },
+          {
+            "key": "extract_requirements",
+            "state": "completed",
+            "durationMs": 8
+          },
+          {
+            "key": "load_rules",
+            "state": "completed",
+            "durationMs": 9
+          },
+          {
+            "key": "retrieve_0",
+            "state": "completed",
+            "durationMs": 59
+          },
+          {
+            "key": "retrieve_1",
+            "state": "completed",
+            "durationMs": 49
+          },
+          {
+            "key": "assess_evidence",
+            "state": "completed",
+            "durationMs": 9
+          },
+          {
+            "key": "generate_email",
+            "state": "failed",
+            "durationMs": 4870
+          }
+        ]
+      }
+    ],
+    "deliveries": 0,
+    "followups": 0
+  },
+  "accountingTestBeforeFix": {
+    "tests": 26,
+    "pass": 25,
+    "fail": 1,
+    "evidence": "s8-main-time-reservation-repro.log (private local output)"
+  },
+  "accountingTestAfterFix": {
+    "tests": 27,
+    "pass": 27,
+    "fail": 0,
+    "evidence": "s8-main-time-settled.log (private local output)"
+  }
+}
