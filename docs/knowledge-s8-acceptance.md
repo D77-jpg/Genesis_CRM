@@ -1,4 +1,4 @@
-# S8 local acceptance (in progress)
+# S8 local acceptance operator guide
 
 This file accompanies `knowledge-agent-roadmap.md`, `knowledge-evaluation.md` and the S0-S7 reports. It does not authorize production deployment or real email delivery. Current S8 fixes are on `codex/knowledge-s8-acceptance`; human PR creation/merge and a main-SHA smoke test remain required.
 
@@ -33,12 +33,19 @@ Read-only loopback `GET /__s8_snapshot` provides isolated evidence (rejects Orig
 ## First measurements retained
 
 - First fact development/holdout ordinary accuracy 15/16 each; gates failed. Fixes and post-fix regression are separately recorded; the holdout is no longer unseen after inspection. Frozen labels are unchanged.
-- First full-email UI generation reached a saved draft but semantic verification did not complete; safe partial fallback was correctly visible. Structured evidence output and response truncation guards were added; real full-email retest is pending.
+- First full-email UI generation reached a saved draft but semantic verification did not complete; safe partial fallback was correctly visible. Structured evidence output and response truncation guards were added; full-email retests and remaining quality limits are recorded in knowledge-s8-results/README.md.
 - Initial full regression 362/363; one keyword isolation assertion did not recur in three standalone repetitions or the later full 364/364 run. Root cause remains unproven; first failure is retained.
-- Original/transfer frozen retrieval reruns: Recall@10 95%/100%; negative-state accuracy 97.5% each; unauthorized hits 0. Scale/performance and final UI results are still pending.
+- Original/transfer frozen retrieval reruns: Recall@10 95%/100%; negative-state accuracy 97.5% each; unauthorized hits 0. Final scale/performance and UI results are recorded in knowledge-s8-results/README.md.
 
 ## Real package boundary
 
 The supplied Genesis Bags ZIP was checked locally: CRC valid, 12/12 members structurally readable (UTF-8 text/JSON/CSV and DOCX/XLSX XML), no member script executed, no external requests and no knowledge published. Structural readability is not business approval, parser success or factual authenticity. Detailed names/headings remain in a private local audit. All 82 real drafts remain unmodified/unpublished.
 
 A business owner must confirm: company/signature authority; each product/process scope; MOQ quantity units and conditions; sample amount/currency/refund/courier exclusions; lead-time start event and working/calendar units; price tier validity and quotation boundaries; certificate scope/expiry; logistics/destination and payment conditions; stale examples/conflicts and who may approve changes. Do not convert template examples or draft suggestions into policy.
+
+
+## Current handoff
+
+See [results and failures](knowledge-s8-results/README.md). The isolated acceptance hosts were gracefully stopped after saving final snapshots; their in-memory accounts/data are disposable. Restarting creates new IDs. The main UI run was eb7d3d5; final missing-question increment was 4658f74. Human PR/merge, merged-main replay, business policy approval and independent whole-email quality confirmation remain required. No production deployment is authorized by this guide.
+
+Recovery: use the existing [S7 operations and migration guide](knowledge-s7-operations.md) for knowledge-only backup/preflight/restore/index rebuild. Do not replace real MongoDB configuration with fixture receipts or restore a test snapshot into the real database. Verify the intended target and empty restore destination. SMTP sink acceptance proves only the isolated send/follow-up transaction.

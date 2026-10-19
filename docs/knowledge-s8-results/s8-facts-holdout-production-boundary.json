@@ -1,0 +1,767 @@
+{
+  "contract": "s4-eval-v1",
+  "fictional": true,
+  "split": "holdout",
+  "independentHoldout": true,
+  "datasetSha256": "0c6a23356b59b105e19de0e2c5b29c9620f004982f2b811cec9a8c1120a99bc0",
+  "measuredAt": "2026-10-19T04:21:27.536Z",
+  "model": "deepseek-flash",
+  "destination": "https://api.deepseek.com",
+  "sourceHashes": [
+    {
+      "path": "src/services/agent/fact-verifier.ts",
+      "sha256": "8698e8b0b1b805cb639d4be536e779275b134f9f1fe49fb619362ff75824156b"
+    },
+    {
+      "path": "src/services/agent/conditional-facts.ts",
+      "sha256": "77281088cb6f3a4cba092396e666cd7d7aa128f327a0b746052b0441515646d9"
+    },
+    {
+      "path": "src/services/agent/knowledge-grounding.ts",
+      "sha256": "b316d0ef3df810e4a09dae02d283c964864ccbb544a00ccc85a8830cb0f5199b"
+    },
+    {
+      "path": "evaluation/knowledge/fact-evaluation.ts",
+      "sha256": "f75c515f9c81f99e92913c75457c56ead8aac21a49018457d6bbc73198027915"
+    }
+  ],
+  "sourceUnchanged": true,
+  "metrics": {
+    "ordinaryAccuracy": 1,
+    "unsupportedCriticalReleased": 0,
+    "criticalPositiveCoverage": 1,
+    "verificationFailures": 0
+  },
+  "gatesPassed": true,
+  "rows": [
+    {
+      "id": "holdout-09-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 815,
+      "check": {
+        "id": "s0",
+        "text": "The interior of the ceramic mug is glazed.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-09-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-09-p:v1",
+            "quote": "The ceramic mug is glazed inside.",
+            "start": 0,
+            "end": 33
+          }
+        ],
+        "reason": "Evidence states the mug is glazed inside, matching the claim that the interior is glazed."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-09-p:v1",
+              "quote": "The ceramic mug is glazed inside.",
+              "start": 0,
+              "end": 33
+            }
+          ],
+          "reason": "Evidence states the mug is glazed inside, matching the claim that the interior is glazed."
+        }
+      ]
+    },
+    {
+      "id": "holdout-09-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 861,
+      "check": {
+        "id": "s0",
+        "text": "The lid is ceramic.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence explicitly states the lid is bamboo, not ceramic."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-09-n:v1",
+              "quote": "The lid is bamboo.",
+              "start": 34,
+              "end": 52
+            }
+          ],
+          "reason": "Evidence explicitly states the lid is bamboo, not ceramic."
+        }
+      ]
+    },
+    {
+      "id": "holdout-10-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 824,
+      "check": {
+        "id": "s0",
+        "text": "The clip can be removed from the metal pen.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-10-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-10-p:v1",
+            "quote": "The metal pen has a removable clip.",
+            "start": 0,
+            "end": 35
+          }
+        ],
+        "reason": "Removable clip on the metal pen entails the clip can be removed from it."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-10-p:v1",
+              "quote": "The metal pen has a removable clip.",
+              "start": 0,
+              "end": 35
+            }
+          ],
+          "reason": "Removable clip on the metal pen entails the clip can be removed from it."
+        }
+      ]
+    },
+    {
+      "id": "holdout-10-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 886,
+      "check": {
+        "id": "s0",
+        "text": "The ink is black.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence states ink is blue, contradicting black."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-10-n:v1",
+              "quote": "The ink is blue.",
+              "start": 36,
+              "end": 52
+            }
+          ],
+          "reason": "Evidence states ink is blue, contradicting black."
+        }
+      ]
+    },
+    {
+      "id": "holdout-11-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1053,
+      "check": {
+        "id": "s0",
+        "text": "The notebook pages are blank.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-11-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-11-p:v1",
+            "quote": "Its pages are unprinted.",
+            "start": 28,
+            "end": 52
+          }
+        ],
+        "reason": "The only cited evidence states the notebook's pages are unprinted, which is presented here as equivalent to blank; no contrary source is provided."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-11-p:v1",
+              "quote": "Its pages are unprinted.",
+              "start": 28,
+              "end": 52
+            }
+          ],
+          "reason": "The only cited evidence states the notebook's pages are unprinted, which is presented here as equivalent to blank; no contrary source is provided."
+        }
+      ]
+    },
+    {
+      "id": "holdout-11-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 961,
+      "check": {
+        "id": "s0",
+        "text": "The notebook has preprinted pages.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Segment says the notebook has preprinted pages, but the evidence states its pages are unprinted."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-11-n:v1",
+              "quote": "Its pages are unprinted.",
+              "start": 28,
+              "end": 52
+            }
+          ],
+          "reason": "Segment says the notebook has preprinted pages, but the evidence states its pages are unprinted."
+        }
+      ]
+    },
+    {
+      "id": "holdout-12-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 877,
+      "check": {
+        "id": "s0",
+        "text": "The travel cup needs hand washing.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-12-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-12-p:v1",
+            "quote": "It must be washed by hand.",
+            "start": 38,
+            "end": 64
+          }
+        ],
+        "reason": "The evidence states the cup must be washed by hand, which entails hand washing is needed."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-12-p:v1",
+              "quote": "It must be washed by hand.",
+              "start": 38,
+              "end": 64
+            }
+          ],
+          "reason": "The evidence states the cup must be washed by hand, which entails hand washing is needed."
+        }
+      ]
+    },
+    {
+      "id": "holdout-12-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 902,
+      "check": {
+        "id": "s0",
+        "text": "The cup is dishwasher safe.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Segment claims dishwasher safe, but evidence requires hand washing."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-12-n:v1",
+              "quote": "It must be washed by hand.",
+              "start": 38,
+              "end": 64
+            }
+          ],
+          "reason": "Segment claims dishwasher safe, but evidence requires hand washing."
+        }
+      ]
+    },
+    {
+      "id": "holdout-13-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 637,
+      "check": {
+        "id": "s0",
+        "text": "The apron neck strap can be adjusted.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-13-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-13-p:v1",
+            "quote": "The fabric apron has an adjustable neck strap.",
+            "start": 0,
+            "end": 46
+          }
+        ],
+        "reason": "Evidence explicitly states the apron has an adjustable neck strap, matching the claim that it can be adjusted."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-13-p:v1",
+              "quote": "The fabric apron has an adjustable neck strap.",
+              "start": 0,
+              "end": 46
+            }
+          ],
+          "reason": "Evidence explicitly states the apron has an adjustable neck strap, matching the claim that it can be adjusted."
+        }
+      ]
+    },
+    {
+      "id": "holdout-13-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 689,
+      "check": {
+        "id": "s0",
+        "text": "The fabric apron is waterproof.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence explicitly states the apron is not waterproof, contradicting the claim."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-13-n:v1",
+              "quote": "The apron is not waterproof.",
+              "start": 47,
+              "end": 75
+            }
+          ],
+          "reason": "Evidence explicitly states the apron is not waterproof, contradicting the claim."
+        }
+      ]
+    },
+    {
+      "id": "holdout-14-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 639,
+      "check": {
+        "id": "s0",
+        "text": "The laptop stand is foldable.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-14-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-14-p:v1",
+            "quote": "The laptop stand can be folded.",
+            "start": 0,
+            "end": 31
+          }
+        ],
+        "reason": "Evidence states the stand can be folded, equivalent to being foldable."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-14-p:v1",
+              "quote": "The laptop stand can be folded.",
+              "start": 0,
+              "end": 31
+            }
+          ],
+          "reason": "Evidence states the stand can be folded, equivalent to being foldable."
+        }
+      ]
+    },
+    {
+      "id": "holdout-14-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 744,
+      "check": {
+        "id": "s0",
+        "text": "A charger is included with the stand.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence explicitly states the stand does not include a charger, contradicting the claim that one is included."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-14-n:v1",
+              "quote": "It does not include a charger.",
+              "start": 32,
+              "end": 62
+            }
+          ],
+          "reason": "Evidence explicitly states the stand does not include a charger, contradicting the claim that one is included."
+        }
+      ]
+    },
+    {
+      "id": "holdout-15-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 816,
+      "check": {
+        "id": "s0",
+        "text": "The organizer contains separate compartments.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-15-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-15-p:v1",
+            "quote": "The felt organizer has separate compartments.",
+            "start": 0,
+            "end": 45
+          }
+        ],
+        "reason": "The evidence states the felt organizer has separate compartments, which entails the segment."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-15-p:v1",
+              "quote": "The felt organizer has separate compartments.",
+              "start": 0,
+              "end": 45
+            }
+          ],
+          "reason": "The evidence states the felt organizer has separate compartments, which entails the segment."
+        }
+      ]
+    },
+    {
+      "id": "holdout-15-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 1052,
+      "check": {
+        "id": "s0",
+        "text": "The dividers can be removed.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence explicitly states dividers cannot be removed, contradicting that they can be removed."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-15-n:v1",
+              "quote": "Its dividers cannot be removed.",
+              "start": 46,
+              "end": 77
+            }
+          ],
+          "reason": "Evidence explicitly states dividers cannot be removed, contradicting that they can be removed."
+        }
+      ]
+    },
+    {
+      "id": "holdout-16-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 761,
+      "check": {
+        "id": "s0",
+        "text": "The wooden tray has a natural finish.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-16-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-16-p:v1",
+            "quote": "The wooden tray has a natural finish.",
+            "start": 0,
+            "end": 37
+          }
+        ],
+        "reason": "The evidence directly states the segment's exact claim."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-16-p:v1",
+              "quote": "The wooden tray has a natural finish.",
+              "start": 0,
+              "end": 37
+            }
+          ],
+          "reason": "The evidence directly states the segment's exact claim."
+        }
+      ]
+    },
+    {
+      "id": "holdout-16-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 864,
+      "check": {
+        "id": "s0",
+        "text": "Painted finishes are already confirmed.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "The source states painted finishes require separate confirmation, contradicting that they are already confirmed."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-16-n:v1",
+              "quote": "Painted finishes require separate confirmation.",
+              "start": 38,
+              "end": 85
+            }
+          ],
+          "reason": "The source states painted finishes require separate confirmation, contradicting that they are already confirmed."
+        }
+      ]
+    },
+    {
+      "id": "holdout-critical-1",
+      "kind": "critical",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1444,
+      "check": {
+        "id": "s0",
+        "text": "Minimum order quantity: 73 pcs. Conditions: standard product; all products.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:holdout-critical-1:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:holdout-critical-1:v1:term:0",
+            "quote": "Minimum order quantity: 73 pcs. Conditions: standard product; all products.",
+            "start": 0,
+            "end": 75
+          }
+        ],
+        "reason": "The segment is identical to the cited evidence."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "supported",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-critical-1:v1:term:0",
+              "quote": "Minimum order quantity: 73 pcs. Conditions: standard product; all products.",
+              "start": 0,
+              "end": 75
+            }
+          ],
+          "reason": "The segment is identical to the cited evidence."
+        }
+      ]
+    },
+    {
+      "id": "holdout-critical-2",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 943,
+      "check": {
+        "id": "s0",
+        "text": "Our MOQ is 37 pcs.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Segment states MOQ of 37 pcs; evidence states 73 pcs."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-critical-2:v1:term:0",
+              "quote": "Minimum order quantity: 73 pcs.",
+              "start": 0,
+              "end": 31
+            }
+          ],
+          "reason": "Segment states MOQ of 37 pcs; evidence states 73 pcs."
+        }
+      ]
+    },
+    {
+      "id": "holdout-critical-3",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 823,
+      "check": {
+        "id": "s0",
+        "text": "Our MOQ is 73 sets.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "MOQ value 73 matches, but the claim says sets while the evidence states pcs, so the unit is incompatible."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "contradicted",
+          "quotes": [
+            {
+              "sourceId": "knowledge:holdout-critical-3:v1:term:0",
+              "quote": "Minimum order quantity: 73 pcs.",
+              "start": 0,
+              "end": 31
+            }
+          ],
+          "reason": "MOQ value 73 matches, but the claim says sets while the evidence states pcs, so the unit is incompatible."
+        }
+      ]
+    },
+    {
+      "id": "holdout-critical-4",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": true,
+      "durationMs": 936,
+      "check": {
+        "id": "s0",
+        "text": "We deliver in 19 days without approval.",
+        "status": "unverifiable",
+        "sourceIds": [],
+        "reason": "The only evidence concerns minimum order quantity and conditions; it contains nothing about delivery lead time or approval requirements, so the claim cannot be verified or contradicted."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "unverifiable",
+          "quotes": [],
+          "reason": "The only evidence concerns minimum order quantity and conditions; it contains nothing about delivery lead time or approval requirements, so the claim cannot be verified or contradicted."
+        }
+      ]
+    },
+    {
+      "id": "holdout-critical-5",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": true,
+      "durationMs": 1064,
+      "check": {
+        "id": "s0",
+        "text": "Freight is free.",
+        "status": "unverifiable",
+        "sourceIds": [],
+        "reason": "The only provided evidence states the minimum order quantity and standard product conditions; it contains no statement about freight costs or whether freight is free."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "unverifiable",
+          "quotes": [],
+          "reason": "The only provided evidence states the minimum order quantity and standard product conditions; it contains no statement about freight costs or whether freight is free."
+        }
+      ]
+    },
+    {
+      "id": "holdout-critical-6",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": true,
+      "durationMs": 812,
+      "check": {
+        "id": "s0",
+        "text": "Our price is USD 73.",
+        "status": "unverifiable",
+        "sourceIds": [],
+        "reason": "The evidence states a minimum order quantity of 73 pcs; it does not establish the price (USD 73) for any product."
+      },
+      "modelChecks": [
+        {
+          "id": "s0",
+          "status": "unverifiable",
+          "quotes": [],
+          "reason": "The evidence states a minimum order quantity of 73 pcs; it does not establish the price (USD 73) for any product."
+        }
+      ]
+    }
+  ]
+}

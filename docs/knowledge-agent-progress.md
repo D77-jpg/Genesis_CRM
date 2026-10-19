@@ -176,3 +176,13 @@ S0 PR 合并后，更新状态并核对实际 main SHA，再从新 main 开 S1 �
 - Strict-output evaluation exposed an adapter discrepancy: the evaluator sent raw trade prose that production intentionally excludes. It now shares production evidenceForCheck; frozen data/labels and conservative verifier unchanged. Pre-fix adapter failure retained; corrected dev/holdout reruns each ordinary 16/16, critical false releases 0, supported critical 1/1.
 
 - Actual c5fca95 UI now retrieves all relevant product evidence, but an unverified acknowledgment in the generated email still caused the fallback to discard an otherwise fully verified product paragraph. Fallback now retains only whole, non-critical paragraphs accepted with exact authorized quotes, alongside deterministic conditional replies; rejected paragraphs are never sliced or rescued. Review remains explicitly partial. Critical commitments still require complete approved cards. Independent mixed-valid/invalid and whole-paragraph rejection tests passed (facts 33/33, server types passed). Full five-task UI rerun remains required.
+
+
+### S8 本地工程交付与未关闭门槛（2026-10-19）
+
+- 最终实现4658f74，干净最新main仍a450e84，S0–S7已合入；S8短分支已逐步提交推送，人创建/合并PR。完整UI加载eb7d3d5且dirty=false；正文缺项追加修复在干净4658f74真实页面再验。
+- 实际MD/PNG解析、OCR部分识别、片段审核发布、跨语言检索及两项目反例、五类持久草稿、编辑复核/保存、版本变化/重生成旧稿保留、本地不转发SMTP=1及跟进=1均有证据。没有真实邮件发送/客户改动/82条知识发布。
+- 首轮sample模型格式失败保留；修订夹具适用范围后sample/询盘3/3已知政策回答，未知价格/运费明确待确认。新增发现安全正文遗漏问题提示，4658f74补齐正文并新增回归。新增测试先触发旧覆盖断言，改为检查完整条件实际补入后再计回答；没有删除安全检查。
+- 最终完整后端370/370、前端33/33、根运维7/7，构建/严格类型/依赖门禁通过。冻结原集/transfer各120题回归Recall95%/100%、负例97.5%、越权0；真实1万向量并发2热P95=3320ms。44事实检查最终回归通过，首次独立保留93.75%失败仍保留，不能把同集修复复测称新独立质量。
+- S8总状态仍未完成：本轮尚未合main并复验、真实业务政策待负责人审核、整封邮件独立质量确认待补。模型仍会保守误判过渡语/签名、偶尔格式失败；安全部分稿不是完整语义通过。最终增量没有保留非关键语义段落，unavailable模式与实际网络成功请求分开解释。
+- [完整报告](knowledge-s8-results/README.md)、[机器可读记录](knowledge-s8-results/verification.json)、[操作与下一阶段入口](knowledge-s8-acceptance.md)已归档；不自行上线。

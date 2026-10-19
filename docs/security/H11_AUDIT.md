@@ -82,3 +82,7 @@ No functional code, model lock or frozen evaluation data changed.
 因该提交已经进入本地Git历史，按既有S0/S2约定仅增加四个精确的commit/file/rule/line指纹，不增加路径、规则或摘要模式豁免，不修改模型、权限或质量门槛。当前报告把该元数据改为productionSourceHashes的path/sha256RawBytes记录数组，并保存archivedRawReportSha256；题目、标签、观察值、初始失败和最终分数均原样保留。扫描器版本仍为8.24.0。
 
 初次最终扫描退出1已明确记录，不能说全历史扫描已经通过。精确核验和修改后重新运行全历史扫描，并立即保存退出码；最终结果由S7 verification.json记录。生产依赖门禁另行通过，xlsx豁免仍按原到期日2026-10-26，没有增加依赖漏洞豁免。
+
+## S8 报告摘要字段复核（2026-10-19）
+提交前目录扫描退出1，在两份检索回归报告的productionHashes.mail-access.ts字段命中generic-api-key。逐份与已跟踪server/src/services/agent/mail-access.ts原始字节SHA-256重算一致，不是凭证。沿用S3/S7报告DTO约定，改为productionSourceHashes数组，保留原始报告archivedRawReportSha256及全部题目/标签/观察值/分数/dirtyTree。没有增加路径、规则或模式豁免，没有修改模型或业务权限。最终全历史扫描必须单独检查即时退出码，不能把此次首次失败写成通过。
+

@@ -1,0 +1,448 @@
+{
+  "contract": "s4-eval-v1",
+  "fictional": true,
+  "split": "dev",
+  "independentHoldout": false,
+  "datasetSha256": "0c6a23356b59b105e19de0e2c5b29c9620f004982f2b811cec9a8c1120a99bc0",
+  "measuredAt": "2026-10-19T03:03:28.927Z",
+  "model": "deepseek-flash",
+  "destination": "https://api.deepseek.com",
+  "sourceHashes": [
+    {
+      "path": "src/services/agent/fact-verifier.ts",
+      "sha256": "f105f38f4857b5f3c15c2bb2802b637e8a417197d66bfa91fd855ed95313161a"
+    },
+    {
+      "path": "src/services/agent/conditional-facts.ts",
+      "sha256": "77281088cb6f3a4cba092396e666cd7d7aa128f327a0b746052b0441515646d9"
+    },
+    {
+      "path": "src/services/agent/knowledge-grounding.ts",
+      "sha256": "b316d0ef3df810e4a09dae02d283c964864ccbb544a00ccc85a8830cb0f5199b"
+    },
+    {
+      "path": "evaluation/knowledge/fact-evaluation.ts",
+      "sha256": "8b0ec696751d22ac4e5df775075875d7463ae2380396a5d82bbee8ead5e7c4e4"
+    }
+  ],
+  "sourceUnchanged": true,
+  "metrics": {
+    "ordinaryAccuracy": 0.9375,
+    "unsupportedCriticalReleased": 0,
+    "criticalPositiveCoverage": 1,
+    "verificationFailures": 0
+  },
+  "gatesPassed": false,
+  "rows": [
+    {
+      "id": "dev-01-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1803,
+      "check": {
+        "id": "s0",
+        "text": "Our company makes cotton bags.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-01-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-01-p:v1",
+            "quote": "We manufacture cotton bags.",
+            "start": 0,
+            "end": 27
+          }
+        ],
+        "reason": "The evidence directly states that the company manufactures cotton bags."
+      }
+    },
+    {
+      "id": "dev-01-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 1995,
+      "check": {
+        "id": "s0",
+        "text": "We manufacture steel racks.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence explicitly states the opposite: no steel rack manufacturing."
+      }
+    },
+    {
+      "id": "dev-02-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1618,
+      "check": {
+        "id": "s0",
+        "text": "The cotton bags are reusable.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-02-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-02-p:v1",
+            "quote": "Cotton bags can be reused.",
+            "start": 0,
+            "end": 26
+          }
+        ],
+        "reason": "The evidence states cotton bags can be reused, which supports that they are reusable."
+      }
+    },
+    {
+      "id": "dev-02-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 2413,
+      "check": {
+        "id": "s0",
+        "text": "The handles are leather.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence says the handles are made from cotton, not leather."
+      }
+    },
+    {
+      "id": "dev-03-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1913,
+      "check": {
+        "id": "s0",
+        "text": "We can print fabric bags.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-03-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-03-p:v1",
+            "quote": "We offer printing on fabric bags only.",
+            "start": 0,
+            "end": 38
+          }
+        ],
+        "reason": "The evidence directly states the supplier offers printing on fabric bags."
+      }
+    },
+    {
+      "id": "dev-03-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 1860,
+      "check": {
+        "id": "s0",
+        "text": "Embroidery is done in our own factory.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "The evidence states embroidery is outsourced, contradicting the claim that it is done in our own factory."
+      }
+    },
+    {
+      "id": "dev-04-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1891,
+      "check": {
+        "id": "s0",
+        "text": "Blank canvas bags are available.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-04-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-04-p:v1",
+            "quote": "Blank canvas bags are available.",
+            "start": 0,
+            "end": 32
+          }
+        ],
+        "reason": "The evidence directly states that blank canvas bags are available."
+      }
+    },
+    {
+      "id": "dev-04-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "unsupported",
+      "correct": true,
+      "durationMs": 4313,
+      "check": {
+        "id": "s0",
+        "text": "Every dyed color is available.",
+        "status": "unsupported",
+        "sourceIds": [],
+        "reason": "The evidence says dyed colors require a separate check; it does not establish that every dyed color is available."
+      }
+    },
+    {
+      "id": "dev-05-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1865,
+      "check": {
+        "id": "s0",
+        "text": "A removable lid is an option for the paper gift boxes.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-05-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-05-p:v1",
+            "quote": "Paper gift boxes can have a removable lid.",
+            "start": 0,
+            "end": 42
+          }
+        ],
+        "reason": "The evidence states paper gift boxes can have a removable lid, which entails that a removable lid is an option for them."
+      }
+    },
+    {
+      "id": "dev-05-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 2322,
+      "check": {
+        "id": "s0",
+        "text": "Magnets are included in all gift boxes.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence says magnets are optional and require approval, incompatible with being included in all gift boxes."
+      }
+    },
+    {
+      "id": "dev-06-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 2467,
+      "check": {
+        "id": "s0",
+        "text": "Cotton is used on the outside of the pouch.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-06-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-06-p:v1",
+            "quote": "The outer fabric is cotton.",
+            "start": 31,
+            "end": 58
+          }
+        ],
+        "reason": "Evidence states the outer fabric is cotton, matching the claim that cotton is on the outside."
+      }
+    },
+    {
+      "id": "dev-06-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 1457,
+      "check": {
+        "id": "s0",
+        "text": "The lining is cotton.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence states the lining is polyester, contradicting the claim that it is cotton."
+      }
+    },
+    {
+      "id": "dev-07-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 1591,
+      "check": {
+        "id": "s0",
+        "text": "We can review artwork provided by customers.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-07-p:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-07-p:v1",
+            "quote": "Our team can review customer artwork.",
+            "start": 0,
+            "end": 37
+          }
+        ],
+        "reason": "The evidence states the team can review customer artwork, which entails the segment's claim that artwork provided by customers can be reviewed."
+      }
+    },
+    {
+      "id": "dev-07-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 2026,
+      "check": {
+        "id": "s0",
+        "text": "We own the customer artwork after reviewing it.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence states design ownership stays with the customer, contradicting the claim that we own it."
+      }
+    },
+    {
+      "id": "dev-08-p",
+      "kind": "ordinary",
+      "expectedSupported": true,
+      "observed": "contradicted",
+      "correct": false,
+      "durationMs": 2312,
+      "check": {
+        "id": "s0",
+        "text": "We supply packaging without contents.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "否定或排除条件与证据不一致"
+      }
+    },
+    {
+      "id": "dev-08-n",
+      "kind": "ordinary",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 2072,
+      "check": {
+        "id": "s0",
+        "text": "Our packaging includes jewelry.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "The evidence says the packaging is empty and jewelry is not included."
+      }
+    },
+    {
+      "id": "dev-critical-1",
+      "kind": "critical",
+      "expectedSupported": true,
+      "observed": "supported",
+      "correct": true,
+      "durationMs": 2060,
+      "check": {
+        "id": "s0",
+        "text": "Minimum order quantity: 73 pcs. Conditions: standard product; all products.",
+        "status": "supported",
+        "sourceIds": [
+          "knowledge:dev-critical-1:v1"
+        ],
+        "quotes": [
+          {
+            "sourceId": "knowledge:dev-critical-1:v1:term:0",
+            "quote": "Minimum order quantity: 73 pcs. Conditions: standard product; all products.",
+            "start": 0,
+            "end": 75
+          }
+        ],
+        "reason": "The cited term exactly matches the segment's MOQ and conditions."
+      }
+    },
+    {
+      "id": "dev-critical-2",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 1992,
+      "check": {
+        "id": "s0",
+        "text": "Our MOQ is 37 pcs.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Segment states MOQ is 37 pcs, while both evidence sources specify 73 pcs."
+      }
+    },
+    {
+      "id": "dev-critical-3",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 4020,
+      "check": {
+        "id": "s0",
+        "text": "Our MOQ is 73 sets.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence specifies the MOQ as 73 pcs, not 73 sets; the unit differs."
+      }
+    },
+    {
+      "id": "dev-critical-4",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 3141,
+      "check": {
+        "id": "s0",
+        "text": "We deliver in 19 days without approval.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence states the 19-day production lead time is after approval; the segment claims delivery without approval."
+      }
+    },
+    {
+      "id": "dev-critical-5",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "unverifiable",
+      "correct": true,
+      "durationMs": 4191,
+      "check": {
+        "id": "s0",
+        "text": "Freight is free.",
+        "status": "unverifiable",
+        "sourceIds": [],
+        "reason": "The evidence states freight is not confirmed; no source establishes that freight is free."
+      }
+    },
+    {
+      "id": "dev-critical-6",
+      "kind": "critical",
+      "expectedSupported": false,
+      "observed": "contradicted",
+      "correct": true,
+      "durationMs": 2502,
+      "check": {
+        "id": "s0",
+        "text": "Our price is USD 73.",
+        "status": "contradicted",
+        "sourceIds": [],
+        "reason": "Evidence explicitly states no confirmed price, contradicting the asserted USD 73 price."
+      }
+    }
+  ]
+}
