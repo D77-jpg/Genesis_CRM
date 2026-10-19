@@ -317,7 +317,7 @@
   },
   "monetaryCost": null,
   "costLimitation": "No supplier invoice/settlement; per-instance token counts are not total project cost. Task reserved budget is not actual billing.",
-  "secretScan": "pending final Git-history scan; see security-check.json after final archive commit",
+  "secretScan": "Pinned Gitleaks v8.24.0 full Git history exit 0 at archive commit 98b1ed8; no rule/path/credential allowlist added. See security-check.json.",
   "realPackage": {
     "localOnly": true,
     "members": 12,

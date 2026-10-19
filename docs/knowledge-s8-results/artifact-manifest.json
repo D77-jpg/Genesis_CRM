@@ -1,102 +1,128 @@
 [
   {
     "file": "README.md",
-    "bytes": 10699,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 10699,
     "sha256": "9f9447766568cef47d41cf9fc07d4cfb3b0a05343134a5f1f4e849ef733ed396"
   },
   {
     "file": "s8-facts-dev-first.json",
-    "bytes": 12983,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 12983,
     "sha256": "65d072381566c7ad5d60be4ff6bcd9f1d326b140534626be0f438b346f6f8e3c"
   },
   {
     "file": "s8-facts-dev-production-boundary.json",
-    "bytes": 23512,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 23512,
     "sha256": "51d6e8ce712914e486d44d02bf30e553043e989258f0ce9cf7e102040c159854"
   },
   {
     "file": "s8-facts-dev-structured.json",
-    "bytes": 13082,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 13082,
     "sha256": "1c9af62ae4f6701553c6a3aa2fdfbe0bf69a24389c4dc56657ffc7448ee22273"
   },
   {
     "file": "s8-facts-holdout-first.json",
-    "bytes": 13140,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 13140,
     "sha256": "7b798437a09801023ac8f7cc3b2ff43728f75959028cb738baa93ef8f0d9dc4d"
   },
   {
     "file": "s8-facts-holdout-production-boundary.json",
-    "bytes": 22949,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 22949,
     "sha256": "7c40b0250b9f962cfa3d6806d472eaa8150e2db86e19b82645715ced1c343b5c"
   },
   {
     "file": "s8-retrieval-original.json",
-    "bytes": 3704647,
-    "sha256": "5fe2d9b152f649858f42516d0782a4040b21a839e775e17def5ea7632ae69b56"
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 3703978,
+    "sha256": "8d51d3a9d9c629aa86c81994cbf3a82affe33dc4284fb2f62dd3d450482405d9"
   },
   {
     "file": "s8-retrieval-transfer.json",
-    "bytes": 3841840,
-    "sha256": "78340321a30aa5e778fc3c1103001e072608f820ab6312863ae2a936fa4e1a80"
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 3842033,
+    "sha256": "2d7e3dd1f9c14905894190a575c77a95cbe75745ce6c7d21be588f4fc1f5cf24"
   },
   {
     "file": "s8-scale-10000.json",
-    "bytes": 16279,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 16279,
     "sha256": "4be8721aadde579d6fa8a2e4bc770e54986a70ae275358b9f7e03d2a635aa4b8"
   },
   {
     "file": "s8-ui-cross-project-excluded.png",
-    "bytes": 54269,
+    "normalization": "binary",
+    "canonicalBytes": 54269,
     "sha256": "0c6a911ad5e06d7d015cfdeb48f253d347a101c15e841e7b363410be98e43c21"
   },
   {
     "file": "s8-ui-edited-claim-rejected.png",
-    "bytes": 74708,
+    "normalization": "binary",
+    "canonicalBytes": 74708,
     "sha256": "1d2db5479b5b5e12df77d6b47d027884bd5b76736b6a2b6958b2f7a912f03604"
   },
   {
     "file": "s8-ui-file-failure.png",
-    "bytes": 74255,
+    "normalization": "binary",
+    "canonicalBytes": 74255,
     "sha256": "f36d8e6b9e941d0e7e3a38f2fd8be657bde3c806932ba993ca80dc0dcdd1ad78"
   },
   {
     "file": "s8-ui-final-cross-language.png",
-    "bytes": 52086,
+    "normalization": "binary",
+    "canonicalBytes": 52086,
     "sha256": "f96478d8954e80f3237f72efdddf882fe6f87195d933bdffb85f1e1b04b9e805"
   },
   {
     "file": "s8-ui-final-missing-notices.png",
-    "bytes": 79524,
+    "normalization": "binary",
+    "canonicalBytes": 79524,
     "sha256": "193d27f823c401c3b140d2dbea28020f8768a79e3794b79e991ef72f09a3a91f"
   },
   {
     "file": "s8-ui-final-ocr.png",
-    "bytes": 75515,
+    "normalization": "binary",
+    "canonicalBytes": 75515,
     "sha256": "4dd6ecc92c9225f086f92312b6d17dbfc58ce2068a1fee491e15b4449f539581"
   },
   {
     "file": "s8-ui-local-send-followup.png",
-    "bytes": 45570,
+    "normalization": "binary",
+    "canonicalBytes": 45570,
     "sha256": "5632cb7698fb745f4a7df0ebf78698c7e6d89fb1f6f00c46068f002a79594af9"
   },
   {
     "file": "s8-ui-stale-drafts.png",
-    "bytes": 75172,
+    "normalization": "binary",
+    "canonicalBytes": 75172,
     "sha256": "afd71cea7d610fbdd436de700bdda1cd2937fc36b306728f05cbfdace49dedaa"
   },
   {
+    "file": "security-check.json",
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 437,
+    "sha256": "ad6b5b98e164fbd98f06dfb302cc09b562255d855447fce752179480037f7f8e"
+  },
+  {
     "file": "ui-business-run.json",
-    "bytes": 231970,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 231970,
     "sha256": "14392eb7cfdc017612b9b8eb9787d83a588fca17b115f8bc11d3b820c5f1e13b"
   },
   {
     "file": "ui-final-increment.json",
-    "bytes": 26660,
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 26660,
     "sha256": "f6a8644b2a872ee5e6b058b92e4ba24b6f63ea5c5e6ff24971b006f0eb67c6d4"
   },
   {
     "file": "verification.json",
-    "bytes": 8696,
-    "sha256": "490e2b74efe13bfec16b047a1cd3b12566caecbe3541e4a7b059ebbc6b658345"
+    "normalization": "UTF-8 without BOM, CRLF normalized to LF",
+    "canonicalBytes": 8938,
+    "sha256": "5b5d1d10098c7bceee5cce69eebeb7b7bcefd8e9530edc70b1e2f8d83ff46348"
   }
 ]

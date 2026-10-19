@@ -85,4 +85,3 @@ No functional code, model lock or frozen evaluation data changed.
 
 ## S8 报告摘要字段复核（2026-10-19）
 提交前目录扫描退出1，在两份检索回归报告的productionHashes.mail-access.ts字段命中generic-api-key。逐份与已跟踪server/src/services/agent/mail-access.ts原始字节SHA-256重算一致，不是凭证。沿用S3/S7报告DTO约定，改为productionSourceHashes数组，保留原始报告archivedRawReportSha256及全部题目/标签/观察值/分数/dirtyTree。没有增加路径、规则或模式豁免，没有修改模型或业务权限。最终全历史扫描必须单独检查即时退出码，不能把此次首次失败写成通过。
-

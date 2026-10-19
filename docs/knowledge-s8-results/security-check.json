@@ -1,0 +1,15 @@
+{
+  "scanner": "gitleaks",
+  "version": "8.24.0",
+  "initialArtifactScanExit": 1,
+  "reviewedSourceDigestFalsePositives": 2,
+  "sourceDigestMatchedActualBytes": true,
+  "metadataDTOAdjusted": true,
+  "newIgnoreEntries": 0,
+  "fullHistoryArchiveCommit": "98b1ed8",
+  "fullHistoryExit": 0,
+  "serverDependencyGateExit": 0,
+  "webDependencyGateExit": 0,
+  "remoteCI": "not run before human PR",
+  "existingXlsxReviewExpiry": "2026-10-26"
+}
