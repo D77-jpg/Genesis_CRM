@@ -1,0 +1,397 @@
+{
+  "date": "2026-10-20",
+  "base": "e10cbcc",
+  "branch": "codex/agent-customer-context",
+  "sourceBriefImplementation": "4a85b2b",
+  "requirementsAndLinkFix": "ac4106a",
+  "tests": {
+    "relatedBackend": {
+      "passed": 200,
+      "failed": 0,
+      "commit": "4a85b2b"
+    },
+    "finalWebsiteAndBrief": {
+      "passed": 30,
+      "failed": 0,
+      "commit": "ac4106a"
+    },
+    "semanticIndexAndRetrieval": {
+      "passed": 38,
+      "failed": 0
+    },
+    "web": {
+      "passed": 43,
+      "failed": 0
+    },
+    "serverTypecheck": true,
+    "strictRelatedTestTypes": true,
+    "serverBuild": true,
+    "historySecretsScan": "passed prior to documentation commit; repeated after final commit"
+  },
+  "authorizedModelSample": "same Moonstone Studio fictional website/contact/test product data; no real customer or ZIP policies",
+  "liveMailFlow": {
+    "head": "c2053adc2545716aa52ce98bfa6932eeb1a84a92",
+    "dirty": false,
+    "model": "deepseek-flash",
+    "retrieval": "real-local-hybrid-rerank",
+    "customerCount": 1,
+    "reports": 1,
+    "pages": 4,
+    "tasks": [
+      {
+        "id": "6ad78a53e9f454f4b6be9f81",
+        "kind": "first_outreach",
+        "status": "awaiting_review",
+        "draftId": "6ad78a60e9f454f4b6be9f83",
+        "epoch": 0,
+        "error": {},
+        "budget": 60000,
+        "budgetCharged": 16474,
+        "workflowCalls": 9,
+        "workflowActiveMs": 12325,
+        "stages": [
+          {
+            "key": "research_customer",
+            "state": "completed",
+            "durationMs": 89
+          },
+          {
+            "key": "read_context",
+            "state": "completed",
+            "durationMs": 4
+          },
+          {
+            "key": "extract_requirements",
+            "state": "completed",
+            "durationMs": 5
+          },
+          {
+            "key": "load_rules",
+            "state": "completed",
+            "durationMs": 5
+          },
+          {
+            "key": "retrieve_0",
+            "state": "completed",
+            "durationMs": 915
+          },
+          {
+            "key": "assess_evidence",
+            "state": "completed",
+            "durationMs": 5
+          },
+          {
+            "key": "generate_email",
+            "state": "completed",
+            "durationMs": 6499
+          },
+          {
+            "key": "audit_claims",
+            "state": "completed",
+            "durationMs": 4798
+          },
+          {
+            "key": "handoff",
+            "state": "completed",
+            "durationMs": 5
+          }
+        ]
+      }
+    ],
+    "draftCount": 1,
+    "drafts": [
+      {
+        "body": "Dear Clara Stone,\nYour website shows that each necklace arrives in a gift box with a cotton pouch, and that your collection includes silver necklaces and bracelets.\nOur test packaging range includes cardboard jewellery gift boxes and cotton pouches for necklaces and bracelets, and a logo can be printed on the gift box.\nI am reaching out to introduce our team and see whether we could help with your requirements.\nWould a brief discussion about your requirements be useful?\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+        "review": {
+          "version": 1,
+          "projectId": "6ad78a24d09ad0fe33fa2fd4",
+          "taskType": "first_outreach",
+          "generatedAt": "2026-10-20T15:35:55.208Z",
+          "status": "ready",
+          "completeness": "partial",
+          "sources": [
+            {
+              "sourceId": "knowledge:6ad78a24d09ad0fe33fa3034:v1",
+              "knowledgeId": "6ad78a24d09ad0fe33fa3034",
+              "version": 1,
+              "title": "FICTIONAL Moonstone test sales rules",
+              "category": "sales_rules",
+              "kind": "knowledge",
+              "content": "SYNTHETIC TEST ONLY. Use approved applicable product facts only. Customer website statements are customer self descriptions. Do not invent purchasing demand, prices, MOQ, delivery, certifications or packaging defects. A person reviews and sends every email.",
+              "source": "fixture://authorized-moonstone-rules",
+              "publication": {
+                "contentHash": "de423eae967b6c2b44798ebbb95f5c74c58bd9d9915ecb8468f00f02b081599f",
+                "location": {
+                  "kind": "published_text",
+                  "offsetUnit": "unicode_codepoints",
+                  "start": 0,
+                  "end": 257
+                },
+                "sourceRefs": []
+              },
+              "applicability": "一般资料；具体产品及交易条件须核对",
+              "products": [],
+              "validFrom": "2026-10-20T15:35:00.402Z",
+              "terms": []
+            },
+            {
+              "sourceId": "knowledge:6ad78a24d09ad0fe33fa301f:v1",
+              "knowledgeId": "6ad78a24d09ad0fe33fa301f",
+              "version": 1,
+              "title": "FICTIONAL Moonstone test packaging product",
+              "category": "product",
+              "kind": "knowledge",
+              "content": "SYNTHETIC TEST ONLY. For the Moonstone Studio acceptance sample: our test packaging range includes cardboard jewellery gift boxes and cotton pouches for necklaces and bracelets. A logo can be printed on the test gift box. No MOQ, price, lead time, certification, freight or sample fee has been approved.",
+              "source": "fixture://authorized-moonstone-product",
+              "publication": {
+                "contentHash": "d0efec21a22697f3a20b76bd045c655ac1ff40c01337bef8b189f9a0ec423cd8",
+                "location": {
+                  "kind": "published_text",
+                  "offsetUnit": "unicode_codepoints",
+                  "start": 0,
+                  "end": 303
+                },
+                "sourceRefs": []
+              },
+              "applicability": "Only the fictional Moonstone Studio acceptance sample",
+              "products": [
+                "jewellery",
+                "necklaces",
+                "bracelets",
+                "gift box",
+                "cotton pouch"
+              ],
+              "validFrom": "2026-10-20T15:35:00.339Z",
+              "terms": [],
+              "index": {
+                "scores": {
+                  "vector": 0.5655728280544281,
+                  "vectorRank": 1,
+                  "bm25": 1.8000000000000004e-05,
+                  "bm25Rank": 1,
+                  "rrf": 0.03278688524590164,
+                  "rerank": -0.1515665054321289
+                },
+                "selection": "semantic",
+                "generation": "6ad78a24e9f454f4b6be9f7f",
+                "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+                "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+                "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+                "dimension": 384,
+                "manifest": "b08dd69fc0ca795a38f0e463e7585e3533af14a29823bc966bd49f35ce52710a",
+                "chunks": [
+                  {
+                    "id": "027d0abee25808ee722b0e752865b47c31ca6ff08ddaf77df73c07a6fc8d7f6e",
+                    "contentHash": "c6f4096904f825efcef86d7856cdb64c166469d27c9b8ba0718a725040e115a3",
+                    "location": {
+                      "kind": "published_text",
+                      "start": 0,
+                      "end": 303,
+                      "offsetUnit": "unicode_codepoints",
+                      "retrievalWindow": {
+                        "start": 0,
+                        "end": 452,
+                        "offsetUnit": "unicode_codepoints",
+                        "includesContext": true,
+                        "standaloneFact": false
+                      },
+                      "parentContentHash": "d0efec21a22697f3a20b76bd045c655ac1ff40c01337bef8b189f9a0ec423cd8"
+                    },
+                    "sourceRefs": []
+                  }
+                ]
+              }
+            }
+          ],
+          "claims": [
+            {
+              "text": "Your website shows that each necklace arrives in a gift box with a cotton pouch, and that your collection includes silver necklaces and bracelets.",
+              "sourceIds": [
+                "website:6ad78a53d09ad0fe33fa33a0:0"
+              ]
+            },
+            {
+              "text": "Our test packaging range includes cardboard jewellery gift boxes and cotton pouches for necklaces and bracelets, and a logo can be printed on the gift box.",
+              "sourceIds": [
+                "knowledge:6ad78a24d09ad0fe33fa301f:v1"
+              ]
+            }
+          ],
+          "questions": [],
+          "issues": [
+            {
+              "code": "claim_rewritten",
+              "message": "原生成稿未经过完整语义支持检查；已使用有依据的条件答复，原文未直接放行"
+            },
+            {
+              "code": "semantic_partial",
+              "message": "部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。"
+            }
+          ],
+          "context": {
+            "customerWebsites": [
+              {
+                "sourceId": "website:6ad78a53d09ad0fe33fa33a0:0",
+                "url": "https://website-demo.example.com/",
+                "text": "Our collection of silver necklaces and bracelets\nEvery necklace arrives in a gift box with a cotton pouch.\nOur brand sells our collection online.",
+                "sha256": "bea2fafcfde9aafffc9e76fea46e5edc5406c0ce0ce4abafb1db76247771682a",
+                "collectedAt": "2026-10-20T15:35:47.64Z"
+              },
+              {
+                "sourceId": "website:6ad78a53d09ad0fe33fa33a0:1",
+                "url": "https://website-demo.example.com/about",
+                "text": "About Moonstone Studio\nFounder: Clara Stone leads our independent jewellery studio.",
+                "sha256": "664b56cac4e6e2a02ed07e2a8fbf390ddbbe3ead23ddfefe5016762d37df1351",
+                "collectedAt": "2026-10-20T15:35:47.654Z"
+              },
+              {
+                "sourceId": "website:6ad78a53d09ad0fe33fa33a0:2",
+                "url": "https://website-demo.example.com/contact",
+                "text": "Contact our team at hello@website-demo.example.com.",
+                "sha256": "3fb531cc90518726a8110231cc919d100d60fa51cbc243220cc0c454b97bf750",
+                "collectedAt": "2026-10-20T15:35:47.668Z"
+              },
+              {
+                "sourceId": "website:6ad78a53d09ad0fe33fa33a0:3",
+                "url": "https://website-demo.example.com/wholesale",
+                "text": "We welcome wholesale and distributor enquiries for our jewellery collection.",
+                "sha256": "b700349718bd3f07106d01a31b3d4946889879ffbc40a1210f991419bdb9d816",
+                "collectedAt": "2026-10-20T15:35:47.683Z"
+              }
+            ],
+            "customerProfile": {
+              "name": "Clara Stone",
+              "company": "Moonstone Studio - FICTIONAL",
+              "country": "",
+              "industry": "",
+              "interestedProducts": ""
+            },
+            "factContext": {
+              "quantityUnit": "pcs",
+              "customerId": "6ad78a24d09ad0fe33fa301c",
+              "products": [
+                "jewellery",
+                "necklaces",
+                "bracelets",
+                "gift box",
+                "cotton pouch"
+              ],
+              "processes": []
+            },
+            "customerId": "6ad78a24d09ad0fe33fa301c",
+            "request": "请分析这个客户，结合官网与历史往来准备合适的邮件，不要发送"
+          },
+          "bodyHash": "a405ae0782a7e726521fba3599a71c294199a5ae36019fe08135bfb5dded2afb",
+          "factAudit": {
+            "contract": "s4.1",
+            "mode": "semantic",
+            "attempts": 2,
+            "checks": [
+              {
+                "id": "s0",
+                "text": "Dear Clara,",
+                "status": "non_claim",
+                "sourceIds": [],
+                "reason": "礼貌语或不含交易承诺的询问"
+              },
+              {
+                "id": "s1",
+                "text": "I'm writing from Fictional Bags Company about our packaging range, which may be relevant to your work.",
+                "status": "unverifiable",
+                "sourceIds": [],
+                "reason": "No evidence states the sender's company or that the range is relevant to her work."
+              },
+              {
+                "id": "s2",
+                "text": "Your website shows that each necklace arrives in a gift box with a cotton pouch, and that your collection includes silver necklaces and bracelets.",
+                "status": "supported",
+                "sourceIds": [
+                  "website:6ad78a53d09ad0fe33fa33a0:0"
+                ],
+                "quotes": [
+                  {
+                    "sourceId": "website:6ad78a53d09ad0fe33fa33a0:0",
+                    "quote": "Every necklace arrives in a gift box with a cotton pouch.",
+                    "start": 49,
+                    "end": 106
+                  },
+                  {
+                    "sourceId": "website:6ad78a53d09ad0fe33fa33a0:0",
+                    "quote": "Our collection of silver necklaces and bracelets",
+                    "start": 0,
+                    "end": 48
+                  }
+                ],
+                "reason": "Website explicitly attributes both statements to the customer; matches gift box with cotton pouch and silver necklaces and bracelets."
+              },
+              {
+                "id": "s3",
+                "text": "Our test packaging range includes cardboard jewellery gift boxes and cotton pouches for necklaces and bracelets, and a logo can be printed on the gift box.",
+                "status": "supported",
+                "sourceIds": [
+                  "knowledge:6ad78a24d09ad0fe33fa301f:v1"
+                ],
+                "quotes": [
+                  {
+                    "sourceId": "knowledge:6ad78a24d09ad0fe33fa301f:v1",
+                    "quote": "our test packaging range includes cardboard jewellery gift boxes and cotton pouches for necklaces and bracelets. A logo can be printed on the test gift box.",
+                    "start": 65,
+                    "end": 221
+                  }
+                ],
+                "reason": "Product facts match the approved test packaging description."
+              },
+              {
+                "id": "s4",
+                "text": "Could you please let me know whether you currently source your gift boxes and pouches directly?",
+                "status": "non_claim",
+                "sourceIds": [],
+                "reason": "礼貌语或不含交易承诺的询问"
+              }
+            ],
+            "facts": []
+          }
+        }
+      }
+    ],
+    "deliveries": 0,
+    "followups": 0,
+    "qualityVerdict": "partial draft; workflow passed, complete semantic quality NOT passed"
+  },
+  "sourceBriefUI": {
+    "head": "4a85b2b81e85e801658637159833ae4c91000e89",
+    "dirty": false,
+    "customerCount": 1,
+    "reports": 1,
+    "tasks": 0,
+    "drafts": 0,
+    "deliveries": 0,
+    "followups": 0,
+    "modelQuotaBuckets": 0,
+    "note": "fixture preloaded the same synthetic website locally; brief made no model request"
+  },
+  "retainedFailures": [
+    "initial live analysis confused customer wholesale channel with buying intent and inferred team/recurrence; not passed",
+    "two structured-output failures on f5b4748; no draft saved",
+    "c2053ad analysis-only response entered mail verifier and became generic English fallback; corrected by source brief route",
+    "live mail on c2053ad retained checked product/website paragraphs but remained partial; no quality pass claim"
+  ],
+  "realDataAudit": {
+    "projectKnowledgeEntries": 0,
+    "otherProjectKnowledgeEntries": 6,
+    "customerMailLetterFollowupCountsUnchanged": true,
+    "oneLocalRetrievalDiagnosticMetricAdded": true
+  },
+  "finalBriefUI": {
+    "head": "ac4106aa4c8d7ef28678470c0d0e6942890354cb",
+    "dirty": false,
+    "customers": 1,
+    "reports": 1,
+    "tasks": 0,
+    "drafts": 0,
+    "deliveries": 0,
+    "followups": 0,
+    "modelQuotaBuckets": 0,
+    "sourceLinksVerified": "original URLs, collection date separate; no navigation to fictional domain"
+  }
+}
