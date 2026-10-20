@@ -213,6 +213,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     const grounded=await workflowStage(options?.workflow,'audit_claims',{body:parsed.emailDraft.bodyText,bundle:context.input.knowledgeContext,model:activeProvider.model},async()=>verifyGroundedEmail(parsed.emailDraft.bodyText,context.input.knowledgeContext!,{
       taskType:options?.taskKind??context.input.taskType??(options?.firstOutreach?'first_outreach':'followup'),knownRequirements:context.input.salesRequirements?.known,
       customerProfile:customerProfileOf(context.input.sourceCatalog.find(s=>s.kind==='profile')!.content as {name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}),recipientName:context.input.customerName,customerId:input.customerId,request:options?.userRequest,
+      customerWebsites:context.input.sourceCatalog.filter(s=>s.kind==='website').map(s=>{const c=s.content as {url:string;text:string;sha256:string;collectedAt:string};return {sourceId:s.sourceId,url:c.url,text:c.text,sha256:c.sha256,collectedAt:c.collectedAt};}),
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
       seller:context.input.seller,
     },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});

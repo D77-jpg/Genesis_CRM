@@ -130,6 +130,7 @@ export function conditionalSentence(term:KnowledgeTerm,source:KnowledgeSource){
 export function customerProfileOf(value:{name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}):CustomerFactProfile{return {name:value.name,company:value.company??'',country:value.country??'',industry:value.industry??'',interestedProducts:value.interestedProducts??''};}
 export interface GroundedEmailOptions {
  knownRequirements?:{quantity?:number;quantityUnit?:string;destination?:string};
+ customerWebsites?:import('./knowledge-types').CustomerWebsiteSnapshot[];
  customerProfile?:CustomerFactProfile;
  taskType:string;recipientName?:string;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string;
  customerEvidence?:string;questions?:string[];seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
@@ -170,13 +171,18 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));
  return {bodyText,review:{version:1,projectId:bundle.projectId,taskType:options.taskType,generatedAt:new Date().toISOString(),
  status:facts.some(f=>f.status==='conflict')?'conflict':bundle.status,completeness:issues.some(i=>i.code!=='claim_rewritten')?'partial':'complete',sources:bundle.sources,claims,questions,issues,
- context:{customerProfile:options.customerProfile,factContext:bundle.factContext,customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request},bodyHash:draftHash(bodyText),factAudit:{contract:'s4.1',mode:'deterministic',attempts:0,checks,facts}}};
+ context:{customerWebsites:options.customerWebsites,customerProfile:options.customerProfile,factContext:bundle.factContext,customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request},bodyHash:draftHash(bodyText),factAudit:{contract:'s4.1',mode:'deterministic',attempts:0,checks,facts}}};
 }
 export async function knowledgeFreshness(review:KnowledgeReview,actor:AuthUser):Promise<KnowledgeFreshness>{
  const result:KnowledgeFreshness={checkedAt:new Date().toISOString(),changed:[]};
  if(review.projectId!==String(requireProjectId(actor)))return {...result,failed:true};
  try{
   if(review.context.customerId){const customer=await getCustomerByIdOrThrow(review.context.customerId,actor);if(review.context.customerProfile&&JSON.stringify(customerProfileOf(customer))!==JSON.stringify(review.context.customerProfile))result.changed.push({sourceId:'profile:'+review.context.customerId,title:'客户资料',reason:'本稿使用的客户事实已变化'});}
+  if(review.context.customerWebsites?.length){
+   if(!review.context.customerId)return {...result,failed:true};
+   const current=await (await import('../website/research.service')).websiteCustomerEvidence(review.context.customerId,actor);
+   for(const source of review.context.customerWebsites){const match=current.find(s=>s.sourceId===source.sourceId);if(!match||match.content.sha256!==source.sha256||match.content.url!==source.url||match.content.text!==source.text||match.content.collectedAt!==source.collectedAt)result.changed.push({sourceId:source.sourceId,title:'客户官网原文',reason:'官网调查快照已变化或当前不可访问，请重新生成'});}
+  }
   const ids=review.sources.flatMap(s=>s.knowledgeId&&Types.ObjectId.isValid(s.knowledgeId)?[s.knowledgeId]:[]);
   const rows=await AgentKnowledge.find({projectId:requireProjectId(actor),_id:{$in:ids}});
   for(const source of review.sources){

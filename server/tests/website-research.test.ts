@@ -134,3 +134,28 @@ test('customer transfer revokes the old owner while the new owner can read expli
  const publicReports=await service.customerWebsiteReports(linked.customerId!,other);assert.equal(publicReports.items[0].canManage,false);assert.equal(publicReports.items[0].draftTaskId,undefined);
  assert.ok((await service.websiteCustomerEvidence(linked.customerId!,other)).length);
 });
+
+test('website quotes support attributed customer descriptions, never our policies, intent or forged quotes',async()=>{
+ const {checkSemanticResults,evidenceForCheck}=await import('../src/services/agent/fact-verifier');
+ const site={sourceId:'website:fictional:0',url:'https://moonstone.example.com',text:'Our collection contains silver necklaces and bracelets.',sha256:'fixture',collectedAt:new Date().toISOString()};
+ const customer={id:'fictional',profile:{name:'Clara',company:'Moonstone',country:'',industry:'',interestedProducts:''},websites:[site]};
+ const bundle:import('../src/services/agent/knowledge-types').KnowledgeBundle={projectId:'fictional',status:'ready',sources:[],issues:[],topics:[]};
+ const supported=[{id:'s0',status:'supported' as const,quotes:[{sourceId:site.sourceId,quote:site.text,start:0,end:Array.from(site.text).length}],reason:'Synthetic exact customer website description'}];
+ assert.equal(checkSemanticResults('Your website shows silver necklaces and bracelets.',bundle,supported,customer)[0].status,'supported');
+ for(const text of ['We supply silver necklaces and bracelets.','Your website shows jewellery and our boxes are certified.','You need new packaging.','Your website shows our boxes at USD 73.'])assert.notEqual(checkSemanticResults(text,bundle,supported,customer)[0].status,'supported');
+ assert.notEqual(checkSemanticResults('Your website shows jewellery.',bundle,[{...supported[0],quotes:[{...supported[0].quotes[0],quote:'invented'}]}],customer)[0].status,'supported');
+ assert.notEqual(checkSemanticResults('Your website shows jewellery.',bundle,supported,{...customer,websites:[]})[0].status,'supported');
+ assert.ok(evidenceForCheck(bundle,customer).some(e=>e.sourceId===site.sourceId));
+});
+
+test('website evidence snapshots survive draft review and fail freshness after a changed snapshot or revoked access',async()=>{
+ const j=await finished('snapshot-fixture');const linked=await service.confirmWebsiteResearch(j.id,{version:j.version,reviewed:true,company:'FICTIONAL Snapshot'},actor);
+ const rows=await service.websiteCustomerEvidence(linked.customerId!,actor);
+ const snapshots=rows.map(s=>({sourceId:s.sourceId,url:s.content.url,text:s.content.text,sha256:s.content.sha256,collectedAt:s.content.collectedAt}));
+ const {auditGroundedEmail,knowledgeFreshness}=await import('../src/services/agent/knowledge-grounding');
+ const review=auditGroundedEmail('',{projectId:actor.projectId!,status:'no_match',sources:[],topics:[],issues:[]},{taskType:'first_outreach',customerId:linked.customerId,customerWebsites:snapshots}).review;
+ assert.deepEqual(review.context.customerWebsites,snapshots);assert.deepEqual((await knowledgeFreshness(review,actor)).changed,[]);
+ assert.equal((await knowledgeFreshness(review,other)).failed,true);assert.equal((await knowledgeFreshness(review,foreign)).failed,true);
+ await Research.updateOne({_id:j.id},{$set:{'pages.0.hash':'changed-independent-fixture'}});
+ assert.ok((await knowledgeFreshness(review,actor)).changed.some(c=>c.sourceId===snapshots[0].sourceId));
+});
