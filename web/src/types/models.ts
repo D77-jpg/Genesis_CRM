@@ -184,7 +184,7 @@ export interface AgentCustomerPreview {
 
 export interface AgentAnalysisSource {
   sourceId: string;
-  kind: 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation' | 'knowledge' | 'attachment';
+  kind: 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation' | 'knowledge' | 'attachment' | 'website';
   recordId: string;
   label: string;
   occurredAt?: string | Date;

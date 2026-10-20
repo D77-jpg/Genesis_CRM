@@ -1,0 +1,18 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import {rateLimit} from 'express-rate-limit';
+import {validate} from '../middleware/validate.middleware';
+import {asyncHandler} from '../utils/asyncHandler';
+import {sendSuccess} from '../utils/pagination';
+import {prepareWebsiteEmail,createWebsiteResearch,getWebsiteResearch,listWebsiteResearch,controlWebsiteResearch,confirmWebsiteResearch,websiteDuplicates,customerWebsiteReports,websiteResearchInput,confirmWebsiteInput} from '../services/website/research.service';
+const router=Router(),params=z.object({id:z.string().regex(/^[a-f0-9]{24}$/i)});
+const limiter=rateLimit({windowMs:60000,max:10,standardHeaders:true,legacyHeaders:false});
+router.get('/',asyncHandler(async(req,res)=>sendSuccess(res,await listWebsiteResearch(req.user!))));
+router.post('/',limiter,validate({body:websiteResearchInput}),asyncHandler(async(req,res)=>sendSuccess(res,await createWebsiteResearch(req.body,req.user!),201)));
+router.get('/customer/:id',validate({params}),asyncHandler(async(req,res)=>sendSuccess(res,await customerWebsiteReports(req.params.id,req.user!))));
+router.get('/:id',validate({params}),asyncHandler(async(req,res)=>sendSuccess(res,await getWebsiteResearch(req.params.id,req.user!))));
+router.get('/:id/duplicates',validate({params}),asyncHandler(async(req,res)=>sendSuccess(res,await websiteDuplicates(req.params.id,req.user!))));
+router.post('/:id/prepare',limiter,validate({params,body:z.object({reviewed:z.literal(true)}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await prepareWebsiteEmail(req.params.id,req.user!))));
+router.post('/:id/confirm',limiter,validate({params,body:confirmWebsiteInput}),asyncHandler(async(req,res)=>sendSuccess(res,await confirmWebsiteResearch(req.params.id,req.body,req.user!))));
+for(const action of ['retry','cancel'] as const)router.post(`/:id/${action}`,limiter,validate({params,body:z.object({version:z.number().int().min(1)}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await controlWebsiteResearch(req.params.id,action,req.body.version,req.user!))));
+export default router;

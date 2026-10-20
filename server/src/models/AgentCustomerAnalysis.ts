@@ -1,7 +1,7 @@
 import type {KnowledgeReview} from '../services/agent/knowledge-types';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 
-export type AgentAnalysisSourceKind = 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation' | 'knowledge' | 'attachment' | 'agreement';
+export type AgentAnalysisSourceKind = 'profile' | 'timeline' | 'mail' | 'followup' | 'quotation' | 'knowledge' | 'attachment' | 'agreement' | 'website';
 
 export interface AgentAnalysisSource {
   sourceId: string;
@@ -52,7 +52,7 @@ export interface IAgentCustomerAnalysis {
 
 const sourceSchema = new Schema<AgentAnalysisSource>({
   sourceId: { type: String, required: true, maxlength: 180 },
-  kind: { type: String, enum: ['profile', 'timeline', 'mail', 'followup', 'quotation', 'knowledge', 'attachment', 'agreement'], required: true },
+  kind: { type: String, enum: ['profile', 'timeline', 'mail', 'followup', 'quotation', 'knowledge', 'attachment', 'agreement', 'website'], required: true },
   recordId: { type: String, required: true, maxlength: 128 },
   label: { type: String, required: true, maxlength: 240 },
   occurredAt: Date,

@@ -49,6 +49,8 @@ jobs:
           npm run test:scratchpad
           npm run test:agent
           npm run test:ai-settings
+          npm run test:website-research
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/website-research.test.ts tests/website-public-web.test.ts
       - name: Knowledge evaluation fixture and metric contracts (no holdout tuning)
         run: |
           npm run eval:knowledge:validate
