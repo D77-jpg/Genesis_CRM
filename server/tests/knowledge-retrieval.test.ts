@@ -57,7 +57,11 @@ test('S3 03 lossless tokenizer windows cover every codepoint including a long co
  assert.equal(covered.size,Array.from(text).length);
 });
 test('S3 04 recovered parent retains complete price, currency, quantity and final footnote',async()=>{
- const result=await retrieveKnowledge(sales,'zipper specifications artwork freight', [longId]);const source=result.sources.find(s=>s.knowledgeId===longId);assert.equal(source?.content,long);assert.ok(source.index!.chunks.length>1);
+ // Evidence is the accepted windows of the publication, not the whole document:
+ // the long body may be trimmed, but the conditional footnote must never be lost.
+ const result=await retrieveKnowledge(sales,'zipper specifications artwork freight', [longId]);const source=result.sources.find(s=>s.knowledgeId===longId);
+ assert.ok(source);assert.match(source.content,/Footnote: price USD 7\.31 per piece only for 2000 pcs after artwork approval\. Freight excluded\.$/);
+ assert.ok(source.index!.chunks.length>=1);
 });
 test('S3 05 long multi-question input is handled without silent 128-token truncation',async()=>{
  const q='Please explain nylon zipper travel pouch construction. '.repeat(16)+'What material is used and which closure is available?';

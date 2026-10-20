@@ -218,13 +218,21 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
   const seen=new Set<string>();
   const explicit=new Set(rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId));
   const hits=[...explicit,...(result.hits??[]).map(h=>h.id)];
+  // Whole documents can be large; the model only needs the retrieved windows.
+  // Keep every accepted window of the entry, not just the first hit.
+  const accepted=new Set([...explicit,...(result.hits??[]).filter(h=>h.accepted).map(h=>h.id)]);
   for(const hitId of hits){
    if(!explicit.has(hitId)&&!(result.hits?.find(h=>h.id===hitId)?.accepted??false))continue;
    const item=details.find(i=>i.itemId===hitId),row=item&&after.rows.find(r=>r.id===String(item.knowledgeId)&&r.version===item.publicationVersion&&visible(r,again));
    if(!item||!row||seen.has(row.id))continue;seen.add(row.id);
    const source=options.sourceOf(row.id,row.revision);
-   sources.push({...source,content:row.revision.content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:result.hits?.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,
-    chunks:details.filter(i=>String(i.knowledgeId)===row.id).map(i=>({id:i.itemId,contentHash:i.contentHash,location:i.location,sourceRefs:i.sourceRefs}))}});
+   const picked=details.filter(i=>String(i.knowledgeId)===row.id&&accepted.has(i.itemId));
+   const windows=picked.map(i=>i.content).filter(Boolean);
+   // Provenance refs are identical on every window; keep them once instead of
+   // repeating the whole document's refs on each chunk (that used to reach MBs).
+   const refs=[...new Map(picked.flatMap(i=>i.sourceRefs??[]).map(r=>[JSON.stringify(r),r])).values()];
+   const chunks=picked.map((i,position)=>({id:i.itemId,contentHash:i.contentHash,location:i.location,sourceRefs:position===0?refs:[]}));
+   sources.push({...source,content:windows.length?windows.join('\n\n…\n\n'):row.revision.content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:result.hits?.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,chunks}});
    if(seen.size>=10)break;
   }
   const diagnosticIssues=(result.trace?.diagnostics??[]).map(d=>({code:d.code,message:({expired:'相关资料已过期：',disabled:'相关资料已停用：',not_effective:'相关资料尚未生效：',draft_only:'相关资料尚未发布：'} as Record<string,string>)[d.code]+d.title,sourceIds:[d.sourceId]}));

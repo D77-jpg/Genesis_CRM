@@ -6,7 +6,7 @@ const {buildSync}=require('esbuild');
 const build=buildSync({entryPoints:[path.resolve(__dirname,'../src/lib/knowledge-sales.ts')],bundle:true,platform:'node',format:'cjs',write:false});
 const compiled={exports:{}};
 new Function('module','exports',build.outputFiles[0].text)(compiled,compiled.exports);
-const {salesKnowledge,matchesSalesKnowledge,knowledgeEmailPrompt,acceptsKnowledgeHandoff,salesTermState,salesTermDetails}=compiled.exports;
+const {salesKnowledge,matchesSalesKnowledge,salesMatchExcerpt,knowledgeEmailPrompt,acceptsKnowledgeHandoff,salesTermState,salesTermDetails}=compiled.exports;
 const now=Date.parse('2026-10-20T12:00:00Z');
 const revision=(version,extra={})=>({version,approved:true,title:'Fictional linen pouch',category:'trade',tags:['linen','亚麻袋'],content:'Fictional approved source only.',source:'fixture://only',products:['linen pouch'],applicability:'standard bag only',validFrom:'2026-01-01T00:00:00Z',terms:[{topic:'sample',value:'9',currency:'USD',unit:'prototype',conditions:'courier excluded',mode:'confirmed'}],...extra});
 const row=(extra={})=>({id:'a'.repeat(24),projectId:'p',version:2,approvedVersion:1,archived:false,effective:true,status:'published',hasDraft:true,updatedAt:'2026-10-01T00:00:00Z',revisions:[revision(1),revision(2,{approved:false,title:'UNPUBLISHED PROMISE'})],...extra});
@@ -40,4 +40,11 @@ test('a reviewed condition that expired or is not yet effective is never labelle
 test('sales details preserve quantity inequalities, lead-time origin, exclusions and certificate scope',()=>{
  const lines=salesTermDetails({min:3,max:9,unit:'USD',scope:{products:['fictional pouch'],processes:['printing'],quantity:{min:80,max:140,minInclusive:false,maxInclusive:true,unit:'pcs'},startsAfter:'artwork approval',origin:'A',destination:'B',incoterm:'FOB',polarity:'denied',exclusions:['courier excluded'],certificate:{number:'FICTIONAL',issuer:'Synthetic',products:['fictional pouch'],validUntil:'2027-01-01'}}}).join(' ');
  for(const expected of ['>80','≤140','pcs','artwork approval','courier excluded','不提供','FICTIONAL','fictional pouch','FOB','区间下限：3','区间上限：9'])assert.ok(lines.includes(expected),expected);
+});
+
+test('a full-text hit shows a short excerpt around the matched term',()=>{
+ const item={id:'x',revision:revision(1,{content:'We make linen pouches and rigid boxes. MOQ 100 pcs.'}),updatedAt:''};
+ const excerpt=salesMatchExcerpt(item,'rigid');
+ assert.match(excerpt,/rigid boxes/);
+ assert.equal(salesMatchExcerpt(item,'missing-term'),'');
 });

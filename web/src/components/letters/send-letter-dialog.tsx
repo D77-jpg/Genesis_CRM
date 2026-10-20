@@ -21,6 +21,8 @@ import {
   Eye,
   FileText,
   Info,
+  Languages,
+  Loader2,
   Mail,
   PencilLine,
   Save,
@@ -51,7 +53,7 @@ import { LetterEditor, type LetterEditorHandle } from './letter-editor';
 import { PlaceholderBar } from './placeholder-bar';
 import { sendLetterSchema, type SendLetterFormValues } from '@/lib/validators';
 import { buildPlaceholderValues, findMissingPlaceholders, renderTemplate } from '@/lib/placeholder';
-import { apiGet, toErrorMessage } from '@/lib/api';
+import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
 import { createClientId, readStorage, writeStorage } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/use-debounce';
 import { useSaveShortcut } from '@/hooks/use-ui';
@@ -155,11 +157,22 @@ export function SendLetterDialog({
   const fetchTemplates = useTemplateStore((state) => state.fetchList);
 
   const editorRef = React.useRef<LetterEditorHandle | null>(null);
+  const bodyRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    // Reopen must start at the tab bar, not midway through the form.
+    const frame = window.requestAnimationFrame(() => bodyRef.current?.scrollTo({ top: 0 }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, letter?.id]);
   const [scheduledAt, setScheduledAt] = React.useState('');
   const [appliedTemplateId, setAppliedTemplateId] = React.useState<string | null>(null);
   const requestKey = React.useRef(createClientId());
   const submitLock = React.useRef(false);
-  const [activeTab, setActiveTab] = React.useState<'edit' | 'preview'>('edit');
+  const [activeTab, setActiveTab] = React.useState<'edit' | 'preview' | 'bilingual'>('edit');
+  const [translation, setTranslation] = React.useState<{ subject?: string; body: string } | null>(null);
+  const [translationSource, setTranslationSource] = React.useState<string | null>(null);
+  const [translating, setTranslating] = React.useState(false);
+  const [translationError, setTranslationError] = React.useState<string | null>(null);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [senderStatus, setSenderStatus] = React.useState<CurrentMailSender | null>(null);
   const [senderLoading, setSenderLoading] = React.useState(false);
@@ -262,6 +275,27 @@ export function SendLetterDialog({
     }),
     [debouncedSubject, debouncedContent, placeholderValues],
   );
+
+  const englishBody = React.useMemo(() => htmlToPlainText(preview.html), [preview.html]);
+  const translationKey = `${preview.subject}\n\n${englishBody}`;
+  React.useEffect(() => {
+    if (activeTab !== 'bilingual' || !englishBody.trim()) return;
+    if (translation && translationSource === translationKey) return;
+    let cancelled = false;
+    setTranslating(true);
+    setTranslationError(null);
+    void apiPost<{ subject?: string; body: string }>('/agent/translate', { subject: preview.subject, body: englishBody })
+      .then((result) => {
+        if (cancelled) return;
+        setTranslation(result);
+        setTranslationSource(translationKey);
+      })
+      .catch((error) => {
+        if (!cancelled) setTranslationError(toErrorMessage(error, '翻译失败，请稍后重试'));
+      })
+      .finally(() => { if (!cancelled) setTranslating(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, englishBody, preview.subject, translationKey, translation, translationSource]);
 
   const missingPlaceholders = React.useMemo(
     () => findMissingPlaceholders(`${subject ?? ''}${content ?? ''}`, placeholderValues),
@@ -412,7 +446,7 @@ export function SendLetterDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <DialogBody className="space-y-4">
+        <DialogBody ref={bodyRef} className="space-y-4">
           {customer ? <RecipientCard customer={customer} /> : null}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2.5">
             <div className="min-w-0">
@@ -454,8 +488,8 @@ export function SendLetterDialog({
             </Alert>
           ) : null}
 
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'edit' | 'preview')}>
-            <TabsList>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'edit' | 'preview' | 'bilingual')}>
+            <TabsList className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
               <TabsTrigger value="edit">
                 <PencilLine className="h-3.5 w-3.5" aria-hidden />
                 编辑
@@ -463,6 +497,10 @@ export function SendLetterDialog({
               <TabsTrigger value="preview">
                 <Eye className="h-3.5 w-3.5" aria-hidden />
                 预览
+              </TabsTrigger>
+              <TabsTrigger value="bilingual">
+                <Languages className="h-3.5 w-3.5" aria-hidden />
+                中英对照
               </TabsTrigger>
             </TabsList>
 
@@ -625,6 +663,52 @@ export function SendLetterDialog({
                   <p className="px-4 py-8 text-center text-sm text-muted-foreground">正文为空</p>
                 )}
               </div>
+            </TabsContent>
+
+            {/* ---------------- 中英对照 ---------------- */}
+            <TabsContent value="bilingual" className="space-y-3 pt-1">
+              <div className="grid gap-3 lg:grid-cols-2">
+                <section className="min-w-0 rounded-md border bg-card">
+                  <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2">
+                    <span className="text-xs font-medium text-muted-foreground">English（原文）</span>
+                    <span className="text-2xs text-muted-foreground">实际发送</span>
+                  </div>
+                  <div className="max-h-[24rem] space-y-2 overflow-y-auto px-4 py-3 text-sm leading-6">
+                    <p className="font-semibold">{preview.subject || '（未填写主题）'}</p>
+                    {englishBody.trim()
+                      ? <p className="whitespace-pre-wrap break-words">{englishBody}</p>
+                      : <p className="py-6 text-center text-muted-foreground">正文为空</p>}
+                  </div>
+                </section>
+                <section className="min-w-0 rounded-md border bg-muted/20">
+                  <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2">
+                    <span className="text-xs font-medium text-muted-foreground">中文对照</span>
+                    {translating ? (
+                      <span className="flex items-center gap-1.5 text-2xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" aria-hidden />正在翻译…</span>
+                    ) : translation ? (
+                      <span className="text-2xs text-muted-foreground">仅用于核对</span>
+                    ) : null}
+                  </div>
+                  <div className="max-h-[24rem] space-y-2 overflow-y-auto px-4 py-3 text-sm leading-6">
+                    {translationError ? (
+                      <div className="space-y-2 py-4 text-center">
+                        <p className="text-sm text-destructive">{translationError}</p>
+                        <Button type="button" variant="outline" size="sm" onClick={() => { setTranslation(null); setTranslationSource(null); }}>重新翻译</Button>
+                      </div>
+                    ) : translation ? (
+                      <>
+                        <p className="font-semibold">{translation.subject || '（主题未翻译）'}</p>
+                        <p className="whitespace-pre-wrap break-words">{translation.body}</p>
+                      </>
+                    ) : translating ? (
+                      <div className="space-y-2 py-4"><div className="h-4 w-3/4 animate-pulse rounded bg-muted" /><div className="h-4 w-full animate-pulse rounded bg-muted" /><div className="h-4 w-5/6 animate-pulse rounded bg-muted" /></div>
+                    ) : (
+                      <p className="py-6 text-center text-muted-foreground">{englishBody.trim() ? '打开后会自动翻译' : '正文为空'}</p>
+                    )}
+                  </div>
+                </section>
+              </div>
+              <p className="text-2xs text-muted-foreground">翻译只用于核对内容，实际发送的是左侧英文原文；翻译不会修改草稿。</p>
             </TabsContent>
           </Tabs>
         </DialogBody>

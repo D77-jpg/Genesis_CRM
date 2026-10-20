@@ -73,6 +73,7 @@
     "node": ">=20.19.0"
   },
   "overrides": {
-    "braces": "$braces"
+    "braces": "$braces",
+    "follow-redirects": "1.16.1"
   }
 }

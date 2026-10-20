@@ -1,4 +1,4 @@
-export const KNOWLEDGE_CATEGORIES = ['company','product','trade','compliance','sales_rules','faq'] as const;
+export const KNOWLEDGE_CATEGORIES = ['company','product','trade','compliance','sales_rules','faq','reference'] as const;
 export type KnowledgeCategory = typeof KNOWLEDGE_CATEGORIES[number];
 export const POLICY_TOPICS = ['moq','lead_time','sample','price','shipping','payment','certification','trade_terms','capacity','other'] as const;
 export type PolicyTopic = typeof POLICY_TOPICS[number];
@@ -40,5 +40,8 @@ export interface KnowledgeFreshness { checkedAt: string; changed: {sourceId:stri
 // publication/snapshot, but never send rejected candidate excerpts or ranking traces.
 export function knowledgeForModel(bundle:KnowledgeBundle):KnowledgeBundle {
  const retrieval=bundle.retrieval;
- return {...bundle,retrieval:retrieval?{engine:retrieval.engine,generation:retrieval.generation,identity:retrieval.identity}:undefined};
+ // Ranking diagnostics (per-chunk locations and provenance refs) stay internal:
+ // they can be megabytes for long collected documents and are not facts.
+ const sources=bundle.sources.map(({index:_diagnostics,publication:_provenance,...source})=>source);
+ return {...bundle,sources,retrieval:retrieval?{engine:retrieval.engine,generation:retrieval.generation,identity:retrieval.identity}:undefined};
 }

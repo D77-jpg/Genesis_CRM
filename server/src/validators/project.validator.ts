@@ -11,6 +11,8 @@ const projectFields = {
   senderName: z.string().trim().max(120).optional().default(''),
   mailFrom: z.string().trim().max(300).optional().default(''),
   mailProfileKey: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80),
+  // Browser-compressed data URL (<=600k chars) or an https URL; '' clears it.
+  coverImage: z.string().max(600000).optional(),
 };
 
 export const createProjectSchema = z.object(projectFields);
@@ -23,6 +25,7 @@ export const updateProjectSchema = z.object({
   senderName: projectFields.senderName,
   mailFrom: projectFields.mailFrom,
   mailProfileKey: projectFields.mailProfileKey.optional(),
+  coverImage: projectFields.coverImage,
   status: z.enum(['active', 'archived']).optional(),
 }).refine((value) => Object.keys(value).length > 0, '至少提供一个更新字段');
 

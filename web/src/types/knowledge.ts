@@ -1,4 +1,4 @@
-export const knowledgeCategories = {company:'公司与品牌',product:'产品与定制',trade:'交易政策',compliance:'质量与合规',sales_rules:'销售规则',faq:'常见问题'} as const;
+export const knowledgeCategories = {reference:'参考资料',company:'公司与品牌',product:'产品与定制',trade:'交易政策',compliance:'质量与合规',sales_rules:'销售规则',faq:'常见问题'} as const;
 export type KnowledgeCategory = keyof typeof knowledgeCategories;
 export const policyTopics = {moq:'MOQ',lead_time:'交期',sample:'样品政策',price:'价格',shipping:'物流与运费',payment:'付款',certification:'认证',trade_terms:'贸易条款',capacity:'产能',other:'其他'} as const;
 export interface FactScope {reviewed:boolean;measure?:'text'|'amount'|'quantity'|'duration'|'percentage';origin?:string;destination?:string;incoterm?:string;products:string[];processes:string[];quantity?:{min?:number;max?:number;minInclusive:boolean;maxInclusive:boolean;unit:string};startsAfter?:string;validFrom?:string;validUntil?:string;exclusions:string[];polarity:'affirmed'|'denied';certificate?:{number:string;issuer:string;products:string[];validUntil:string}}

@@ -198,5 +198,15 @@ test('15 rejected candidate diagnostics never enter generation context; complete
  const {retrieveKnowledge}=await import('../src/services/agent/knowledge.service');
  const original=await retrieveKnowledge(actor,'velvet pouch MOQ');
  original.retrieval={engine:'local_semantic',generation:'fixture',trace:{candidates:[{excerpt:'REJECTED CANARY'}]}};
- const filtered=knowledgeForModel(original);assert.equal(filtered.retrieval?.trace,undefined);assert.equal(filtered.sources,original.sources);assert.ok(original.retrieval.trace);
+ const filtered=knowledgeForModel(original);
+ assert.equal(filtered.retrieval?.trace,undefined);assert.ok(original.retrieval.trace);
+ // Selected evidence (text/terms/version) stays; ranking and provenance diagnostics do not.
+ assert.equal(filtered.sources.length,original.sources.length);
+ for(const [index,source] of filtered.sources.entries()){
+  assert.equal(source.sourceId,original.sources[index].sourceId);
+  assert.equal(source.content,original.sources[index].content);
+  assert.deepEqual(source.terms,original.sources[index].terms);
+  assert.equal(source.index,undefined);
+  assert.equal(source.publication,undefined);
+ }
 });

@@ -8,7 +8,12 @@ import { createServer, type Server } from 'node:http';
 import { Types } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import PDFDocument from 'pdfkit';
+import dotenv from 'dotenv';
 import type { AuthUser } from '../src/types/express';
+// Read the local runtime paths from server/.env; never validates or overrides
+// variables the caller already exported. CI without .env is caught by the
+// explicit assert in before() below.
+dotenv.config({ path: resolve(__dirname, '../.env') });
 process.env.NODE_ENV = 'test'; process.env.AI_PROVIDER = 'mock'; process.env.MAIL_CHANNEL = 'mock';
 let memory: MongoMemoryServer, mongoose: typeof import('mongoose'), directory: string;
 let service: typeof import('../src/services/knowledge/document.service');

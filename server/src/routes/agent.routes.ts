@@ -1,6 +1,7 @@
 import {governanceOverview,versionDiff,previewDisable,commitDisable,bulkInput,draftEvidence} from '../services/agent/knowledge-governance';
 import {agreementInput,listCustomerAgreements,saveCustomerAgreement,disableCustomerAgreement} from '../services/agent/customer-agreement.service';
 import {regenerateKnowledgeDraft,recheckKnowledgeDraft} from '../services/agent/knowledge-draft.service';
+import {translateLetter} from '../services/agent/translation.service';
 import { Router } from 'express';
 import { z } from 'zod';
 import { getAgentTask, listAgentTasks, controlAgentTask } from '../services/agent/task.service';
@@ -69,7 +70,7 @@ import {
 
 import { getAgentActionDetail } from '../services/agent/action-detail.service';
 
-import {appendKnowledge,listKnowledge,archiveKnowledge,knowledgeInput,previewKnowledgeImport,importKnowledge,importPreviewInput,importCommitInput,getKnowledgeHistory} from '../services/agent/knowledge.service';
+import {appendKnowledge,listKnowledge,archiveKnowledge,deleteKnowledge,knowledgeInput,previewKnowledgeImport,importKnowledge,importPreviewInput,importCommitInput,getKnowledgeHistory} from '../services/agent/knowledge.service';
 import {getAgentBatch,listAgentBatches,proposeAgentBatch,controlAgentBatch,batchProposalSchema} from '../services/agent/batch.service';
 import {readAgentAttachment} from '../services/agent/attachment-text.service';
 import {automationRuleInput,getAutomationRule,saveAutomationRule,listAutomationInbox} from '../services/agent/automation.service';
@@ -87,6 +88,7 @@ router.get('/automation-rule',asyncHandler(async(req,res)=>sendSuccess(res,await
 router.put('/automation-rule',messageLimiter,validate({body:automationRuleInput}),asyncHandler(async(req,res)=>sendSuccess(res,await saveAutomationRule(req.body,req.user!))));
 router.get('/inbox',asyncHandler(async(req,res)=>sendSuccess(res,await listAutomationInbox(req.user!))));
 router.get('/skills',(_req,res)=>sendSuccess(res,BUSINESS_SKILLS));
+router.post('/translate',messageLimiter,validate({body:z.object({subject:z.string().trim().max(300).optional(),body:z.string().trim().min(1).max(8000)}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await translateLetter({subject:req.body.subject,body:req.body.body}))));
 router.post('/knowledge/import-preview',requireRole('admin'),validate({body:importPreviewInput}),asyncHandler(async(req,res)=>sendSuccess(res,previewKnowledgeImport(req.body))));
 router.post('/knowledge/import',requireRole('admin'),validate({body:importCommitInput}),asyncHandler(async(req,res)=>sendSuccess(res,await importKnowledge(req.body.entries,req.user!),201)));
 router.post('/knowledge-drafts/:id/regenerate',messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({requestKey:z.string().uuid()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await regenerateKnowledgeDraft(req.params.id,req.user!,req.body.requestKey),201)));
@@ -107,6 +109,7 @@ router.get('/knowledge/:id',validate({params:agentSessionParamsSchema}),asyncHan
 router.post('/knowledge',requireRole('admin'),validate({body:knowledgeInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await appendKnowledge(undefined,req.body,req.user!)},201)));
 router.post('/knowledge/:id/revisions',requireRole('admin'),validate({params:agentSessionParamsSchema,body:knowledgeInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await appendKnowledge(req.params.id,req.body,req.user!)})));
 router.post('/knowledge/:id/archive',requireRole('admin'),validate({params:agentSessionParamsSchema,body:z.object({version:z.number().int().min(1)}).strict()}),asyncHandler(async(req,res)=>{await archiveKnowledge(req.params.id,req.body.version,req.user!);sendSuccess(res,{archived:true});}));
+router.delete('/knowledge/:id',requireRole('admin'),validate({params:agentSessionParamsSchema}),asyncHandler(async(req,res)=>{await deleteKnowledge(req.params.id,req.user!);sendSuccess(res,{removed:true});}));
 router.get('/customers/:id/attachments/:attachmentId/text',validate({params:z.object({id:z.string().regex(/^[a-f\d]{24}$/i),attachmentId:z.string().regex(/^[a-f\d]{24}$/i)})}),asyncHandler(async(req,res)=>sendSuccess(res,await readAgentAttachment(req.params.id,req.params.attachmentId,req.user!))));
 router.get('/batches',asyncHandler(async(req,res)=>sendSuccess(res,await listAgentBatches(req.user!))));
 router.get('/batches/:id',validate({params:agentSessionParamsSchema}),asyncHandler(async(req,res)=>sendSuccess(res,await getAgentBatch(req.params.id,req.user!))));

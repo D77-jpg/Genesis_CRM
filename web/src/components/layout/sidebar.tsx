@@ -6,7 +6,7 @@
  */
 import * as React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BookOpen, FileText, FolderKanban, LayoutDashboard, Mail, PanelLeftClose, PanelLeftOpen, Settings2, ShieldCheck, UserCog, Users, X } from 'lucide-react';
+import { BookOpen, FileText, FolderKanban, LayoutDashboard, Mail, PanelLeftClose, PanelLeftOpen, Settings2, ShieldCheck, Target, UserCog, Users, X } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useMetaStore } from '@/store/meta.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
@@ -26,6 +26,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.dashboard, label: '仪表盘', icon: LayoutDashboard, end: true },
   { to: ROUTES.customers, label: '客户管理', icon: Users, end: false },
+  { to: ROUTES.prospecting, label: '今日开发', icon: Target, end: false },
   { to: '/mail', label: '邮件中心', icon: Mail, end: false },
   { to: ROUTES.letters, label: '开发信记录', icon: Mail, end: false },
   { to: '/knowledge', label: '知识库', icon: BookOpen, end: false },

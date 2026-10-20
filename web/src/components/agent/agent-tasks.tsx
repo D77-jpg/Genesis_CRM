@@ -12,7 +12,7 @@ export interface AgentTask {
  id:string; sessionId:string; goal:string; version:number;
  status:'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
  parentBatchId?:string; contextSummary?:string; tokenBudget?:number; budgetCharged?:number;
- customerId?:string; customerName?:string; draftId?:string; analysisId?:string; currentStep?:string; completedSteps:string[];
+ customerId?:string; customerName?:string; draftId?:string; staleDraftId?:string; analysisId?:string; currentStep?:string; completedSteps:string[];
  candidates:{id:string;name:string;company?:string}[]; error?:{message:string;retryable:boolean}; attempts:number;
  events:{at:string;message:string;step?:string}[];
 }
@@ -105,9 +105,9 @@ export function AgentTasks({ tasks, loaded, loadError, onTaskUpdated, autoOpenTa
         {!task.completedSteps.includes('locate_customer') && <div className="flex gap-2"><Input className="min-h-11" aria-label="客户或公司名称" placeholder="补充客户或公司名称" value={queries[task.id] ?? ''} onChange={event => setQueries(values => ({ ...values, [task.id]: event.target.value }))} /><Button variant="outline" className="min-h-11" disabled={busy === task.id || !queries[task.id]?.trim()} onClick={() => void control(task, 'resume', { query: queries[task.id].trim() })}>检索</Button></div>}
       </div>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {task.status === 'awaiting_review' && task.draftId && <Button className="min-h-11" onClick={() => onOpenDraft(task)}><FilePenLine className="h-4 w-4" aria-hidden />审核并去写信</Button>}
+        {(task.draftId||task.staleDraftId)&&task.status === 'awaiting_review' && <Button className="min-h-11" variant={task.draftId?'default':'outline'} onClick={() => onOpenDraft(task)}><FilePenLine className="h-4 w-4" aria-hidden />{task.draftId?'审核并去写信':'查看原稿（依据已变化）'}</Button>}
         {['queued','running'].includes(task.status) && <Button variant="outline" className="min-h-11" disabled={busy === task.id} onClick={() => void control(task, 'pause')}><Pause className="h-4 w-4" aria-hidden />暂停</Button>}
-        {((task.needsRefresh&&task.status==='awaiting_review') || task.status === 'paused' || (task.status === 'waiting_input' && (task.customerId || task.sourceMailId)) || (task.status === 'failed' && task.error?.retryable && task.attempts < 5)) && <Button variant="outline" className="min-h-11" disabled={busy === task.id} onClick={() => void control(task, 'resume')}><Play className="h-4 w-4" aria-hidden />{task.status === 'failed'||task.needsRefresh ? '重新准备' : '继续准备'}</Button>}
+        {((task.needsRefresh&&task.status==='awaiting_review') || task.status === 'paused' || (task.status === 'waiting_input' && (task.customerId || task.sourceMailId)) || (task.status === 'failed' && task.attempts < 5)) && <Button variant="outline" className="min-h-11" disabled={busy === task.id} onClick={() => void control(task, 'resume')}><Play className="h-4 w-4" aria-hidden />{task.status === 'failed'||task.needsRefresh ? '重新准备' : '继续准备'}</Button>}
         {task.sourceMailId && task.status === 'waiting_input' && <Button asChild variant="outline" className="min-h-11"><a href={'/mail?id=' + task.sourceMailId + '&direction=inbound'}>查看来信并关联客户</a></Button>}
         {task.status === 'waiting_input' && task.customerId && <Button asChild variant="outline" className="min-h-11"><a href={'/customers/' + task.customerId}>补充客户资料</a></Button>}
         <Button variant="ghost" className="min-h-11 px-2 text-muted-foreground" aria-expanded={Boolean(expanded[task.id])} aria-controls={'task-details-' + task.id} onClick={() => setExpanded(values => ({ ...values, [task.id]: !values[task.id] }))}>{expanded[task.id] ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}处理详情</Button>
