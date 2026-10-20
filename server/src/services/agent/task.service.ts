@@ -50,6 +50,9 @@ async function dto(task: AgentTaskDocument, actor: AuthUser) {
   ...customerScope(actor), _id: {$in: task.candidates.map(c => c.id)}}).select('_id name company').lean() : [];
  return {id: task.id, sessionId: String(task.sessionId), goal: task.goal, status: task.status, version: task.version,
   customerId: task.customerId?.toString(), customerName: customer?.name, analysisId: inputsChanged?undefined:task.analysisId?.toString(), draftId: inputsChanged?undefined:task.draftId?.toString(),needsRefresh:inputsChanged&&!['completed','cancelled'].includes(task.status),
+  // A draft written before the inputs changed stays readable for review, but is
+  // never presented as the current draft: the UI labels it and keeps 重新准备.
+  staleDraftId: inputsChanged&&task.status==='awaiting_review'?task.draftId?.toString():undefined,
   sentLetterId: task.sentLetterId?.toString(), completedSteps: task.completedSteps, currentStep: task.currentStep,
   workflowEpoch:task.workflowEpoch??0,workflowCalls:task.workflowCalls??0,workflowActiveMs:task.workflowActiveMs??0,previousArtifacts:inputsChanged?[]:task.previousArtifacts??[],workflow:(task.workflowRecords??[]).map(({payload,...record})=>({...record,label:workflowLabels[record.key]??record.key,partial:record.key==='audit_claims'&&(payload as {review?:{completeness?:string}}|undefined)?.review?.completeness==='partial'})),
   events: task.events, error: task.error?.code?task.error:undefined, attempts: task.attempts,

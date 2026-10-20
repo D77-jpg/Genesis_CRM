@@ -20,6 +20,19 @@ export function matchesSalesKnowledge(item:SalesKnowledge,query:string,category:
  return (category==='all'||v.category===category)&&query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean).every(q=>text.includes(q));
 }
 export function salesTitle(title:string){return title.replace(/^\s*\d+[.、．]\s*/,'');}
+// Why did this entry match? Show the surrounding text so a full-text hit is not
+// mistaken for a broken filter.
+export function salesMatchExcerpt(item:SalesKnowledge,query:string,radius=40){
+ const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+ if(!terms.length)return '';
+ const v=item.revision;
+ const text=[v.applicability??'',...(v.products??[]),v.content,...(v.terms??[]).flatMap(term=>[term.value,term.conditions,term.unit??'',term.currency??''])].filter(Boolean).join(' · ');
+ const lower=text.toLocaleLowerCase();
+ const index=Math.min(...terms.map(term=>{const at=lower.indexOf(term);return at<0?Infinity:at;}));
+ if(!Number.isFinite(index))return '';
+ const start=Math.max(0,index-radius),end=Math.min(text.length,index+radius*2);
+ return (start>0?'…':'')+text.slice(start,end).replace(/\s+/g,' ').trim()+(end<text.length?'…':'');
+}
 export function salesExcerpt(content:string){return content.replace(/https?:\/\/\S+/g,'').replace(/[#*_>|]/g,' ').replace(/\s+/g,' ').trim().slice(0,130);}
 export function knowledgeEmailPrompt(item:SalesKnowledge){
  return '帮我给这个客户写第一封开发信，参考「'+salesTitle(item.revision.title)+'」（已查看第'+item.revision.version+'版）。先检索当前项目已发布且适用的资料，核对产品和条件；资料已变或不适用时请提醒我。只使用有依据的卖点，缺少的信息列为待确认，不编造价格、MOQ、交期或认证。保存草稿交给我审核，不要发送邮件。';

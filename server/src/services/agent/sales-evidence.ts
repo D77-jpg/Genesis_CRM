@@ -2,6 +2,7 @@ import {AgentKnowledge} from '../../models/AgentKnowledge';
 import {requireProjectId} from '../../utils/access';
 import type {AuthUser} from '../../types/express';
 import type {KnowledgeBundle,KnowledgeSource,PolicyTopic} from './knowledge-types';
+import {knowledgeForModel} from './knowledge-types';
 import {sourceOf,revisionActive,policyTopics} from './knowledge.service';
 import {buildKnowledgeBundle,factContextFromRequest,knowledgeFreshness,auditGroundedEmail} from './knowledge-grounding';
 import {collectConditionalEvidence} from './conditional-facts';
@@ -55,7 +56,7 @@ export async function prepareSalesEvidence(actor:AuthUser,input:{request:string;
   for(const s of extra.sources)sources.set(s.sourceId,sources.has(s.sourceId)?mergeSource(sources.get(s.sourceId)!,s):s);
  }
  bundle.sources=[...sources.values()];if(['no_match','expired'].includes(bundle.status)&&bundle.sources.some(s=>s.category!=='sales_rules'))bundle.status='ready';bundle.topics=requirements.topics;bundle.factContext=factContextFromRequest(contextQuery,bundle,{...requirements.known,customerId:input.customerId});bundle.facts=collectConditionalEvidence(bundle);
- if(bundle.sources.length>16||JSON.stringify(bundle).length>48000)throw new ApiError(413,'完整依据超过单稿上限，请缩小问题范围；未截断条件','PAYLOAD_TOO_LARGE');
+ if(bundle.sources.length>16||JSON.stringify(knowledgeForModel(bundle)).length>48000)throw new ApiError(413,'完整依据超过单稿上限，请缩小问题范围；未截断条件','PAYLOAD_TOO_LARGE');
  if(requirements.historyLimited)bundle.issues.push({code:'history_limit',message:'历史资料超出本轮整理范围，请核对更早往来'});
  await assertSalesEvidenceCurrent(bundle,actor,input.customerId);
  await workflowStage(workflow,'assess_evidence',bundle,async()=>({status:bundle.status,missing:supplemental(),conflicts:bundle.facts?.filter(f=>f.status==='conflict').map(f=>f.id),evidence:bundle.sources.map(s=>({sourceId:s.sourceId,version:s.version,publication:s.publication,index:s.index})),known:requirements.known}),{tool:'conditions'});

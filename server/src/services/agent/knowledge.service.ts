@@ -80,6 +80,15 @@ export async function archiveKnowledge(id:string,version:number,actor:AuthUser){
  if(!(await AgentKnowledge.updateOne({_id:id,projectId:requireProjectId(actor),version,archived:false},{$set:{archived:true},$inc:{version:1}})).matchedCount)throw ApiError.conflict('知识已变化');
  await knowledgeIndexChanged(actor).catch(()=>undefined);
 }
+// Permanent removal for a mistaken or outdated entry; archived entries included.
+export async function deleteKnowledge(id:string,actor:AuthUser){
+ admin(actor);const projectId=requireProjectId(actor);
+ if(!Types.ObjectId.isValid(id))throw ApiError.notFound('知识不存在');
+ const removed=await AgentKnowledge.findOneAndDelete({_id:id,projectId});
+ if(!removed)throw ApiError.notFound('知识不存在或无权访问');
+ await knowledgeIndexChanged(actor).catch(()=>undefined);
+ return {removed:true};
+}
 const topicPatterns:Record<PolicyTopic,RegExp>={
  moq:/\bmoq\b|minimum\s+(?:order|quantity)|起订|最低订|最小订单/i,
  lead_time:/lead.?time|delivery|turnaround|dispatch|ship in|\b\d+(?:-\d+)?\s*(?:working\s+|business\s+)?days?\b|生产周期|交期|交货|到货/i,

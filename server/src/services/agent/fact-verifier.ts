@@ -44,7 +44,7 @@ function segments(body:string){
 export function checkSemanticResults(body:string,bundle:KnowledgeBundle,result:SemanticCheck[],customer?:CustomerCheckContext):ClaimCheck[]{
  const parts=segments(body);const facts=collectConditionalEvidence(bundle).filter(f=>f.status==='applicable');
  const evidence=new Map<string,string>();
- for(const source of bundle.sources)if(source.kind==='knowledge'&&['company','product','faq','sales_rules'].includes(source.category))evidence.set(source.sourceId,source.content);
+ for(const source of bundle.sources)if(source.kind==='knowledge'&&['company','product','faq','sales_rules','reference'].includes(source.category))evidence.set(source.sourceId,source.content);
  for(const fact of facts){const source=bundle.sources.find(s=>s.sourceId===fact.sourceId)!;evidence.set(fact.id,conditionalSentence(fact.term,source));}
  if(customer)evidence.set('profile:'+customer.id,JSON.stringify(customer.profile));
  for(const site of customer?.websites??[])if(site.sourceId.startsWith('website:'))evidence.set(site.sourceId,site.text);
@@ -67,7 +67,7 @@ export function checkSemanticResults(body:string,bundle:KnowledgeBundle,result:S
  });
 }
 export function evidenceForCheck(bundle:KnowledgeBundle,customer?:CustomerCheckContext){
- const evidence=bundle.sources.filter(s=>s.kind==='knowledge'&&['company','product','faq','sales_rules'].includes(s.category)).map(s=>({sourceId:s.sourceId,text:s.content}));
+ const evidence=bundle.sources.filter(s=>s.kind==='knowledge'&&['company','product','faq','sales_rules','reference'].includes(s.category)).map(s=>({sourceId:s.sourceId,text:s.content}));
  for(const fact of collectConditionalEvidence(bundle).filter(f=>f.status==='applicable'))evidence.push({sourceId:fact.id,text:conditionalSentence(fact.term,bundle.sources.find(s=>s.sourceId===fact.sourceId)!)});
  if(customer)evidence.push({sourceId:'profile:'+customer.id,text:JSON.stringify(customer.profile)});
  for(const site of customer?.websites??[])if(site.sourceId.startsWith('website:'))evidence.push({sourceId:site.sourceId,text:site.text});

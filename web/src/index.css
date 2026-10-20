@@ -409,9 +409,15 @@
 .agent-message-content pre code { padding: 0; background: transparent; white-space: pre; }
 .agent-message-content hr { margin: 1.25rem 0; border-color: hsl(var(--border)); }
 .agent-message-table { max-width: 100%; overflow-x: auto; margin: 1rem 0; border: 1px solid hsl(var(--border)); border-radius: 0.625rem; }
-.agent-message-table table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.65; }
+.agent-message-table table { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.65; }
 .agent-message-table th { background: hsl(var(--muted)); font-weight: 600; text-align: left; }
-.agent-message-table :is(th, td) { padding: 0.625rem 0.75rem; vertical-align: top; border-bottom: 1px solid hsl(var(--border)); }
-.agent-message-table th:first-child, .agent-message-table td:first-child { min-width: 6rem; }
+.agent-message-table :is(th, td) { padding: 0.625rem 0.75rem; vertical-align: top; border-bottom: 1px solid hsl(var(--border)); overflow-wrap: anywhere; }
+.agent-message-table th:first-child, .agent-message-table td:first-child { width: 7rem; }
+/* Five or more columns would be squeezed by a fixed layout: keep natural width and scroll. */
+.agent-message-table table:has(> thead > tr > th:nth-child(5)) { table-layout: auto; width: max-content; min-width: 100%; }
+.agent-message-table table:has(> thead > tr > th:nth-child(5)) :is(th, td) { min-width: 7rem; max-width: 26rem; }
 .agent-message-table tr:last-child td { border-bottom: 0; }
 .agent-message-table tbody tr:nth-child(even) { background: hsl(var(--muted) / 0.3); }
+/* Article search hits: painted through the CSS Custom Highlight API, not DOM edits. */
+::highlight(kb-hit) { background-color: rgb(253 230 138); color: hsl(var(--foreground)); }
+::highlight(kb-hit-active) { background-color: rgb(245 158 11); color: #111827; }

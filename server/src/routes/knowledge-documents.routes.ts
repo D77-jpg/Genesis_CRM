@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/pagination';
 import { requireRole } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
-import { controlParsing, documentDetail, legacyPreview, listDocuments, mapLegacy, originalDocument, reviewInput, saveChunkDraft, uploadDocument, uploadInput } from '../services/knowledge/document.service';
+import { collectDocument, collectInput, controlParsing, deleteDocument, documentDetail, legacyPreview, listDocuments, mapLegacy, originalDocument, previewCollection, reviewInput, saveChunkDraft, uploadDocument, uploadInput } from '../services/knowledge/document.service';
 
 const router = Router();
 router.use(requireRole('admin'));
@@ -19,6 +19,10 @@ router.get('/legacy-preview', validate({ query: beforeQuery }), asyncHandler(asy
 router.post('/legacy/:id', limiter, validate({ params, body: z.object({ version: z.number().int().min(1).max(100) }).strict() }), asyncHandler(async (req, res) => sendSuccess(res, await mapLegacy(req.params.id, req.body.version, req.user!), 201)));
 router.post('/parsing/:id/:action', limiter, validate({ params: params.extend({ action: z.enum(['retry', 'cancel']) }), body: z.object({}).strict() }), asyncHandler(async (req, res) => sendSuccess(res, await controlParsing(req.params.id, req.params.action as 'retry' | 'cancel', req.user!))));
 router.post('/chunks/:id/draft', limiter, validate({ params: z.object({ id: z.string().regex(/^[a-f0-9]{64}$/) }), body: reviewInput }), asyncHandler(async (req, res) => sendSuccess(res, await saveChunkDraft(req.params.id, req.body, req.user!), 201)));
+// One upload becomes one entry: preview the joined text, then collect it into the library.
+router.get('/:id/collection', validate({ params }), asyncHandler(async (req, res) => sendSuccess(res, await previewCollection(req.params.id, req.user!))));
+router.post('/:id/collection', limiter, validate({ params, body: collectInput }), asyncHandler(async (req, res) => sendSuccess(res, await collectDocument(req.params.id, req.body, req.user!), 201)));
+router.delete('/:id', limiter, validate({ params }), asyncHandler(async (req, res) => sendSuccess(res, await deleteDocument(req.params.id, req.user!))));
 router.get('/:id', validate({ params, query: pageQuery }), asyncHandler(async (req, res) => sendSuccess(res, await documentDetail(req.params.id, req.user!, Number(req.query.page),req.query.revision as string|undefined,req.query.chunk as string|undefined))));
 router.get('/:id/original', validate({ params }), asyncHandler(async (req, res) => {
   const source = await originalDocument(req.params.id, req.user!);

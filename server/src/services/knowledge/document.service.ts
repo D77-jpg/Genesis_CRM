@@ -9,6 +9,7 @@ import type { AuthUser } from '../../types/express';
 import { requireProjectId } from '../../utils/access';
 import { ApiError } from '../../utils/ApiError';
 import { appendKnowledge, policyTopics } from '../agent/knowledge.service';
+import { knowledgeIndexChanged } from './index.service';
 import { KNOWLEDGE_CATEGORIES } from '../agent/knowledge-types';
 import { configHash, parserConfig, parserIdentity, PARSER_VERSION, ParserError, runParser } from './parser-process';
 
@@ -22,6 +23,15 @@ const reviewedDraftInput = z.object({ title: z.string().trim().min(1).max(160), 
 // Uploading a file and staging its text require no policy form or publication decision.
 export const reviewInput = reviewedDraftInput.partial();
 export const UNREVIEWED_APPLICABILITY = '适用条件待审核，请对照原文核对产品、数量、费用与有效期。';
+// Whole-document collection: one file becomes one reviewable entry, not one per
+// parser paragraph. Long files are split at section boundaries, never truncated.
+export const collectInput = z.object({ title: z.string().trim().min(1).max(160).optional(),
+  category: z.enum(KNOWLEDGE_CATEGORIES).optional(), products: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
+  applicability: z.string().trim().min(1).max(1000).optional(), source: z.string().trim().min(1).max(500).optional(),
+  publish: z.boolean().default(true) }).strict();
+export const COLLECTION_APPLICABILITY = '参考资料；对外报价、交期、认证等承诺须按已确认的条件使用。';
+const PART_CHARS = 11000;
+const HORIZONTAL_RULE = /^\s*(?:[-*_]\s*){3,}$/;
 export const digest = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 const id = (value: string) => { if (!Types.ObjectId.isValid(value)) throw ApiError.notFound('资料不存在或无权访问'); return value; };
 function admin(actor: AuthUser) { requireProjectId(actor); if (actor.role !== 'admin') throw ApiError.forbidden('原文与解析建议仅供项目管理员审核'); }
@@ -87,7 +97,11 @@ export async function listDocuments(actor: AuthUser, before?: string) {
     const expires=current.flatMap(({v})=>v.validUntil?[v.validUntil]:[]);
     const validity=effective?(expires.some(d=>d>new Date()&&d<=new Date(Date.now()+30*86400000))?'expiring':'active'):expires.some(d=>d<=new Date())?'expired':'unconfirmed';
     const reviewState=current.length?'published':related.some(x=>!x.archived)?'draft':related.length?'disabled':'unreviewed';
-    result.push({products,reviewState,validity, ...d, id: String(d._id), blobKey: undefined, parsing: parsing ? { ...parsing, id: String(parsing._id), artifact: undefined, leaseToken: undefined } : null });
+    // Surface the actual advisories (mostly per-paragraph) instead of a vague "partial".
+    const chunkWarnings = parsing ? await KnowledgeChunk.distinct('warnings', { ...scope(actor), documentId: d._id, parsingRevisionId: parsing._id, artifactHash: parsing.artifactHash }) as string[] : [];
+    result.push({products,reviewState,validity, ...d, id: String(d._id), blobKey: undefined,
+      parsing: parsing ? { ...parsing, id: String(parsing._id), artifact: undefined, leaseToken: undefined,
+        warnings: [...new Set([...(parsing.warnings ?? []), ...chunkWarnings])] } : null });
   }
   return { documents: result, next: documents.length === 30 ? String(documents.at(-1)!._id) : null };
 }
@@ -170,8 +184,268 @@ export async function saveChunkDraft(chunkId: string, input: z.infer<typeof revi
   }
 }
 
-export async function legacyPreview(actor: AuthUser, before?: string) {
+type ChunkRow = { _id: string; content?: string; headingPath?: string[]; contentHash?: string; location?: Record<string, unknown>; warnings?: string[]; headers?: string[]; table?: unknown };
+type CollectionPart = { content: string; chunks: ChunkRow[] };
+
+function chunkRef(chunk: ChunkRow, parsing: { id: string; parserVersion: string; artifactHash?: string | null }, doc: { id: string; sha256: string }) {
+  return { documentId: doc.id, parsingRevisionId: parsing.id, chunkId: chunk._id, contentHash: chunk.contentHash ?? '',
+    location: chunk.location ?? {}, parserVersion: parsing.parserVersion, artifactHash: parsing.artifactHash, originalSha256: doc.sha256 };
+}
+
+// Paragraph-level parser chunks are retrieval provenance, not human review units.
+// Join them back into readable text. Markdown tables arrive one row per chunk,
+// each repeating the header and the same footnote block; rebuild one table.
+type TextBlock = { content: string; chunks: ChunkRow[] };
+
+function splitBlock(text: string) {
+  const pieces: string[] = [];
+  let current = '';
+  for (const line of text.split('\n')) {
+    if (current.length + line.length + 1 > PART_CHARS) { if (current) pieces.push(current); current = ''; }
+    current += (current ? '\n' : '') + line;
+  }
+  if (current) pieces.push(current);
+  return pieces;
+}
+
+const tableCell = (value: string) => value.replace(/\|/g, '\\|').replace(/\s*\n\s*/g, '<br>').trim();
+const tableNotes = (notes: unknown) => Array.isArray(notes) ? (notes as unknown[]).filter(n => typeof n === 'string').join('\n') : '';
+
+// Markdown tables carry headerText/rowText; Word tables carry cell arrays.
+// Both arrive one row per chunk and repeat their notes, so normalise them here.
+function tableRowBlock(chunk: ChunkRow): { key: string; rows: string[]; notes: string } | null {
+  const meta = chunk.table as { headerText?: string; rowText?: string; headers?: unknown; rows?: unknown; notes?: unknown } | undefined;
+  if (meta?.headerText && meta.rowText) {
+    const header = meta.headerText.trim();
+    const lines = chunk.content!.trim().split('\n');
+    const columns = Math.max(header.split('|').length - 2, 1);
+    const separator = lines[1] && /^[\s|:-]+$/.test(lines[1].trim()) && lines[1].includes('-') ? lines[1].trim() : '| ' + Array.from({ length: columns }, () => '---').join(' | ') + ' |';
+    return { key: header, rows: [header, separator, meta.rowText.trim()], notes: tableNotes(meta.notes) };
+  }
+  const headers = meta?.headers, rows = meta?.rows;
+  if (Array.isArray(headers) && headers.length > 1 && headers.every(cell => typeof cell === 'string') && Array.isArray(rows) && Array.isArray(rows[0])) {
+    const cells = headers as string[];
+    const row = rows[0] as unknown[];
+    if (!row.every(cell => typeof cell === 'string')) return null;
+    return { key: 'grid:' + cells.join('\u0001'), rows: ['| ' + cells.map(tableCell).join(' | ') + ' |', '| ' + cells.map(() => '---').join(' | ') + ' |', '| ' + (row as string[]).map(tableCell).join(' | ') + ' |'], notes: tableNotes(meta?.notes) };
+  }
+  return null;
+}
+
+function collectionBlocks(chunks: ChunkRow[]): TextBlock[] {
+  const usable = chunks.filter(c => typeof c.content === 'string' && c.content.trim() && !HORIZONTAL_RULE.test(c.content.trim()));
+  const blocks: TextBlock[] = [];
+  let table: { key: string; head: string[]; rows: string[]; notes: string; noteChunk?: ChunkRow; chunks: ChunkRow[] } | null = null;
+  const flush = () => {
+    if (!table) return;
+    // Notes are a separate paragraph: inside the table they would be read as a
+    // one-cell row (GFM continues a table until a blank line).
+    blocks.push({ content: [...table.head, ...table.rows].join('\n'), chunks: table.chunks });
+    if (table.notes) blocks.push({ content: table.notes, chunks: table.noteChunk ? [table.noteChunk] : table.chunks.slice(0, 1) });
+    table = null;
+  };
+  for (const chunk of usable) {
+    const part = tableRowBlock(chunk);
+    if (part) {
+      if (table && table.key !== part.key) flush();
+      if (!table) table = { key: part.key, head: part.rows.slice(0, 2), rows: [], notes: part.notes, noteChunk: chunk, chunks: [] };
+      table.rows.push(part.rows[part.rows.length - 1]);
+      table.chunks.push(chunk);
+    } else {
+      flush();
+      blocks.push({ content: chunk.content!.trim(), chunks: [chunk] });
+    }
+  }
+  flush();
+  // The parser attaches the paragraph after a table to every row as a footnote,
+  // while the same paragraph also exists as its own chunk: keep the first copy.
+  const seen = new Set<string>();
+  return blocks.filter(block => {
+    const key = block.content.replace(/\s+/g, ' ').trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function collectionParts(chunks: ChunkRow[]): CollectionPart[] {
+  const parts: CollectionPart[] = [];
+  let current: ChunkRow[] = [], text = '';
+  const push = () => { if (current.length) { parts.push({ content: text.trim(), chunks: current }); current = []; text = ''; } };
+  for (const block of collectionBlocks(chunks)) {
+    for (const piece of splitBlock(block.content)) {
+      if (text.length + piece.length + 2 > PART_CHARS) push();
+      text += (text ? '\n\n' : '') + piece;
+      current.push(...block.chunks);
+    }
+  }
+  push();
+  return parts;
+}
+
+const cellText = (value: string) => value.replace(/\s*\[格式:\s*[^\]]*\]/g, '').replace(/\s+/g, ' ').trim();
+
+function tableRowOf(chunk: ChunkRow): string[] | null {
+  const rows = (chunk.table as { rows?: unknown } | undefined)?.rows;
+  const row = Array.isArray(rows) ? rows[0] : undefined;
+  if (!Array.isArray(row) || !row.length || !row.every(cell => typeof cell === 'string')) return null;
+  return row as string[];
+}
+
+// Spreadsheets are rows, not prose: "id | type | ..." repeated for every record
+// reads like a wall of pipes. Turn each record into a small section with the
+// row's own column labels, so both the review sheet and the sales library stay
+// readable. Falls back to plain text when the file carries no table metadata.
+function rowBlock(labels: string[], row: string[], index: number) {
+  const cells = row.map(cellText);
+  // Prefer a human-readable title: a short-to-medium cell, never a formula dump.
+  const titled = cells.findIndex(cell => cell.length >= 8 && cell.length <= 80 && !cell.startsWith('['));
+  const titleIndex = titled >= 0 ? titled : 0;
+  const title = cells[titleIndex] || '第 ' + (index + 1) + ' 条';
+  const lines = ['### ' + title];
+  cells.forEach((cell, position) => {
+    if (position === titleIndex || !cell) return;
+    lines.push('- ' + (labels[position] || '第 ' + (position + 1) + ' 列') + '：' + cell);
+  });
+  return lines.join('\n');
+}
+
+function tabularParts(chunks: ChunkRow[]): CollectionPart[] | null {
+  let labels: string[] | null = null, sheet = '', records = 0;
+  const blocks: { chunk: ChunkRow; text: string }[] = [];
+  const preamble: ChunkRow[] = [];
+  for (const chunk of chunks) {
+    const row = tableRowOf(chunk);
+    const chunkSheet = String((chunk.location as { sheet?: string } | undefined)?.sheet ?? '');
+    if (row && row.length > 1 && chunkSheet && sheet && chunkSheet !== sheet) {
+      // A new worksheet restarts the column labels.
+      labels = null;
+      blocks.push({ chunk, text: '## ' + chunkSheet });
+    }
+    if (row) sheet = chunkSheet || sheet;
+    if (!row || row.length < 2) { preamble.push(chunk); continue; }
+    if (!labels) {
+      if (chunk.headers && chunk.headers.length === row.length && chunk.headers.length > 1) {
+        labels = chunk.headers.map(cellText);
+      } else {
+        labels = row.map(cellText);
+        continue;
+      }
+    }
+    if (row.length === labels.length && row.every((cell, position) => cellText(cell) === labels![position])) continue;
+    records++;
+    blocks.push({ chunk, text: rowBlock(labels, row, records) });
+  }
+  if (!labels || !blocks.length) return null;
+  // Leading title / warning rows: drop the repeated sheet title and duplicates.
+  const introLines: string[] = [];
+  for (const chunk of preamble) for (const line of (chunk.content ?? '').split('\n').map(cellText).filter(Boolean)) {
+    if (!introLines.includes(line)) introLines.push(line);
+  }
+  let intro = introLines.join('\n\n');
+  if (intro.length > 1500) {
+    const cut = intro.lastIndexOf('\n\n', 1500);
+    intro = (cut > 300 ? intro.slice(0, cut) : intro.slice(0, 1500)).trimEnd() + '\n\n…';
+  }
+  const parts: CollectionPart[] = [];
+  let current: ChunkRow[] = intro ? [...preamble] : [], text = intro;
+  const flush = () => { if (current.length && text.trim()) parts.push({ content: text.trim(), chunks: current }); current = []; text = ''; };
+  for (const block of blocks) {
+    if (text.length + block.text.length + 2 > PART_CHARS) flush();
+    text += (text ? '\n\n' : '') + block.text;
+    current.push(block.chunk);
+  }
+  flush();
+  return parts.length ? parts : null;
+}
+
+function suggestedTitle(parts: CollectionPart[], doc: { originalName: string }) {
+  const chunks = parts.flatMap(part => part.chunks);
+  // A table header can start with "#" (the first column is literally "#"), so
+  // never treat a line containing "|" as a heading.
+  const heading = chunks.map(chunk => chunk.content?.trim() ?? '').find(text => /^#{1,6}\s+\S/.test(text) && !text.includes('|') && text.length <= 120);
+  // Sheet names such as "CSV" / "Sheet1" are parser labels, not titles.
+  const path = chunks.map(chunk => chunk.headingPath?.[0]?.trim()).find((value): value is string => !!value && value.length >= 4 && !/^(csv|tsv|sheet\s*\d*|table\s*\d*|表格\s*\d*)$/i.test(value));
+  const filename = doc.originalName.replace(/\.[^.]+$/, '').replace(/^\s*\d+\s*[-_.、]\s*/, '');
+  const title = heading ? heading.replace(/^#{1,6}\s+/, '') : path ?? filename;
+  return title.replace(/\s+/g, ' ').trim().slice(0, 160) || '未命名资料';
+}
+
+function defaultCategory(doc: { category?: string | null }) {
+  return KNOWLEDGE_CATEGORIES.includes(doc.category as typeof KNOWLEDGE_CATEGORIES[number]) ? doc.category as typeof KNOWLEDGE_CATEGORIES[number] : 'reference';
+}
+
+async function collectionSource(documentId: string, actor: AuthUser) {
+  const doc = await KnowledgeDocument.findOne({ _id: id(documentId), ...scope(actor) }).lean();
+  if (!doc) throw ApiError.notFound('资料不存在或无权访问');
+  const parsing = await KnowledgeParsing.findOne({ documentId: doc._id, ...scope(actor) }).sort({ revision: -1 }).lean();
+  if (!parsing || !['succeeded', 'partial'].includes(parsing.state)) throw ApiError.conflict('文件还没有解析完成，请稍后再试');
+  const chunks = await KnowledgeChunk.find({ ...scope(actor), parsingRevisionId: parsing._id, artifactHash: parsing.artifactHash }).sort({ ordinal: 1 }).lean() as unknown as ChunkRow[];
+  const parts = ['csv', 'xlsx'].includes(doc.extension) ? (tabularParts(chunks) ?? collectionParts(chunks)) : collectionParts(chunks);
+  if (!parts.length) throw ApiError.conflict('这份文件没有可用的文字内容，请检查解析结果');
+  // lean() drops virtuals: rebuild the parsing identity explicitly.
+  const persisted = { id: String(parsing._id), parserVersion: parsing.parserVersion, artifactHash: parsing.artifactHash, warnings: parsing.warnings ?? [] };
+  return { doc, docId: String(doc._id), parsing: persisted, parts };
+}
+
+type ParsingRow = { id: string; parserVersion: string; artifactHash?: string | null; warnings?: string[] | null };
+const partRefs = (part: CollectionPart, parsing: ParsingRow, doc: { id: string; sha256: string }) => part.chunks.map(chunk => chunkRef(chunk, parsing, doc));
+
+export async function previewCollection(documentId: string, actor: AuthUser) {
   admin(actor);
+  const { doc, parsing, parts } = await collectionSource(documentId, actor);
+  const notes = [...new Set([...(parsing.warnings ?? []), ...parts.flatMap(part => part.chunks.flatMap(chunk => chunk.warnings ?? []))])];
+  return { title: suggestedTitle(parts, doc), category: defaultCategory(doc), source: doc.source, sourceName: doc.originalName, notes,
+    parts: parts.map(part => ({ chars: part.content.length, content: part.content })) };
+}
+
+export async function collectDocument(documentId: string, input: z.infer<typeof collectInput>, actor: AuthUser) {
+  admin(actor);
+  const value = collectInput.parse(input);
+  const { doc, docId, parsing, parts } = await collectionSource(documentId, actor);
+  const title = value.title ?? suggestedTitle(parts, doc);
+  const category = value.category ?? defaultCategory(doc);
+  const source = value.source ?? doc.source ?? doc.originalName;
+  const ids: string[] = [];
+  for (let index = 0; index < parts.length; index++) {
+    const importKey = `document-collection:${docId}:${parsing.id}:${index}`;
+    const existing = await AgentKnowledge.findOne({ ...scope(actor), importKey });
+    if (existing) { ids.push(existing.id); continue; }
+    try {
+      ids.push(await appendKnowledge(undefined, {
+        accessScope: 'project', expectedVersion: 0,
+        title: (parts.length === 1 ? title : `${title} · 第 ${index + 1} 部分`).slice(0, 160),
+        tags: [], content: parts[index].content, source: source.slice(0, 500), approved: value.publish,
+        category, applicability: value.applicability ?? COLLECTION_APPLICABILITY,
+        products: value.products ?? [], validFrom: new Date(), terms: [],
+      }, actor, importKey, partRefs(parts[index], parsing, { id: docId, sha256: doc.sha256 })));
+    } catch (e) {
+      if ((e as { code?: number }).code !== 11000) throw e;
+      ids.push((await AgentKnowledge.findOne({ ...scope(actor), importKey }))!.id);
+    }
+  }
+  return { ids, count: parts.length, category };
+}
+
+// Removing a file also removes the entries collected from it: they are derived
+// views of the same text, and leaving them behind is what made "重新上传" messy.
+export async function deleteDocument(documentId: string, actor: AuthUser) {
+  admin(actor);
+  const doc = await KnowledgeDocument.findOne({ _id: id(documentId), ...scope(actor) }).lean();
+  if (!doc) throw ApiError.notFound('资料不存在或无权访问');
+  const linked = await AgentKnowledge.find({ ...scope(actor), 'revisions.sourceRefs.documentId': String(doc._id) }).select('_id').lean();
+  if (linked.length) await AgentKnowledge.deleteMany({ _id: { $in: linked.map(k => k._id) }, projectId: doc.projectId });
+  await KnowledgeChunk.deleteMany({ projectId: doc.projectId, documentId: doc._id });
+  await KnowledgeParsing.deleteMany({ projectId: doc.projectId, documentId: doc._id });
+  if (doc.blobKey && !await KnowledgeDocument.exists({ projectId: doc.projectId, blobKey: doc.blobKey, _id: { $ne: doc._id } })) {
+    await KnowledgeBlob.deleteOne({ _id: doc.blobKey, projectId: doc.projectId });
+  }
+  await KnowledgeDocument.deleteOne({ _id: doc._id, projectId: doc.projectId });
+  if (linked.length) await knowledgeIndexChanged(actor).catch(() => undefined);
+  return { removedKnowledge: linked.length, removedFile: true };
+}
+
+export async function legacyPreview(actor: AuthUser, before?: string) {  admin(actor);
   const rows = await AgentKnowledge.find({ ...scope(actor), ...(before ? { _id: { $lt: id(before) } } : {}) }).sort({ _id: -1 }).limit(30).lean();
   const mappings = await KnowledgeDocument.find({ ...scope(actor), kind: 'legacy_inline', legacyKnowledgeId: { $in: rows.map(r => r._id) } }).select('legacyKnowledgeId legacyVersion').lean();
   return { entries: rows.map(k => ({ id: String(k._id), version: k.version, approvedVersion: k.approvedVersion, archived: k.archived,

@@ -289,11 +289,13 @@ export function CustomerDetailPage(): React.JSX.Element {
   React.useEffect(()=>{
     if(!customer?.id || !outreachTaskId || !/^[a-f\d]{24}$/i.test(outreachTaskId)) return;
     let active=true;
-    void apiGet<{customerId?:string;draftId?:string;status:string}>(`/agent/tasks/${outreachTaskId}`).then(async task=>{
-      if(task.customerId!==customer.id || !task.draftId || task.status!=='awaiting_review') throw new Error('任务草稿与当前客户不匹配或状态已变化');
-      const letter=await apiGet<DevelopmentLetter>(`/letters/${task.draftId}`);
+    void apiGet<{customerId?:string;draftId?:string;staleDraftId?:string;status:string}>(`/agent/tasks/${outreachTaskId}`).then(async task=>{
+      const draftId=task.draftId??task.staleDraftId;
+      if(task.customerId!==customer.id || !draftId || task.status!=='awaiting_review') throw new Error('任务草稿与当前客户不匹配或状态已变化');
+      const letter=await apiGet<DevelopmentLetter>(`/letters/${draftId}`);
       if(!active)return;
       if(letter.customerId!==customer.id || letter.status!=='draft') throw new Error('草稿状态已变化，请刷新任务');
+      if(!task.draftId&&task.staleDraftId)toast.warning('这份草稿写于资料变更之前',{description:'发送前请重新核对依据，或回到任务里重新准备。'});
       setComposeDraft(null);setResendTarget(letter);setSendOpen(true);
       setSearchParams(current=>{const next=new URLSearchParams(current);next.delete('outreachTask');return next;},{replace:true});
     }).catch(error=>{if(active)toast.error('任务草稿无法打开',{description:toErrorMessage(error,'请检查权限与草稿状态')});});
