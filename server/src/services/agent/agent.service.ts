@@ -376,10 +376,11 @@ export async function sendAgentMessage(
 
     for (let round = 0; round <= env.AI_MAX_TOOL_CALLS; round += 1) {
       // eslint-disable-next-line no-await-in-loop
+      const finalAnswerOnly=toolCallCount>=env.AI_MAX_TOOL_CALLS||round===env.AI_MAX_TOOL_CALLS;
       const turn = await activeProvider.createTurn({
-        instructions: instructions(session.context),
+        instructions: instructions(session.context)+(finalAnswerOnly?'\n本轮只根据已经取得的授权资料回答，不再调用工具。明确哪些问题尚未查到，不把未执行查询说成已完成。':''),
         input,
-        tools: agentToolSchemas(),
+        tools: finalAnswerOnly?[]:agentToolSchemas(),
         context: session.context,
         userPrompt: content,
         safetyIdentifier,
@@ -392,6 +393,7 @@ export async function sendAgentMessage(
         text = turn.text.trim();
         break;
       }
+      if(finalAnswerOnly)throw new AgentProviderError('AGENT_TOOL_LIMIT');
       for (const call of turn.toolCalls) {
         const args = safeToolArguments(call.arguments);
         const callKey = canonicalToolCallKey(call.name, args);
@@ -402,7 +404,10 @@ export async function sendAgentMessage(
           });
           continue;
         }
-        if (toolCallCount >= env.AI_MAX_TOOL_CALLS) throw new AgentProviderError('AGENT_TOOL_LIMIT');
+        if (toolCallCount >= env.AI_MAX_TOOL_CALLS) {
+          input.push({type:'function_call_output',call_id:call.callId,output:JSON.stringify({error:'TOOL_BUDGET_EXHAUSTED',notice:'本次查询数量已达上限，该项未执行；仅用已有资料回答，缺失内容明确为未知。'})});
+          continue;
+        }
         toolCallCount += 1;
         // V1 注册表只有只读工具，因此审批状态固定为 not_required；模型和字段已为 V1.5 写操作预留。
         // eslint-disable-next-line no-await-in-loop

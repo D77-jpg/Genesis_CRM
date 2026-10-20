@@ -878,7 +878,7 @@ test('duplicate provider tool calls execute the read-only tool only once', async
   const { AgentAction, AgentRun } = await import('../src/models');
   const { MockAgentProvider } = await import('../src/services/agent/mock-provider');
   class DuplicateToolProvider extends MockAgentProvider {
-    override async createTurn(request: Parameters<MockAgentProvider['createTurn']>[0]) {
+    override async createTurn(request: Parameters<InstanceType<typeof MockAgentProvider>['createTurn']>[0]) {
       if (request.input.some((item) => item.type === 'function_call_output')) {
         return {
           text: '重复工具调用已合并。',
@@ -918,7 +918,7 @@ test('fixed eval dataset and diagnostics are admin-only and expose no automatic 
   assert.equal(evaluation.status, 'completed');
   assert.equal(evaluation.datasetVersion, 'v1.4.0');
   assert.equal(evaluation.passedCases, evaluation.totalCases);
-  assert.ok(evaluation.cases.some((item) => item.category === 'injection' && item.passed));
+  assert.ok((evaluation.cases as Array<{category:string;passed:boolean}>).some((item) => item.category === 'injection' && item.passed));
   const report = await diagnostics.getAgentDiagnostics(adminActor);
   assert.equal(report.dataset.version, 'v1.4.0');
   assert.ok(report.users.some((item) => item.userId === userA.toString()));
@@ -1341,7 +1341,7 @@ test('P3 due events do not fabricate communication records and stale due dates p
  const rule=await automation.saveAutomationRule({...p3Rule,inbound:false,due:true},actorA);const dueAt=new Date();const c=await Customer.create({projectId:projectA,ownerId:userA,name:'P3 Due Fixture',email:'p3due@example.test',nextFollowUpAt:dueAt,source:'manual'});
  await automation.observeAgentEvents();await automation.observeAgentEvents();let event=(await automation.listAutomationInbox(actorA)).find(e=>e.customerId===c.id)!;assert.ok(event?.taskId);
  await Customer.updateOne({_id:c._id},{$set:{nextFollowUpAt:new Date(Date.now()+86400000)}});await tasks.processAgentTask(event.taskId);const failed=await tasks.getAgentTask(event.taskId,actorA);assert.equal(failed.error?.code,'AUTOMATION_REVOKED');assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);assert.equal(await DevelopmentLetter.countDocuments({customerId:c._id}),0);
- const c2=await Customer.create({projectId:projectA,ownerId:userA,name:'P3 Current Due Fixture',email:'p3due2@example.test',nextFollowUpAt:new Date(),source:'manual'});await automation.observeAgentEvents();event=(await automation.listAutomationInbox(actorA)).find(e=>e.customerId===c2.id)!;await tasks.processAgentTask(event.taskId);const ready=await tasks.getAgentTask(event.taskId,actorA);assert.equal(ready.kind,'followup_review');assert.equal(ready.status,'awaiting_review');assert.equal(await FollowUp.countDocuments({customerId:c2._id}),0);assert.ok(rule.enabled);
+ const c2=await Customer.create({projectId:projectA,ownerId:userA,name:'P3 Current Due Fixture',email:'p3due2@example.test',nextFollowUpAt:new Date(),source:'manual'});await automation.observeAgentEvents();event=(await automation.listAutomationInbox(actorA)).find(e=>e.customerId===c2.id)!;assert.ok(event?.taskId);await tasks.processAgentTask(event.taskId);const ready=await tasks.getAgentTask(event.taskId,actorA);assert.equal(ready.kind,'followup_review');assert.equal(ready.status,'awaiting_review');assert.equal(await FollowUp.countDocuments({customerId:c2._id}),0);assert.ok(rule.enabled);
 });
 
 test('P3 unsubscribe cancels pending and ready marketing tasks and blocks sending retained drafts',async()=>{
@@ -1387,4 +1387,20 @@ test('P3 a compatible-gateway sibling nesting error is repaired without relaxing
  assert.equal((await Customer.findById(c._id))?.status,'pending');assert.ok(analysis.replyDraft.bodyText.includes('\n\n'));assert.ok(!analysis.replyDraft.bodyText.includes('\\n'));assert.equal(await FollowUp.countDocuments({customerId:c._id}),0);
  const bad=new MockAgentProvider();bad.analyzeMailThread=async request=>({...await original(request),unexpectedWrite:'send_all'}) as any;
  await assert.rejects(()=>flow.createMailThreadAnalysis({mailId:mail.id,direction:'inbound',idempotencyKey:'p3-shape-invalid'},actorA,{provider:bad}));
+});
+
+
+test('exhausted read budget produces one no-tools answer turn without executing excess queries',async()=>{
+ const models=await import('../src/models');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');const {default:env}=await import('../src/config/env');const provider=new MockAgentProvider();let rounds=0;
+ const session=await service.createAgentSession({context:{type:'global'}},actorA);
+ provider.createTurn=async request=>{rounds++;if(rounds===1)return {text:'',output:[],toolCalls:Array.from({length:env.AI_MAX_TOOL_CALLS+1},(_,i)=>({callId:'budget-'+i,name:'search_customers',arguments:JSON.stringify({query:'Independent scope '+i})})),usage:{inputTokens:1,outputTokens:1,totalTokens:2}};assert.equal(request.tools.length,0);assert.match(request.instructions,/只根据已经取得/);assert.ok(request.input.some(i=>'output' in i&&String(i.output).includes('TOOL_BUDGET_EXHAUSTED')));return {text:'已经核对可取得的客户资料，其余需求仍待确认。',output:[],toolCalls:[],usage:{inputTokens:1,outputTokens:1,totalTokens:2}};};
+ const answer=await service.sendAgentMessage(session.id,'请查询独立样本的客户信息并说明尚未确认的事项',actorA,undefined,provider);assert.equal(answer.degraded,false);assert.equal(rounds,2);const actions=await models.AgentAction.find({sessionId:session.id});assert.equal(actions.length,env.AI_MAX_TOOL_CALLS);assert.ok(actions.every(a=>a.executionStatus==='succeeded'));
+ const run=await models.AgentRun.findOne({sessionId:session.id});assert.equal(run!.toolCallCount,env.AI_MAX_TOOL_CALLS);
+});
+
+
+test('a provider that ignores the no-tools final turn cannot execute further queries',async()=>{
+ const models=await import('../src/models');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');const {default:env}=await import('../src/config/env');const provider=new MockAgentProvider();let rounds=0;const session=await service.createAgentSession({context:{type:'global'}},actorA);
+ provider.createTurn=async()=>({text:'',output:[],toolCalls:Array.from({length:env.AI_MAX_TOOL_CALLS+1},(_,i)=>({callId:'ignore-'+(++rounds)+'-'+i,name:'search_customers',arguments:JSON.stringify({query:'Independent denied '+i})})),usage:{inputTokens:1,outputTokens:1,totalTokens:2}});
+ const answer=await service.sendAgentMessage(session.id,'只查询独立测试客户',actorA,undefined,provider);assert.equal(answer.degraded,true);assert.equal(await models.AgentAction.countDocuments({sessionId:session.id}),env.AI_MAX_TOOL_CALLS);assert.equal((await models.AgentRun.findOne({sessionId:session.id}))!.errorCode,'AGENT_TOOL_LIMIT');
 });
