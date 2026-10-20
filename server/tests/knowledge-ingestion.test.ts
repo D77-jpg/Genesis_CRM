@@ -232,3 +232,52 @@ test('actual worker termination and replacement process recover the durable leas
     assert.equal(recovered.revisions[0].attempts, 2); assert.equal(recovered.chunks.length, 1);
   } finally { if (first && first.exitCode === null) first.kill(); if (old) process.env.KNOWLEDGE_PARSER_SCRIPT = old; else delete process.env.KNOWLEDGE_PARSER_SCRIPT; }
 });
+
+test('file-only HTTP upload and one-click staging preserve text and references without publishing', async () => {
+  const { AgentKnowledge } = await import('../src/models/AgentKnowledge');
+  const mailCount = await business.DevelopmentLetter.countDocuments(), followupCount = await business.FollowUp.countDocuments();
+  const text = 'FICTIONAL file-only sample. Cotton only: MOQ 73 pcs; 19 days after artwork approval. 运费另行确认。';
+  const headers = { Authorization: 'Bearer ' + token, 'X-Project-Id': String(projectId), 'Content-Type': 'application/json' };
+  const response = await fetch(base + '/knowledge-documents', {method:'POST',headers,body:JSON.stringify({fileName:'虚构资料-仅文件.txt',data:Buffer.from(text).toString('base64')})});
+  assert.equal(response.status,201);
+  const uploaded = (await response.json()).data as {id:string};
+  const before = await service.documentDetail(uploaded.id,actor);
+  assert.equal(before.document.source,'虚构资料-仅文件.txt'); assert.equal(before.document.category,'pending');
+  assert.equal(before.revisions[0].state,'queued');
+  await service.processKnowledgeDocument(String(before.revisions[0].id));
+  const detail = await service.documentDetail(uploaded.id,actor), chunk = detail.chunks[0];
+  assert.equal(detail.revisions[0].state,'succeeded'); assert.equal(chunk.content,text);
+  const stage = await fetch(base + '/knowledge-documents/chunks/'+chunk.id+'/draft',{method:'POST',headers,body:'{}'});
+  assert.equal(stage.status,201);
+  const draft = (await stage.json()).data as {id:string};
+  const saved = await AgentKnowledge.findById(draft.id);
+  assert.equal(saved!.approvedVersion,0); assert.equal(saved!.revisions[0].approved,false);
+  assert.equal(saved!.revisions[0].title,'虚构资料-仅文件.txt'); assert.equal(saved!.revisions[0].content,text);
+  assert.equal(saved!.revisions[0].source,'虚构资料-仅文件.txt');
+  assert.equal(saved!.revisions[0].applicability,service.UNREVIEWED_APPLICABILITY);
+  assert.equal(saved!.revisions[0].sourceRefs?.[0].chunkId,chunk.id);
+  assert.ok(saved!.revisions[0].terms?.every(t=>t.mode==='needs_confirmation'));
+  assert.equal((await service.saveChunkDraft(chunk.id,{},actor)).id,draft.id);
+  await assert.rejects(service.saveChunkDraft(chunk.id,{},other));
+  await assert.rejects(service.saveChunkDraft(chunk.id,{}, {...actor,role:'user'}));
+  await assert.rejects(service.uploadDocument({fileName:'forbidden.txt',data:'eA=='},{...actor,role:'user'}));
+  assert.equal(await business.DevelopmentLetter.countDocuments(),mailCount); assert.equal(await business.FollowUp.countDocuments(),followupCount);
+});
+
+test('optional upload metadata remains editable; staging validates overrides and never truncates long conditions', async () => {
+  const { AgentKnowledge } = await import('../src/models/AgentKnowledge');
+  const d = await parsed('optional-review.txt',Buffer.from('FICTIONAL manual source. Minimum order 91 pcs for linen only.'));
+  assert.equal(d.document.source,'FICTIONAL S1 ONLY'); assert.equal(d.document.category,'trade');
+  const chunk = d.chunks[0];
+  await assert.rejects(service.saveChunkDraft(chunk.id,{content:'x'.repeat(12001)},actor));
+  await assert.rejects(service.saveChunkDraft(chunk.id,{title:''},actor));
+  assert.equal(await AgentKnowledge.countDocuments({importKey:'document-chunk:'+chunk.id}),0);
+  const staged = await service.saveChunkDraft(chunk.id,{title:'Custom title',applicability:'Fictional linen only'},actor);
+  const saved = await AgentKnowledge.findById(staged.id);
+  assert.equal(saved!.revisions[0].category,'trade'); assert.equal(saved!.revisions[0].title,'Custom title');
+  assert.equal(saved!.revisions[0].applicability,'Fictional linen only'); assert.equal(saved!.approvedVersion,0);
+  const long = await parsed('long-conditions.txt',Buffer.from('FICTIONAL '+ 'Keep all conditions together; '.repeat(500)));
+  assert.ok(long.chunks[0].content!.length>12000);
+  await assert.rejects(service.saveChunkDraft(long.chunks[0].id,{},actor));
+  assert.equal(await AgentKnowledge.countDocuments({importKey:'document-chunk:'+long.chunks[0].id}),0);
+});

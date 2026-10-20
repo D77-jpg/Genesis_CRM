@@ -1,3 +1,4 @@
+import {useNavigate} from 'react-router-dom';
 import {KnowledgeGovernance,KnowledgeVersionDiff} from './knowledge-governance';
 import {ConditionalScopeEditor} from './conditional-scope-editor';
 import * as React from 'react';
@@ -17,6 +18,7 @@ const knowledgeError=(error:unknown,fallback?:string)=>error instanceof ApiClien
 const newForm=()=>({accessScope:'project' as 'project'|'admins',title:'',category:'company' as KnowledgeCategory,tags:'',content:'',source:'',applicability:'',products:'',validFrom:localDate(),validUntil:'',terms:[] as KnowledgeTerm[]});
 const nativeSelect='min-h-11 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{admin:boolean;customerId?:string;initialKnowledgeId?:string}){
+ const navigate=useNavigate();
  const openedKnowledge=React.useRef('');
  const project=useProjectStore(s=>s.activeProject);
  const [rows,setRows]=React.useState<ProjectKnowledge[]>([]);
@@ -25,9 +27,6 @@ export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{a
  const [query,setQuery]=React.useState('');const [category,setCategory]=React.useState('all');const [status,setStatus]=React.useState('all');
  const [form,setForm]=React.useState(newForm);const [editing,setEditing]=React.useState<ProjectKnowledge|null>(null);const [formOpen,setFormOpen]=React.useState(false);
  const [selected,setSelected]=React.useState<ProjectKnowledge|null>(null);const [history,setHistory]=React.useState<KnowledgeRevision[]>([]);
- const [importOpen,setImportOpen]=React.useState(false);const [importSource,setImportSource]=React.useState('');const [importCategory,setImportCategory]=React.useState<KnowledgeCategory>('company');
- const [preview,setPreview]=React.useState<{entries:Record<string,unknown>[];warnings:string[]}|null>(null);
- const [fileName,setFileName]=React.useState('');const [importResult,setImportResult]=React.useState('');const fileRef=React.useRef<HTMLInputElement>(null);
  const [attachments,setAttachments]=React.useState<{id:string;originalName:string}[]>([]);
  const [attachmentText,setAttachmentText]=React.useState<{name:string;text:string;reason?:string}|null>(null);
  const load=React.useCallback(async()=>{setLoading(true);try{setRows(await apiGet<ProjectKnowledge[]>('/agent/knowledge'));}finally{setLoading(false);}},[]);
@@ -45,35 +44,13 @@ export function ProjectKnowledgeManager({admin,customerId,initialKnowledgeId}:{a
    setFormOpen(false);setEditing(null);await load();
   }catch(e){setError(knowledgeError(e,'知识尚未保存，请检查字段与版本'));}finally{setBusy(false);}
  }
- async function importPreview(file:File){
-  setBusy(true);setError('');setPreview(null);setImportResult('');
-  try{if(!/\.(txt|md|markdown)$/i.test(file.name)||file.size>512000)throw new Error('请选择 500KB 内的 TXT 或 Markdown 文件');
-   const content=await file.text();if(content.includes('\uFFFD'))throw new Error('资料编码无法识别，请另存为 UTF-8');
-   setPreview(await apiPost('/agent/knowledge/import-preview',{fileName:file.name,content,category:importCategory,source:importSource}));setFileName(file.name);
-  }catch(e){setError(knowledgeError(e));}finally{setBusy(false);if(fileRef.current)fileRef.current.value='';}
- }
- async function commitImport(){
-  if(!preview)return;setBusy(true);setError('');
-  try{const result=await apiPost<{created:number;skipped:number}>('/agent/knowledge/import',{entries:preview.entries});setImportResult('已保存 '+result.created+' 条草稿，跳过 '+result.skipped+' 条重复资料。请逐条核对后发布。');setPreview(null);await load();}
-  catch(e){setError(knowledgeError(e));}finally{setBusy(false);}
- }
  const matches=rows.filter(row=>{const v=row.revisions.at(-1);return v&&(!product||(v.products??[]).some(p=>p.toLowerCase().includes(product.toLowerCase())))&&(validity==='all'||(validity==='active'?row.effective:validity==='expired'?!!v.validUntil&&new Date(v.validUntil)<=new Date():validity==='upcoming'?!!v.validFrom&&new Date(v.validFrom)>new Date():!!v.validUntil&&new Date(v.validUntil)>new Date()&&new Date(v.validUntil)<=new Date(Date.now()+30*86400000)))&&(category==='all'||(v.category??'product')===category)&&(status==='all'||row.status===status)&&[v.title,v.content,v.tags.join(' ')].join(' ').toLowerCase().includes(query.toLowerCase());});
  const inputField=(id:string,label:string,value:string,onChange:(v:string)=>void,type='text')=><div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} type={type} value={value} onChange={e=>onChange(e.target.value)} className="min-h-11"/></div>;
  return <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-  <header className="mb-5 space-y-3"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-base font-semibold"><BookOpen className="h-5 w-5" aria-hidden/>资料审核与维护</h2>{admin&&!formOpen&&<div className="flex flex-wrap gap-2"><Button className="min-h-11" onClick={()=>edit()}><Plus className="h-4 w-4" aria-hidden/>新增资料</Button><Button variant="outline" className="min-h-11" onClick={()=>{setImportOpen(v=>!v);setSelected(null);}}><Upload className="h-4 w-4" aria-hidden/>快速导入文本</Button></div>}</div>
+  <header className="mb-5 space-y-3"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-base font-semibold"><BookOpen className="h-5 w-5" aria-hidden/>资料审核与维护</h2>{admin&&!formOpen&&<div className="flex flex-wrap gap-2"><Button className="min-h-11" onClick={()=>edit()}><Plus className="h-4 w-4" aria-hidden/>新增资料</Button><Button variant="outline" className="min-h-11" onClick={()=>navigate('/knowledge?view=documents')}><Upload className="h-4 w-4" aria-hidden/>上传文件</Button></div>}</div>
    <p className="text-sm leading-6 text-muted-foreground">{project?.name} 的资料维护区。先核对产品、适用条件和来源，再逐条发布；发布后才会出现在销售资料中。</p>
   </header>
   {error&&<p role="alert" className="my-4 rounded-lg border border-destructive/30 p-3 text-sm leading-6 text-destructive">{error}</p>}
-  {importOpen&&admin&&!formOpen&&<section className="mb-6 space-y-4 rounded-lg border p-4">
-   <h3 className="font-semibold">TXT / Markdown 导入</h3><p className="text-sm leading-6 text-muted-foreground">选择分类和来源，预览按标题拆分的条目，再保存为草稿。不会自动发布。</p>
-   <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2 text-sm"><span className="block font-medium">导入分类</span><select className={nativeSelect} value={importCategory} onChange={e=>{setImportCategory(e.target.value as KnowledgeCategory);setPreview(null);}}>{Object.entries(knowledgeCategories).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
-   {inputField('knowledge-import-source','资料来源',importSource,v=>{setImportSource(v);setPreview(null);})}</div>
-   <input ref={fileRef} type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" className="sr-only" aria-label="选择知识文件" onChange={e=>{const file=e.target.files?.[0];if(file)void importPreview(file);}}/>
-   <Button variant="outline" className="min-h-11" disabled={busy||!importSource.trim()} onClick={()=>fileRef.current?.click()}>{busy?<Loader2 className="h-4 w-4 animate-spin"/>:<Upload className="h-4 w-4"/>}选择文本文件并预览</Button>
-   {!importSource.trim()&&<p className="text-xs text-muted-foreground">先填写文档名称、内部确认记录或来源地址。</p>}
-   {preview&&<div className="space-y-3"><p className="text-sm font-medium">{fileName} · 共 {preview.entries.length} 条</p>{preview.warnings.map(w=><p key={w} className="text-sm leading-6 text-amber-700 dark:text-amber-400">{w}</p>)}<ol className="max-h-64 overflow-y-auto divide-y">{preview.entries.map((entry,i)=><li key={i} className="py-3 text-sm"><p className="font-medium">{String(entry.title)}</p><p className="mt-1 line-clamp-3 whitespace-pre-wrap leading-6 text-muted-foreground">{String(entry.content)}</p></li>)}</ol><Button className="min-h-11" disabled={busy} onClick={()=>void commitImport()}>确认导入为草稿</Button><Button variant="ghost" className="ml-2 min-h-11" onClick={()=>setPreview(null)}>取消预览</Button></div>}
-   {importResult&&<p role="status" className="text-sm leading-6">{importResult}</p>}
-  </section>}
   {formOpen&&admin?<section className="space-y-5">
    <Button variant="ghost" className="min-h-11 px-0" onClick={()=>setFormOpen(false)}><ArrowLeft className="h-4 w-4"/>返回资料列表</Button>
    {editing?.revisions.at(-1)?.sourceRefs?.map(ref=><a key={ref.chunkId} className="block min-h-11 py-2 text-sm text-primary underline" target="_blank" rel="noreferrer" href={'/knowledge?view=documents&document='+encodeURIComponent(ref.documentId)+'&revision='+encodeURIComponent(ref.parsingRevisionId)}>打开原始资料核对（新标签页）</a>)}
