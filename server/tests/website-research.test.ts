@@ -142,6 +142,7 @@ test('website quotes support attributed customer descriptions, never our policie
  const bundle:import('../src/services/agent/knowledge-types').KnowledgeBundle={projectId:'fictional',status:'ready',sources:[],issues:[],topics:[]};
  const supported=[{id:'s0',status:'supported' as const,quotes:[{sourceId:site.sourceId,quote:site.text,start:0,end:Array.from(site.text).length}],reason:'Synthetic exact customer website description'}];
  assert.equal(checkSemanticResults('Your website shows silver necklaces and bracelets.',bundle,supported,customer)[0].status,'supported');
+ assert.equal(checkSemanticResults("Moonstone's website lists silver necklaces and bracelets.",bundle,supported,customer)[0].status,'supported');
  for(const text of ['We supply silver necklaces and bracelets.','Your website shows jewellery and our boxes are certified.','You need new packaging.','Your website shows our boxes at USD 73.'])assert.notEqual(checkSemanticResults(text,bundle,supported,customer)[0].status,'supported');
  assert.notEqual(checkSemanticResults('Your website shows jewellery.',bundle,[{...supported[0],quotes:[{...supported[0].quotes[0],quote:'invented'}]}],customer)[0].status,'supported');
  assert.notEqual(checkSemanticResults('Your website shows jewellery.',bundle,supported,{...customer,websites:[]})[0].status,'supported');
@@ -158,4 +159,17 @@ test('website evidence snapshots survive draft review and fail freshness after a
  assert.equal((await knowledgeFreshness(review,other)).failed,true);assert.equal((await knowledgeFreshness(review,foreign)).failed,true);
  await Research.updateOne({_id:j.id},{$set:{'pages.0.hash':'changed-independent-fixture'}});
  assert.ok((await knowledgeFreshness(review,actor)).changed.some(c=>c.sourceId===snapshots[0].sourceId));
+});
+
+test('only exact trusted trailing signature lines are normalized; unknown claims still require evidence',async()=>{
+ const {verifyGroundedEmail}=await import('../src/services/agent/fact-verifier');
+ const site={sourceId:'website:fictional:0',url:'https://moonstone.example.com',text:'Our collection contains silver necklaces.',sha256:'fixture',collectedAt:new Date().toISOString()};
+ const bundle:import('../src/services/agent/knowledge-types').KnowledgeBundle={projectId:'fictional',status:'ready',sources:[],issues:[],topics:[]};
+ const seller={companyName:'FICTIONAL Seller Co',senderName:'Fictional Seller',senderEmail:'seller@example.test'};
+ const options={taskType:'first_outreach',customerId:'fictional',customerProfile:{name:'Clara',company:'Moonstone',country:'',industry:'',interestedProducts:''},customerWebsites:[site],seller};
+ let seen='';const verifier:import('../src/services/agent/fact-verifier').SemanticVerifier={model:'independent-exact-test',async check(input){seen=input.segments.map(s=>s.text).join('\n');return input.segments.map(s=>({id:s.id,status:s.text.startsWith('Your website')?'supported':'unverifiable',reason:'Independent boundary test',quotes:s.text.startsWith('Your website')?[{sourceId:site.sourceId,quote:site.text,start:0,end:site.text.length}]:[]}));}};
+ const good=await verifyGroundedEmail('Your website lists silver necklaces.\n\nBest regards,\nFictional Seller\nFICTIONAL Seller Co\nseller@example.test',bundle,options,verifier);
+ assert.equal(seen,'Your website lists silver necklaces.');assert.equal(good.review.factAudit!.mode,'semantic');assert.equal(good.bodyText.match(/Fictional Seller/g)!.length,1);
+ const bad=await verifyGroundedEmail('Unapproved manufacturing statement.\nUnknown Seller',bundle,options,verifier);
+ assert.ok(seen.includes('Unapproved manufacturing statement.'));assert.ok(seen.includes('Unknown Seller'));assert.equal(bad.review.completeness,'partial');assert.ok(!bad.bodyText.includes('Unapproved manufacturing statement.'));
 });
