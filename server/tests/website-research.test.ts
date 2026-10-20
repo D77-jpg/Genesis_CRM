@@ -239,3 +239,12 @@ test('analysis-only requests cannot create mail tasks and website changes during
  const result=await ensureCustomerResearch(c.id,actor,{fetcher:async(url,kind)=>{const value=await fixture(url,kind);if(kind!=='robots')await models.Customer.updateOne({_id:c.id},{$set:{website:'https://changed-mid-read.example.com'}});return value;}});
  assert.equal(result.state,'unavailable');assert.equal((await service.websiteCustomerEvidence(c.id,actor)).length,0);
 });
+
+test('a malformed model result gets one bounded reformat attempt; persistent errors never save a draft',async()=>{
+ const {createAgentSession}=await import('../src/services/agent/agent.service');const {createAgentTask,processAgentTask,getAgentTask}=await import('../src/services/agent/task.service');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Format Retry',email:'format-retry@fixture.example.com'});const session=await createAgentSession({context:{type:'customer',resourceId:c.id}},actor);
+ let calls=0;class OnceBad extends MockAgentProvider{override async analyzeCustomer(request:import('../src/services/agent/provider').CustomerAnalysisRequest){const result=await super.analyzeCustomer(request);calls++;if(calls===1)result.facts[0].sourceIds=[];return result;}}
+ const first=await createAgentTask({sessionId:session.id,goal:'请准备第一封开发信，不要发送',requestKey:randomUUID()},actor);await processAgentTask(first.id,new OnceBad());const done=await getAgentTask(first.id,actor);assert.equal(done.status,'awaiting_review',JSON.stringify(done.error));assert.equal(calls,2);assert.ok(done.budgetCharged>0);assert.equal(await models.FollowUp.countDocuments({customerId:c.id}),0);
+ calls=0;class AlwaysBad extends MockAgentProvider{override async analyzeCustomer(request:import('../src/services/agent/provider').CustomerAnalysisRequest){calls++;const result=await super.analyzeCustomer(request);result.facts[0].sourceIds=[];return result;}}
+ const second=await createAgentTask({sessionId:session.id,goal:'请准备第一封开发信，不要发送',requestKey:randomUUID()},actor);await processAgentTask(second.id,new AlwaysBad());const failed=await getAgentTask(second.id,actor);assert.equal(failed.status,'failed');assert.equal(calls,2);assert.equal(await models.DevelopmentLetter.countDocuments({customerId:c.id}),1);
+});

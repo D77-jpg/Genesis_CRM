@@ -182,6 +182,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
   const run = await AgentRun.create({ ...identifiers, provider: activeProvider.name, model: activeProvider.model, kind: 'customer_analysis', status: 'running' });
   const startedAt = Date.now();
   let reservation: AgentQuotaReservation | undefined;
+  let finalUsage:{inputTokens:number;outputTokens:number;totalTokens:number}|undefined;
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const taskKind=options?.taskKind??(options?.firstOutreach?'first_outreach':options?.userRequest?salesMailKind(options.userRequest):'followup_review');
@@ -201,12 +202,27 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     if (serializedInput.length > env.AI_MAX_INPUT_CHARS) throw new ApiError(413, '客户资料超过 Agent 单次分析上限，请减少历史数据后重试', 'PAYLOAD_TOO_LARGE');
     let generatedNow=false;
     const generated = await workflowStage(options?.workflow,'generate_email',{input:context.input,model:activeProvider.model},async()=>{
-      await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
-      generatedNow=true;reservation = await reserveAgentQuota(actor, serializedInput.length);
-      await chargeTaskBudget(options?.taskId,serializedInput.length,env.AI_MAX_OUTPUT_TOKENS);
-      const result=await activeProvider.analyzeCustomer({ input: context.input, safetyIdentifier:agentSafetyIdentifier(actor) });
-      outputSchema.parse({facts:result.facts,gaps:result.gaps,recommendations:result.recommendations,emailDraft:result.emailDraft,followUpPlan:result.followUpPlan});
-      return result;
+      const totals={inputTokens:0,outputTokens:0,totalTokens:0};
+      for(let attempt=0;attempt<2;attempt++){
+        await options?.workflow?.check();await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
+        const requestInput=attempt?{...context.input,userRequest:(context.input.userRequest??'')+'\n请完整重整一次输出结构：事实、缺口和建议必须引用已有 sourceId，不能使用空引用；文本非空，跟进时间用未来 ISO8601。保持原业务事实、权限和人工发送要求，不能补造内容。'}:context.input;
+        const chars=JSON.stringify(requestInput).length;if(chars>env.AI_MAX_INPUT_CHARS)throw new ApiError(413,'客户资料超过单次分析范围','PAYLOAD_TOO_LARGE');
+        generatedNow=true;reservation=await reserveAgentQuota(actor,chars);
+        let result:Awaited<ReturnType<AgentProvider['analyzeCustomer']>>|undefined;
+        try{
+          await chargeTaskBudget(options?.taskId,chars,env.AI_MAX_OUTPUT_TOKENS);
+          result=await activeProvider.analyzeCustomer({input:requestInput,safetyIdentifier:agentSafetyIdentifier(actor)});
+          outputSchema.parse({facts:result.facts,gaps:result.gaps,recommendations:result.recommendations,emailDraft:result.emailDraft,followUpPlan:result.followUpPlan});
+          finalUsage=result.usage;for(const key of ['inputTokens','outputTokens','totalTokens'] as const)totals[key]+=result.usage[key];
+          return {...result,usage:totals};
+        }catch(error){
+          await settleAgentQuota(reservation,result?.usage);reservation=undefined;
+          if(result?.usage)for(const key of ['inputTokens','outputTokens','totalTokens'] as const)totals[key]+=result.usage[key];
+          const shape=(error as {name?:string})?.name==='ZodError'||error instanceof AgentProviderError&&error.code==='OPENAI_INVALID_STRUCTURED_OUTPUT';
+          if(!shape||attempt!==0)throw error;
+        }
+      }
+      throw new AgentProviderError('OPENAI_INVALID_STRUCTURED_OUTPUT');
     },{cache:true,tool:'model'});
     const parsed = outputSchema.parse({
       facts: generated.facts, gaps: generated.gaps, recommendations: generated.recommendations,
@@ -263,11 +279,11 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       arguments: { customerId: input.customerId, sourceCount: context.sources.length }, requiresApproval: false,
       approvalStatus: 'not_required', executionStatus: 'succeeded', resultSummary: `已生成客户分析与英文邮件草稿（${context.sources.length} 个来源）`, executedAt: new Date(),
     });
-    await settleAgentQuota(reservation, generated.usage);
+    await settleAgentQuota(reservation, finalUsage??generated.usage);
     return dto(analysis);
   } catch (error) {
     await AgentRun.updateOne({ _id: run._id, ...identifiers }, { $set: { status: 'failed', errorCode: safeErrorCode(error), durationMs: Date.now() - startedAt } });
-    await settleAgentQuota(reservation);
+    await settleAgentQuota(reservation,finalUsage);
     if (error instanceof ApiError) throw error;
     if (error instanceof AgentProviderError || (error as { name?: string })?.name === 'ZodError') {
       const failure = agentFailure(error);
