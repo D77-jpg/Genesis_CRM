@@ -48,6 +48,7 @@ export const ROUTES = {
   dashboard: '/',
   customers: '/customers',
   customerDetail: '/customers/:id',
+  prospecting: '/prospecting',
   letters: '/letters',
   templates: '/templates',
   users: '/users',

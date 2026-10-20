@@ -211,18 +211,20 @@ export async function getCustomer(id: string, actor?: AuthUser): Promise<Custome
 export async function createCustomer(
   input: CreateCustomerInput,
   actor?: AuthUser,
-  options?: { agentCreationKey?: string },
+  options?: { agentCreationKey?: string; source?: CustomerSource; ownerId?: string },
 ): Promise<CustomerDto> {
   const payload: Record<string, unknown> = {
     ...input,
     projectId: requireProjectId(actor),
-    source: 'manual' as CustomerSource,
+    source: (options?.source ?? 'manual') as CustomerSource,
     createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
     ...(options?.agentCreationKey ? { agentCreationKey: options.agentCreationKey } : {}),
   };
   // 严格分配制：业务员新建的客户强制归自己，忽略传入 ownerId；管理员可自由指定
   if (actor && !isAdmin(actor)) {
     payload.ownerId = new Types.ObjectId(actor.id);
+  } else if (options?.ownerId) {
+    payload.ownerId = new Types.ObjectId(options.ownerId);
   }
   const customer = await Customer.create(payload as AnyKeys<ICustomer>);
   logger.info(`新建客户: ${customer.name} (${customer.id})`);

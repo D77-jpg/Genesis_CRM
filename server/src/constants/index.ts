@@ -31,8 +31,8 @@ export type LetterStatus = (typeof LETTER_STATUS)[number];
 export const MAIL_CHANNEL = ['mock', 'smtp'] as const;
 export type MailChannel = (typeof MAIL_CHANNEL)[number];
 
-/** 客户来源（数据溯源：手工 / Excel / 初始化 / 集成 API 同步） */
-export const CUSTOMER_SOURCE = ['manual', 'excel', 'seed', 'integration'] as const;
+/** 客户来源（数据溯源：手工 / Excel / 初始化 / 集成 API 同步 / 自动开发候选） */
+export const CUSTOMER_SOURCE = ['manual', 'excel', 'seed', 'integration', 'prospecting'] as const;
 export type CustomerSource = (typeof CUSTOMER_SOURCE)[number];
 
 /* ---------------------------- Integration API v1 ---------------------------- */

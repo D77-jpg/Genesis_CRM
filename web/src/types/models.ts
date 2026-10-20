@@ -285,7 +285,7 @@ export type CustomerStatus =
 /** 跟进时间筛选：全部 / 今天 / 已逾期 / 未来 */
 export type FollowUpFilter = 'all' | 'today' | 'overdue' | 'upcoming';
 /** 客户数据来源 */
-export type CustomerSource = 'manual' | 'excel' | 'seed' | 'integration';
+export type CustomerSource = 'manual' | 'excel' | 'seed' | 'integration' | 'prospecting';
 /**
  * 客户跟进优先级：high 高 / medium 中 / low 低。
  * 与 Grade（客户价值等级 A/B/C）是不同概念，可任意组合（如 A 级 + Low）。
@@ -1034,9 +1034,88 @@ export interface Project {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  coverImage?: string;
   mailChannel?: MailChannel;
   status: ProjectStatus;
   isDefault: boolean;
+}
+
+export type ProspectStatus = 'ready' | 'low' | 'needs_contact' | 'rejected' | 'converted';
+
+export interface Prospect {
+  id: string;
+  day: string;
+  domain: string;
+  website: string;
+  name?: string;
+  company?: string;
+  country?: string;
+  emails: string[];
+  emailSource?: 'site' | 'hunter';
+  emailConfidence?: number;
+  contactName?: string;
+  contactTitle?: string;
+  instagram?: string;
+  linkedin?: string;
+  snippet?: string;
+  excerpt?: string;
+  sourceUrl: string;
+  score: number;
+  aiScore?: number;
+  reasons: string[];
+  status: ProspectStatus;
+  customerId?: string;
+  draftTaskId?: string;
+  outcome?: { sent: number; replied: number; bounced: number };
+  createdAt: string;
+}
+
+export interface ProspectingRun {
+  id: string;
+  day: string;
+  status: 'running' | 'completed' | 'partial' | 'failed';
+  queries: string[];
+  imported: number;
+  deduped: number;
+  enriched: number;
+  hunterFound: number;
+  scored: number;
+  selected: number;
+  failed: { domain: string; reason: string }[];
+  error?: string;
+  startedAt?: string;
+  endedAt?: string;
+}
+
+export interface ProspectingToday {
+  day: string;
+  run: ProspectingRun | null;
+  prospects: Prospect[];
+  counts: { total: number; ready: number; needsContact: number; low: number; converted: number; carriedFromEarlier: number };
+}
+
+export interface ProspectingDaily {
+  day: string;
+  candidates: number;
+  ready: number;
+  needsContact: number;
+  low: number;
+  rejected: number;
+  converted: number;
+}
+
+export interface ProspectingReport {
+  days: number;
+  sinceDay: string;
+  today: string;
+  runs: ProspectingRun[];
+  daily: ProspectingDaily[];
+  totals: {
+    candidates: number; ready: number; needsContact: number; low: number; rejected: number; converted: number;
+    sent: number; bounced: number; replies: number;
+  };
+  bounce: { sent: number; bounced: number; rate: number; risky: boolean };
+  warning?: { code: string; message: string };
 }
 
 /* ---------------------------- 个人随手记 ---------------------------- */

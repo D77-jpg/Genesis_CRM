@@ -47,6 +47,7 @@ import knowledgeIndexRoutes from './knowledge-index.routes';
 import knowledgeDocumentRoutes from './knowledge-documents.routes';
 import mailAccountRoutes from './mail-account.routes';
 import integrationRoutes from './integration.routes';
+import prospectingRoutes from './prospecting.routes';
 
 const router = Router();
 
@@ -98,6 +99,7 @@ router.use('/scratchpad', requireAuth, requireProject, scratchpadRoutes);
 router.use('/agent', requireAuth, requireProject, agentRoutes);
 router.use('/knowledge-index', requireAuth, requireProject, knowledgeIndexRoutes);
 router.use('/knowledge-documents', requireAuth, requireProject, knowledgeDocumentRoutes);
+router.use('/prospecting', requireAuth, requireProject, prospectingRoutes);
 router.use('/mail-accounts', requireAuth, requireProject, mailAccountRoutes);
 router.use('/users', userRoutes);
 router.get('/stats/overview', requireAuth, requireProject, overviewHandler);

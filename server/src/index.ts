@@ -2,6 +2,7 @@ import {stopKnowledgeDocumentWorker} from './services/knowledge/document.service
 import {stopKnowledgeIndexWorker} from './services/knowledge/index.service';
 import {stopAgentTaskWorker} from './services/agent/task.service';
 import {semanticPool} from './services/knowledge/embedding';
+import {startProspectingScheduler, stopProspectingScheduler} from './services/prospecting/scheduler';
 /**
  * 服务启动入口
  * ------------------------------------------------------------------
@@ -50,6 +51,7 @@ async function bootstrap(): Promise<void> {
     void syncInbox();
     mailTimers.push(setInterval(() => void runMailQueue(), env.MAIL_WORKER_INTERVAL_MS));
     mailTimers.push(setInterval(() => void syncInbox(), env.IMAP_SYNC_INTERVAL_MS));
+    startProspectingScheduler();
 
     server.listen(env.PORT, env.HOST, () => {
       logger.info('==============================================');
@@ -91,6 +93,7 @@ function registerShutdown(server: http.Server): void {
     if (shuttingDown) return;
     shuttingDown = true;
     mailTimers.forEach(clearInterval);
+    stopProspectingScheduler();
     stopAgentTaskWorker();stopKnowledgeDocumentWorker();stopKnowledgeIndexWorker();semanticPool.close();
     logger.info(`收到 ${signal}，开始优雅停机...`);
 
