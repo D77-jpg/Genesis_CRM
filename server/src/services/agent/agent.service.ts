@@ -1,3 +1,4 @@
+import {customerBrief,isCustomerBriefRequest} from './customer-brief';
 import {knowledgeForModel} from './knowledge-types';
 import {verifyGroundedEmail,providerFactVerifier,verifyLanguageTransform} from './fact-verifier';
 import {buildKnowledgeBundle,needsKnowledge,isBusinessMailCommand,languageOnly} from './knowledge-grounding';
@@ -350,6 +351,16 @@ export async function sendAgentMessage(
         status: 'completed', replyToMessageId: userMessage._id, taskId: new Types.ObjectId(task.id)});
       await AgentRun.updateOne({_id:run._id,...identifiers},{$set:{status:'completed',workflowId:new Types.ObjectId(task.id),durationMs:Date.now()-startedAt}});
       return { userMessage: messageDto(userMessage), assistantMessage: messageDto(assistantMessage), degraded: false, idempotent: false };
+    }
+    if(session.context.type==='customer'&&session.context.resourceId&&isCustomerBriefRequest(content)){
+      const action=await AgentAction.create({...identifiers,sessionId:session._id,runId:run._id,toolName:'research_customer',riskLevel:'read',arguments:{customerId:session.context.resourceId},requiresApproval:false,approvalStatus:'not_required',executionStatus:'pending'});
+      try{
+        const text=await customerBrief(session.context.resourceId,actor);
+        const assistantMessage=await AgentMessage.create({...identifiers,sessionId:session._id,role:'assistant',content:text,status:'completed',replyToMessageId:userMessage._id});
+        await AgentAction.updateOne({_id:action._id,...identifiers},{$set:{executionStatus:'succeeded',resultSummary:'已整理当前客户来源、联系阶段和待确认事项；未起草或发送',executedAt:new Date()}});
+        await AgentRun.updateOne({_id:run._id,...identifiers},{$set:{status:'completed',toolCallCount:1,durationMs:Date.now()-startedAt}});
+        return {userMessage:messageDto(userMessage),assistantMessage:messageDto(assistantMessage),degraded:false,idempotent:false};
+      }catch(error){await AgentAction.updateOne({_id:action._id,...identifiers},{$set:{executionStatus:'failed',resultSummary:'客户资料分析未完成',executedAt:new Date()}});throw error;}
     }
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const history = await AgentMessage.find({ sessionId: session._id, ...identifiers }).sort({ createdAt: -1, _id: -1 }).limit(60).lean();
