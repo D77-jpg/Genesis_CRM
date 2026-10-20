@@ -145,11 +145,13 @@ test('15 missing local index fails explicitly; rebuild restores from Mongo witho
  const result=await query('paper bag');assert.equal(result.status,'retrieval_failed','empty new SQLite must not look like a valid no-match');
  await build();assert.equal((await query('paper bag')).status,'ready');
 });
-test('16 long publication indexes lossless retrieval windows and restores full parent conditions',async()=>{
+test('16 long publication indexes lossless retrieval windows and keeps the final condition in evidence',async()=>{
  const content=('conditional specification ').repeat(300)+'Final condition: MOQ 731 pcs only after artwork approval; freight excluded.';
  const id=await appendKnowledge(undefined,policy('Long fixture',content),actor);await build();
  const result=await retrieveKnowledge(actor,'conditional specification',[id]);const source=result.sources.find(s=>s.knowledgeId===id);
- assert.equal(source?.content,content);assert.ok(source.index!.chunks.length>1);
+ // Evidence is the accepted windows, not the whole publication; the conditional tail must survive.
+ assert.ok(source);assert.match(source.content,/Final condition: MOQ 731 pcs only after artwork approval; freight excluded\.$/);
+ assert.ok(source.index!.chunks.length>1);
  assert.ok(source.index!.chunks.every(c=>!!c.location.retrievalWindow));
  await archiveKnowledge(id,1,actor);await build();
 });
