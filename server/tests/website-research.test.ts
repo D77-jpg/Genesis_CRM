@@ -157,7 +157,10 @@ test('website evidence snapshots survive draft review and fail freshness after a
  const review=auditGroundedEmail('',{projectId:actor.projectId!,status:'no_match',sources:[],topics:[],issues:[]},{taskType:'first_outreach',customerId:linked.customerId,customerWebsites:snapshots}).review;
  assert.deepEqual(review.context.customerWebsites,snapshots);assert.deepEqual((await knowledgeFreshness(review,actor)).changed,[]);
  assert.equal((await knowledgeFreshness(review,other)).failed,true);assert.equal((await knowledgeFreshness(review,foreign)).failed,true);
+ const {taskContextStamp}=await import('../src/services/agent/task-context');const stamp=await taskContextStamp(linked.customerId,undefined,actor);
+ await Research.updateOne({_id:j.id},{$set:{draftTaskId:new Types.ObjectId()}});assert.equal(await taskContextStamp(linked.customerId,undefined,actor),stamp);
  await Research.updateOne({_id:j.id},{$set:{'pages.0.hash':'changed-independent-fixture'}});
+ assert.notEqual(await taskContextStamp(linked.customerId,undefined,actor),stamp);
  assert.ok((await knowledgeFreshness(review,actor)).changed.some(c=>c.sourceId===snapshots[0].sourceId));
 });
 

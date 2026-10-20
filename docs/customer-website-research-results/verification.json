@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-20",
+  "baseMain": "04c356a",
+  "branch": "codex/customer-website-research",
+  "live": {
+    "providerOrigin": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "codeCommit": "ead31b2f8288d04d7004eb8fe3962b00490bd5e0",
+    "dirty": false,
+    "scope": "Only the explicitly authorized fictional Moonstone Studio website, contact and test products. No real data or plugin policies.",
+    "websiteTransport": "Injected four-page synthetic fixture; separate real native HTTPS example.com smoke succeeded. Not a live customer site.",
+    "retrieval": "Real local multilingual MiniLM 384d index and local reranker; generation/checking real DeepSeek, not mock.",
+    "pages": 4,
+    "status": "awaiting_review",
+    "workflowCalls": 8,
+    "workflowActiveMs": 11764,
+    "letterStatus": "draft",
+    "completeness": "complete",
+    "factAuditMode": "semantic",
+    "semanticCheckAttempts": 2,
+    "draftRewrites": 1,
+    "smtpDeliveries": 0,
+    "followups": 0,
+    "firstAttemptPass": false,
+    "firstAndSecondRunFailuresRetained": true,
+    "independentQualityBenchmark": false
+  },
+  "tests": {
+    "websiteSuite": 22,
+    "relatedServerRegression": 185,
+    "webRegression": 43,
+    "strictNewTestTypes": true,
+    "serverTypecheck": true,
+    "serverBuild": true,
+    "webBuild": true,
+    "remoteCI": "not yet confirmed; human opens PR"
+  },
+  "ui": {
+    "desktop": [
+      1270,
+      720
+    ],
+    "narrow": [
+      759,
+      900
+    ],
+    "mobile": [
+      375,
+      812
+    ],
+    "mobileDialogClientWidth": 341,
+    "mobileDialogScrollWidth": 341,
+    "mobileTable": "bounded horizontal scroll"
+  },
+  "failures": [
+    {
+      "commit": "e3a1b25",
+      "result": "untrusted customer website text absent from semantic evidence, generic safe fallback"
+    },
+    {
+      "commit": "d7f5027",
+      "result": "overly narrow website attribution, duplicated signature and rewrite of internal unapproved-policy text caused safe fallback"
+    }
+  ]
+}
