@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
+import { apiDelete, apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
 import { STORAGE_KEYS } from '@/constants';
 import { readStorage, removeStorage, writeStorage } from '@/lib/utils';
 import type { CreateProjectInput, Project, UpdateProjectInput } from '@/types';
@@ -14,6 +14,7 @@ interface ProjectState {
   switchProject: (id: string) => void;
   createProject: (input: CreateProjectInput) => Promise<Project>;
   updateProject: (id: string, input: UpdateProjectInput) => Promise<Project>;
+  deleteProject: (id: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -53,6 +54,15 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     set((state) => ({ items: state.items.map((item) => item.id === id ? { ...item, ...project } : item),
       activeProject: state.activeProject?.id === id ? { ...state.activeProject, ...project } : state.activeProject }));
     return project;
+  },
+  async deleteProject(id) {
+    await apiDelete<{ name: string }>(`/projects/${id}`);
+    const wasActive = get().activeProject?.id === id;
+    set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
+    if (wasActive) {
+      removeStorage(STORAGE_KEYS.activeProject);
+      await get().initialize(true);
+    }
   },
   reset() { set({ items: [], activeProject: null, loading: false, initialized: false, error: null }); },
 }));

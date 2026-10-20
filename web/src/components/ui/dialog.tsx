@@ -101,9 +101,10 @@ const DialogDescription = React.forwardRef<
 DialogDescription.displayName = 'DialogDescription';
 
 /** 可滚动的正文区：长表单 / 导入预览用它避免撑破视口 */
-function DialogBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): React.JSX.Element {
-  return <div className={cn('-mx-1 min-h-0 flex-1 overflow-y-auto px-1 py-1', className)} {...props} />;
-}
+const DialogBody = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn('-mx-1 min-h-0 flex-1 overflow-y-auto px-1 py-1', className)} {...props} />
+));
+DialogBody.displayName = 'DialogBody';
 
 export {
   Dialog,

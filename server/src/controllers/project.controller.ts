@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/pagination';
-import { createProject, listProjects, updateProject } from '../services/project.service';
+import { createProject, deleteProject, listProjects, updateProject } from '../services/project.service';
 import type { CreateProjectInput, UpdateProjectInput } from '../validators/project.validator';
 
 export const listProjectsHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -14,4 +14,8 @@ export const createProjectHandler = asyncHandler(async (req: Request, res: Respo
 
 export const updateProjectHandler = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, await updateProject(req.params.id, req.body as UpdateProjectInput));
+});
+
+export const deleteProjectHandler = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await deleteProject(req.params.id, req.user!));
 });

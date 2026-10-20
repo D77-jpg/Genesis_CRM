@@ -1,5 +1,19 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import env from '../config/env';
+// Side-effect imports: every project-scoped model must be registered before the
+// cascade delete enumerates mongoose.models.
+import '../models/AgentAutomation';
+import '../models/AgentBatch';
+import '../models/AgentKnowledge';
+import '../models/AgentTask';
+import '../models/CustomerAgreement';
+import '../models/KnowledgeDocument';
+import '../models/KnowledgeIndex';
+import '../models/Prospect';
+import '../models/ProspectingConfig';
+import '../models/ProspectingRun';
+import '../models/TemplateSuggestion';
+import '../models/WebsiteResearch';
 import {
   Customer,
   CustomerAttachment,
@@ -29,6 +43,7 @@ export interface ProjectDto {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  coverImage?: string;
   status: 'active' | 'archived';
   isDefault: boolean;
   mailChannel?: 'mock' | 'smtp';
@@ -40,6 +55,7 @@ const dto = (raw: Record<string, unknown>): ProjectDto => ({
   companyName: String(raw.companyName), website: raw.website ? String(raw.website) : undefined,
   moq: raw.moq ? String(raw.moq) : undefined, senderName: raw.senderName ? String(raw.senderName) : undefined,
   mailFrom: raw.mailFrom ? String(raw.mailFrom) : undefined, mailProfileKey: String(raw.mailProfileKey),
+  coverImage: raw.coverImage ? String(raw.coverImage) : undefined,
   status: raw.status as 'active' | 'archived', isDefault: Boolean(raw.isDefault),
 });
 
@@ -82,8 +98,31 @@ export async function updateProject(id: string, input: UpdateProjectInput): Prom
   };
 }
 
-type ExistingIndex = {
-  name?: string;
+/**
+ * Permanently removes one workspace and every document that carries its
+ * projectId. The default project (historical data owner) is never deletable.
+ * Registered in app.ts; keep destructive behaviour behind an admin route.
+ */
+export async function deleteProject(id: string, actor: AuthUser): Promise<{ name: string; deleted: Record<string, number> }> {
+  if (actor.role !== 'admin') throw ApiError.forbidden('只有管理员可以删除项目');
+  if (!Types.ObjectId.isValid(id)) throw ApiError.notFound('项目不存在');
+  const project = await Project.findById(id).lean();
+  if (!project) throw ApiError.notFound('项目不存在');
+  if (project.isDefault) throw ApiError.badRequest('默认项目是历史数据归属，不能删除');
+  const fallback = await Project.findOne({ isDefault: true, status: 'active' }).select('_id').lean();
+  const deleted: Record<string, number> = {};
+  for (const model of Object.values(mongoose.models)) {
+    if (!model.schema.path('projectId')) continue;
+    const result = await model.deleteMany({ projectId: project._id });
+    if (result.deletedCount) deleted[model.modelName] = result.deletedCount;
+  }
+  await User.updateMany({ projectIds: project._id }, { $pull: { projectIds: project._id } });
+  if (fallback) await User.updateMany({ defaultProjectId: project._id }, { $set: { defaultProjectId: fallback._id } });
+  await Project.deleteOne({ _id: project._id });
+  return { name: project.name, deleted };
+}
+
+type ExistingIndex = {  name?: string;
   sparse?: boolean;
   partialFilterExpression?: Record<string, unknown>;
 };

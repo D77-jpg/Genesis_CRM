@@ -13,6 +13,7 @@ export interface IProject {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  coverImage?: string;
   status: ProjectStatus;
   isDefault: boolean;
   createdBy?: Types.ObjectId;
@@ -43,6 +44,8 @@ const ProjectSchema = new Schema<IProject>(
     mailFrom: { type: String, trim: true, maxlength: 300 },
     // 凭据不入库；通过服务端 PROJECT_MAIL_CONFIGS_JSON 用此键查找。
     mailProfileKey: { type: String, required: true, trim: true, lowercase: true, maxlength: 80 },
+    // Compressed data URL (browser downscales to <=1280px) or an absolute https URL.
+    coverImage: { type: String, maxlength: 600000 },
     status: { type: String, enum: ['active', 'archived'], default: 'active', index: true },
     isDefault: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
