@@ -187,17 +187,18 @@ export function EditableInfoRow({
   // 选中即保存；点击页面其他区域由 Radix 自动收起，不会残留输入框外观。
   if (kind === 'select') {
     return (
-      <div className={cn('group/row', className)}>
+      <div className={cn('group/row min-w-0 [overflow-wrap:anywhere]', className)}>
         {labelNode}
         <dd className="mt-1">
           <Select value={selectCurrent || undefined} onValueChange={(next) => void commitSelect(next)}>
             <SelectTrigger
               aria-label={label}
+              title={options?.find(option => option.value === selectCurrent)?.label}
               disabled={saving}
               className={cn(
-                '-mx-1 h-auto w-auto max-w-full justify-start gap-1 rounded border-0 bg-transparent px-1 py-0.5',
+                '-mx-1 h-auto min-h-7 w-auto max-w-full justify-start gap-1 whitespace-normal rounded border-0 bg-transparent px-1 py-0.5',
                 'text-sm font-medium shadow-none hover:bg-muted/60 focus:ring-0 focus:ring-offset-0 focus-visible:ring-1 focus-visible:ring-ring/40',
-                '[&>span]:min-w-0 [&>span]:truncate [&_[data-placeholder]]:font-normal [&_[data-placeholder]]:text-muted-foreground/80',
+                '[&>span]:min-w-0 [&>span]:line-clamp-none [&>span]:whitespace-normal [&>span]:break-words [&_[data-placeholder]]:font-normal [&_[data-placeholder]]:text-muted-foreground/80',
                 selectClassName,
               )}
             >
@@ -219,7 +220,7 @@ export function EditableInfoRow({
 
   if (editing) {
     return (
-      <div className={className}>
+      <div className={cn('min-w-0', className)}>
         {labelNode}
         <dd className="mt-1">
           {kind === 'textarea' ? (
@@ -271,7 +272,7 @@ export function EditableInfoRow({
   }
 
   return (
-    <div className={cn('group/row', className)}>
+    <div className={cn('group/row min-w-0 [overflow-wrap:anywhere]', className)}>
       {labelNode}
       <dd className="mt-1">
         <div className="flex items-start gap-1">
