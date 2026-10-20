@@ -1,0 +1,29 @@
+{
+  "normalization": "UTF-8 source with LF newlines",
+  "files": [
+    {
+      "file": "web/src/components/agent/knowledge-documents.tsx",
+      "sha256LF": "3075689bc983d8ae8915e4a217523c8d1661e5274ac8e6cef1dbcb56396f802b"
+    },
+    {
+      "file": "web/src/components/agent/knowledge-sales-library.tsx",
+      "sha256LF": "28b37d384f5fcadedcb1e046d5ad4ef315c183e3885ea23955c729ec926d1aaa"
+    },
+    {
+      "file": "web/src/components/agent/project-knowledge-manager.tsx",
+      "sha256LF": "d62b18bf4b5faf57da050549d44c504db3508b4c8a540d5f732fb6869c311b70"
+    },
+    {
+      "file": "web/src/pages/knowledge.tsx",
+      "sha256LF": "5aa3fa273a44298f860f1085c6f49535921a9e70b02ceae247f2afe01fc896c9"
+    },
+    {
+      "file": "web/src/lib/knowledge-upload.ts",
+      "sha256LF": "d79ec839a6f311aa5e41317a131ae4deddf2372d7205b6287422da464c8ca4bd"
+    },
+    {
+      "file": "server/src/services/knowledge/document.service.ts",
+      "sha256LF": "21642edf59c0efcc4f860ec048022aa57586ca601e37bfd5d1fe0d23ac8499da"
+    }
+  ]
+}

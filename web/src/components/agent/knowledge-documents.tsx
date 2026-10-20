@@ -79,7 +79,7 @@ export function KnowledgeDocuments({ initialChunk,initialDocument, initialRevisi
         const data = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(new Error('文件读取失败')); reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.readAsDataURL(file); });
         if(controller.signal.aborted)break;
         const result = await apiPost<{ id: string; duplicate: boolean }>('/knowledge-documents', { fileName: file.name, data, ...knowledgeUploadMetadata(source, category) },{signal:controller.signal});
-        status(result.duplicate ? '已存在，保留原解析记录' : '上传成功，正在准备内容');
+        status(result.duplicate ? '已存在，保留原解析记录' : '上传成功，请在下方查看内容');
         setSelected(result.id); setPage(0); setRevisionId('');setRefresh(v=>v+1);
       } catch (e) { status(toErrorMessage(e)); }
     }
@@ -115,7 +115,7 @@ export function KnowledgeDocuments({ initialChunk,initialDocument, initialRevisi
     <section className="mb-6 space-y-4" aria-label="上传项目资料">
       <div className={'rounded-xl border-2 border-dashed px-5 py-7 text-center transition-colors ' + (dragging ? 'border-primary bg-primary/10' : 'border-primary/25 bg-primary/5')}
         onDragOver={e => { e.preventDefault(); if (!busy) setDragging(true); }}
-        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false); }}
+        onDragLeave={e => { if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget)) setDragging(false); }}
         onDrop={e => { e.preventDefault(); setDragging(false); chooseFiles(Array.from(e.dataTransfer.files)); }}>
         <Upload className="mx-auto mb-3 h-7 w-7 text-primary" aria-hidden />
         <h3 className="font-semibold">把资料拖到这里，或选择文件上传</h3>
