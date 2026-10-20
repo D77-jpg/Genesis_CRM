@@ -317,7 +317,7 @@ export function CustomerDetailPage(): React.JSX.Element {
   const [viewOpen, setViewOpen] = React.useState(false);
   const [deleteLetterTarget, setDeleteLetterTarget] = React.useState<DevelopmentLetter | null>(null);
   const [deleteCustomerOpen, setDeleteCustomerOpen] = React.useState(false);
-  // 客户信息默认只展示业务员常用字段，其余收进「展开全部」；状态按浏览器记住
+  // 常用联系资料和跟进安排保持可见，补充档案的展开状态按浏览器记住
   const [infoExpanded, setInfoExpanded] = React.useState(() =>
     readStorage<boolean>(STORAGE_KEYS.customerInfoExpanded, false),
   );
@@ -576,7 +576,7 @@ export function CustomerDetailPage(): React.JSX.Element {
               <User className="h-4 w-4 text-muted-foreground" aria-hidden />
               客户信息
             </CardTitle>
-            <CardDescription>关键字段可直接点击修改</CardDescription>
+            <CardDescription>点击内容即可编辑，选择状态或负责人后自动保存</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="gap-1.5">
@@ -608,184 +608,196 @@ export function CustomerDetailPage(): React.JSX.Element {
               <span>该客户的下一次跟进时间（{formatDate(customer.nextFollowUpAt)}）已逾期，请尽快联系。</span>
             </div>
           ) : null}
-          {/* 桌面端保持一行关键摘要；窄屏自然换行，补充信息默认收起。 */}
-          <dl className="grid gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-            <EditableInfoRow
-              icon={<Building2 className="h-3.5 w-3.5" />}
-              label="公司"
-              value={customer.company}
-              placeholder="例如 Monarc Jewellery"
-              maxLength={200}
-              onSave={textSaver('company')}
-            />
-            <EditableInfoRow
-              icon={<Mail className="h-3.5 w-3.5" />}
-              label="邮箱"
-              kind="email"
-              value={customer.email}
-              href={customer.email ? `mailto:${customer.email}` : undefined}
-              placeholder="name@company.com"
-              maxLength={200}
-              hint="发送开发信的收件地址"
-              validate={validateEmail}
-              onSave={saveEmail}
-            />
-            <EditableInfoRow
-              icon={<Phone className="h-3.5 w-3.5" />}
-              label="手机号"
-              value={customer.phone}
-              href={customer.phone ? `tel:${customer.phone}` : undefined}
-              placeholder="例如 +64 21 000 0000"
-              maxLength={60}
-              onSave={textSaver('phone')}
-            />
-            <EditableInfoRow
-              icon={<Activity className="h-3.5 w-3.5" />}
-              label="开发状态"
-              kind="select"
-              value={customer.status}
-              options={CUSTOMER_STATUS_OPTIONS}
-              selectClassName={CUSTOMER_STATUS_BADGE_CLASS[customer.status]}
-              onSave={saveStatus}
-            />
-            <EditableInfoRow
-              icon={<Flag className="h-3.5 w-3.5" />}
-              label="优先级"
-              kind="select"
-              value={customer.priority ?? ''}
-              options={CUSTOMER_PRIORITY_OPTIONS}
-              selectClassName={customer.priority ? CUSTOMER_PRIORITY_BADGE_CLASS[customer.priority] : undefined}
-              onSave={savePriority}
-            />
-            {isAdmin ? (
-              <EditableInfoRow
-                icon={<User className="h-3.5 w-3.5" />}
-                label="负责人"
-                kind="select"
-                value={customer.ownerId ?? ''}
-                options={ownerOptions}
-                currentSelectValue={customer.ownerId ? customer.ownerId : OWNER_NONE}
-                onSave={saveOwner}
-              />
-            ) : null}
-            {/* ---- 展开后显示：跟进安排、备注、客户分类与补充信息 ---- */}
-            {infoExpanded ? (
-              <div id="customer-info-details" className="contents">
-                <div className="col-span-full mt-1 border-t pt-3 text-xs font-medium text-muted-foreground">详细资料</div>
-                <EditableInfoRow
-                  icon={<CalendarClock className="h-3.5 w-3.5" />}
-                  label="下一次跟进"
-                  kind="date"
-                  value={toInputDate(customer.nextFollowUpAt)}
-                  displayValue={customer.nextFollowUpAt ? formatDate(customer.nextFollowUpAt) : undefined}
-                  onSave={saveFollowUpDate}
-                />
-                <EditableInfoRow
-                  icon={<Star className="h-3.5 w-3.5" />}
-                  label="客户等级"
-                  value={customer.grade}
-                  placeholder="例如 A"
-                  maxLength={20}
-                  hint="例如 A / B / C，便于分层跟进"
-                  onSave={textSaver('grade')}
-                />
-                <EditableInfoRow
-                  icon={<User className="h-3.5 w-3.5" />}
-                  label="职位"
-                  value={customer.title}
-                  placeholder="例如 Founder / Buyer"
-                  maxLength={120}
-                  onSave={textSaver('title')}
-                />
-                <EditableInfoRow
-                  icon={<Building2 className="h-3.5 w-3.5" />}
-                  label="行业"
-                  value={customer.industry}
-                  placeholder="例如 Fine Jewellery"
-                  datalistId="detail-industry-options"
-                  datalist={industries}
-                  maxLength={120}
-                  onSave={textSaver('industry')}
-                />
-                <EditableInfoRow
-                  icon={<Globe className="h-3.5 w-3.5" />}
-                  label="国家 / 地区"
-                  value={customer.country}
-                  placeholder="例如 New Zealand"
-                  maxLength={120}
-                  onSave={textSaver('country')}
-                />
-                <EditableInfoRow
-                  icon={<Globe className="h-3.5 w-3.5" />}
-                  label="官网"
-                  value={customer.website}
-                  href={
-                    customer.website
-                      ? customer.website.startsWith('http')
-                        ? customer.website
-                        : `https://${customer.website}`
-                      : undefined
-                  }
-                  placeholder="https://example.com"
-                  maxLength={300}
-                  onSave={textSaver('website')}
-                />
-                <EditableInfoRow
-                  icon={<MapPin className="h-3.5 w-3.5" />}
-                  label="地址"
-                  value={customer.address}
-                  placeholder="街道 / 城市 / 邮编"
-                  maxLength={500}
-                  className="sm:col-span-2"
-                  onSave={textSaver('address')}
-                />
-                <EditableInfoRow
-                  icon={<Tag className="h-3.5 w-3.5" />}
-                  label="来源"
-                  kind="select"
-                  value={customer.leadSource}
-                  options={[{ value: SOURCE_NONE, label: '未设置' }, ...leadSourceOptions]}
-                  currentSelectValue={customer.leadSource?.trim() ? customer.leadSource.trim() : SOURCE_NONE}
-                  onSave={saveLeadSource}
-                />
-                <InfoRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="创建时间" value={formatDateTime(customer.createdAt)} />
-                <InfoRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="更新时间" value={formatDateTime(customer.updatedAt)} />
-                <EditableInfoRow
-                  icon={<NotebookText className="h-3.5 w-3.5" />}
-                  label="备注"
-                  kind="textarea"
-                  value={customer.notes}
-                  placeholder="客户背景、跟进要点、包装需求等"
-                  maxLength={5000}
-                  className="sm:col-span-2 lg:col-span-3 xl:col-span-6"
-                  renderValue={(raw) => (
-                    <span className="block whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm font-normal leading-relaxed">
-                      {raw}
-                    </span>
-                  )}
-                  onSave={textSaver('notes')}
-                />
-                <EditableInfoRow
-                  icon={<Tags className="h-3.5 w-3.5" />}
-                  label="标签"
-                  value={customer.tags.join(', ')}
-                  placeholder="多个标签用逗号分隔，例如：珠宝, 高优先级"
-                  maxLength={600}
-                  className="sm:col-span-2 lg:col-span-3 xl:col-span-6"
-                  renderValue={(raw) => (
-                    <span className="flex flex-wrap gap-1.5">
-                      {parseTagsText(raw).map((tag) => (
-                        <Badge key={tag} variant="outline" className="font-normal">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </span>
-                  )}
-                  onSave={saveTags}
-                />
-              </div>
-            ) : null}
-          </dl>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <section aria-labelledby="customer-contact-title" className="min-w-0">
+              <h3 id="customer-contact-title" className="mb-4 text-sm font-semibold">联系资料</h3>
+              <dl className="grid min-w-0 gap-x-8 gap-y-5 sm:grid-cols-2 2xl:grid-cols-3">
+                  <EditableInfoRow
+                    icon={<Building2 className="h-3.5 w-3.5" />}
+                    label="公司"
+                    value={customer.company}
+                    placeholder="例如 Monarc Jewellery"
+                    maxLength={200}
+                    onSave={textSaver('company')}
+                  />
+                  <EditableInfoRow
+                    icon={<Mail className="h-3.5 w-3.5" />}
+                    label="邮箱"
+                    kind="email"
+                    value={customer.email}
+                    href={customer.email ? `mailto:${customer.email}` : undefined}
+                    placeholder="name@company.com"
+                    maxLength={200}
+                    hint="发送开发信的收件地址"
+                    validate={validateEmail}
+                    onSave={saveEmail}
+                  />
+                  <EditableInfoRow
+                    icon={<Phone className="h-3.5 w-3.5" />}
+                    label="手机号"
+                    value={customer.phone}
+                    href={customer.phone ? `tel:${customer.phone}` : undefined}
+                    placeholder="例如 +64 21 000 0000"
+                    maxLength={60}
+                    onSave={textSaver('phone')}
+                  />
+                  <EditableInfoRow
+                    icon={<Globe className="h-3.5 w-3.5" />}
+                    label="官网"
+                    value={customer.website}
+                    href={
+                      customer.website
+                        ? customer.website.startsWith('http')
+                          ? customer.website
+                          : `https://${customer.website}`
+                        : undefined
+                    }
+                    placeholder="https://example.com"
+                    maxLength={300}
+                    onSave={textSaver('website')}
+                  />
+                  <EditableInfoRow
+                    icon={<Globe className="h-3.5 w-3.5" />}
+                    label="国家 / 地区"
+                    value={customer.country}
+                    placeholder="例如 New Zealand"
+                    maxLength={120}
+                    onSave={textSaver('country')}
+                  />
+                  <EditableInfoRow
+                    icon={<Building2 className="h-3.5 w-3.5" />}
+                    label="行业"
+                    value={customer.industry}
+                    placeholder="例如 Fine Jewellery"
+                    datalistId="detail-industry-options"
+                    datalist={industries}
+                    maxLength={120}
+                    onSave={textSaver('industry')}
+                  />
+              </dl>
+            </section>
+            <section aria-labelledby="customer-development-title" className="min-w-0 border-t pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+              <h3 id="customer-development-title" className="mb-4 text-sm font-semibold">开发与跟进</h3>
+              <dl className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+                  <EditableInfoRow
+                    icon={<Activity className="h-3.5 w-3.5" />}
+                    label="开发状态"
+                    kind="select"
+                    value={customer.status}
+                    options={CUSTOMER_STATUS_OPTIONS}
+                    selectClassName={CUSTOMER_STATUS_BADGE_CLASS[customer.status]}
+                    onSave={saveStatus}
+                  />
+                  <EditableInfoRow
+                    icon={<Flag className="h-3.5 w-3.5" />}
+                    label="优先级"
+                    kind="select"
+                    value={customer.priority ?? ''}
+                    options={CUSTOMER_PRIORITY_OPTIONS}
+                    selectClassName={customer.priority ? CUSTOMER_PRIORITY_BADGE_CLASS[customer.priority] : undefined}
+                    onSave={savePriority}
+                  />
+                {isAdmin ? (
+                  <EditableInfoRow
+                    icon={<User className="h-3.5 w-3.5" />}
+                    label="负责人"
+                    kind="select"
+                    value={customer.ownerId ?? ''}
+                    options={ownerOptions}
+                    currentSelectValue={customer.ownerId ? customer.ownerId : OWNER_NONE}
+                    onSave={saveOwner}
+                  />
+                ) : null}
+                  <EditableInfoRow
+                    icon={<CalendarClock className="h-3.5 w-3.5" />}
+                    label="下一次跟进"
+                    kind="date"
+                    value={toInputDate(customer.nextFollowUpAt)}
+                    displayValue={customer.nextFollowUpAt ? formatDate(customer.nextFollowUpAt) : undefined}
+                    onSave={saveFollowUpDate}
+                  />
+                  <EditableInfoRow
+                    icon={<Star className="h-3.5 w-3.5" />}
+                    label="客户等级"
+                    value={customer.grade}
+                    placeholder="例如 A"
+                    maxLength={20}
+                    hint="例如 A / B / C，便于分层跟进"
+                    onSave={textSaver('grade')}
+                  />
+                  <EditableInfoRow
+                    icon={<Tag className="h-3.5 w-3.5" />}
+                    label="来源"
+                    kind="select"
+                    value={customer.leadSource}
+                    options={[{ value: SOURCE_NONE, label: '未设置' }, ...leadSourceOptions]}
+                    currentSelectValue={customer.leadSource?.trim() ? customer.leadSource.trim() : SOURCE_NONE}
+                    onSave={saveLeadSource}
+                  />
+              </dl>
+            </section>
+          </div>
+          {infoExpanded ? (
+            <section id="customer-info-details" aria-labelledby="customer-details-title" className="mt-6 border-t pt-5">
+              <h3 id="customer-details-title" className="mb-4 text-sm font-semibold">补充资料</h3>
+              <dl className="grid min-w-0 gap-x-8 gap-y-5 sm:grid-cols-2">
+                  <EditableInfoRow
+                    icon={<User className="h-3.5 w-3.5" />}
+                    label="职位"
+                    value={customer.title}
+                    placeholder="例如 Founder / Buyer"
+                    maxLength={120}
+                    onSave={textSaver('title')}
+                  />
+                  <EditableInfoRow
+                    icon={<MapPin className="h-3.5 w-3.5" />}
+                    label="地址"
+                    value={customer.address}
+                    placeholder="街道 / 城市 / 邮编"
+                    maxLength={500}
+                    className="min-w-0"
+                    onSave={textSaver('address')}
+                  />
+                  <EditableInfoRow
+                    icon={<NotebookText className="h-3.5 w-3.5" />}
+                    label="备注"
+                    kind="textarea"
+                    value={customer.notes}
+                    placeholder="客户背景、跟进要点、包装需求等"
+                    maxLength={5000}
+                    className="col-span-full"
+                    renderValue={(raw) => (
+                      <span className="block whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm font-normal leading-relaxed">
+                        {raw}
+                      </span>
+                    )}
+                    onSave={textSaver('notes')}
+                  />
+                  <EditableInfoRow
+                    icon={<Tags className="h-3.5 w-3.5" />}
+                    label="标签"
+                    value={customer.tags.join(', ')}
+                    placeholder="多个标签用逗号分隔，例如：珠宝, 高优先级"
+                    maxLength={600}
+                    className="col-span-full"
+                    renderValue={(raw) => (
+                      <span className="flex flex-wrap gap-1.5">
+                        {parseTagsText(raw).map((tag) => (
+                          <Badge key={tag} variant="outline" className="font-normal">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </span>
+                    )}
+                    onSave={saveTags}
+                  />
+              </dl>
+              <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4">
+                <InfoRow className="flex items-center gap-2 [&>dd]:mt-0 [&>dd]:text-xs [&>dd]:font-normal [&>dd]:text-muted-foreground" icon={<CalendarClock className="h-3.5 w-3.5" />} label="创建时间" value={formatDateTime(customer.createdAt)} />
+                <InfoRow className="flex items-center gap-2 [&>dd]:mt-0 [&>dd]:text-xs [&>dd]:font-normal [&>dd]:text-muted-foreground" icon={<CalendarClock className="h-3.5 w-3.5" />} label="更新时间" value={formatDateTime(customer.updatedAt)} />
+              </dl>
+            </section>
+          ) : null}
 
           {!customer.email ? (
             <p className="mt-4 rounded-md border border-status-pending/30 bg-status-pending/5 px-3 py-2 text-xs text-status-pending">

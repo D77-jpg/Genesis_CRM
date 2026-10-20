@@ -1,0 +1,122 @@
+[
+  {
+    "cardScrollWidth": 1598,
+    "cardWidth": 1598,
+    "grids": [
+      {
+        "columns": "272.406px 272.406px 272.406px",
+        "scrollWidth": 881,
+        "width": 881
+      },
+      {
+        "columns": "193.258px 193.258px 193.258px",
+        "scrollWidth": 628,
+        "width": 628
+      },
+      {
+        "columns": "763px 763px",
+        "scrollWidth": 1558,
+        "width": 1558
+      }
+    ],
+    "owner": "Lisa Anderson · International Sales",
+    "pageWidth": 3270,
+    "viewport": 3270
+  },
+  {
+    "cardScrollWidth": 1598,
+    "cardWidth": 1598,
+    "grids": [
+      {
+        "columns": "272.406px 272.406px 272.406px",
+        "scrollWidth": 881,
+        "width": 881
+      },
+      {
+        "columns": "193.258px 193.258px 193.258px",
+        "scrollWidth": 628,
+        "width": 628
+      },
+      {
+        "columns": "763px 763px",
+        "scrollWidth": 1558,
+        "width": 1558
+      }
+    ],
+    "owner": "Lisa Anderson · International Sales",
+    "pageWidth": 1910,
+    "viewport": 1910
+  },
+  {
+    "cardScrollWidth": 1148,
+    "cardWidth": 1148,
+    "grids": [
+      {
+        "columns": "295.359px 295.359px",
+        "scrollWidth": 623,
+        "width": 623
+      },
+      {
+        "columns": "206.141px 206.141px",
+        "scrollWidth": 436,
+        "width": 436
+      },
+      {
+        "columns": "538px 538px",
+        "scrollWidth": 1108,
+        "width": 1108
+      }
+    ],
+    "owner": "Lisa Anderson · International Sales",
+    "pageWidth": 1430,
+    "viewport": 1430
+  },
+  {
+    "cardScrollWidth": 732,
+    "cardWidth": 732,
+    "grids": [
+      {
+        "columns": "330px 330px",
+        "scrollWidth": 692,
+        "width": 692
+      },
+      {
+        "columns": "214.664px 214.664px 214.672px",
+        "scrollWidth": 692,
+        "width": 692
+      },
+      {
+        "columns": "330px 330px",
+        "scrollWidth": 692,
+        "width": 692
+      }
+    ],
+    "owner": "Lisa Anderson · International Sales",
+    "pageWidth": 1014,
+    "viewport": 1014
+  },
+  {
+    "cardScrollWidth": 288,
+    "cardWidth": 288,
+    "grids": [
+      {
+        "columns": "256.148px",
+        "scrollWidth": 256,
+        "width": 256
+      },
+      {
+        "columns": "116.07px 116.078px",
+        "scrollWidth": 256,
+        "width": 256
+      },
+      {
+        "columns": "256.148px",
+        "scrollWidth": 256,
+        "width": 256
+      }
+    ],
+    "owner": "Lisa Anderson · International Sales",
+    "pageWidth": 365,
+    "viewport": 365
+  }
+]
