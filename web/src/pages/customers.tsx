@@ -5,6 +5,7 @@
  * 数据与条件全部托管在 useCustomerStore，页面只负责「组装」与「交互反馈」。
  */
 import * as React from 'react';
+import {WebsiteResearchDialog} from '@/components/customers/website-research-dialog';
 import {useUiStore} from '@/store/ui.store';
 import { toast } from 'sonner';
 import { Download, FileSpreadsheet, UserPlus } from 'lucide-react';
@@ -35,6 +36,7 @@ import type { Customer, CustomerStatus, SendLetterResult } from '@/types';
 
 export function CustomersPage(): React.JSX.Element {
   usePageTitle('客户管理');
+  const [websiteOpen,setWebsiteOpen]=React.useState(false);
 
   // 严格分配制：负责人相关 UI（筛选 / 列 / 批量分配）仅管理员可见
   const isAdmin = useAuthStore(selectIsAdmin);
@@ -285,6 +287,7 @@ export function CustomersPage(): React.JSX.Element {
               <FileSpreadsheet className="h-4 w-4" aria-hidden />
               导入 Excel
             </Button>
+            <Button type="button" variant="outline" size="sm" onClick={()=>setWebsiteOpen(true)}>官网调查</Button>
             <Button
               type="button"
               variant="outline"
@@ -402,6 +405,7 @@ export function CustomersPage(): React.JSX.Element {
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <WebsiteResearchDialog open={websiteOpen} onOpenChange={setWebsiteOpen}/>
 
       <SendLetterDialog
         open={sendOpen}

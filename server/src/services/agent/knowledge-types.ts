@@ -3,6 +3,7 @@ export type KnowledgeCategory = typeof KNOWLEDGE_CATEGORIES[number];
 export const POLICY_TOPICS = ['moq','lead_time','sample','price','shipping','payment','certification','trade_terms','capacity','other'] as const;
 export type PolicyTopic = typeof POLICY_TOPICS[number];
 import type {FactScope,FactContext,ConditionalEvidence} from './conditional-facts';
+export interface CustomerWebsiteSnapshot {sourceId:string;url:string;text:string;sha256:string;collectedAt:string}
 export interface CustomerFactProfile {name:string;company:string;country:string;industry:string;interestedProducts:string}
 export interface KnowledgeTerm {
   publicationIndex?:number;scope?:FactScope;
@@ -29,7 +30,7 @@ export interface KnowledgeReview {
   status: KnowledgeBundle['status']; completeness: 'complete'|'partial';
   sources: KnowledgeSource[]; claims: {text:string;sourceIds:string[];topic?:PolicyTopic}[];
   questions: {question:string;topic?:PolicyTopic;status:'answered'|'unanswered';sourceIds:string[]}[];
-  issues: KnowledgeIssue[]; context: {customerProfile?:CustomerFactProfile;factContext?:FactContext;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string};
+  issues: KnowledgeIssue[]; context: {customerWebsites?:CustomerWebsiteSnapshot[];customerProfile?:CustomerFactProfile;factContext?:FactContext;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string};
   bodyHash: string;
 }
 export interface ClaimCheck {id:string;text:string;status:'supported'|'unsupported'|'contradicted'|'unverifiable'|'non_claim';sourceIds:string[];reason:string;quotes?:{sourceId:string;quote:string;start:number;end:number}[]}

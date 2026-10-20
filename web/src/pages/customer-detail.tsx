@@ -7,6 +7,7 @@ import { customerTextPatch } from '@/lib/customer-payload';
  * URL 带 #letters 时自动滚动到历史区（从列表页「开发信数」徽章点进来）。
  */
 import * as React from 'react';
+import {WebsiteResearchDialog} from '@/components/customers/website-research-dialog';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { apiGet, toErrorMessage } from '@/lib/api';
@@ -234,6 +235,7 @@ function EditableCustomerName({
 
 export function CustomerDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
+  const [websiteOpen,setWebsiteOpen]=React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const lettersAnchor = React.useRef<HTMLDivElement | null>(null);
@@ -516,6 +518,8 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   return (
     <div className="workspace-page">
+      <div className="flex justify-end"><Button variant="outline" className="min-h-11" onClick={()=>setWebsiteOpen(true)}>官网调查与开发建议</Button></div>
+      <WebsiteResearchDialog open={websiteOpen} onOpenChange={setWebsiteOpen} customer={customer}/>
       <PageHeader
         backTo={ROUTES.customers}
         backLabel="返回客户列表"

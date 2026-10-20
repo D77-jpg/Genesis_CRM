@@ -1,0 +1,246 @@
+{
+  "fictional": true,
+  "body": "Dear Clara,\nYour website shows that Moonstone Studio offers silver necklaces and bracelets, and that every necklace arrives in a gift box with a cotton pouch.\nWe would like to introduce our packaging range for necklaces and bracelets, which includes cardboard jewellery gift boxes and cotton pouches, with the option of printing a logo on the gift box.\nCould you please let me know whether a logo-printed gift box option would be of interest to your studio?\nBest regards,\nFictional Seller\nFICTIONAL Bags Company\nseller@example.test",
+  "review": {
+    "version": 1,
+    "projectId": "6ad772348153e0e54a4e1d29",
+    "taskType": "first_outreach",
+    "generatedAt": "2026-10-20T13:57:22.794Z",
+    "status": "ready",
+    "completeness": "complete",
+    "sources": [
+      {
+        "sourceId": "knowledge:6ad772348153e0e54a4e1d87:v1",
+        "knowledgeId": "6ad772348153e0e54a4e1d87",
+        "version": 1,
+        "title": "FICTIONAL Moonstone test sales rules",
+        "category": "sales_rules",
+        "kind": "knowledge",
+        "content": "SYNTHETIC TEST ONLY. Use approved applicable product facts only. Customer website statements are customer self descriptions. Do not invent purchasing demand, prices, MOQ, delivery, certifications or packaging defects. A person reviews and sends every email.",
+        "source": "fixture://authorized-moonstone-rules",
+        "publication": {
+          "contentHash": "de423eae967b6c2b44798ebbb95f5c74c58bd9d9915ecb8468f00f02b081599f",
+          "location": {
+            "kind": "published_text",
+            "offsetUnit": "unicode_codepoints",
+            "start": 0,
+            "end": 257
+          },
+          "sourceRefs": []
+        },
+        "applicability": "一般资料；具体产品及交易条件须核对",
+        "products": [],
+        "validFrom": "2026-10-20T13:52:52.827Z",
+        "terms": []
+      },
+      {
+        "sourceId": "knowledge:6ad772348153e0e54a4e1d70:v1",
+        "knowledgeId": "6ad772348153e0e54a4e1d70",
+        "version": 1,
+        "title": "FICTIONAL Moonstone test packaging product",
+        "category": "product",
+        "kind": "knowledge",
+        "content": "SYNTHETIC TEST ONLY. For the Moonstone Studio acceptance sample: our test packaging range includes cardboard jewellery gift boxes and cotton pouches for necklaces and bracelets. A logo can be printed on the test gift box. No MOQ, price, lead time, certification, freight or sample fee has been approved.",
+        "source": "fixture://authorized-moonstone-product",
+        "publication": {
+          "contentHash": "d0efec21a22697f3a20b76bd045c655ac1ff40c01337bef8b189f9a0ec423cd8",
+          "location": {
+            "kind": "published_text",
+            "offsetUnit": "unicode_codepoints",
+            "start": 0,
+            "end": 303
+          },
+          "sourceRefs": []
+        },
+        "applicability": "Only the fictional Moonstone Studio acceptance sample",
+        "products": [
+          "jewellery",
+          "necklaces",
+          "bracelets",
+          "gift box",
+          "cotton pouch"
+        ],
+        "validFrom": "2026-10-20T13:52:52.777Z",
+        "terms": [],
+        "index": {
+          "scores": {
+            "vector": 0.5655728280544281,
+            "vectorRank": 1,
+            "bm25": 1.8000000000000004e-05,
+            "bm25Rank": 1,
+            "rrf": 0.03278688524590164,
+            "rerank": -0.1515665054321289
+          },
+          "selection": "semantic",
+          "generation": "6ad77235e63cf28ae7ed092d",
+          "model": "d7cb92fc00f69fe19801afc459b3a782f9380138c74d008d4d4a511dc8a5a843",
+          "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+          "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+          "dimension": 384,
+          "manifest": "ec5b0ec1cfe7769eccf022647eae7c707b729931445f3dd14e1b57d64befab25",
+          "chunks": [
+            {
+              "id": "a6111cc75d0a229e9b70b12f3a3d09f7a18bc5eb49c1367ec54a2f05600c7170",
+              "contentHash": "c6f4096904f825efcef86d7856cdb64c166469d27c9b8ba0718a725040e115a3",
+              "location": {
+                "kind": "published_text",
+                "start": 0,
+                "end": 303,
+                "offsetUnit": "unicode_codepoints",
+                "retrievalWindow": {
+                  "start": 0,
+                  "end": 452,
+                  "offsetUnit": "unicode_codepoints",
+                  "includesContext": true,
+                  "standaloneFact": false
+                },
+                "parentContentHash": "d0efec21a22697f3a20b76bd045c655ac1ff40c01337bef8b189f9a0ec423cd8"
+              },
+              "sourceRefs": []
+            }
+          ]
+        }
+      }
+    ],
+    "claims": [
+      {
+        "text": "Your website shows that Moonstone Studio offers silver necklaces and bracelets, and that every necklace arrives in a gift box with a cotton pouch.",
+        "sourceIds": [
+          "website:6ad772b58153e0e54a4e2351:0",
+          "website:6ad772b58153e0e54a4e2351:1"
+        ]
+      },
+      {
+        "text": "We would like to introduce our packaging range for necklaces and bracelets, which includes cardboard jewellery gift boxes and cotton pouches, with the option of printing a logo on the gift box.",
+        "sourceIds": [
+          "knowledge:6ad772348153e0e54a4e1d70:v1"
+        ]
+      }
+    ],
+    "questions": [],
+    "issues": [],
+    "context": {
+      "customerWebsites": [
+        {
+          "sourceId": "website:6ad772b58153e0e54a4e2351:0",
+          "url": "https://website-demo.example.com/",
+          "text": "Our collection of silver necklaces and bracelets\nEvery necklace arrives in a gift box with a cotton pouch.\nOur brand sells our collection online.",
+          "sha256": "bea2fafcfde9aafffc9e76fea46e5edc5406c0ce0ce4abafb1db76247771682a",
+          "collectedAt": "2026-10-20T13:55:01.696Z"
+        },
+        {
+          "sourceId": "website:6ad772b58153e0e54a4e2351:1",
+          "url": "https://website-demo.example.com/about",
+          "text": "About Moonstone Studio\nFounder: Clara Stone leads our independent jewellery studio.",
+          "sha256": "664b56cac4e6e2a02ed07e2a8fbf390ddbbe3ead23ddfefe5016762d37df1351",
+          "collectedAt": "2026-10-20T13:55:01.707Z"
+        },
+        {
+          "sourceId": "website:6ad772b58153e0e54a4e2351:2",
+          "url": "https://website-demo.example.com/contact",
+          "text": "Contact our team at hello@website-demo.example.com.",
+          "sha256": "3fb531cc90518726a8110231cc919d100d60fa51cbc243220cc0c454b97bf750",
+          "collectedAt": "2026-10-20T13:55:01.716Z"
+        },
+        {
+          "sourceId": "website:6ad772b58153e0e54a4e2351:3",
+          "url": "https://website-demo.example.com/wholesale",
+          "text": "We welcome wholesale and distributor enquiries for our jewellery collection.",
+          "sha256": "b700349718bd3f07106d01a31b3d4946889879ffbc40a1210f991419bdb9d816",
+          "collectedAt": "2026-10-20T13:55:01.725Z"
+        }
+      ],
+      "customerProfile": {
+        "name": "Clara Stone",
+        "company": "Moonstone Studio - FICTIONAL",
+        "country": "",
+        "industry": "",
+        "interestedProducts": ""
+      },
+      "factContext": {
+        "quantityUnit": "pcs",
+        "customerId": "6ad773188153e0e54a4e276a",
+        "products": [
+          "jewellery",
+          "necklaces",
+          "bracelets",
+          "gift box",
+          "cotton pouch"
+        ],
+        "processes": []
+      },
+      "customerId": "6ad773188153e0e54a4e276a",
+      "request": "帮我给这个客户写第一封开发信。先阅读已关联的官网调查和历史往来，区分客户自述、推断和待确认信息。首段引用一个有来源的客户产品细节，再结合当前项目已发布知识中的相关优势，选择一个具体切入点，以一个低门槛问题收尾。业务事实以有效依据为限，客户采购意向保持待确认。仅保存待审核草稿；发送交由业务员操作。"
+    },
+    "bodyHash": "05a2f4d6a60f51afbeb3f27695cd6520c71e0d60c647f4224ea65298a200f8a9",
+    "factAudit": {
+      "contract": "s4.1",
+      "mode": "semantic",
+      "attempts": 2,
+      "checks": [
+        {
+          "id": "s0",
+          "text": "Dear Clara,",
+          "status": "non_claim",
+          "sourceIds": [],
+          "reason": "礼貌语或不含交易承诺的询问"
+        },
+        {
+          "id": "s1",
+          "text": "Your website shows that Moonstone Studio offers silver necklaces and bracelets, and that every necklace arrives in a gift box with a cotton pouch.",
+          "status": "supported",
+          "sourceIds": [
+            "website:6ad772b58153e0e54a4e2351:0",
+            "website:6ad772b58153e0e54a4e2351:1"
+          ],
+          "quotes": [
+            {
+              "sourceId": "website:6ad772b58153e0e54a4e2351:0",
+              "quote": "Our collection of silver necklaces and bracelets",
+              "start": 0,
+              "end": 48
+            },
+            {
+              "sourceId": "website:6ad772b58153e0e54a4e2351:0",
+              "quote": "Every necklace arrives in a gift box with a cotton pouch.",
+              "start": 49,
+              "end": 106
+            },
+            {
+              "sourceId": "website:6ad772b58153e0e54a4e2351:1",
+              "quote": "About Moonstone Studio",
+              "start": 0,
+              "end": 22
+            }
+          ],
+          "reason": "Attributed customer website description matching the cited site text."
+        },
+        {
+          "id": "s2",
+          "text": "We would like to introduce our packaging range for necklaces and bracelets, which includes cardboard jewellery gift boxes and cotton pouches, with the option of printing a logo on the gift box.",
+          "status": "supported",
+          "sourceIds": [
+            "knowledge:6ad772348153e0e54a4e1d70:v1"
+          ],
+          "quotes": [
+            {
+              "sourceId": "knowledge:6ad772348153e0e54a4e1d70:v1",
+              "quote": "our test packaging range includes cardboard jewellery gift boxes and cotton pouches for necklaces and bracelets. A logo can be printed on the test gift box.",
+              "start": 65,
+              "end": 221
+            }
+          ],
+          "reason": "Product facts match approved packaging range description."
+        },
+        {
+          "id": "s3",
+          "text": "Could you please let me know whether a logo-printed gift box option would be of interest to your studio?",
+          "status": "non_claim",
+          "sourceIds": [],
+          "reason": "礼貌语或不含交易承诺的询问"
+        }
+      ],
+      "facts": []
+    }
+  }
+}

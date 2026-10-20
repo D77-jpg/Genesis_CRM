@@ -3,6 +3,7 @@
  * ------------------------------------------------------------------
  * 只负责「中间件 + 路由」的组合，不监听端口（便于测试时直接 import app）。
  */
+import {startWebsiteResearchWorker} from './services/website/research.service';
 import {startKnowledgeIndexWorker} from './services/knowledge/index.service';
 import { startKnowledgeDocumentWorker } from './services/knowledge/document.service';
 import { startAgentTaskWorker } from './services/agent/task.service';
@@ -138,6 +139,7 @@ export function createApp(): Application {
   app.use(errorHandler);
 
   startAgentTaskWorker();
+  startWebsiteResearchWorker();
   startKnowledgeDocumentWorker();
   startKnowledgeIndexWorker();
   return app;

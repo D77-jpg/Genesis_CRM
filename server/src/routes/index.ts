@@ -31,6 +31,7 @@ import { getActiveChannel } from '../services/mailer.service';
 import { healthHandler, overviewHandler } from '../controllers/stats.controller';
 import { requireAuth, requireProject } from '../middleware/auth.middleware';
 
+import websiteResearchRoutes from './website-research.routes';
 import authRoutes from './auth.routes';
 import customerRoutes from './customer.routes';
 import letterRoutes from './letter.routes';
@@ -88,6 +89,7 @@ router.use('/tracking', trackingRoutes);
 router.use('/integrations/v1', integrationRoutes);
 router.use('/projects', projectRoutes);
 router.use('/customers', requireAuth, requireProject, customerRoutes);
+router.use('/website-research', requireAuth, requireProject, websiteResearchRoutes);
 router.use('/letters', requireAuth, requireProject, letterRoutes);
 router.use('/mail', requireAuth, requireProject, mailRoutes);
 router.use('/quotations', requireAuth, requireProject, quotationRoutes);

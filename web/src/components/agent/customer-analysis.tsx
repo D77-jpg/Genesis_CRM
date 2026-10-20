@@ -174,7 +174,7 @@ export function CustomerAnalysisView({ analysisId, onRecordsChanged }: { analysi
       {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>操作未完成</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       <div className="mb-4 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
         <span>已读取 {analysis.sources.length} 个来源：</span>
-        {(['profile', 'timeline', 'mail', 'followup', 'quotation'] as const).map((kind) => sourceKinds.has(kind) && <Badge key={kind} variant="muted">{{ profile: '档案', timeline: '时间线', mail: '邮件', followup: '跟进', quotation: '报价' }[kind]}</Badge>)}
+        {(['profile', 'timeline', 'mail', 'followup', 'quotation', 'website'] as const).map((kind) => sourceKinds.has(kind) && <Badge key={kind} variant="muted">{{ profile: '档案', timeline: '时间线', mail: '邮件', followup: '跟进', quotation: '报价', website: '官网' }[kind]}</Badge>)}
       </div>
 
       <section className="mb-5" aria-labelledby="analysis-facts"><div className="mb-2 flex items-center gap-2"><FileText className="h-4 w-4 text-sky-600" /><h4 id="analysis-facts" className="text-sm font-semibold">事实摘要</h4><Badge variant="outline">仅陈述 CRM 已有信息</Badge></div><ClaimList items={analysis.facts} sources={analysis.sources} /></section>

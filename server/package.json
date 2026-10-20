@@ -34,7 +34,8 @@
     "test:knowledge-workflow": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-workflow.test.ts",
     "test:knowledge-operations": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-operations.test.ts",
     "eval:knowledge:operations": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/operations.ts",
-    "knowledge:maintenance": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/knowledge-maintenance.ts"
+    "knowledge:maintenance": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/knowledge-maintenance.ts",
+    "test:website-research": "node --require ./tests/os-user-info.cjs --import tsx --test tests/website-public-web.test.ts tests/website-research.test.ts"
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "^1.0.0",
@@ -45,6 +46,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
+    "htmlparser2": "10.1.0",
     "imapflow": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "mailparser": "^3.9.23",

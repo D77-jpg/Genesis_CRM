@@ -1,3 +1,4 @@
+import {websiteCustomerEvidence} from '../website/research.service';
 import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesMailKind,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
@@ -138,8 +139,10 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   for (const followup of followups) add({
     sourceId: `followup:${String(followup._id)}`, kind: 'followup', recordId: String(followup._id), label: `跟进 · ${followup.method}`, occurredAt: followup.followUpAt,
   }, { method: followup.method, result: followup.result, content: clipped(followup.content), followUpAt: followup.followUpAt, nextFollowUpAt: followup.nextFollowUpAt });
+  const websiteSources=await websiteCustomerEvidence(customerId,actor);
+  for(const item of websiteSources)add({sourceId:item.sourceId,kind:'website',recordId:item.recordId,label:item.label,occurredAt:item.occurredAt},item.content);
   await workflowStage(workflow,'read_context',{customerId,sourceCatalog},async()=>({projectId:actor.projectId,customerId,sourceCatalog}),{tool:'crm'});
-  const prepared=await prepareSalesEvidence(actor,{request:goal,history:inbound.slice().reverse().map(m=>m.text).join('\n'),productHint:[customer.interestedProducts,customer.productCategory,customer.industry].filter(Boolean).join(' '),kind:taskKind??salesMailKind(goal),customerId,ids:knowledgeIds},workflow);
+  const prepared=await prepareSalesEvidence(actor,{request:goal,history:inbound.slice().reverse().map(m=>m.text).join('\n'),productHint:[customer.interestedProducts,customer.productCategory,customer.industry,...new Set(websiteSources.map(item=>item.content.productHint))].filter(Boolean).join(' '),kind:taskKind??salesMailKind(goal),customerId,ids:knowledgeIds},workflow);
   const knowledgeContext=prepared.bundle;
   const knowledge=knowledgeContext.sources;
   for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...item,approved:true});
@@ -210,6 +213,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     const grounded=await workflowStage(options?.workflow,'audit_claims',{body:parsed.emailDraft.bodyText,bundle:context.input.knowledgeContext,model:activeProvider.model},async()=>verifyGroundedEmail(parsed.emailDraft.bodyText,context.input.knowledgeContext!,{
       taskType:options?.taskKind??context.input.taskType??(options?.firstOutreach?'first_outreach':'followup'),knownRequirements:context.input.salesRequirements?.known,
       customerProfile:customerProfileOf(context.input.sourceCatalog.find(s=>s.kind==='profile')!.content as {name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}),recipientName:context.input.customerName,customerId:input.customerId,request:options?.userRequest,
+      customerWebsites:context.input.sourceCatalog.filter(s=>s.kind==='website').map(s=>{const c=s.content as {url:string;text:string;sha256:string;collectedAt:string};return {sourceId:s.sourceId,url:c.url,text:c.text,sha256:c.sha256,collectedAt:c.collectedAt};}),
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
       seller:context.input.seller,
     },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});
