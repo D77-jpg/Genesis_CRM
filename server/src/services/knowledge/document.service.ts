@@ -16,9 +16,12 @@ const formats: Record<string, string> = { txt: 'text/plain', md: 'text/markdown'
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', csv: 'text/csv', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
 export const uploadInput = z.object({ fileName: z.string().min(1).max(180), data: z.string().min(4).max(20971520),
-  source: z.string().trim().min(1).max(350), category: z.enum(KNOWLEDGE_CATEGORIES) }).strict();
-export const reviewInput = z.object({ title: z.string().trim().min(1).max(160), content: z.string().trim().min(1).max(12000),
+  source: z.string().trim().min(1).max(350).optional(), category: z.enum(KNOWLEDGE_CATEGORIES).optional() }).strict();
+const reviewedDraftInput = z.object({ title: z.string().trim().min(1).max(160), content: z.string().trim().min(1).max(12000),
   category: z.enum(KNOWLEDGE_CATEGORIES), applicability: z.string().trim().min(1).max(1000) }).strict();
+// Uploading a file and staging its text require no policy form or publication decision.
+export const reviewInput = reviewedDraftInput.partial();
+export const UNREVIEWED_APPLICABILITY = '适用条件待审核，请对照原文核对产品、数量、费用与有效期。';
 export const digest = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 const id = (value: string) => { if (!Types.ObjectId.isValid(value)) throw ApiError.notFound('资料不存在或无权访问'); return value; };
 function admin(actor: AuthUser) { requireProjectId(actor); if (actor.role !== 'admin') throw ApiError.forbidden('原文与解析建议仅供项目管理员审核'); }
@@ -62,7 +65,7 @@ export async function uploadDocument(input: z.infer<typeof uploadInput>, actor: 
   try { blob = await KnowledgeBlob.findOneAndUpdate({ ...scope(actor), sha256 }, { $setOnInsert: { ...scope(actor), sha256, data } }, { new: true, upsert: true }); }
   catch (e) { if ((e as { code?: number }).code !== 11000) throw e; blob = await KnowledgeBlob.findOne({ ...scope(actor), sha256 }); }
   try { existing = await KnowledgeDocument.create({ ...scope(actor), kind: 'project_document', originalName: value.fileName, extension,
-    mime: formats[extension], bytes: data.length, sha256, blobKey: blob!._id, uploadedBy: actor.id, source: value.source, category: value.category }); }
+    mime: formats[extension], bytes: data.length, sha256, blobKey: blob!._id, uploadedBy: actor.id, source: value.source ?? value.fileName, category: value.category ?? 'pending' }); }
   catch (e) { if ((e as { code?: number }).code !== 11000) throw e; existing = await KnowledgeDocument.findOne({ ...scope(actor), sha256, kind: 'project_document' }); }
   if (!existing) throw ApiError.internal('原文保存失败');
   await enqueue(existing, actor, 1);
@@ -137,7 +140,7 @@ export async function controlParsing(parsingId: string, action: 'cancel' | 'retr
 }
 
 export async function saveChunkDraft(chunkId: string, input: z.infer<typeof reviewInput>, actor: AuthUser) {
-  admin(actor); const reviewed = reviewInput.parse(input);
+  admin(actor); const overrides = reviewInput.parse(input);
   if (!/^[a-f0-9]{64}$/.test(chunkId)) throw ApiError.notFound();
   const chunk = await KnowledgeChunk.findOne({ _id: chunkId, ...scope(actor) });
   if (!chunk) throw ApiError.notFound();
@@ -147,8 +150,16 @@ export async function saveChunkDraft(chunkId: string, input: z.infer<typeof revi
   const importKey = 'document-chunk:' + chunkId;
   const existing = await AgentKnowledge.findOne({ ...scope(actor), importKey });
   if (existing) return { id: existing.id, duplicate: true };
+  // Preserve the full source text and conditions; overlong content must be edited, never truncated.
+  const reviewed = reviewedDraftInput.parse({
+    title: (chunk.headingPath?.join(' / ') || doc.originalName).slice(0, 160),
+    content: chunk.content,
+    category: KNOWLEDGE_CATEGORIES.includes(doc.category as typeof KNOWLEDGE_CATEGORIES[number]) ? doc.category : 'product',
+    applicability: UNREVIEWED_APPLICABILITY,
+    ...overrides,
+  });
   try {
-    const knowledgeId = await appendKnowledge(undefined, { ...reviewed, source: `${doc.source} · ${doc.originalName}`.slice(0, 500),
+    const knowledgeId = await appendKnowledge(undefined, { ...reviewed, source: (doc.source === doc.originalName ? doc.originalName : `${doc.source} · ${doc.originalName}`).slice(0, 500),
       expectedVersion: 0, approved: false, tags: [], products: [], terms: [] }, actor, importKey,
     [{ documentId: doc.id, parsingRevisionId: parsing.id, chunkId, contentHash: chunk.contentHash, location: chunk.location,
       parserVersion: parsing.parserVersion, artifactHash: parsing.artifactHash, originalSha256: doc.sha256 }]);
