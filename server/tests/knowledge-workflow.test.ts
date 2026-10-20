@@ -90,7 +90,7 @@ test('repeated questions about known buyer quantity cannot pass the generated-em
 
 test('invalid structured model output is not cached as a completed generation checkpoint',async()=>{
  const created=await task('请写报价说明邮件');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');const {AgentTask}=await import('../src/models/AgentTask');const provider=new MockAgentProvider();const original=provider.analyzeCustomer.bind(provider);let calls=0;provider.analyzeCustomer=async(input)=>{calls++;const result=await original(input);if(calls===1)return {...result,emailDraft:{subject:'',bodyText:''}};return result;};
- await tasks.processAgentTask(created.task.id,provider);const failed=await tasks.getAgentTask(created.task.id,actor);assert.equal(failed.status,'failed');assert.equal((await AgentTask.findById(created.task.id))?.workflowRecords.find(r=>r.key==='generate_email')?.state,'failed');await tasks.controlAgentTask(created.task.id,'resume',{version:failed.version},actor);await tasks.processAgentTask(created.task.id,provider);assert.equal((await tasks.getAgentTask(created.task.id,actor)).status,'awaiting_review');assert.equal(calls,2);
+ await tasks.processAgentTask(created.task.id,provider);assert.equal((await tasks.getAgentTask(created.task.id,actor)).status,'awaiting_review');assert.equal(calls,2);const checkpoint=(await AgentTask.findById(created.task.id))?.workflowRecords.find(r=>r.key==='generate_email');assert.equal(checkpoint?.state,'completed');const payload=checkpoint?.payload as {emailDraft?:{subject?:string;bodyText?:string}};assert.ok(payload.emailDraft?.subject?.trim());assert.ok(payload.emailDraft?.bodyText?.trim());
 });
 
 

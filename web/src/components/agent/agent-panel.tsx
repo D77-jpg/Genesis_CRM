@@ -13,7 +13,6 @@ import {
   ListChecks,
   MessageSquare,
   Bot,
-  BarChart3,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -128,6 +127,7 @@ function actionLabel(toolName: string): string {
     extract_mail_customer: '从邮件提取客户',
     update_scratchpad_customer_preview: '编辑客户预览',
     create_customer_from_scratchpad: '确认创建客户',
+    research_customer:'分析客户官网与开发角度',
     analyze_customer_and_draft_email: '分析客户并生成邮件草稿',
     edit_customer_analysis_draft: '编辑分析草稿',
     save_agent_email_draft: '确认保存开发信草稿',
@@ -482,7 +482,6 @@ export function AgentPanel(): React.JSX.Element | null {
     }
   }
 
-  async function startCustomerAnalysis(){if(activeContext.type==='customer'&&!sending)await sendMessage('请分析这个客户并写第一封开发信，不要发送');}
   async function startMailAnalysis(){if(activeContext.type==='mail'&&!sending)await sendMessage('请整理当前询盘并准备回复邮件，不要发送');}
 
   if (!open || !user || !project) return null;
@@ -624,13 +623,12 @@ export function AgentPanel(): React.JSX.Element | null {
                   <p className="text-lg font-semibold leading-7">{activeContext.type === 'customer' ? '这位客户，下一步怎么推进？' : activeContext.type === 'mail' ? '一起处理这封客户来信' : '今天想先推进哪项工作？'}</p>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{activeContext.type === 'customer' ? '结合客户资料写信、梳理跟进，或直接告诉我你的需求。' : activeContext.type === 'mail' ? '整理往来内容与客户需求，再准备合适的回复。' : '找客户、看跟进、准备开发信，用一句话交给助手。'}</p>
                 </div>
-                {activeContext.type === 'customer' && <Button type="button" className="h-auto min-h-12 w-full justify-between whitespace-normal px-4 py-3 text-left" onClick={() => void sendMessage('帮我给这个客户写第一封开发信')} disabled={sending}><span className="flex items-center gap-2"><Send className="h-4 w-4" aria-hidden />准备首封开发信</span><ArrowRight className="h-4 w-4" aria-hidden /></Button>}
+                {activeContext.type === 'customer' && <Button type="button" className="h-auto min-h-12 w-full justify-between whitespace-normal px-4 py-3 text-left" onClick={() => void sendMessage('请分析这个客户，结合官网与历史往来准备合适的邮件，不要发送')} disabled={sending}><span className="flex items-center gap-2"><Send className="h-4 w-4" aria-hidden />分析客户并准备邮件</span><ArrowRight className="h-4 w-4" aria-hidden /></Button>}
                 {activeContext.type === 'mail' && <Button type="button" className="h-auto min-h-12 w-full justify-between whitespace-normal px-4 py-3 text-left" onClick={() => void startMailAnalysis()} disabled={analyzing}><span className="flex items-center gap-2">{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}整理来信并准备回复</span><ArrowRight className="h-4 w-4" aria-hidden /></Button>}
                 <div className="divide-y">
                   {suggestions(activeContext).filter(item => activeContext.type !== 'customer' || !item.includes('第一封')).map(item => <Button key={item} type="button" variant="ghost" className="h-auto min-h-12 w-full justify-between gap-3 whitespace-normal rounded-none px-1 py-3 text-left font-normal leading-6" disabled={sending} onClick={() => void sendMessage(item)}><span>{item}</span><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /></Button>)}
-                  {activeContext.type === 'customer' && <Button type="button" variant="ghost" className="h-auto min-h-12 w-full justify-between gap-3 whitespace-normal rounded-none px-1 py-3 text-left font-normal leading-6" onClick={() => void startCustomerAnalysis()} disabled={analyzing}><span className="flex items-center gap-2">{analyzing && <Loader2 className="h-4 w-4 animate-spin" />}分析客户并起草邮件</span><BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /></Button>}
                 </div>
-                <p className="text-xs leading-5 text-muted-foreground">草稿准备好后可打开写信页面，由你审核发送。</p>
+                <p className="text-xs leading-5 text-muted-foreground">助手自动结合客户官网、授权往来与项目资料分析，再准备合适的邮件；由你审核发送。</p>
               </div>
             )}
             {messages.map((message) => (

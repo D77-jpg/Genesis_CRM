@@ -193,7 +193,11 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
  const projectId=String(requireProjectId(actor));const base:KnowledgeBundle={projectId,status:'index_not_ready',sources:[],issues:[],topics:options.topics};
  try{
   const current=await indexActor(actor);
-  const [state,snapshot,identity]=await Promise.all([State.findOne({projectId}),published(projectId),embeddingIdentity()]);
+  const snapshot=await published(projectId);
+  // No published corpus needs no vector/model runtime. This is absence of evidence,
+  // never a keyword fallback or permission to invent supplier facts.
+  if(!snapshot.rows.length){const inactive=await diagnosticMetadata(projectId,current,query,options.topics);return {...base,status:inactive.some(d=>d.code==='expired')?'expired':'no_match',issues:[{code:'no_published_knowledge',message:'当前项目暂无有效已发布资料；可分析客户，邮件中不能加入未经确认的我方能力或交易承诺'},...inactive.map(d=>({code:d.code,message:d.code==='expired'?'相关知识已过期':'相关知识尚不可用',sourceIds:[d.sourceId]}))]};}
+  const [state,identity]=await Promise.all([State.findOne({projectId}),embeddingIdentity()]);
   const g=state?.activeGeneration?await Gen.findOne({_id:state.activeGeneration,projectId,state:'ready'}):null;
   if(!g||g.manifest!==snapshot.manifest||g.identity.id!==identity.id||g.identity.dimension!==identity.dimension){
    return {...base,status:g?'index_stale':'index_not_ready',issues:[{code:g?'index_stale':'index_not_ready',message:'当前有效知识的语义索引尚未就绪，请管理员在知识库更新检索资料；未使用旧索引'}]};

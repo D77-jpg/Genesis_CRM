@@ -176,3 +176,84 @@ test('only exact trusted trailing signature lines are normalized; unknown claims
  const bad=await verifyGroundedEmail('Unapproved manufacturing statement.\nUnknown Seller',bundle,options,verifier);
  assert.ok(seen.includes('Unapproved manufacturing statement.'));assert.ok(seen.includes('Unknown Seller'));assert.equal(bad.review.completeness,'partial');assert.ok(!bad.bodyText.includes('Unapproved manufacturing statement.'));
 });
+
+test('local workspace command resolves dynamic retrieval imports and empty projects need no model files',async()=>{
+ const {readFileSync}=await import('node:fs');const {execFileSync}=await import('node:child_process');
+ const script=JSON.parse(readFileSync('package.json','utf8')).scripts['dev:workspace'];assert.match(script,/--import tsx/);assert.match(script,/src\/local-workspace.ts/);
+ // Use a real TS entry rather than a pure ESM eval: the server package is CommonJS.
+ const text=execFileSync(process.execPath,['--require','./tests/os-user-info.cjs','--import','tsx','tests/fixtures/website-research/local-retrieval.ts'],{cwd:process.cwd(),env:{...process.env,MONGODB_URI:memory.getUri('website_research_fictional'),WEBSITE_RESEARCH_ACTOR_JSON:JSON.stringify(actor),AI_PROVIDER:'mock',OPENAI_API_KEY:'',KNOWLEDGE_MODEL_DIR:'missing-synthetic-model'},timeout:20000,encoding:'utf8',windowsHide:true});
+ const result=JSON.parse(text.trim().split('\n').at(-1)!);assert.equal(result.status,'no_match');assert.equal(result.code,'no_published_knowledge');
+ const {agentFailure}=await import('../src/services/agent/agent-errors');const failure=agentFailure(Object.assign(new Error('local module'),{code:'ERR_MODULE_NOT_FOUND'}));assert.equal(failure.code,'AGENT_RUNTIME_DEPENDENCY');assert.equal(failure.retryable,false);
+});
+
+test('Agent analyzes an existing customer automatically, preserves all fields and reuses fresh scoped website evidence',async()=>{
+ const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Auto Existing',company:'Moonstone fixture',email:'auto@fixture.example.com',website:'https://auto-fixture.example.com',notes:'Preserve real CRM fields',status:'pending',tags:[]});
+ const before=await models.Customer.countDocuments();const original=c.toObject();
+ const {createAgentSession}=await import('../src/services/agent/agent.service');const {createAgentTask,processAgentTask,getAgentTask}=await import('../src/services/agent/task.service');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const session=await createAgentSession({context:{type:'customer',resourceId:c.id}},actor);
+ const task=await createAgentTask({sessionId:session.id,goal:'请分析这个客户并准备合适的邮件，不要发送',requestKey:randomUUID()},actor);
+ let calls=0;class Provider extends MockAgentProvider {seen?:import('../src/services/agent/provider').CustomerAnalysisRequest;override async analyzeCustomer(request:import('../src/services/agent/provider').CustomerAnalysisRequest){this.seen=request;return super.analyzeCustomer(request);}}
+ const provider=new Provider();await processAgentTask(task.id,provider,{fetcher:async(url,kind)=>{calls++;return fixture(url,kind);}});
+ const done=await getAgentTask(task.id,actor);assert.equal(done.status,'awaiting_review',JSON.stringify(done.error));assert.ok(done.completedSteps.includes('research_customer'));assert.equal(provider.seen?.input.customerResearch?.state,'ready');assert.ok(provider.seen?.input.sourceCatalog.some(s=>s.kind==='website'));
+ assert.equal(await models.Customer.countDocuments(),before);assert.equal((await models.Customer.findById(c.id))!.notes,original.notes);assert.equal((await models.Customer.findById(c.id))!.website,original.website);assert.equal((await models.DevelopmentLetter.findById(done.draftId))!.status,'draft');assert.equal(await models.FollowUp.countDocuments({customerId:c.id}),0);
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');let called=false;const reused=await ensureCustomerResearch(c.id,actor,{fetcher:async()=>{called=true;throw Error('must reuse');}});assert.equal(reused.state,'ready');assert.equal(called,false);assert.ok(calls>1);
+ const {executeAgentTool}=await import('../src/services/agent/tool-registry');const tool=await executeAgentTool('research_customer',{actor},{customerId:c.id}) as {researchPerspective:string;notice:string};assert.equal(tool.researchPerspective,'包装客户开发');assert.ok(tool.notice.includes('客户所售产品不是我方产品'));
+ await assert.rejects(ensureCustomerResearch(c.id,{...other,role:'admin'},{fetcher:fixture}));
+ await assert.rejects(ensureCustomerResearch(c.id,other,{fetcher:fixture}));await assert.rejects(ensureCustomerResearch(c.id,foreign,{fetcher:fixture}));
+ // A synthetic sent-state record tests relationship selection without SMTP.
+ await models.DevelopmentLetter.updateOne({_id:done.draftId},{$set:{status:'sent',sentAt:new Date()}});
+ const follow=await createAgentTask({sessionId:session.id,goal:'请分析这个客户并准备合适的邮件，不要发送',requestKey:randomUUID()},actor);assert.equal(follow.kind,'followup_review');
+ const explicit=await createAgentTask({sessionId:session.id,goal:'请给这个客户写第一封开发信，不要发送',requestKey:randomUUID()},actor);assert.equal(explicit.kind,'first_outreach');
+});
+
+test('unreadable or absent websites yield explicit partial drafts, never a new CRM customer or guessed website',async()=>{
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');
+ const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL No Site',email:'no-site@fixture.example.com',status:'pending'});let calls=0;
+ assert.equal((await ensureCustomerResearch(c.id,actor,{fetcher:async()=>{calls++;throw Error('must not fetch');}})).state,'no_website');assert.equal(calls,0);
+ await models.Customer.updateOne({_id:c.id},{$set:{website:'http://127.0.0.1'}});assert.equal((await ensureCustomerResearch(c.id,actor,{fetcher:fixture})).state,'unavailable');
+ await models.Customer.updateOne({_id:c.id},{$set:{website:'https://unreadable-fixture.example.com'}});
+ const {createAgentSession}=await import('../src/services/agent/agent.service');const {createAgentTask,processAgentTask,getAgentTask}=await import('../src/services/agent/task.service');const session=await createAgentSession({context:{type:'customer',resourceId:c.id}},actor);const task=await createAgentTask({sessionId:session.id,goal:'请分析这个客户并准备合适的邮件，不要发送',requestKey:randomUUID()},actor);
+ const before=await models.Customer.countDocuments();await processAgentTask(task.id,undefined,{fetcher:async()=>{throw Error('fictional network failure');}});const done=await getAgentTask(task.id,actor);assert.equal(done.status,'awaiting_review',JSON.stringify(done.error));const letter=await models.DevelopmentLetter.findById(done.draftId);assert.equal(letter!.knowledgeReview!.completeness,'partial');assert.ok(letter!.knowledgeReview!.issues.some(i=>i.code==='customer_research_gap'));assert.equal(await models.Customer.countDocuments(),before);
+});
+
+test('changed website URLs and expired source snapshots cannot silently supply the next Agent task',async()=>{
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Changed Site',website:'https://first-site.example.com',email:'site-change@fixture.example.com'});
+ const first=await ensureCustomerResearch(c.id,actor,{fetcher:fixture});assert.equal(first.state,'ready');
+ await models.Customer.updateOne({_id:c.id},{$set:{website:'https://second-site.example.com'}});assert.equal((await service.websiteCustomerEvidence(c.id,actor)).length,0);
+ const second=await ensureCustomerResearch(c.id,actor,{fetcher:fixture});assert.equal(second.state,'ready');assert.notEqual(second.reportId,first.reportId);assert.ok((await service.websiteCustomerEvidence(c.id,actor)).every(s=>s.content.url.startsWith('https://second-site.example.com')));
+ await Research.collection.updateOne({_id:new Types.ObjectId(second.reportId)},{$set:{createdAt:new Date(Date.now()-25*3600000)}});assert.equal((await service.websiteCustomerEvidence(c.id,actor)).length,0);
+});
+
+test('Agent research stops on customer reassignment and its tool accepts customer IDs rather than arbitrary websites',async()=>{
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Revoked Research',website:'https://revoked-research.example.com'});
+ await assert.rejects(ensureCustomerResearch(c.id,actor,{fetcher:async(url,kind)=>{await models.Customer.updateOne({_id:c.id},{$set:{ownerId:otherUser}});return fixture(url,kind);}}));
+ assert.equal((await Research.findOne({customerId:c.id}))!.state,'failed');
+ const {executeAgentTool}=await import('../src/services/agent/tool-registry');await assert.rejects(executeAgentTool('research_customer',{actor},{customerId:c.id}));await assert.rejects(executeAgentTool('research_customer',{actor},{customerId:c.id,url:'http://127.0.0.1'}));
+});
+
+test('analysis-only requests cannot create mail tasks and website changes during a read invalidate its outcome',async()=>{
+ const {isFirstOutreachCommand}=await import('../src/services/agent/first-outreach-intent');const {isBusinessMailCommand}=await import('../src/services/agent/knowledge-grounding');
+ for(const text of ['请只做分析，不要起草第一封开发信','请分析这个客户，不写邮件','请分析这个客户，不要起草邮件','Please analyze only; do not draft an email']){assert.equal(isFirstOutreachCommand(text),false);assert.equal(isBusinessMailCommand(text),false);}
+ assert.equal(isBusinessMailCommand('请先分析这个客户再准备合适的邮件，不要发送'),true);
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Concurrent URL',website:'https://original-site.example.com'});
+ const result=await ensureCustomerResearch(c.id,actor,{fetcher:async(url,kind)=>{const value=await fixture(url,kind);if(kind!=='robots')await models.Customer.updateOne({_id:c.id},{$set:{website:'https://changed-mid-read.example.com'}});return value;}});
+ assert.equal(result.state,'unavailable');assert.equal((await service.websiteCustomerEvidence(c.id,actor)).length,0);
+});
+
+test('a malformed model result gets one bounded reformat attempt; persistent errors never save a draft',async()=>{
+ const {createAgentSession}=await import('../src/services/agent/agent.service');const {createAgentTask,processAgentTask,getAgentTask}=await import('../src/services/agent/task.service');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Format Retry',email:'format-retry@fixture.example.com'});const session=await createAgentSession({context:{type:'customer',resourceId:c.id}},actor);
+ let calls=0;class OnceBad extends MockAgentProvider{override async analyzeCustomer(request:import('../src/services/agent/provider').CustomerAnalysisRequest){const result=await super.analyzeCustomer(request);calls++;if(calls===1)result.facts[0].sourceIds=[];return result;}}
+ const first=await createAgentTask({sessionId:session.id,goal:'请准备第一封开发信，不要发送',requestKey:randomUUID()},actor);await processAgentTask(first.id,new OnceBad());const done=await getAgentTask(first.id,actor);assert.equal(done.status,'awaiting_review',JSON.stringify(done.error));assert.equal(calls,2);assert.ok(done.budgetCharged>0);assert.equal(await models.FollowUp.countDocuments({customerId:c.id}),0);
+ calls=0;class AlwaysBad extends MockAgentProvider{override async analyzeCustomer(request:import('../src/services/agent/provider').CustomerAnalysisRequest){calls++;const result=await super.analyzeCustomer(request);result.facts[0].sourceIds=[];return result;}}
+ const second=await createAgentTask({sessionId:session.id,goal:'请准备第一封开发信，不要发送',requestKey:randomUUID()},actor);await processAgentTask(second.id,new AlwaysBad());const failed=await getAgentTask(second.id,actor);assert.equal(failed.status,'failed');assert.equal(calls,2);assert.equal(await models.DevelopmentLetter.countDocuments({customerId:c.id}),1);
+});
+
+
+test('customer analysis is a source brief, never an email rewrite or extra draft',async()=>{
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');const {createAgentSession,sendAgentMessage}=await import('../src/services/agent/agent.service');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Brief',company:'Independent Brief Fixture',expectedQuantity:'300 pcs',targetPrice:'USD 1 target',email:'brief@fixture.example.com',website:'https://brief.example.com'});await ensureCustomerResearch(c.id,actor,{fetcher:fixture});const session=await createAgentSession({context:{type:'customer',resourceId:c.id}},actor);const provider=new MockAgentProvider();provider.createTurn=async()=>{throw Error('source brief must not call email/model pipeline');};
+ const before={customers:await models.Customer.countDocuments(),letters:await models.DevelopmentLetter.countDocuments(),followups:await models.FollowUp.countDocuments()};
+ const result=await sendAgentMessage(session.id,'请只做分析，说明这个客户的经营方式和开发角度，不要起草邮件。',actor,undefined,provider);assert.equal(result.degraded,false);assert.match(result.assistantMessage.content,/官网观察/);assert.match(result.assistantMessage.content,/还不知道什么/);assert.match(result.assistantMessage.content,/300 pcs/);assert.match(result.assistantMessage.content,/USD 1 target/);assert.match(result.assistantMessage.content,/\[查看原文\]\(https:\/\//);assert.match(result.assistantMessage.content,/不是我方承诺/);assert.doesNotMatch(result.assistantMessage.content,/Hello,|Thank you for getting in touch|Best regards/);assert.deepEqual({customers:await models.Customer.countDocuments(),letters:await models.DevelopmentLetter.countDocuments(),followups:await models.FollowUp.countDocuments()},before);
+ await models.Customer.updateOne({_id:c.id},{$set:{ownerId:otherUser}});await assert.rejects(()=>sendAgentMessage(session.id,'分析这个客户',actor,undefined,provider));
+});

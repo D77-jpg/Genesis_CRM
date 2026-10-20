@@ -1,5 +1,5 @@
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
-export const taskStepKeys = ['locate_customer', 'analyze_customer', 'save_draft', 'verify_draft'] as const;
+export const taskStepKeys = ['locate_customer', 'research_customer', 'analyze_customer', 'save_draft', 'verify_draft'] as const;
 export type TaskStep = typeof taskStepKeys[number];
 export type TaskStatus = 'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
 export interface WorkflowRecord {key:string;epoch:number;inputHash:string;state:'running'|'completed'|'failed';startedAt:string;durationMs?:number;completedAt?:string;attempts:number;reused:number;payload?:unknown;tool?:string;error?:string}
