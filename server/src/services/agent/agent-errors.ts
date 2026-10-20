@@ -2,6 +2,7 @@ import { ApiError } from '../../utils/ApiError';
 import { AgentProviderError } from './provider';
 
 export function agentFailure(error: unknown): { code: string; message: string; retryable: boolean } {
+  if(['ERR_MODULE_NOT_FOUND','MODULE_NOT_FOUND'].includes(String((error as {code?:string})?.code)))return {code:'AGENT_RUNTIME_DEPENDENCY',message:'本地服务未正确加载，无法继续检索。请管理员重新启动 CRM 服务后再准备，重复点击不会修复该问题。',retryable:false};
   const marker = error instanceof ApiError ? error.details?.find(item => item.field === 'agent')?.message : undefined;
   const code = error instanceof AgentProviderError ? error.code : marker
     ?? (error instanceof ApiError ? error.code : (error as { name?: string })?.name === 'ZodError' ? 'OPENAI_INVALID_STRUCTURED_OUTPUT' : 'AGENT_RUNTIME_ERROR');

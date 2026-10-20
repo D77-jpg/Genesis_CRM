@@ -35,7 +35,8 @@
     "test:knowledge-operations": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-operations.test.ts",
     "eval:knowledge:operations": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/operations.ts",
     "knowledge:maintenance": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/knowledge-maintenance.ts",
-    "test:website-research": "node --require ./tests/os-user-info.cjs --import tsx --test tests/website-public-web.test.ts tests/website-research.test.ts"
+    "test:website-research": "node --require ./tests/os-user-info.cjs --import tsx --test tests/website-public-web.test.ts tests/website-research.test.ts",
+    "dev:workspace": "node --require ./scripts/os-user-info.cjs --import tsx src/local-workspace.ts"
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "^1.0.0",

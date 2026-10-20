@@ -176,3 +176,12 @@ test('only exact trusted trailing signature lines are normalized; unknown claims
  const bad=await verifyGroundedEmail('Unapproved manufacturing statement.\nUnknown Seller',bundle,options,verifier);
  assert.ok(seen.includes('Unapproved manufacturing statement.'));assert.ok(seen.includes('Unknown Seller'));assert.equal(bad.review.completeness,'partial');assert.ok(!bad.bodyText.includes('Unapproved manufacturing statement.'));
 });
+
+test('local workspace command resolves dynamic retrieval imports and empty projects need no model files',async()=>{
+ const {readFileSync}=await import('node:fs');const {execFileSync}=await import('node:child_process');
+ const script=JSON.parse(readFileSync('package.json','utf8')).scripts['dev:workspace'];assert.match(script,/--import tsx/);assert.match(script,/src\/local-workspace.ts/);
+ const program=`import mongoose from 'mongoose';await mongoose.connect(process.env.MONGODB_URI);try{const {semanticKnowledge}=await import('./src/services/knowledge/index.service.ts');const result=await semanticKnowledge(${JSON.stringify(actor)},'synthetic diagnostics',{topics:[],productApplies:()=>true,sourceOf:()=>{throw Error('no corpus')}});console.log(JSON.stringify({status:result.status,code:result.issues[0]?.code}));}finally{await mongoose.disconnect();}`;
+ const text=execFileSync(process.execPath,['--require','./tests/os-user-info.cjs','--import','tsx','--input-type=module','--eval',program],{cwd:process.cwd(),env:{...process.env,MONGODB_URI:memory.getUri('website_research_fictional'),AI_PROVIDER:'mock',OPENAI_API_KEY:'',KNOWLEDGE_MODEL_DIR:'missing-synthetic-model'},timeout:20000,encoding:'utf8',windowsHide:true});
+ const result=JSON.parse(text.trim().split('\n').at(-1)!);assert.equal(result.status,'no_match');assert.equal(result.code,'no_published_knowledge');
+ const {agentFailure}=await import('../src/services/agent/agent-errors');const failure=agentFailure(Object.assign(new Error('local module'),{code:'ERR_MODULE_NOT_FOUND'}));assert.equal(failure.code,'AGENT_RUNTIME_DEPENDENCY');assert.equal(failure.retryable,false);
+});
