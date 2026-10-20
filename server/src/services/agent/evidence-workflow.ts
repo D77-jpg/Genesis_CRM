@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {AgentTask,type AgentTaskDocument} from '../../models/AgentTask';
 import {ApiError} from '../../utils/ApiError';
-export const workflowLabels:Record<string,string>={read_context:'读取授权往来',extract_requirements:'整理需求与已知信息',load_rules:'读取项目销售规则',retrieve_0:'检索业务依据',retrieve_1:'补查未回答问题',retrieve_2:'补查剩余依据',assess_evidence:'核对适用条件与缺口',generate_email:'生成邮件草稿',audit_claims:'逐项核对事实',handoff:'交给业务员审核'};
+export const workflowLabels:Record<string,string>={research_customer:'分析客户官网与经营线索',read_context:'读取授权往来',extract_requirements:'整理需求与已知信息',load_rules:'读取项目销售规则',retrieve_0:'检索业务依据',retrieve_1:'补查未回答问题',retrieve_2:'补查剩余依据',assess_evidence:'核对适用条件与缺口',generate_email:'生成邮件草稿',audit_claims:'逐项核对事实',handoff:'交给业务员审核'};
 export const workflowHash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export interface EvidenceWorkflow {epoch:number;check:()=>Promise<unknown>;run<T>(key:string,input:unknown,action:()=>Promise<T>,options?:{cache?:boolean;tool?:string}):Promise<T>}
 export async function workflowStage<T>(workflow:EvidenceWorkflow|undefined,key:string,input:unknown,action:()=>Promise<T>,options?:{cache?:boolean;tool?:string}){return workflow?workflow.run(key,input,action,options):action();}

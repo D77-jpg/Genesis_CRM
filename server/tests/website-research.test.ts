@@ -197,6 +197,8 @@ test('Agent analyzes an existing customer automatically, preserves all fields an
  const done=await getAgentTask(task.id,actor);assert.equal(done.status,'awaiting_review',JSON.stringify(done.error));assert.ok(done.completedSteps.includes('research_customer'));assert.equal(provider.seen?.input.customerResearch?.state,'ready');assert.ok(provider.seen?.input.sourceCatalog.some(s=>s.kind==='website'));
  assert.equal(await models.Customer.countDocuments(),before);assert.equal((await models.Customer.findById(c.id))!.notes,original.notes);assert.equal((await models.Customer.findById(c.id))!.website,original.website);assert.equal((await models.DevelopmentLetter.findById(done.draftId))!.status,'draft');assert.equal(await models.FollowUp.countDocuments({customerId:c.id}),0);
  const {ensureCustomerResearch}=await import('../src/services/website/customer-research');let called=false;const reused=await ensureCustomerResearch(c.id,actor,{fetcher:async()=>{called=true;throw Error('must reuse');}});assert.equal(reused.state,'ready');assert.equal(called,false);assert.ok(calls>1);
+ const {executeAgentTool}=await import('../src/services/agent/tool-registry');const tool=await executeAgentTool('research_customer',{actor},{customerId:c.id}) as {researchPerspective:string;notice:string};assert.equal(tool.researchPerspective,'包装客户开发');assert.ok(tool.notice.includes('客户所售产品不是我方产品'));
+ await assert.rejects(ensureCustomerResearch(c.id,{...other,role:'admin'},{fetcher:fixture}));
  await assert.rejects(ensureCustomerResearch(c.id,other,{fetcher:fixture}));await assert.rejects(ensureCustomerResearch(c.id,foreign,{fetcher:fixture}));
  // A synthetic sent-state record tests relationship selection without SMTP.
  await models.DevelopmentLetter.updateOne({_id:done.draftId},{$set:{status:'sent',sentAt:new Date()}});
@@ -227,4 +229,13 @@ test('Agent research stops on customer reassignment and its tool accepts custome
  await assert.rejects(ensureCustomerResearch(c.id,actor,{fetcher:async(url,kind)=>{await models.Customer.updateOne({_id:c.id},{$set:{ownerId:otherUser}});return fixture(url,kind);}}));
  assert.equal((await Research.findOne({customerId:c.id}))!.state,'failed');
  const {executeAgentTool}=await import('../src/services/agent/tool-registry');await assert.rejects(executeAgentTool('research_customer',{actor},{customerId:c.id}));await assert.rejects(executeAgentTool('research_customer',{actor},{customerId:c.id,url:'http://127.0.0.1'}));
+});
+
+test('analysis-only requests cannot create mail tasks and website changes during a read invalidate its outcome',async()=>{
+ const {isFirstOutreachCommand}=await import('../src/services/agent/first-outreach-intent');const {isBusinessMailCommand}=await import('../src/services/agent/knowledge-grounding');
+ for(const text of ['请只做分析，不要起草第一封开发信','请分析这个客户，不写邮件','请分析这个客户，不要起草邮件','Please analyze only; do not draft an email']){assert.equal(isFirstOutreachCommand(text),false);assert.equal(isBusinessMailCommand(text),false);}
+ assert.equal(isBusinessMailCommand('请先分析这个客户再准备合适的邮件，不要发送'),true);
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Concurrent URL',website:'https://original-site.example.com'});
+ const result=await ensureCustomerResearch(c.id,actor,{fetcher:async(url,kind)=>{const value=await fixture(url,kind);if(kind!=='robots')await models.Customer.updateOne({_id:c.id},{$set:{website:'https://changed-mid-read.example.com'}});return value;}});
+ assert.equal(result.state,'unavailable');assert.equal((await service.websiteCustomerEvidence(c.id,actor)).length,0);
 });

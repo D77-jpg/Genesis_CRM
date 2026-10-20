@@ -1,3 +1,4 @@
+import {isAnalysisOnlyRequest} from './first-outreach-intent';
 import {collectConditionalEvidence,scopeSummary,normalized,type FactContext} from './conditional-facts';
 import {agreementEvidence} from './customer-agreement.service';
 import {CustomerAgreement} from '../../models/CustomerAgreement';
@@ -54,7 +55,7 @@ export function guardLanguageTransform(text:string,original:string){
  return transformNumbersMatch(text,original)?text:'未能确认译文保留原有数值、单位与条件，请核对原文后重试。';
 }
 export function isBusinessMailCommand(text:string){
- if(/^(为什么|如何|怎么|是否)|不要.{0,6}(写|生成|准备)|不用.{0,6}(写|生成|准备)/.test(text))return false;
+ if(isAnalysisOnlyRequest(text)||/^(为什么|如何|怎么|是否)|不要.{0,6}(写|生成|准备|起草)|不用.{0,6}(写|生成|准备|起草)/.test(text))return false;
  return /^(请|帮我|给我|为|给|你帮我|麻烦|现在|先|写|生成|起草|准备|回复|please|write|draft|prepare)/i.test(text)
   &&/(写|生成|起草|准备|回复|write|draft|prepare|reply)/i.test(text)
   &&/(开发信|邮件|询盘|跟进信|样品回复|报价说明|email|letter|inquiry|quotation|follow.?up)/i.test(text);

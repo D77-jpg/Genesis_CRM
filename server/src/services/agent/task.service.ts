@@ -178,14 +178,14 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
   if(await hasProtectedCustomerMail(customer.id,actor.projectId!))throw new ApiError(403,'客户已停止营销联系','FORBIDDEN',[{field:'agent',message:'MARKETING_BLOCKED'}]);
   if (!customer.email) { await change({status:'waiting_input'},'客户档案缺少邮箱，请在档案补齐后点击继续。'); return; }
   await step('research_customer','正在分析客户官网、已有产品与经营线索，并核对历史联系。');
-  const research=await ensureCustomerResearch(customer.id,actor,{...researchOptions,requestKey:task.id,retry:task.attempts>1,check});
+  const research=await taskEvidenceWorkflow(task,token,check).run('research_customer',{customerId:customer.id,website:customer.website??''},()=>ensureCustomerResearch(customer.id,actor,{...researchOptions,requestKey:task.id,retry:task.attempts>1,check}),{tool:'website'});
   await check();await change({},research.message,'research_customer');
   const workflow=await prepareWorkflow();
   const epochSuffix=(task.workflowEpoch??0)?'-e'+task.workflowEpoch:'';
   if (!task.completedSteps.includes('analyze_customer')) {
    await step('analyze_customer','正在读取客户档案、时间线、邮件与报价，生成有依据的英文草稿。');
    const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}${epochSuffix}`},actor,{firstOutreach:task.kind==='first_outreach',userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id,workflow,taskKind:task.kind,customerResearch:research});
-   await check(); await change({analysisId:new Types.ObjectId(analysis.id),contextSummary:analysis.facts.map(f=>f.text).join('；').slice(0,1500)},'分析与草稿内容已持久保存。','analyze_customer');
+   await check(); await change({analysisId:new Types.ObjectId(analysis.id),contextSummary:analysis.facts.filter(f=>f.sourceIds.some(id=>/^(?:profile|timeline|mail-in|mail-out|website|followup|attachment):/.test(id))).map(f=>f.text).join('；').slice(0,1500)},'分析与草稿内容已持久保存。','analyze_customer');
   }
   if (!task.completedSteps.includes('save_draft')) {
    await step('save_draft','正在保存开发信草稿；不会调用发送接口。');
