@@ -1,3 +1,4 @@
+import {ensureCustomerResearch,type CustomerResearchOptions} from '../website/customer-research';
 import {taskContextStamp} from './task-context';
 import {taskEvidenceWorkflow,workflowLabels,workflowHash} from './evidence-workflow';
 import {salesMailKind} from './sales-evidence';
@@ -78,8 +79,10 @@ export async function createAgentTask(input: {sessionId: string; goal: string; r
   ?await getLetter(session.context.resourceId!,actor):undefined;
  const customerId = input.customerId ?? (session.context.type === 'customer' ? session.context.resourceId : outbound?.customerId);
  if (customerId) await getCustomerByIdOrThrow(customerId,actor);
+ let kind=salesMailKind(input.goal,inquiry);
+ if(kind==='first_outreach'&&customerId&&!/首封|第一封|first (?:outreach|introduction)/i.test(input.goal)&&await DevelopmentLetter.exists({projectId:requireProjectId(actor),customerId,status:{$in:['sent','opened']}}))kind='followup_review';
  const data = {...scope(actor), sessionId: session._id, actorRole: actor.role, goal: input.goal, requestKey: input.requestKey,requestSignature:workflowHash({sessionId:input.sessionId,goal:input.goal,customerId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000}),
-  customerId,kind:salesMailKind(input.goal,inquiry),sourceMailId:inquiry?session.context.resourceId:undefined,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:5, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
+  customerId,kind,sourceMailId:inquiry?session.context.resourceId:undefined,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:5, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
  let task;
  try { task = await AgentTask.findOneAndUpdate({...scope(actor),requestKey: input.requestKey}, {$setOnInsert: data}, {upsert: true,new: true,runValidators: true}); }
  catch (error) { if ((error as {code?:number}).code !== 11000) throw error; task = await AgentTask.findOne({...scope(actor),requestKey: input.requestKey}); }
@@ -109,7 +112,7 @@ export async function controlAgentTask(id: string, action: 'resume'|'pause'|'can
 }
 const escapeHtml = (s:string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 // A lease fences state transitions. Every domain write also has its own durable idempotency key.
-export async function processAgentTask(id?: string, providerOverride?: AgentProvider): Promise<void> {
+export async function processAgentTask(id?: string, providerOverride?: AgentProvider,researchOptions?:CustomerResearchOptions): Promise<void> {
  await AgentTask.updateMany({...(id?{_id:validId(id)}:{}),attempts:{$gte:5},$or:[{status:'queued'},{status:'running',leaseUntil:{$lt:new Date()}}]},{$set:{status:'failed',error:{code:'TASK_WORKFLOW_LIMIT',message:'任务恢复次数已达上限，已保存结果保留，请新建任务。',retryable:false}},$unset:{leaseToken:1,leaseUntil:1},$inc:{version:1}});
  const attemptStarted=Date.now();
  const token = randomUUID();
@@ -138,7 +141,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
    const fresh=prior?.knowledgeReview?await knowledgeFreshness(prior.knowledgeReview,actor):undefined;
    if((task.workflowStamp&&task.workflowStamp!==stamp)||fresh?.failed||fresh?.changed.length){
     if((task.workflowEpoch??0)>=3)throw ApiError.conflict('资料多次变化，请核对后新建任务');
-    await change({workflowEpoch:(task.workflowEpoch??0)+1,analysisId:null,mailAnalysisId:null,draftId:null,completedSteps:task.completedSteps.filter(k=>k==='locate_customer'),previousArtifacts:[...(task.previousArtifacts??[]),{analysisId:task.analysisId?.toString(),mailAnalysisId:task.mailAnalysisId?.toString(),draftId:task.draftId?.toString(),at:new Date().toISOString()}]},'资料或有效依据已变化，原稿保留，按新版本重新准备。');
+    await change({workflowEpoch:(task.workflowEpoch??0)+1,analysisId:null,mailAnalysisId:null,draftId:null,completedSteps:task.completedSteps.filter(k=>k==='locate_customer'||k==='research_customer'),previousArtifacts:[...(task.previousArtifacts??[]),{analysisId:task.analysisId?.toString(),mailAnalysisId:task.mailAnalysisId?.toString(),draftId:task.draftId?.toString(),at:new Date().toISOString()}]},'资料或有效依据已变化，原稿保留，按新版本重新准备。');
    }
    await change({workflowStamp:stamp});expectedStamp=stamp;return taskEvidenceWorkflow(task,token,check);
   };
@@ -174,11 +177,14 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
   const customer=await getCustomerByIdOrThrow(String(task.customerId),actor);
   if(await hasProtectedCustomerMail(customer.id,actor.projectId!))throw new ApiError(403,'客户已停止营销联系','FORBIDDEN',[{field:'agent',message:'MARKETING_BLOCKED'}]);
   if (!customer.email) { await change({status:'waiting_input'},'客户档案缺少邮箱，请在档案补齐后点击继续。'); return; }
+  await step('research_customer','正在分析客户官网、已有产品与经营线索，并核对历史联系。');
+  const research=await ensureCustomerResearch(customer.id,actor,{...researchOptions,requestKey:task.id,retry:task.attempts>1,check});
+  await check();await change({},research.message,'research_customer');
   const workflow=await prepareWorkflow();
   const epochSuffix=(task.workflowEpoch??0)?'-e'+task.workflowEpoch:'';
   if (!task.completedSteps.includes('analyze_customer')) {
    await step('analyze_customer','正在读取客户档案、时间线、邮件与报价，生成有依据的英文草稿。');
-   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}${epochSuffix}`},actor,{firstOutreach:task.kind==='first_outreach',userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id,workflow,taskKind:task.kind});
+   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}${epochSuffix}`},actor,{firstOutreach:task.kind==='first_outreach',userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id,workflow,taskKind:task.kind,customerResearch:research});
    await check(); await change({analysisId:new Types.ObjectId(analysis.id),contextSummary:analysis.facts.map(f=>f.text).join('；').slice(0,1500)},'分析与草稿内容已持久保存。','analyze_customer');
   }
   if (!task.completedSteps.includes('save_draft')) {

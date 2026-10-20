@@ -71,6 +71,7 @@ test('tool registry exposes read-only tools only', () => {
     'get_mail_thread',
     'list_customer_attachments',
     'read_customer_attachment',
+    'research_customer',
     'search_customers',
     'search_product_knowledge',
   ].sort());
@@ -266,7 +267,7 @@ test('status is safe to expose and never contains the API key', async () => {
   assert.equal(status.readOnly, false);
   assert.equal(status.toolsReadOnly, true);
   assert.equal(status.automaticEmailSending, false);
-  assert.equal(status.toolCount, 10);
+  assert.equal(status.toolCount, 11);
   assert.equal('apiKey' in status, false);
   assert.equal(serialized.includes('OPENAI_API_KEY'), false);
   assert.equal(serialized.includes('Bearer '), false);
@@ -1099,7 +1100,7 @@ test('durable tasks recover a lost checkpoint after restart without duplicate an
  const task=await tasks.createAgentTask({sessionId:session.id,goal:'帮我写第一封开发信，不要发送',requestKey:'durable-fixture'},actorA);
  await Promise.all([tasks.processAgentTask(task.id),tasks.processAgentTask(task.id)]);
  const done=await tasks.getAgentTask(task.id,actorA);
- assert.equal(done.status,'awaiting_review');assert.equal(done.completedSteps.length,4);assert.ok(done.draftId);
+ assert.equal(done.status,'awaiting_review');assert.equal(done.completedSteps.length,5);assert.ok(done.completedSteps.includes('research_customer'));assert.ok(done.draftId);
  // Simulate process death after the domain write, before its checkpoint could be saved.
  await AgentTask.updateOne({_id:task.id},{$set:{status:'running',completedSteps:['locate_customer'],leaseToken:'dead-process',leaseUntil:new Date(0)},$unset:{analysisId:1,draftId:1}});
  await tasks.processAgentTask(task.id);

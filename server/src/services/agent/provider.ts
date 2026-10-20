@@ -46,6 +46,7 @@ export interface CustomerExtractionResult {
 }
 
 export interface CustomerAnalysisInput {
+  customerResearch?:import('../website/customer-research').CustomerResearchStatus;
   taskType?:SalesMailKind;userRequest?:string;salesRequirements?:SalesRequirements;
   knowledgeContext?: KnowledgeBundle;
   firstOutreach?: boolean;

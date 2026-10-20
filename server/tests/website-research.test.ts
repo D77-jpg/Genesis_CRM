@@ -185,3 +185,46 @@ test('local workspace command resolves dynamic retrieval imports and empty proje
  const result=JSON.parse(text.trim().split('\n').at(-1)!);assert.equal(result.status,'no_match');assert.equal(result.code,'no_published_knowledge');
  const {agentFailure}=await import('../src/services/agent/agent-errors');const failure=agentFailure(Object.assign(new Error('local module'),{code:'ERR_MODULE_NOT_FOUND'}));assert.equal(failure.code,'AGENT_RUNTIME_DEPENDENCY');assert.equal(failure.retryable,false);
 });
+
+test('Agent analyzes an existing customer automatically, preserves all fields and reuses fresh scoped website evidence',async()=>{
+ const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Auto Existing',company:'Moonstone fixture',email:'auto@fixture.example.com',website:'https://auto-fixture.example.com',notes:'Preserve real CRM fields',status:'pending',tags:[]});
+ const before=await models.Customer.countDocuments();const original=c.toObject();
+ const {createAgentSession}=await import('../src/services/agent/agent.service');const {createAgentTask,processAgentTask,getAgentTask}=await import('../src/services/agent/task.service');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');
+ const session=await createAgentSession({context:{type:'customer',resourceId:c.id}},actor);
+ const task=await createAgentTask({sessionId:session.id,goal:'请分析这个客户并准备合适的邮件，不要发送',requestKey:randomUUID()},actor);
+ let calls=0;class Provider extends MockAgentProvider {seen?:import('../src/services/agent/provider').CustomerAnalysisRequest;override async analyzeCustomer(request:import('../src/services/agent/provider').CustomerAnalysisRequest){this.seen=request;return super.analyzeCustomer(request);}}
+ const provider=new Provider();await processAgentTask(task.id,provider,{fetcher:async(url,kind)=>{calls++;return fixture(url,kind);}});
+ const done=await getAgentTask(task.id,actor);assert.equal(done.status,'awaiting_review',JSON.stringify(done.error));assert.ok(done.completedSteps.includes('research_customer'));assert.equal(provider.seen?.input.customerResearch?.state,'ready');assert.ok(provider.seen?.input.sourceCatalog.some(s=>s.kind==='website'));
+ assert.equal(await models.Customer.countDocuments(),before);assert.equal((await models.Customer.findById(c.id))!.notes,original.notes);assert.equal((await models.Customer.findById(c.id))!.website,original.website);assert.equal((await models.DevelopmentLetter.findById(done.draftId))!.status,'draft');assert.equal(await models.FollowUp.countDocuments({customerId:c.id}),0);
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');let called=false;const reused=await ensureCustomerResearch(c.id,actor,{fetcher:async()=>{called=true;throw Error('must reuse');}});assert.equal(reused.state,'ready');assert.equal(called,false);assert.ok(calls>1);
+ await assert.rejects(ensureCustomerResearch(c.id,other,{fetcher:fixture}));await assert.rejects(ensureCustomerResearch(c.id,foreign,{fetcher:fixture}));
+ // A synthetic sent-state record tests relationship selection without SMTP.
+ await models.DevelopmentLetter.updateOne({_id:done.draftId},{$set:{status:'sent',sentAt:new Date()}});
+ const follow=await createAgentTask({sessionId:session.id,goal:'请分析这个客户并准备合适的邮件，不要发送',requestKey:randomUUID()},actor);assert.equal(follow.kind,'followup_review');
+ const explicit=await createAgentTask({sessionId:session.id,goal:'请给这个客户写第一封开发信，不要发送',requestKey:randomUUID()},actor);assert.equal(explicit.kind,'first_outreach');
+});
+
+test('unreadable or absent websites yield explicit partial drafts, never a new CRM customer or guessed website',async()=>{
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');
+ const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL No Site',email:'no-site@fixture.example.com',status:'pending'});let calls=0;
+ assert.equal((await ensureCustomerResearch(c.id,actor,{fetcher:async()=>{calls++;throw Error('must not fetch');}})).state,'no_website');assert.equal(calls,0);
+ await models.Customer.updateOne({_id:c.id},{$set:{website:'http://127.0.0.1'}});assert.equal((await ensureCustomerResearch(c.id,actor,{fetcher:fixture})).state,'unavailable');
+ await models.Customer.updateOne({_id:c.id},{$set:{website:'https://unreadable-fixture.example.com'}});
+ const {createAgentSession}=await import('../src/services/agent/agent.service');const {createAgentTask,processAgentTask,getAgentTask}=await import('../src/services/agent/task.service');const session=await createAgentSession({context:{type:'customer',resourceId:c.id}},actor);const task=await createAgentTask({sessionId:session.id,goal:'请分析这个客户并准备合适的邮件，不要发送',requestKey:randomUUID()},actor);
+ const before=await models.Customer.countDocuments();await processAgentTask(task.id,undefined,{fetcher:async()=>{throw Error('fictional network failure');}});const done=await getAgentTask(task.id,actor);assert.equal(done.status,'awaiting_review',JSON.stringify(done.error));const letter=await models.DevelopmentLetter.findById(done.draftId);assert.equal(letter!.knowledgeReview!.completeness,'partial');assert.ok(letter!.knowledgeReview!.issues.some(i=>i.code==='customer_research_gap'));assert.equal(await models.Customer.countDocuments(),before);
+});
+
+test('changed website URLs and expired source snapshots cannot silently supply the next Agent task',async()=>{
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Changed Site',website:'https://first-site.example.com',email:'site-change@fixture.example.com'});
+ const first=await ensureCustomerResearch(c.id,actor,{fetcher:fixture});assert.equal(first.state,'ready');
+ await models.Customer.updateOne({_id:c.id},{$set:{website:'https://second-site.example.com'}});assert.equal((await service.websiteCustomerEvidence(c.id,actor)).length,0);
+ const second=await ensureCustomerResearch(c.id,actor,{fetcher:fixture});assert.equal(second.state,'ready');assert.notEqual(second.reportId,first.reportId);assert.ok((await service.websiteCustomerEvidence(c.id,actor)).every(s=>s.content.url.startsWith('https://second-site.example.com')));
+ await Research.collection.updateOne({_id:new Types.ObjectId(second.reportId)},{$set:{createdAt:new Date(Date.now()-25*3600000)}});assert.equal((await service.websiteCustomerEvidence(c.id,actor)).length,0);
+});
+
+test('Agent research stops on customer reassignment and its tool accepts customer IDs rather than arbitrary websites',async()=>{
+ const {ensureCustomerResearch}=await import('../src/services/website/customer-research');const c=await models.Customer.create({projectId,ownerId:userId,name:'FICTIONAL Revoked Research',website:'https://revoked-research.example.com'});
+ await assert.rejects(ensureCustomerResearch(c.id,actor,{fetcher:async(url,kind)=>{await models.Customer.updateOne({_id:c.id},{$set:{ownerId:otherUser}});return fixture(url,kind);}}));
+ assert.equal((await Research.findOne({customerId:c.id}))!.state,'failed');
+ const {executeAgentTool}=await import('../src/services/agent/tool-registry');await assert.rejects(executeAgentTool('research_customer',{actor},{customerId:c.id}));await assert.rejects(executeAgentTool('research_customer',{actor},{customerId:c.id,url:'http://127.0.0.1'}));
+});

@@ -1,3 +1,4 @@
+import {ensureCustomerResearch,type CustomerResearchStatus} from '../website/customer-research';
 import {websiteCustomerEvidence} from '../website/research.service';
 import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesMailKind,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
@@ -122,7 +123,7 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   };
   add({ sourceId: `profile:${customerId}`, kind: 'profile', recordId: customerId, label: '客户档案' }, {
     name: customer.name, company: customer.company, email: customer.email, phone: customer.phone, country: customer.country,
-    industry: customer.industry, status: customer.status, priority: customer.priority, interestedProducts: customer.interestedProducts,
+    website:customer.website,industry: customer.industry, status: customer.status, priority: customer.priority, interestedProducts: customer.interestedProducts,
     productModel: customer.productModel, productCategory: customer.productCategory, expectedQuantity: customer.expectedQuantity,
     targetPrice: customer.targetPrice, moq: customer.moq, requirementNotes: customer.requirementNotes, notes: customer.notes,
     nextFollowUpAt: customer.nextFollowUpAt,
@@ -169,7 +170,7 @@ function recommendationEvidence(recommendations: AgentAnalysisClaim[]): { reason
   return { reason: recommendation.rationale!.trim(), sourceIds: recommendation.sourceIds };
 }
 
-export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider; knowledgeIds?:string[]; taskId?:string;workflow?:EvidenceWorkflow;taskKind?:SalesMailKind }) {
+export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider; knowledgeIds?:string[]; taskId?:string;workflow?:EvidenceWorkflow;taskKind?:SalesMailKind;customerResearch?:CustomerResearchStatus }) {
   const identifiers = scope(actor);
   await getCustomerByIdOrThrow(input.customerId, actor);
   const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
@@ -184,8 +185,9 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
   try {
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const taskKind=options?.taskKind??(options?.firstOutreach?'first_outreach':options?.userRequest?salesMailKind(options.userRequest):'followup_review');
+    const research=options?.customerResearch??await ensureCustomerResearch(input.customerId,actor,{requestKey:input.idempotencyKey});
     const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest,options?.workflow,taskKind);
-    context.input.userRequest=options?.userRequest;
+    context.input.userRequest=options?.userRequest;context.input.customerResearch=research;
     {
       const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
       const sender = await getCurrentMailSender(String(requireProjectId(actor)), actor.id);
@@ -219,6 +221,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});
     await options?.workflow?.check();
     await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
+    if(research.state!=='ready'){grounded.review.issues.push({code:'customer_research_gap',message:research.message});grounded.review.completeness='partial';}
     parsed.emailDraft.bodyText=grounded.bodyText;
     // A generated subject is not an unchecked channel for numeric commitments.
     parsed.emailDraft.subject=salesSubjects[taskKind];
