@@ -38,6 +38,12 @@ export const envSchema = z.object({
   PROJECT_MAIL_CONFIGS_JSON: z.string().default('{}'),
   /** 收件人可访问的 CRM 公网地址，仅用于生成邮件追踪 URL。 */
   TRACKING_BASE_URL: z.string().url().default('http://localhost:5000'),
+  /** 邮件里引用的静态资源（品牌 logo）使用的公网地址；留空则复用 TRACKING_BASE_URL。 */
+  PUBLIC_BASE_URL: z.string().url().optional(),
+  /** 关闭后开发信结尾只输出文字签名，不引用 logo 图片。 */
+  SIGNATURE_LOGO: booleanish.default('true'),
+  /** 官网被 WAF 拦截时，是否用无头浏览器兜底抓取（需要安装 playwright）。 */
+  WEBSITE_BROWSER_FETCH: booleanish.default('false'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: booleanish.default('false'),
@@ -158,6 +164,8 @@ export const env = {
   smtpConfigured: Boolean(raw.MAIL_TRANSPORT === 'smtp' && raw.SMTP_HOST && raw.SMTP_USER && raw.SMTP_PASS),
   /** 只用于服务端状态判断；任何 API 都不得返回 OPENAI_API_KEY。 */
   aiConfigured: raw.AI_PROVIDER === 'mock' || Boolean(raw.OPENAI_API_KEY),
+  /** 邮件静态资源（品牌 logo）的对外根地址。 */
+  publicBaseUrl: (raw.PUBLIC_BASE_URL || raw.TRACKING_BASE_URL).replace(/\/+$/, ''),
 } as const;
 
 export type Env = typeof env;

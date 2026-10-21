@@ -24,6 +24,7 @@ import {
   listLetters,
   previewLetter,
   resendLetter,
+  reviewLetter,
   sendLetter,
 } from '../services/letter.service';
 import { buildLettersWorkbook } from '../services/excel.service';
@@ -31,6 +32,7 @@ import { getCustomerByIdOrThrow } from '../services/customer.service';
 import type {
   ListLettersQuery,
   ResendLetterInput,
+  ReviewLetterInput,
   SendLetterInput,
 } from '../validators/letter.validator';
 
@@ -70,6 +72,12 @@ export const resendLetterHandler = asyncHandler(async (req: Request, res: Respon
   const input = req.body as ResendLetterInput;
   const result = await resendLetter(req.params.id, input, req.user);
   sendSuccess(res, result, 201, { delivered: result.delivered, channel: result.channel });
+});
+
+/** POST /api/letters/:id/review —— 记录业务员对草稿的自检结论：通过 / 不通过 / 撤销结论 */
+export const reviewLetterHandler = asyncHandler(async (req: Request, res: Response) => {
+  const data = await reviewLetter(req.params.id, req.body as ReviewLetterInput, req.user);
+  sendSuccess(res, data);
 });
 
 export const previewLetterHandler = asyncHandler(async (req: Request, res: Response) => {

@@ -1,10 +1,26 @@
 import sanitizeHtml from 'sanitize-html';
 import path from 'node:path';
+import env from '../config/env';
+import { BRAND_LOGO_PATH } from '../constants/brand-logo';
+
+/** 唯一允许出现在邮件正文里的图片：本站的品牌 logo */
+export function brandLogoUrl(): string {
+  return `${env.publicBaseUrl}${BRAND_LOGO_PATH}`;
+}
+
+/** 只允许品牌 logo 一张远程图片，其余 img 一律丢弃（防追踪像素 / 钓鱼图） */
+function stripUnexpectedImages(html: string): string {
+  const allowed = brandLogoUrl();
+  return html.replace(/<img\b[^>]*>/gi, (tag) => {
+    const src = /src\s*=\s*"([^"]*)"/i.exec(tag)?.[1] ?? /src\s*=\s*'([^']*)'/i.exec(tag)?.[1] ?? '';
+    return src === allowed ? tag : '';
+  });
+}
 
 export function safeMailHtml(html: string): string {
-  return sanitizeHtml(html, {
-    allowedTags: ['p', 'br', 'div', 'span', 'strong', 'b', 'em', 'i', 'u', 's', 'blockquote', 'pre', 'code', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'h1', 'h2', 'h3', 'hr', 'a'],
-    allowedAttributes: { a: ['href', 'title', 'rel', 'data-no-track'], '*': ['style'] },
+  const sanitized = sanitizeHtml(html, {
+    allowedTags: ['p', 'br', 'div', 'span', 'strong', 'b', 'em', 'i', 'u', 's', 'blockquote', 'pre', 'code', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'h1', 'h2', 'h3', 'hr', 'a', 'img'],
+    allowedAttributes: { a: ['href', 'title', 'rel', 'data-no-track'], img: ['src', 'alt', 'width', 'height'], '*': ['style'] },
     allowedStyles: { '*': {
       color: [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s.,%]+\)$/i, /^[a-z]+$/i],
       'background-color': [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s.,%]+\)$/i, /^[a-z]+$/i],
@@ -16,8 +32,10 @@ export function safeMailHtml(html: string): string {
     } },
     allowedSchemes: ['https', 'http', 'mailto'],
     allowProtocolRelative: false,
-    // Only inert typography styles; no remote images, CSS URLs, forms or scripts.
+    // Only inert typography styles; no CSS URLs, forms or scripts. The single
+    // exception is the brand logo, which is filtered again by stripUnexpectedImages.
   });
+  return stripUnexpectedImages(sanitized);
 }
 
 export function normalizeSubject(subject: string): string {

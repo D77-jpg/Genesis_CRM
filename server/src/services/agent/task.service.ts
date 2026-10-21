@@ -2,12 +2,13 @@ import {ensureCustomerResearch,type CustomerResearchOptions} from '../website/cu
 import {taskContextStamp} from './task-context';
 import {taskEvidenceWorkflow,workflowLabels,workflowHash} from './evidence-workflow';
 import {salesMailKind} from './sales-evidence';
-import {knowledgeFreshness} from './knowledge-grounding';
+import {draftHash,knowledgeFreshness} from './knowledge-grounding';
 import {chargeTaskBudget} from './task-budget';
 import {AgentMailThreadAnalysis} from '../../models';
 import {observeAgentEvents,assertAutomaticTask} from './automation.service';
 import {executeInquiryTask} from './inquiry-task';
 import {agentMailOrThrow} from './mail-access';
+import {renderLetterContent,signatureName} from '../letter-signature';
 import {materializeAgentBatches} from './batch.service';
 import {AgentBatch} from '../../models/AgentBatch';
 import {hasProtectedCustomerMail} from './mail-thread-analysis.service';
@@ -147,7 +148,6 @@ export async function controlAgentTask(id: string, action: 'resume'|'pause'|'can
  if (!updated) throw ApiError.conflict('任务已变化，请刷新后重试');
  return dto(updated,actor);
 }
-const escapeHtml = (s:string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 // A lease fences state transitions. Every domain write also has its own durable idempotency key.
 export async function processAgentTask(id?: string, providerOverride?: AgentProvider,researchOptions?:CustomerResearchOptions): Promise<void> {
  await AgentTask.updateMany({...(id?{_id:validId(id)}:{}),attempts:{$gte:5},$or:[{status:'queued'},{status:'running',leaseUntil:{$lt:new Date()}}]},{$set:{status:'failed',error:{code:'TASK_WORKFLOW_LIMIT',message:'任务恢复次数已达上限，已保存结果保留，请新建任务。',retryable:false}},$unset:{leaseToken:1,leaseUntil:1},$inc:{version:1}});
@@ -233,9 +233,9 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
     const analysis=await getCustomerAnalysis(String(task.analysisId),actor);
     actor=await check();
     const saved=await sendLetter({customerId:String(task.customerId),subject:analysis.emailDraft.subject,
-     content:analysis.emailDraft.bodyText.trim().split(/\r?\n(?:[ \t]*\r?\n)+/).map(p=>`<p>${escapeHtml(p).replace(/\r?\n/g,'<br>')}</p>`).join(''),
+     content:renderLetterContent(analysis.emailDraft.bodyText, signatureName(actor.displayName)),
      saveAsDraft:true,markAsDeveloped:false,agentTaskId:task.id,agentAnalysisId:task.kind==='first_outreach'?analysis.id:undefined,requestKey:`task-draft-${task.id}${epochSuffix}`},actor);
-    if(analysis.knowledgeReview)await DevelopmentLetter.updateOne({_id:saved.letter.id,projectId:task.projectId,knowledgeReview:{$exists:false}},{$set:{knowledgeReview:analysis.knowledgeReview}});
+    if(analysis.knowledgeReview)await DevelopmentLetter.updateOne({_id:saved.letter.id,projectId:task.projectId,knowledgeReview:{$exists:false}},{$set:{knowledgeReview:{...analysis.knowledgeReview,bodyHash:draftHash(saved.letter.contentText)}}});
     draft=await DevelopmentLetter.findById(saved.letter.id);
    }
    await check();

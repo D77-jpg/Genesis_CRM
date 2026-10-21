@@ -425,7 +425,10 @@ test('61 plain-text mail sends normally without pixel tracking', async () => {
   assert.equal(result.delivered, true);
   assert.equal(result.letter.tracking, undefined);
   const job = await models.DevelopmentLetter.findById(result.letter.id).select('+deliveryContent');
-  assert.equal(job?.deliveryContent, 'Hello without HTML');
+  // 纯文本正文保持纯文本，只在末尾补固定结尾（因此仍然不挂追踪像素）
+  assert.ok(job?.deliveryContent?.startsWith('Hello without HTML\n\n'));
+  assert.ok(job?.deliveryContent?.includes('Gold Supplier on Alibaba.com since 2014'));
+  assert.ok(!(job?.deliveryContent ?? '').includes('<'));
   assert.equal(job?.tracking?.enabled, false);
 });
 
@@ -436,7 +439,8 @@ test('62 tracking preparation failure never blocks normal SMTP/mock delivery', a
     const id = await scheduled({ subject: 'Tracking fallback', content: '<p>Still deliver</p>' });
     await due(id);
     await queue.processMailJob(id, async payload => {
-      assert.equal(payload.html, '<p>Still deliver</p>');
+      assert.ok(payload.html.startsWith('<p>Still deliver</p>'));
+      assert.ok(payload.html.includes('Gold Supplier on Alibaba.com since 2014'));
       return { accepted: true, channel: 'smtp', durationMs: 0 };
     });
     const job = await models.DevelopmentLetter.findById(id);
@@ -864,4 +868,56 @@ test('P3 a later opt-out stops an already scheduled Agent delivery before the SM
  const scheduled=await request('POST','/letters',salesToken,{customerId:customer.id,agentAnalysisId:analysis.id,subject:'Scheduled agent fixture',content:'<p>Fixture</p>',scheduledAt:new Date(Date.now()+3600000).toISOString(),requestKey:`p3-scheduled-send-${suffix}`},201);
  await mailModels.MailMessage.create({projectId,customerId:customer.id,mailboxUserId:salesId,dedupKey:`p3-scheduled-stop-${suffix}`,threadId:`p3-scheduled-stop-${suffix}`,from:customer.email,subject:'Unsubscribe',text:'Do not contact us again',sentAt:new Date()});
  await due(scheduled.letter.id);let called=false;await queue.processMailJob(scheduled.letter.id,async()=>{called=true;return {accepted:true,channel:'smtp',durationMs:0};});assert.equal(called,false);assert.equal((await models.DevelopmentLetter.findById(scheduled.letter.id))?.status,'cancelled');assert.equal(await models.FollowUp.countDocuments({customerId:customer.id}),0);
+});
+
+test('87 审核结论决定草稿能否发送，不通过无需理由、审核后改动正文需重新审核', async () => {
+  const draft = await request('POST', '/letters', salesToken, { customerId, subject: 'Review fixture', content: '<p>Review me</p>', saveAsDraft: true, requestKey: `review-draft-${suffix}` }, 201);
+  const id = draft.letter.id;
+  assert.equal(draft.letter.review, undefined);
+
+  // 不通过是自检结论，不需要填写理由
+  const rejected = await request('POST', `/letters/${id}/review`, salesToken, { decision: 'reject' }, 200);
+  assert.equal(rejected.review.decision, 'rejected');
+  assert.equal(rejected.review.note, undefined);
+
+  // 已标记不通过的草稿不能直接发送
+  await request('POST', `/letters/${id}/resend`, salesToken, { requestKey: `review-rejected-send-${suffix}` }, 409);
+
+  // 保存草稿后结论失效，回到待审核
+  const edited = await request('POST', `/letters/${id}/resend`, salesToken, { saveAsDraft: true, subject: 'Review fixture v2', content: '<p>Fixed lead time</p>', requestKey: `review-edit-${suffix}` }, 201);
+  assert.equal(edited.letter.review, undefined);
+
+  const approved = await request('POST', `/letters/${id}/review`, salesToken, { decision: 'approve', subject: 'Review fixture v2', content: '<p>Fixed lead time</p>' }, 200);
+  assert.equal(approved.review.decision, 'approved');
+  assert.equal(approved.review.contentHash.length, 64);
+  assert.ok(approved.review.byName);
+
+  // 通过后又改正文：发送被挡住；按审核时的内容发送成功
+  await request('POST', `/letters/${id}/resend`, salesToken, { content: '<p>Changed after approval</p>', requestKey: `review-stale-${suffix}` }, 409);
+  const sent = await request('POST', `/letters/${id}/resend`, salesToken, { subject: 'Review fixture v2', content: '<p>Fixed lead time</p>', requestKey: `review-send-${suffix}` }, 201);
+  assert.notEqual(sent.letter.id, id);
+
+  // 没有审核结论的历史草稿保持可直接发送；不通过的草稿也能重新通过
+  const legacy = await request('POST', '/letters', salesToken, { customerId, subject: 'Legacy fixture', content: '<p>Legacy</p>', saveAsDraft: true, requestKey: `review-legacy-${suffix}` }, 201);
+  await request('POST', `/letters/${legacy.letter.id}/resend`, salesToken, { requestKey: `review-legacy-send-${suffix}` }, 201);
+  const second = await request('POST', '/letters', salesToken, { customerId, subject: 'Second review fixture', content: '<p>Second</p>', saveAsDraft: true, requestKey: `review-second-${suffix}` }, 201);
+  await request('POST', `/letters/${second.letter.id}/review`, salesToken, { decision: 'reject' }, 200);
+  const flipped = await request('POST', `/letters/${second.letter.id}/review`, salesToken, { decision: 'approve' }, 200);
+  assert.equal(flipped.review.decision, 'approved');
+  await request('POST', `/letters/${second.letter.id}/resend`, salesToken, { requestKey: `review-second-send-${suffix}` }, 201);
+
+  // 撤销结论：草稿回到待审核
+  const third = await request('POST', '/letters', salesToken, { customerId, subject: 'Third review fixture', content: '<p>Third</p>', saveAsDraft: true, requestKey: `review-third-${suffix}` }, 201);
+  await request('POST', `/letters/${third.letter.id}/review`, salesToken, { decision: 'reject' }, 200);
+  const cleared = await request('POST', `/letters/${third.letter.id}/review`, salesToken, { decision: 'clear' }, 200);
+  assert.equal(cleared.review, undefined);
+  await request('POST', `/letters/${third.letter.id}/resend`, salesToken, { requestKey: `review-third-send-${suffix}` }, 201);
+
+  // 草稿列表筛选：todo 只排除已标记不通过的；pending 只保留没有结论的
+  const todo = await request('GET', '/letters?status=draft&review=todo&limit=50', salesToken, undefined, 200);
+  assert.ok(todo.items.every((item: { review?: { decision: string } }) => item.review?.decision !== 'rejected'));
+  const pending = await request('GET', `/letters?status=draft&review=pending&limit=50`, salesToken, undefined, 200);
+  assert.ok(pending.items.every((item: { review?: { decision: string } }) => !item.review));
+  const rejectedOnly = await request('GET', '/letters?review=rejected&limit=50', salesToken, undefined, 200);
+  assert.ok(rejectedOnly.items.every((item: { review?: { decision: string } }) => item.review?.decision === 'rejected'));
 });

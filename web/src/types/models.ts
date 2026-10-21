@@ -417,10 +417,19 @@ export interface LetterCustomerSummary {
   status: CustomerStatus;
 }
 
+export interface LetterReview {
+  decision: 'approved' | 'rejected';
+  at: string | Date;
+  by?: string;
+  byName?: string;
+  contentHash: string;
+}
+
 export interface DevelopmentLetter {
   knowledgeReview?:KnowledgeReview;
   knowledgeFreshness?:KnowledgeFreshness;
   reviewBodyChanged?:boolean;
+  review?: LetterReview;
   id: string;
   customerId: string;
   customer?: LetterCustomerSummary;

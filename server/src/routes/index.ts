@@ -28,6 +28,7 @@ import {
   TEMPLATE_CATEGORY_LABEL,
 } from '../constants';
 import { getActiveChannel } from '../services/mailer.service';
+import { BRAND_LOGO_ROUTE, BRAND_LOGO_PNG_BASE64 } from '../constants/brand-logo';
 import { healthHandler, overviewHandler } from '../controllers/stats.controller';
 import { requireAuth, requireProject } from '../middleware/auth.middleware';
 
@@ -81,6 +82,18 @@ router.get(
     });
   }),
 );
+
+/* ---------- 需要对邮件客户端开放的静态资源 ---------- */
+/**
+ * 品牌 logo：开发信固定结尾里引用它。
+ * 邮件客户端不会带 CRM 的 JWT（和追踪像素同理），所以这里不鉴权，
+ * 只暴露这一张固定图片，不接受任何参数。
+ */
+router.get(BRAND_LOGO_ROUTE, (_req, res) => {
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+  res.send(Buffer.from(BRAND_LOGO_PNG_BASE64, 'base64'));
+});
 
 /* ---------- 需要登录的接口 ---------- */
 router.use('/auth', authRoutes);

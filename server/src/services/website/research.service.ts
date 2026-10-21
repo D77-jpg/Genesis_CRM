@@ -8,7 +8,8 @@ import {customerScope,requireProjectId} from '../../utils/access';
 import {ApiError} from '../../utils/ApiError';
 import {createCustomer,getCustomerByIdOrThrow} from '../customer.service';
 import {createCustomerSchema} from '../../validators/customer.validator';
-import {fetchWebsite,WebsiteError,websiteUrl,robotsAllows,type WebsiteFetcher} from './public-web';
+import {WebsiteError,websiteUrl,robotsAllows,type WebsiteFetcher} from './public-web';
+import {fetchWithArchiveFallback} from './archive';
 import {analyzeWebsite,parseWebsitePage,projectResearchProfile,relatedPages} from './site-analysis';
 
 const oid=z.string().regex(/^[a-f0-9]{24}$/i);
@@ -99,16 +100,19 @@ async function authorizedWorker(projectId:Types.ObjectId,userId:Types.ObjectId){
  const [project,user]=await Promise.all([Project.findOne({_id:projectId,status:'active'}),User.findOne({_id:userId,status:'active'})]);
  if(!project||!user||user.role!=='admin'&&!user.projectIds.some(p=>p.equals(projectId)))throw new WebsiteError('authority_revoked','项目或发起人权限已变化，已停止调查');
 }
-export async function processWebsiteResearch(id?:string,fetcher:WebsiteFetcher=fetchWebsite){
+export async function processWebsiteResearch(id?:string,fetcher:WebsiteFetcher=fetchWithArchiveFallback){
  const now=new Date(),token=randomUUID();const job=await WebsiteResearch.findOneAndUpdate({...(id?{_id:id}:{}),$or:[{state:'queued'},{state:'running',leaseUntil:{$lte:now}}]},{$set:{state:'running',stage:'正在读取客户官网',leaseToken:token,leaseUntil:new Date(Date.now()+120000)},$inc:{attempts:1}},{sort:{createdAt:1},new:true});
  if(!job)return;
  const fence={_id:job._id,leaseToken:token,state:'running'};
  const check=async()=>{if(!await WebsiteResearch.exists(fence))throw new WebsiteError('interrupted','任务已取消或由其他进程接管');await authorizedWorker(job.projectId,job.userId);if(job.customerId){const user=await User.findById(job.userId);await getCustomerByIdOrThrow(String(job.customerId),{id:String(job.userId),projectId:String(job.projectId),role:user!.role,username:user!.username,displayName:user!.displayName});}};
  try{
   await check();if(job.attempts>3)throw new WebsiteError('attempt_limit','多次中断后已停止，请重新创建调查');
-  if(job.robots===undefined){const origin=new URL(job.url).origin;const response=await fetcher(origin+'/robots.txt','robots');job.robots=response.text;await check();await WebsiteResearch.updateOne(fence,{$set:{robots:job.robots}});}
+  if(job.robots===undefined){const origin=new URL(job.url).origin;try{const response=await fetcher(origin+'/robots.txt','robots');job.robots=response.text;}catch(e){if(!(e instanceof WebsiteError)||!['http_error','timeout','dns_failed'].includes(e.code))throw e;
+   // robots.txt 自己也被 WAF 挡住时按「没有声明限制」处理：主页面仍会走归档兜底，
+   // 但不会伪造一条 robots 规则。
+   job.robots='';}await check();await WebsiteResearch.updateOne(fence,{$set:{robots:job.robots}});}
   if(!robotsAllows(new URL(job.url).pathname,job.robots))throw new WebsiteError('robots_blocked','该网站不允许自动采集，请人工查看官网');
-  if(!job.pages.length){const response=await fetcher(job.url);await check();const page=parseWebsitePage(response.text,response.url);if(page.text.length<30||page.text.length<400&&/captcha|verify you are human|checking your browser|enable javascript|access denied|人机验证/i.test(page.text))throw new WebsiteError('no_text','没有足够的可读正文，网站可能需要登录、验证或运行脚本；请人工调查');job.pages.push(page);job.targets=relatedPages(page);await WebsiteResearch.updateOne(fence,{$set:{pages:job.pages,targets:job.targets}});}
+  if(!job.pages.length){const response=await fetcher(job.url);await check();const page=parseWebsitePage(response.text,response.url);if(response.archivedAt)page.collectedAt=response.archivedAt;if(page.text.length<30||page.text.length<400&&/captcha|verify you are human|checking your browser|enable javascript|access denied|人机验证/i.test(page.text))throw new WebsiteError('no_text','没有足够的可读正文，网站可能需要登录、验证或运行脚本；请人工调查');job.pages.push(page);job.targets=relatedPages(page);await WebsiteResearch.updateOne(fence,{$set:{pages:job.pages,targets:job.targets}});}
   for(const url of job.targets){
    if(job.pages.some(p=>p.url===url)||job.failures.some(f=>f.url===url))continue;await check();
    if(!robotsAllows(new URL(url).pathname,job.robots)){job.failures.push({url,message:'网站不允许自动读取此页面'});await WebsiteResearch.updateOne(fence,{$set:{failures:job.failures}});continue;}
