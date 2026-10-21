@@ -103,6 +103,7 @@ export function LettersPage(): React.JSX.Element {
    */
   const openResend = React.useCallback(async (letter: DevelopmentLetter) => {
     setViewOpen(false);
+    if(letter.status==='draft'){navigate('/customers/'+letter.customerId+'?knowledgeDraft='+letter.id);return;}
     setPreparing(true);
     try {
       const customer = await apiGet<Customer>(`/customers/${letter.customerId}`);
@@ -116,7 +117,7 @@ export function LettersPage(): React.JSX.Element {
     } finally {
       setPreparing(false);
     }
-  }, []);
+  }, [navigate]);
 
   const handleSent = React.useCallback(() => {
     void fetchList();

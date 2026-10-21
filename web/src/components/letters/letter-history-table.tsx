@@ -6,7 +6,7 @@
  */
 import * as React from 'react';
 import { toast } from 'sonner';
-import { Copy, Eye, MailWarning, RotateCw, Trash2 } from 'lucide-react';
+import { Copy, Eye, MailWarning, FilePenLine, RotateCw, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, SortableHeader } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/ui/separator';
@@ -221,15 +221,16 @@ export function LetterHistoryTable({
                         type="button"
                         variant="ghost"
                         size="icon-xs"
-                        aria-label="重新发送"
-                        disabled={busy || letter.status === 'draft'}
+                        className={letter.status === 'draft' ? 'h-auto min-h-11 w-auto px-3' : undefined}
+                        aria-label={letter.status === 'draft' ? '审核草稿' : '重新发送'}
+                        disabled={busy}
                         onClick={() => onResend(letter)}
                       >
-                        <RotateCw className="h-3.5 w-3.5" />
+                        {letter.status === 'draft' ? <><FilePenLine className="h-3.5 w-3.5" aria-hidden/>审核草稿</> : <RotateCw className="h-3.5 w-3.5" />}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {letter.status === 'draft' ? '草稿请编辑后发送' : '以原内容再发一次'}
+                      {letter.status === 'draft' ? '审核并编辑草稿' : '以原内容再发一次'}
                     </TooltipContent>
                   </Tooltip>
 

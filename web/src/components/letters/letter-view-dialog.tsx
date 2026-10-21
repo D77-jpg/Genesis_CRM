@@ -13,6 +13,7 @@ import {
   FileText,
   Hash,
   Mail,
+  FilePenLine,
   RotateCw,
   Trash2,
   User,
@@ -239,11 +240,9 @@ export function LetterViewDialog({
               <Button
                 type="button"
                 onClick={() => onResend(letter)}
-                disabled={letter.status === 'draft'}
-                title={letter.status === 'draft' ? '草稿请直接编辑后发送' : undefined}
               >
-                <RotateCw className="h-3.5 w-3.5" aria-hidden />
-                重新发送
+                {letter.status === 'draft' ? <FilePenLine className="h-3.5 w-3.5" aria-hidden/> : <RotateCw className="h-3.5 w-3.5" aria-hidden/>}
+                {letter.status === 'draft' ? '审核草稿' : '重新发送'}
               </Button>
             </>
           ) : null}

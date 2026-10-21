@@ -1,4 +1,6 @@
 import * as React from 'react';
+import {PendingDrafts} from '@/components/letters/pending-drafts';
+import {usePendingDrafts} from '@/hooks/use-pending-drafts';
 import {acceptsKnowledgeHandoff} from '@/lib/knowledge-sales';
 import { WorkspaceDrawer } from '@/components/common/workspace';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -203,6 +205,7 @@ export function AgentPanel(): React.JSX.Element | null {
   const contextKey = project?.id + ':' + (activeContext.type === 'customer' ? activeContext.resourceId : '');
   const currentCustomer = customerInfo?.key === contextKey ? customerInfo.customer : null;
   const counts = taskCounts(workflowTasks);
+  const pendingDrafts=usePendingDrafts(context.type==='customer'?context.resourceId:undefined,open);
   const contextualTasks = workflowTasks.filter(task => activeContext.type === 'customer'
     ? task.customerId === activeContext.resourceId
     : activeContext.type === 'mail' ? task.sourceMailId === activeContext.resourceId : true);
@@ -524,10 +527,11 @@ export function AgentPanel(): React.JSX.Element | null {
         <div className="shrink-0 border-b px-3 py-2">
           <TabsList aria-label="助手功能" className="grid w-full max-w-none grid-cols-3 gap-1 overflow-visible rounded-xl bg-muted/60 p-1 [&>button]:min-h-10 [&>button]:rounded-lg [&>button]:px-2 [&>button]:py-2 [&>button]:leading-5 [&>button]:text-muted-foreground [&>button]:data-[state=active]:bg-card [&>button]:data-[state=active]:text-foreground [&>button]:data-[state=active]:shadow-sm">
             <TabsTrigger value="chat"><MessageSquare className="h-4 w-4" aria-hidden />对话</TabsTrigger>
-            <TabsTrigger value="tasks" onClick={() => { setFocusTaskId(null); setAutoOpenTaskId(null); }}><ListChecks className="h-4 w-4" aria-hidden />待办{tasksLoaded && counts.review + counts.attention > 0 && <span className="rounded-full bg-primary/10 px-1.5 text-xs tabular-nums">{counts.review + counts.attention}</span>}</TabsTrigger>
+            <TabsTrigger value="tasks" onClick={() => { setFocusTaskId(null); setAutoOpenTaskId(null); }}><ListChecks className="h-4 w-4" aria-hidden />待办{(tasksLoaded||!pendingDrafts.loading) && pendingDrafts.total + counts.attention > 0 && <span className="rounded-full bg-primary/10 px-1.5 text-xs tabular-nums">{pendingDrafts.total + counts.attention}</span>}</TabsTrigger>
             <TabsTrigger value={secondaryLabels[tab] ? tab : 'tools'} onClick={() => setTab('tools')}><BriefcaseBusiness className="h-4 w-4" aria-hidden />工具</TabsTrigger>
           </TabsList>
         </div>
+        {tab!=='tasks'&&(pendingDrafts.total>0||pendingDrafts.error)&&<button type="button" className="mx-3 mt-3 flex min-h-12 shrink-0 items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={()=>{setTab('tasks');if(pendingDrafts.error)pendingDrafts.refresh();}}><span>{pendingDrafts.error?'待审核草稿暂未更新，点击重试':(context.type==='customer'?'当前客户有 ':'有 ')+pendingDrafts.total+' 封草稿待审核'}</span><span className="shrink-0 font-medium text-primary">查看草稿</span></button>}
         {secondaryLabels[tab] && <div className="flex shrink-0 items-center gap-2 border-b px-4 py-1.5">
           <Button variant="ghost" className="min-h-11 px-2 text-muted-foreground" onClick={() => setTab(['customer-preview','customer-analysis','mail-analysis'].includes(tab) ? 'chat' : 'tools')}><ArrowLeft className="h-4 w-4" aria-hidden />返回{['customer-preview','customer-analysis','mail-analysis'].includes(tab) ? '对话' : '工具'}</Button>
           <span className="text-sm font-medium">{secondaryLabels[tab]}</span>
@@ -695,7 +699,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <TabsContent value="inbox" className="m-0 flex min-h-0 flex-1 flex-col"><AgentEventInbox key={`${project.id}:${user.id}`} onTask={showTask}/></TabsContent>
         <TabsContent value="batches" className="m-0 flex min-h-0 flex-1 flex-col"><AgentBatches key={`${project.id}:${user.id}`} selectedIds={selectedBatchIds} onClearSelection={clearBatchSelection} onTask={showTask} onDraft={openTaskDraft}/></TabsContent>
         <TabsContent value="knowledge" className="m-0 flex min-h-0 flex-1 flex-col"><AgentKnowledge key={`${project.id}:${user.id}`} admin={user.role==='admin'} customerId={context.type==='customer'?context.resourceId:undefined}/></TabsContent>
-        <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks key={`${project.id}:${user.id}`} tasks={workflowTasks} loaded={tasksLoaded} loadError={tasksError} onTaskUpdated={updated => setWorkflowTasks(rows => rows.map(task => task.id === updated.id ? updated : task))} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft} onMailAnalysis={showTaskMail} focusTaskId={focusTaskId}/></TabsContent>
+        <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks drafts={<PendingDrafts feed={pendingDrafts} onOpenDraft={letter=>{navigate('/customers/'+letter.customerId+'?knowledgeDraft='+letter.id);setOpen(false);}}/>} key={`${project.id}:${user.id}`} tasks={workflowTasks} loaded={tasksLoaded} loadError={tasksError} onTaskUpdated={updated => setWorkflowTasks(rows => rows.map(task => task.id === updated.id ? updated : task))} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft} onMailAnalysis={showTaskMail} focusTaskId={focusTaskId}/></TabsContent>
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-2 gap-3">
