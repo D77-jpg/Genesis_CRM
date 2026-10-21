@@ -1,3 +1,5 @@
+import {PendingDrafts} from '@/components/letters/pending-drafts';
+import {usePendingDrafts} from '@/hooks/use-pending-drafts';
 import {CustomerAgreements} from '@/components/agent/customer-agreements';
 import { customerTextPatch } from '@/lib/customer-payload';
 /**
@@ -265,6 +267,8 @@ export function CustomerDetailPage(): React.JSX.Element {
   const lettersQuery = useCustomerLetters(id, { page: letterPage, limit: letterLimit });
   // run 引用稳定，单独取出来放进依赖，避免每次渲染都重建回调
   const reloadLetters = lettersQuery.run;
+  const pendingDrafts = usePendingDrafts(id);
+  const refreshDrafts = pendingDrafts.refresh;
 
   /* ---------------------------- 弹窗状态 ---------------------------- */
 
@@ -331,8 +335,9 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   /** 发信 / 重发成功后：刷新客户档案与开发信历史 */
   const refreshAll = React.useCallback(async () => {
+    refreshDrafts();
     await Promise.all([reloadCustomer(), reloadLetters()]);
-  }, [reloadCustomer, reloadLetters]);
+  }, [reloadCustomer, reloadLetters, refreshDrafts]);
 
   // 发信结果里带了最新的 customer，可先局部更新列表缓存，返回时不闪烁
   const handleSent = React.useCallback(
@@ -449,14 +454,16 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   const openResend = React.useCallback((letter: DevelopmentLetter) => {
     setViewOpen(false);
+    if(letter.status==='draft'){navigate('/customers/'+letter.customerId+'?knowledgeDraft='+letter.id);return;}
     setResendTarget(letter);
     setSendOpen(true);
-  }, []);
+  }, [navigate]);
 
   const confirmDeleteLetter = React.useCallback(async () => {
     if (!deleteLetterTarget) return;
     try {
       await deleteLetter(deleteLetterTarget.id);
+      refreshDrafts();
       toast.success('开发信记录已删除');
       setDeleteLetterTarget(null);
       setViewOpen(false);
@@ -464,7 +471,7 @@ export function CustomerDetailPage(): React.JSX.Element {
     } catch (caught) {
       toast.error('删除失败', { description: caught instanceof Error ? caught.message : String(caught) });
     }
-  }, [deleteLetterTarget, deleteLetter, reloadCustomer, reloadLetters]);
+  }, [deleteLetterTarget, deleteLetter, reloadCustomer, reloadLetters, refreshDrafts]);
 
   const confirmDeleteCustomer = React.useCallback(async () => {
     if (!id) return;
@@ -566,6 +573,8 @@ export function CustomerDetailPage(): React.JSX.Element {
           </>
         }
       />
+
+      <PendingDrafts feed={pendingDrafts} onOpenDraft={letter=>navigate('/customers/'+customer.id+'?knowledgeDraft='+letter.id)} busy={letterBusy}/>
 
       {/* ---------------------------- 客户档案 ---------------------------- */}
 

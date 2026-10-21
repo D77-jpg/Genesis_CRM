@@ -31,6 +31,7 @@ const descriptions: Record<AgentTask['status'], string> = {
   failed: '暂未完成，请查看原因后重试。', cancelled: '任务已停止，已保存的结果保留。',
 };
 interface Props {
+  drafts?: React.ReactNode;
   tasks: AgentTask[]; loaded: boolean; loadError: string;
   onTaskUpdated: (task: AgentTask) => void;
   autoOpenTaskId: string | null;
@@ -38,7 +39,7 @@ interface Props {
   onMailAnalysis?: (task: AgentTask) => void;
   focusTaskId?: string | null;
 }
-export function AgentTasks({ tasks, loaded, loadError, onTaskUpdated, autoOpenTaskId, onOpenDraft, onMailAnalysis, focusTaskId }: Props) {
+export function AgentTasks({ drafts, tasks, loaded, loadError, onTaskUpdated, autoOpenTaskId, onOpenDraft, onMailAnalysis, focusTaskId }: Props) {
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState('');
   const [filter, setFilter] = React.useState<TaskFilter>('pending');
@@ -67,14 +68,15 @@ export function AgentTasks({ tasks, loaded, loadError, onTaskUpdated, autoOpenTa
     finally { setBusy(''); }
   }
   return <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+    {drafts&&<div className="mb-6">{drafts}</div>}
     <header className="mb-4">
-      <h3 className="text-base font-semibold">待你推进的工作</h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">先审核草稿，再处理需要补充的资料。关闭助手后，准备中的任务仍会继续。</p>
+      <h3 className="text-base font-semibold">助手任务进度</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">这里保留助手的准备过程；已保存的草稿请从上方审核。关闭助手后，准备中的任务仍会继续。</p>
     </header>
     <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="筛选待办">
       {([
         ['pending', '未完成', counts.review + counts.attention + counts.active],
-        ['review', '待审核', counts.review],
+        ['review', '已出稿', counts.review],
         ['attention', '需处理', counts.attention],
       ] as const).map(([key, label, count]) => <Button key={key} variant={filter === key ? 'secondary' : 'ghost'} className="min-h-11 px-3" aria-pressed={filter === key} onClick={() => chooseFilter(key)}>{label}{loaded && <span className="text-xs tabular-nums text-muted-foreground">{count}</span>}</Button>)}
     </div>
@@ -82,7 +84,7 @@ export function AgentTasks({ tasks, loaded, loadError, onTaskUpdated, autoOpenTa
       <span className="text-xs leading-5 text-muted-foreground">显示最近 30 项任务</span>
       <label className="flex items-center gap-2 text-xs text-muted-foreground"><span className="sr-only">其他任务范围</span>
         <select aria-label="其他任务范围" className="min-h-11 max-w-40 rounded-md border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={filter} onChange={event => chooseFilter(event.target.value as TaskFilter)}>
-          <option value="pending">全部未完成</option><option value="review">待审核</option><option value="attention">需处理</option><option value="active">正在准备</option><option value="history">已结束</option><option value="all">全部记录</option>
+          <option value="pending">全部未完成</option><option value="review">已出稿任务</option><option value="attention">需处理</option><option value="active">正在准备</option><option value="history">已结束</option><option value="all">全部记录</option>
         </select>
       </label>
     </div>
@@ -90,8 +92,8 @@ export function AgentTasks({ tasks, loaded, loadError, onTaskUpdated, autoOpenTa
     {!loaded && !loadError && <p role="status" className="flex items-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" aria-hidden />正在更新待办…</p>}
     {loaded && rows.length === 0 && <div className="py-8">
       <ListChecks className="mb-3 h-7 w-7 text-muted-foreground" aria-hidden />
-      <p className="text-sm font-medium">{tasks.length ? '这个范围内暂无任务' : '暂时没有待办'}</p>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{tasks.length ? '可以切换范围，查看准备中的任务和已结束记录。' : '在客户页面告诉助手“帮我写第一封开发信”，草稿准备好后会出现在这里。'}</p>
+      <p className="text-sm font-medium">{tasks.length ? '这个范围内暂无任务' : '暂无助手任务'}</p>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{tasks.length ? '可以切换范围，查看准备中的任务和已结束记录。' : '手动保存或较早生成的草稿也可在上方审核，无需重新准备。'}</p>
     </div>}
     <div className="divide-y">{rows.map(task => <section key={task.id} ref={task.id === pinnedId ? focusRef : undefined} className={'py-5 first:pt-1 ' + (task.id === pinnedId ? 'rounded-lg bg-primary/5 px-3' : '')}>
       <div className="flex items-start justify-between gap-3">
