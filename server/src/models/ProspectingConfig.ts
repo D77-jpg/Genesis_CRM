@@ -1,6 +1,12 @@
 import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoose';
 
+export interface SearchProfile {
+ id:string;name:string;queries:string[];enrichLimit:number;hunterLimit:number;minScore:number;llmScoring:boolean;
+}
 export interface IProspectingConfig {
+  profiles:SearchProfile[];
+  activeProfileId?:string;
+  version:number;
   projectId: Types.ObjectId;
   enabled: boolean;
   dailyTarget: number;
@@ -24,6 +30,8 @@ export type ProspectingConfigModel = Model<IProspectingConfig>;
 
 const ProspectingConfigSchema = new Schema<IProspectingConfig>({
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, unique: true },
+  profiles:{type:[new Schema<SearchProfile>({id:{type:String,required:true},name:{type:String,required:true,maxlength:60},queries:{type:[String],default:[]},enrichLimit:{type:Number,required:true,min:1,max:80},hunterLimit:{type:Number,required:true,min:0,max:50},minScore:{type:Number,required:true,min:0,max:100},llmScoring:{type:Boolean,default:true}},{_id:false})],default:[]},
+  activeProfileId:{type:String},version:{type:Number,default:0},
   enabled: { type: Boolean, default: false },
   dailyTarget: { type: Number, default: 15, min: 1, max: 50 },
   queries: { type: [String], default: [] },

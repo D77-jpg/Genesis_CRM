@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {ProspectingSettingsDialog,ProspectingRunDialog} from '@/components/prospecting/search-profile-dialogs';
 import {
   AtSign, Check, ExternalLink, Instagram, Linkedin, Loader2, Play, RefreshCw, Settings2, Sparkles, Target, X,
 } from 'lucide-react';
@@ -7,13 +8,8 @@ import { PageHeader } from '@/components/common/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { usePageTitle } from '@/hooks/use-ui';
-import { apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
+import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import type { Prospect, ProspectingReport, ProspectingToday } from '@/types';
@@ -22,15 +18,19 @@ const STATUS_LABEL: Record<Prospect['status'], string> = {
   ready: '可发送', needs_contact: '待补联系方式', low: '评分不足', rejected: '已跳过', converted: '已转客户',
 };
 
+function socialHref(value:string,host:string,prefix=''){
+ try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&url.hostname.replace(/^www\./,'')===host?url.href:undefined;}
+ catch{return /^[\w.%-]{1,100}$/.test(value)?'https://'+host+'/'+prefix+encodeURIComponent(value):undefined;}
+}
 function scoreClass(score: number) {
   if (score >= 80) return 'bg-emerald-100 text-emerald-800 border-emerald-200';
   if (score >= 60) return 'bg-amber-100 text-amber-800 border-amber-200';
   return 'bg-muted text-muted-foreground';
 }
 
-function ProspectCard({ prospect, today, busy, onApprove, onReject }: {
+function ProspectCard({ prospect, today, busy, onApprove, onReject,onSync,onRefresh }: {
   prospect: Prospect; today: string; busy: boolean;
-  onApprove: (id: string) => void; onReject: (id: string) => void;
+  onApprove: (id: string) => void; onReject: (id: string) => void;onSync?:(id:string)=>void;onRefresh?:(id:string)=>void;
 }) {
   const converted = prospect.status === 'converted';
   return (
@@ -85,14 +85,19 @@ function ProspectCard({ prospect, today, busy, onApprove, onReject }: {
         {prospect.emails.map((email) => (
           <a key={email} href={`mailto:${email}`} className="inline-flex items-center gap-1 text-primary hover:underline"><AtSign className="h-3.5 w-3.5" aria-hidden />{email}</a>
         ))}
-        {prospect.instagram ? <a href={`https://instagram.com/${prospect.instagram}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Instagram className="h-3.5 w-3.5" aria-hidden />@{prospect.instagram}</a> : null}
+        {prospect.instagram ? <a href={socialHref(prospect.instagram,'instagram.com')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Instagram className="h-3.5 w-3.5" aria-hidden />Instagram</a> : null}
         {prospect.emailSource === 'hunter' ? <Badge variant="outline" className="font-normal">Hunter{prospect.emailConfidence ? ` ${prospect.emailConfidence}%` : ''}</Badge> : null}
-        {prospect.linkedin ? <a href={`https://linkedin.com/company/${prospect.linkedin}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Linkedin className="h-3.5 w-3.5" aria-hidden />LinkedIn</a> : null}
+        {prospect.linkedin ? <a href={socialHref(prospect.linkedin,'linkedin.com','company/')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Linkedin className="h-3.5 w-3.5" aria-hidden />LinkedIn</a> : null}
         <a href={prospect.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><ExternalLink className="h-3.5 w-3.5" aria-hidden />来源</a>
         {converted && prospect.outcome ? (
           <span className="text-xs text-muted-foreground">已发 {prospect.outcome.sent} · 回复 {prospect.outcome.replied} · 退信 {prospect.outcome.bounced}</span>
         ) : null}
       </div>
+      {converted&&onSync&&<Button type="button" variant="outline" className="mt-3 min-h-11" disabled={busy} onClick={()=>onSync(prospect.id)}>补齐已获取资料</Button>}
+      {onRefresh&&<div className="mt-2 flex flex-wrap items-center gap-2"><Button type="button" variant="ghost" className="min-h-11" disabled={busy} onClick={()=>onRefresh(prospect.id)}>{busy?'正在处理…':converted?'重新采集并补齐空字段':'重新采集官网资料'}</Button><span className="text-xs text-muted-foreground">最多读取 3 个官网页面，消耗 Firecrawl 额度；保留客户已有内容。</span></div>}
+      <details className="mt-3 rounded-md border bg-muted/20 p-3 text-sm"><summary className="min-h-11 cursor-pointer font-medium">查看将导入客户的资料</summary><dl className="mt-3 grid gap-3 sm:grid-cols-2">{[
+ ['公司',prospect.company],['联系人',prospect.contactName],['职位',prospect.contactTitle],['电话',prospect.phone],['国家 / 地区',prospect.country],['行业',prospect.industry],['地址',prospect.address],['Instagram',prospect.instagram],['LinkedIn',prospect.linkedin],['Facebook',prospect.facebook],['WhatsApp',prospect.whatsapp],
+ ].map(([label,value])=><div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 break-words">{value||'来源未提供'}</dd></div>)}</dl><p className="mt-3 text-xs leading-6 text-muted-foreground">已获取字段和官网简介会随客户保存；未提供的字段保留空白，不从网站售卖产品推断采购需求。</p></details>
       {prospect.excerpt ? <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{prospect.excerpt}</p> : null}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {prospect.reasons.map((reason) => <Badge key={reason} variant="outline" className="font-normal text-muted-foreground">{reason}</Badge>)}
@@ -110,14 +115,6 @@ export function ProspectingPage(): React.JSX.Element {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [runOpen, setRunOpen] = React.useState(false);
   const [configOpen, setConfigOpen] = React.useState(false);
-  const [queries, setQueries] = React.useState('');
-  const [enrichLimit, setEnrichLimit] = React.useState(20);
-  const [hunterLimit, setHunterLimit] = React.useState(15);
-  const [minScore, setMinScore] = React.useState(60);
-  const [autoEnabled, setAutoEnabled] = React.useState(false);
-  const [llmScoring, setLlmScoring] = React.useState(true);
-  const [profileTitle, setProfileTitle] = React.useState<string | null>(null);
-
   const load = React.useCallback(async () => {
     try {
       const [today, summary] = await Promise.all([
@@ -141,27 +138,7 @@ export function ProspectingPage(): React.JSX.Element {
     return () => window.clearInterval(timer);
   }, [data?.run?.status, load]);
 
-  const openRun = async () => {
-    try {
-      const config = await apiGet<{ queries: string[]; enrichLimit: number }>('/prospecting/config');
-      setQueries(config.queries.join('\n'));
-      setEnrichLimit(config.enrichLimit);
-    } catch { /* 用当前表单值 */ }
-    setRunOpen(true);
-  };
-
-  const startRun = async () => {
-    setBusy('run');
-    try {
-      const list = queries.split('\n').map((item) => item.trim()).filter(Boolean);
-      await apiPost('/prospecting/run', { queries: list.length ? list : undefined, enrichLimit });
-      toast.success('已开始生成今日候选', { description: '搜索与补全需要 1–3 分钟，页面会自动刷新' });
-      setRunOpen(false);
-      await load();
-    } catch (error) {
-      toast.error('启动失败', { description: toErrorMessage(error, '请稍后重试') });
-    } finally { setBusy(null); }
-  };
+  const openRun = () => setRunOpen(true);
 
   const approve = async (id: string) => {
     setBusy(id);
@@ -188,36 +165,9 @@ export function ProspectingPage(): React.JSX.Element {
     } finally { setBusy(null); }
   };
 
-  const saveConfig = async () => {
-    setBusy('config');
-    try {
-      await apiPut('/prospecting/config', {
-        enabled: autoEnabled,
-        queries: queries.split('\n').map((item) => item.trim()).filter(Boolean),
-        enrichLimit, hunterLimit, minScore, llmScoring,
-      });
-      toast.success('配置已保存');
-      setConfigOpen(false);
-    } catch (error) {
-      toast.error('保存失败', { description: toErrorMessage(error, '请稍后重试') });
-    } finally { setBusy(null); }
-  };
-
-  const openConfig = async () => {
-    try {
-      const config = await apiGet<{ queries: string[]; enrichLimit: number; hunterLimit: number; minScore: number; enabled: boolean; llmScoring: boolean; profileTitle: string | null }>('/prospecting/config');
-      setQueries(config.queries.join('\n'));
-      setEnrichLimit(config.enrichLimit);
-      setHunterLimit(config.hunterLimit);
-      setMinScore(config.minScore);
-      setAutoEnabled(config.enabled);
-      setLlmScoring(config.llmScoring);
-      setProfileTitle(config.profileTitle);
-      setConfigOpen(true);
-    } catch (error) {
-      toast.error('读取配置失败', { description: toErrorMessage(error, '请稍后重试') });
-    }
-  };
+  const sync = async(id:string)=>{setBusy(id);try{const result=await apiPost<{filledFields:string[]}>('/prospecting/'+id+'/sync-customer',{});toast.success(result.filledFields.length?'已补齐 '+result.filledFields.length+' 个空字段':'资料已核对',{description:'只补空字段，保留已有内容；来源与简介也可在候选资料中查看。'});await load();}catch(error){toast.error('补齐失败',{description:toErrorMessage(error)});}finally{setBusy(null);}};
+  const refreshContact=async(id:string)=>{setBusy(id);try{const result=await apiPost<{filledFields:string[]}>('/prospecting/'+id+'/refresh-contact',{},{timeout:600000});toast.success('官网资料已更新',{description:result.filledFields.length?'已补齐客户 '+result.filledFields.length+' 个空字段':'已保留可读取资料，客户已有内容未覆盖。'});await load();}catch(error){toast.error('重新采集失败',{description:toErrorMessage(error)});}finally{setBusy(null);}};
+  const openConfig = () => setConfigOpen(true);
 
   const run = data?.run;
   const counts = data?.counts;
@@ -233,7 +183,7 @@ export function ProspectingPage(): React.JSX.Element {
     <div className="workspace-page">
       <PageHeader
         title="今日开发"
-        description="按客户画像搜索候选品牌、补全联系方式；审核后转为正式客户，再写开发信。定时自动生成在下一步接入。"
+        description="按客户画像搜索候选品牌、补全联系方式；审核后转为正式客户，再写开发信。可保存多套搜索方案，并选择默认自动生成。"
         actions={isAdmin ? (
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => void openConfig()}><Settings2 className="h-4 w-4" aria-hidden />搜索设置</Button>
@@ -267,7 +217,7 @@ export function ProspectingPage(): React.JSX.Element {
         <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-4 py-3 text-sm',
           run.status === 'failed' ? 'border-destructive/30 bg-destructive/5 text-destructive' : run.status === 'running' ? 'border-amber-300/60 bg-amber-50 text-amber-900' : 'bg-muted/30')}>
           {run.status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          <span>本轮：搜索到 {run.imported} 个域名，去重后 {run.deduped} 个，补全 {run.enriched} 个，Hunter 补到 {run.hunterFound} 个邮箱，入选 {run.selected} 个</span>
+          <span>本轮{run.profileName?'（'+run.profileName+'）':''}：搜索到 {run.imported} 个域名，去重后 {run.deduped} 个，补全 {run.enriched} 个，Hunter 补到 {run.hunterFound} 个邮箱，入选 {run.selected} 个</span>
           {run.failed.length ? <span className="text-xs text-muted-foreground">{run.failed.length} 条失败</span> : null}
           {run.error ? <span>{run.error}</span> : null}
           <Button type="button" size="sm" variant="ghost" className="ml-auto" onClick={() => void load()}><RefreshCw className="h-3.5 w-3.5" aria-hidden />刷新</Button>
@@ -292,7 +242,7 @@ export function ProspectingPage(): React.JSX.Element {
           <div className="space-y-2">
             {group.items.map((prospect) => (
               <ProspectCard key={prospect.id} prospect={prospect} today={data?.day ?? ''} busy={busy === prospect.id}
-                onApprove={(id) => void approve(id)} onReject={(id) => void reject(id)} />
+                onRefresh={isAdmin?id=>void refreshContact(id):undefined} onApprove={(id) => void approve(id)} onReject={(id) => void reject(id)} />
             ))}
           </div>
         </section>
@@ -303,7 +253,7 @@ export function ProspectingPage(): React.JSX.Element {
           <h2 className="text-sm font-medium">今天已转客户</h2>
           <div className="space-y-2">
             {converted.map((prospect) => (
-              <ProspectCard key={prospect.id} prospect={prospect} today={data?.day ?? ''} busy={false} onApprove={() => undefined} onReject={() => undefined} />
+              <ProspectCard key={prospect.id} prospect={prospect} today={data?.day ?? ''} busy={busy===prospect.id} onSync={id=>void sync(id)} onRefresh={isAdmin?id=>void refreshContact(id):undefined} onApprove={() => undefined} onReject={() => undefined} />
             ))}
           </div>
         </section>
@@ -357,76 +307,8 @@ export function ProspectingPage(): React.JSX.Element {
         </section>
       ) : null}
 
-      <Dialog open={runOpen} onOpenChange={(next) => !busy && setRunOpen(next)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>生成今日候选</DialogTitle>
-            <DialogDescription>默认使用“搜索设置”里的关键词；也可以这次临时换一组，每行一个。</DialogDescription>
-          </DialogHeader>
-          <DialogBody className="space-y-3">
-            <div>
-              <Label htmlFor="prospect-queries">搜索词（可留空）</Label>
-              <Textarea id="prospect-queries" className="mt-1.5 min-h-28" value={queries} onChange={(event) => setQueries(event.target.value)}
-                placeholder={'independent jewelry brand "made in usa" shop -site:etsy.com\nhandmade candle brand usa online store'} />
-            </div>
-            <div>
-              <Label htmlFor="prospect-enrich">补全数量</Label>
-              <Input id="prospect-enrich" type="number" min={1} max={80} className="mt-1.5 w-32" value={enrichLimit}
-                onChange={(event) => setEnrichLimit(Number(event.target.value) || 20)} />
-              <p className="mt-1 text-xs text-muted-foreground">每个候选会抓官网首页和联系页，越多越慢、消耗的 Firecrawl 额度越多。</p>
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" disabled={busy === 'run'} onClick={() => setRunOpen(false)}>取消</Button>
-            <Button type="button" loading={busy === 'run'} onClick={() => void startRun()}>开始生成</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={configOpen} onOpenChange={(next) => !busy && setConfigOpen(next)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>搜索设置</DialogTitle>
-            <DialogDescription>搜索词决定候选质量；建议每个品类 2–3 条，带国家/风格限定，排除平台站。</DialogDescription>
-          </DialogHeader>
-          <DialogBody className="space-y-3">
-            <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-              <div>
-                <p className="text-sm font-medium">每天自动生成</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">开启后每天 06:30（项目时区）自动跑一轮；服务重启后 3 小时内也会补跑一次。</p>
-              </div>
-              <Switch checked={autoEnabled} onCheckedChange={setAutoEnabled} aria-label="每天自动生成" />
-            </div>
-            <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-              <div>
-                <p className="text-sm font-medium">客户画像评分</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">按资料库里已发布的《客户画像》打分；找不到时用内置规则。</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  <span>{profileTitle ? `当前来源：资料库《${profileTitle}》` : '当前来源：内置规则（资料库未找到《客户画像》）'}</span>
-                  {profileTitle ? null : (
-                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => { window.location.assign('/knowledge?view=manage'); }}>
-                      去资料库上传
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <Switch checked={llmScoring} onCheckedChange={setLlmScoring} aria-label="AI 画像评分" />
-            </div>            <div>
-              <Label htmlFor="config-queries">默认搜索词（每行一个）</Label>
-              <Textarea id="config-queries" className="mt-1.5 min-h-32" value={queries} onChange={(event) => setQueries(event.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div><Label htmlFor="config-enrich">每天补全数量</Label><Input id="config-enrich" type="number" min={1} max={80} className="mt-1.5" value={enrichLimit} onChange={(event) => setEnrichLimit(Number(event.target.value) || 20)} /></div>
-              <div><Label htmlFor="config-hunter">Hunter 查询上限</Label><Input id="config-hunter" type="number" min={0} max={50} className="mt-1.5" value={hunterLimit} onChange={(event) => setHunterLimit(Number(event.target.value) || 0)} /></div>
-              <div><Label htmlFor="config-min">入选分数</Label><Input id="config-min" type="number" min={0} max={100} className="mt-1.5" value={minScore} onChange={(event) => setMinScore(Number(event.target.value) || 60)} /></div>
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" disabled={busy === 'config'} onClick={() => setConfigOpen(false)}>取消</Button>
-            <Button type="button" loading={busy === 'config'} onClick={() => void saveConfig()}>保存</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProspectingRunDialog open={runOpen} onOpenChange={setRunOpen} onCompleted={()=>void load()}/>
+      <ProspectingSettingsDialog open={configOpen} onOpenChange={setConfigOpen} onCompleted={()=>{toast.success('搜索方案已保存');void load();}}/>
     </div>
   );
 }

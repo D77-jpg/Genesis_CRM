@@ -6,7 +6,7 @@ import { sendSuccess } from '../utils/pagination';
 import { loadProfile } from '../services/prospecting/profile';
 import {
   approveProspect, getProspectingConfig, prospectingReport, prospectingToday, rejectProspect,
-  startProspecting, updateProspectingConfig,
+  startProspecting, updateProspectingConfig,syncProspectCustomer,refreshProspectContact,
 } from '../services/prospecting/prospecting.service';
 
 export const todayHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -14,12 +14,15 @@ export const todayHandler = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const runHandler = asyncHandler(async (req: Request, res: Response) => {
-  sendSuccess(res, await startProspecting(req.user!, req.body as { queries?: string[]; enrichLimit?: number }), 202);
+  sendSuccess(res, await startProspecting(req.user!, req.body as { profileId?:string;queries?: string[]; enrichLimit?: number }), 202);
 });
 
 export const approveHandler = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, await approveProspect(req.user!, req.params.id));
 });
+
+export const refreshContactHandler=asyncHandler(async(req:Request,res:Response)=>{sendSuccess(res,await refreshProspectContact(req.user!,req.params.id));});
+export const syncCustomerHandler=asyncHandler(async(req:Request,res:Response)=>{sendSuccess(res,await syncProspectCustomer(req.user!,req.params.id));});
 
 export const rejectHandler = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, await rejectProspect(req.user!, req.params.id, (req.body as { reason?: string }).reason));
@@ -37,6 +40,7 @@ export const configHandler = asyncHandler(async (req: Request, res: Response) =>
     minScore: config.minScore, llmScoring: config.llmScoring ?? true, enrichLimit: config.enrichLimit, cooldownDays: config.cooldownDays,
     hunterLimit: config.hunterLimit ?? 15,
     runAt: config.runAt, reviewAt: config.reviewAt, timezone: config.timezone,
+    profiles:config.profiles,activeProfileId:config.activeProfileId,version:config.version,
     ownerId: config.ownerId ? String(config.ownerId) : null,
     profileTitle: profile?.title ?? null,
   });

@@ -48,6 +48,8 @@ jobs:
           npm run test:mail
           npm run test:scratchpad
           npm run test:agent
+          npm run test:prospecting
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/prospecting-profiles.test.ts tests/prospecting.test.ts
           npm run test:ai-settings
           npm run test:website-research
           npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/website-research.test.ts tests/website-public-web.test.ts tests/fixtures/website-research/local-retrieval.ts

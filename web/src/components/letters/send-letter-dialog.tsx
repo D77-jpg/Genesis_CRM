@@ -378,7 +378,7 @@ export function SendLetterDialog({
         } finally { submitLock.current = false; }
       })();
     },
-    [canSend, customer, letter, initialDraft, reply, attributedTemplate?.id, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
+    [canSend, customer, letter, initialDraft, reply, attributedTemplate, scheduledAt, senderError, senderStatus?.reason, handleSubmit, sendLetter, resendLetter, onSent, onOpenChange],
   );
 
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送
@@ -488,24 +488,10 @@ export function SendLetterDialog({
             </Alert>
           ) : null}
 
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'edit' | 'preview' | 'bilingual')}>
-            <TabsList className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
-              <TabsTrigger value="edit">
-                <PencilLine className="h-3.5 w-3.5" aria-hidden />
-                编辑
-              </TabsTrigger>
-              <TabsTrigger value="preview">
-                <Eye className="h-3.5 w-3.5" aria-hidden />
-                预览
-              </TabsTrigger>
-              <TabsTrigger value="bilingual">
-                <Languages className="h-3.5 w-3.5" aria-hidden />
-                中英对照
-              </TabsTrigger>
-            </TabsList>
+
 
             {/* ---------------- 编辑 ---------------- */}
-            <TabsContent value="edit" className="space-y-4 pt-1">
+          <div className="space-y-4">
               {templateItems.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border border-dashed bg-muted/20 px-3 py-2">
                   <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -570,6 +556,24 @@ export function SendLetterDialog({
                 </div>
               </div>
 
+          </div>
+
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'edit' | 'preview' | 'bilingual')}>
+            <TabsList className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
+              <TabsTrigger value="edit">
+                <PencilLine className="h-3.5 w-3.5" aria-hidden />
+                编辑
+              </TabsTrigger>
+              <TabsTrigger value="preview">
+                <Eye className="h-3.5 w-3.5" aria-hidden />
+                预览
+              </TabsTrigger>
+              <TabsTrigger value="bilingual">
+                <Languages className="h-3.5 w-3.5" aria-hidden />
+                中英对照
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="edit" className="space-y-4 pt-1">
               <div>
                 <div className="flex items-baseline justify-between gap-2">
                   <Label htmlFor="letter-content">正文</Label>
