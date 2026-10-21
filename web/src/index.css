@@ -340,6 +340,10 @@
 .mail-preview a {
   @apply text-primary underline underline-offset-2 break-all;
 }
+/* 结尾里的品牌 logo：块级显示、去掉行内基线留白，避免和下一行之间出现大空档 */
+.mail-preview img {
+  @apply my-1.5 block h-auto max-w-full;
+}
 .mail-preview ul {
   @apply my-2 list-disc pl-6;
 }

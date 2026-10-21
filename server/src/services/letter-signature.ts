@@ -67,10 +67,10 @@ export function renderSignatureHtml(name: string): string {
   const lines = LETTER_SIGNATURE.lines.map((line) => escapeHtml(line)).join('<br>');
   const logoUrl = signatureLogoUrl();
   const logo = logoUrl
-    ? `<br><img src="${escapeHtml(logoUrl)}" alt="Genesis Packaging" width="180" style="display:block;border:0;max-width:180px;height:auto;margin:8px 0 0">`
+    ? `<img src="${escapeHtml(logoUrl)}" alt="Genesis Packaging" width="160" style="display:block;border:0;width:160px;height:auto;margin:6px 0">`
     : '';
   return `<div style="margin-top:14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6">`
-    + `<strong>${who}</strong><br>${escapeHtml(LETTER_SIGNATURE.title)}${logo}<hr><br>${lines}</div>`;
+    + `<strong>${who}</strong><br>${escapeHtml(LETTER_SIGNATURE.title)}<br>${logo}<hr><br>${lines}</div>`;
 }
 
 /** 把正文里的固定签名切出来（名字取签名块第一行），没有签名时 body 原样返回 */

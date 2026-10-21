@@ -763,8 +763,8 @@ function escapeSignatureText(value: string): string {
  */
 export function letterSignatureHtml(name: string): string {
   const who = escapeSignatureText((name || '').trim() || 'Sales Team');
-  const lines = LETTER_SIGNATURE.lines.map((line) => `<p>${escapeSignatureText(line)}</p>`).join('');
-  return `<p><strong>${who}</strong></p><p>${escapeSignatureText(LETTER_SIGNATURE.title)}</p><p></p>${lines}`;
+  const lines = LETTER_SIGNATURE.lines.map(escapeSignatureText).join('<br>');
+  return `<p><strong>${who}</strong><br>${escapeSignatureText(LETTER_SIGNATURE.title)}<br>${lines}</p>`;
 }
 
 /** 结尾里的落款词 / 联系方式 / 姓名行（与 server 端 stripTrailingSignoff 的口径一致） */
@@ -826,9 +826,38 @@ export function appendSignatureHtml(html: string, name: string): string {
  */
 export function withSignatureLogo(html: string): string {
   if (!html.includes(LETTER_SIGNATURE.marker) || /genesis-logo/.test(html)) return html;
-  const titleBlock = `<p>${LETTER_SIGNATURE.title}</p>`;
-  const logoBlock = '<p><img src="/api/brand/genesis-logo.png" alt="Genesis Packaging" width="180"></p>';
-  return html.includes(titleBlock) ? html.replace(titleBlock, `${titleBlock}${logoBlock}`) : html;
+  if (typeof DOMParser === 'undefined') return html;
+  const doc = new DOMParser().parseFromString(`<div id="signature-preview-root">${html}</div>`, 'text/html');
+  const root = doc.getElementById('signature-preview-root');
+  if (!root) return html;
+  const title = LETTER_SIGNATURE.title;
+  const logoSrc = '/api/brand/genesis-logo.png';
+  const logoTag = `<img src="${logoSrc}" alt="Genesis Packaging" width="150" style="display:block;width:150px;height:auto;margin:4px 0">`;
+  const dropEmptyBlocks = (start: Element): void => {
+    let next = start.nextElementSibling;
+    while (next && !(next.textContent ?? '').trim()) {
+      const after = next.nextElementSibling;
+      next.remove();
+      next = after;
+    }
+  };
+  // 结尾可能是「标题独占一段」，也可能整段用 <br> 连写，两种都支持
+  const standalone = [...root.querySelectorAll('p,div')].find((el) => (el.textContent ?? '').trim() === title);
+  if (standalone?.parentElement) {
+    const holder = doc.createElement('p');
+    holder.innerHTML = logoTag;
+    standalone.parentElement.insertBefore(holder, standalone.nextSibling);
+    dropEmptyBlocks(holder);
+    return root.innerHTML;
+  }
+  const host = [...root.querySelectorAll('p,div')].find((el) => el.innerHTML.includes(title));
+  if (host) {
+    host.innerHTML = host.innerHTML.replace(`${title}<br>`, `${title}<br>${logoTag}<br>`);
+    if (!host.innerHTML.includes(logoSrc)) host.innerHTML = host.innerHTML.replace(title, `${title}<br>${logoTag}`);
+    dropEmptyBlocks(host);
+    return root.innerHTML;
+  }
+  return html;
 }
 
 export const DEFAULT_LETTER_SUBJECT = '{{company}} packaging — samples from {{moq}}';
