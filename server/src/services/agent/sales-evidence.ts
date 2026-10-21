@@ -36,6 +36,28 @@ function mergeSource(a:KnowledgeSource,b:KnowledgeSource){
  if(a.version!==b.version||a.publication?.contentHash!==b.publication?.contentHash)throw ApiError.conflict('检索期间资料版本变化，请重新准备');
  const terms=[...a.terms];for(const term of b.terms)if(!terms.some(t=>t.publicationIndex===term.publicationIndex&&t.topic===term.topic))terms.push(term);return {...a,terms};
 }
+const EVIDENCE_SOURCE_LIMIT=16,EVIDENCE_CHAR_LIMIT=48000;
+export function evidenceWithinBudget(bundle:KnowledgeBundle){return bundle.sources.length<=EVIDENCE_SOURCE_LIMIT&&JSON.stringify(knowledgeForModel(bundle)).length<=EVIDENCE_CHAR_LIMIT;}
+function evidenceRank(source:KnowledgeSource){return Math.max(0,...Object.values(source.index?.scores??{}).filter((value):value is number=>typeof value==='number'));}
+// A project can publish more knowledge than one draft can carry. Keep the rules,
+// then the sources that answer a requested topic, then the best-ranked rest. Text
+// is never cut mid-condition; whatever is left out becomes a visible issue, so the
+// task still produces a reviewable draft instead of "reduce the scope and retry".
+export function trimEvidenceBudget(bundle:KnowledgeBundle,topics:PolicyTopic[]){
+ const answers=(source:KnowledgeSource)=>source.category!=='sales_rules'&&source.terms.some(term=>topics.includes(term.topic));
+ const rules=bundle.sources.filter(source=>source.category==='sales_rules');
+ const ranked=bundle.sources.filter(source=>source.category!=='sales_rules').sort((a,b)=>Number(answers(b))-Number(answers(a))||evidenceRank(b)-evidenceRank(a));
+ const kept:KnowledgeSource[]=[];
+ for(const source of [...rules,...ranked]){
+  const next=[...kept,source];
+  if(next.length>EVIDENCE_SOURCE_LIMIT)continue;
+  if(JSON.stringify(knowledgeForModel({...bundle,sources:next})).length>EVIDENCE_CHAR_LIMIT)continue;
+  kept.push(source);
+ }
+ const dropped=bundle.sources.length-kept.length;
+ bundle.sources=kept;
+ return dropped;
+}
 export async function prepareSalesEvidence(actor:AuthUser,input:{request:string;history:string;productHint:string;kind:SalesMailKind;customerId?:string;ids?:string[]},workflow?:EvidenceWorkflow){
  const requirements=await workflowStage(workflow,'extract_requirements',input,async()=>extractSalesRequirements(input.request,input.history,input.kind));
  const rules=await workflowStage(workflow,'load_rules',{projectId:actor.projectId,role:actor.role},()=>rulesFor(actor),{tool:'rules'});
@@ -55,8 +77,11 @@ export async function prepareSalesEvidence(actor:AuthUser,input:{request:string;
   bundle.issues.push(...extra.issues);if(['retrieval_failed','index_stale','index_not_ready'].includes(extra.status)){bundle.status=extra.status;break;}
   for(const s of extra.sources)sources.set(s.sourceId,sources.has(s.sourceId)?mergeSource(sources.get(s.sourceId)!,s):s);
  }
- bundle.sources=[...sources.values()];if(['no_match','expired'].includes(bundle.status)&&bundle.sources.some(s=>s.category!=='sales_rules'))bundle.status='ready';bundle.topics=requirements.topics;bundle.factContext=factContextFromRequest(contextQuery,bundle,{...requirements.known,customerId:input.customerId});bundle.facts=collectConditionalEvidence(bundle);
- if(bundle.sources.length>16||JSON.stringify(knowledgeForModel(bundle)).length>48000)throw new ApiError(413,'完整依据超过单稿上限，请缩小问题范围；未截断条件','PAYLOAD_TOO_LARGE');
+ bundle.sources=[...sources.values()];if(['no_match','expired'].includes(bundle.status)&&bundle.sources.some(s=>s.category!=='sales_rules'))bundle.status='ready';
+ const dropped=evidenceWithinBudget(bundle)?0:trimEvidenceBudget(bundle,requirements.topics);
+ if(dropped)bundle.issues.push({code:'evidence_budget',message:'资料较多，本次只采用 '+bundle.sources.length+' 条最相关资料（另有 '+dropped+' 条未纳入，邮件不会引用）。需要覆盖更多主题时请补充检索关键词或先整理知识库。'});
+ bundle.topics=requirements.topics;bundle.factContext=factContextFromRequest(contextQuery,bundle,{...requirements.known,customerId:input.customerId});bundle.facts=collectConditionalEvidence(bundle);
+ if(!evidenceWithinBudget(bundle))throw new ApiError(413,'完整依据超过单稿上限，请缩小问题范围；未截断条件','PAYLOAD_TOO_LARGE');
  if(requirements.historyLimited)bundle.issues.push({code:'history_limit',message:'历史资料超出本轮整理范围，请核对更早往来'});
  await assertSalesEvidenceCurrent(bundle,actor,input.customerId);
  await workflowStage(workflow,'assess_evidence',bundle,async()=>({status:bundle.status,missing:supplemental(),conflicts:bundle.facts?.filter(f=>f.status==='conflict').map(f=>f.id),evidence:bundle.sources.map(s=>({sourceId:s.sourceId,version:s.version,publication:s.publication,index:s.index})),known:requirements.known}),{tool:'conditions'});

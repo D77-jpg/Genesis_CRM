@@ -10,6 +10,7 @@ import {ApiError} from '../../utils/ApiError';
 import {embeddingIdentity,IndexError,localEmbedding,sha,type SemanticAdapter} from './embedding';
 import type {IndexIdentity,IndexState} from '../../models/KnowledgeIndex';
 import type {KnowledgeBundle,KnowledgeSource} from '../agent/knowledge-types';
+import {boundedRefs} from '../agent/knowledge-types';
 
 type Published={id:string;version:number;revision:KnowledgeRevision};
 const valid=(v:KnowledgeRevision,now=new Date())=>v.approved&&v.validFrom&&v.validFrom<=now&&(!v.validUntil||v.validUntil>now);
@@ -230,7 +231,7 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
    const windows=picked.map(i=>i.content).filter(Boolean);
    // Provenance refs are identical on every window; keep them once instead of
    // repeating the whole document's refs on each chunk (that used to reach MBs).
-   const refs=[...new Map(picked.flatMap(i=>i.sourceRefs??[]).map(r=>[JSON.stringify(r),r])).values()];
+   const refs=boundedRefs(picked.flatMap(i=>i.sourceRefs??[]));
    const chunks=picked.map((i,position)=>({id:i.itemId,contentHash:i.contentHash,location:i.location,sourceRefs:position===0?refs:[]}));
    sources.push({...source,content:windows.length?windows.join('\n\n…\n\n'):row.revision.content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:result.hits?.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,chunks}});
    if(seen.size>=10)break;
