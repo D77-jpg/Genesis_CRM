@@ -153,16 +153,14 @@ test('a transport failure keeps the generated draft as unverified, and invented 
  assert.doesNotMatch(invented.bodyText,/888/);
  assert.match(invented.bodyText,/19 working days/);
 });
-test('intro prose without numbers or commitments survives a failed check; commitments never do',async()=>{
- const verifier={model:'fixture',async check({segments}:{segments:{id:string;text:string}[]}){return segments.map(p=>({...p,status:'unsupported' as const,quotes:[],reason:'no direct support'}));}};
- const kept=await verifyGroundedEmail('Hi,\n\nWe make packaging for jewelry brands.\n\nBest regards,\nFixture Seller',bundle([source],[]),{taskType:'first_outreach'},verifier);
- assert.equal(kept.review.factAudit?.mode,'semantic');
- assert.ok(kept.review.issues.some(i=>i.code==='descriptive_unchecked'));
- assert.match(kept.bodyText,/We make packaging for jewelry brands/);
- assert.equal(kept.review.completeness,'partial');
+test('unsupported introductory facts and commitments are never promoted to non-claims',async()=>{
+ const verifier:SemanticVerifier={model:'fixture',async check({segments}){return segments.map(p=>({...p,status:'unsupported',quotes:[],reason:'no direct support'}));}};
+ const rejected=await verifyGroundedEmail('We make packaging for jewelry brands.',bundle([source],[]),{taskType:'first_outreach'},verifier);
+ assert.doesNotMatch(rejected.bodyText,/We make packaging for jewelry brands/);
+ assert.ok(!rejected.review.issues.some(i=>i.code==='descriptive_unchecked'));
  const blocked=await verifyGroundedEmail('Our MOQ is 73 pcs.',bundle(),{taskType:'inquiry_reply'},verifier);
  assert.doesNotMatch(blocked.bodyText,/MOQ is 73/);
- assert.ok(blocked.review.issues.some(i=>i.code==='semantic_unverified')||blocked.review.issues.some(i=>i.code==='semantic_partial'));
+ assert.equal(blocked.review.completeness,'partial');
 });
 
 test('an omitted topic is answered only after rendering its complete applicable fact, never by shared source ID',async()=>{
@@ -251,10 +249,12 @@ test('real provider HTTP protocol validates JSON, unique Unicode quotes and reje
  try{const address=http.address();assert.ok(address&&typeof address==='object');const provider=new OpenAIResponsesProvider({apiKey:'fictional-loopback-only',baseUrl:`http://127.0.0.1:${address.port}/v1`,model:'loopback-not-a-real-model',timeoutMs:3000});const verifier=providerFactVerifier(provider,actor)!;
   const payload={segments:[{id:'s0',text:'We make cotton bags.'}],evidence:[{sourceId:'local-evidence',text:'😀 We make cotton bags.'}]};
   const rows=await verifier.check(payload);assert.equal(rows[0].quotes[0].start,10);assert.equal(rows[0].quotes[0].end,21);
+  const layoutPayload={...payload,evidence:[{sourceId:'local-evidence',text:'😀 We make cotton\nbags.'}]};
+  const layoutRows=await verifier.check(layoutPayload);assert.equal(layoutRows[0].quotes[0].quote,'cotton\nbags');assert.equal(layoutRows[0].quotes[0].start,10);assert.equal(layoutRows[0].quotes[0].end,21);
   assert.deepEqual(requests[0].tools,[]);assert.equal(requests[0].store,false);assert.equal(requests[0].parallel_tool_calls,false);
   assert.equal((requests[0].text as {format:{type:string;name:string}}).format.type,'json_schema');
   assert.equal((requests[0].text as {format:{name:string}}).format.name,'evidence_entailment');
-  await verifier.rewrite!({body:'Fictional only',allowed:[],issues:[]});assert.deepEqual(requests[1].text,{format:{type:'text'}});
+  await verifier.rewrite!({body:'Fictional only',allowed:[],issues:[]});assert.deepEqual(requests[2].text,{format:{type:'text'}});
   mode='invalid';await assert.rejects(()=>verifier.check(payload));mode='tool';await assert.rejects(()=>verifier.check(payload));
  }finally{await new Promise<void>((resolve,reject)=>http.close(error=>error?reject(error):resolve()));}
 });

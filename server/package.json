@@ -28,7 +28,7 @@
     "test:knowledge-index": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-index.test.ts",
     "test:knowledge-retrieval": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-retrieval.test.ts",
     "eval:knowledge:retrieval": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/retrieval.ts",
-    "test:knowledge-facts": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-facts.test.ts",
+    "test:knowledge-facts": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-facts.test.ts tests/knowledge-verifier-boundaries.test.ts",
     "eval:knowledge:facts": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/fact-evaluation.ts",
     "test:knowledge-governance": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-governance.test.ts",
     "test:knowledge-workflow": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-workflow.test.ts",
