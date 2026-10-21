@@ -1042,7 +1042,11 @@ export interface Project {
 
 export type ProspectStatus = 'ready' | 'low' | 'needs_contact' | 'rejected' | 'converted';
 
+export interface SearchProfile {id:string;name:string;queries:string[];enrichLimit:number;hunterLimit:number;minScore:number;llmScoring:boolean}
+export interface ProspectingConfig {profiles:SearchProfile[];activeProfileId:string;version:number;enabled:boolean;profileTitle:string|null;runAt:string;timezone:string}
 export interface Prospect {
+  phone?:string;address?:string;industry?:string;facebook?:string;whatsapp?:string;
+  contactSources?:{source:'site'|'hunter';url:string;fields:string[]}[];
   id: string;
   day: string;
   domain: string;
@@ -1071,6 +1075,7 @@ export interface Prospect {
 }
 
 export interface ProspectingRun {
+  profileId?:string;profileName?:string;
   id: string;
   day: string;
   status: 'running' | 'completed' | 'partial' | 'failed';

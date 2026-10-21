@@ -2,7 +2,8 @@
 // Serper = Google search (discovery), Firecrawl = page markdown (enrichment).
 // Both are called server-side only; keys live in server/.env and never reach the UI.
 
-export interface RawLead {
+import {extractSiteContact,type LeadContact} from './lead-contact';
+export interface RawLead extends LeadContact {
   externalId?: string;
   name?: string;
   company?: string;
@@ -21,6 +22,7 @@ export interface RawLead {
   emailSource?: 'site' | 'hunter';
   emailConfidence?: number;
   markdownChars?: number;
+  pagesRead?:number;
 }
 
 const BLOCKED = /(^|\.)(etsy|amazon|ebay|pinterest|facebook|instagram|linkedin|youtube|tiktok|alibaba|aliexpress|walmart|target|shopify|wixsite|blogspot|wordpress|tumblr|reddit|x|twitter)\./i;
@@ -63,15 +65,15 @@ export async function serperSearch(query: string, count = 10): Promise<RawLead[]
   });
 }
 
-export async function firecrawlScrape(url: string): Promise<{ markdown: string; title?: string } | null> {
+export async function firecrawlScrape(url: string): Promise<{ markdown: string; title?: string;company?:string;rawHtml?:string } | null> {
   try {
     const data = await request('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key('LEAD_FIRECRAWL_API_KEY')}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, formats: ['markdown'], onlyMainContent: true, timeout: 30000 }),
-    }) as { success?: boolean; data?: { markdown?: string; metadata?: { title?: string } } };
-    if (!data.success || !data.data?.markdown) return null;
-    return { markdown: data.data.markdown, title: data.data.metadata?.title };
+      body: JSON.stringify({ url, formats: ['markdown','rawHtml'], onlyMainContent: false, timeout: 30000 }),
+    }) as { success?: boolean; data?: { markdown?: string;rawHtml?:string; metadata?: { title?: string;ogSiteName?:string } } };
+    if (!data.success || (!data.data?.markdown&&!data.data?.rawHtml)) return null;
+    return { markdown: (data.data!.markdown??'').slice(0,40000), title: data.data.metadata?.title,company:data.data.metadata?.ogSiteName,rawHtml:data.data.rawHtml?.slice(0,500000) };
   } catch {
     return null;
   }
@@ -79,32 +81,28 @@ export async function firecrawlScrape(url: string): Promise<{ markdown: string; 
 
 const unique = (values: string[]) => [...new Set(values)];
 
-export async function enrichLead(lead: RawLead): Promise<RawLead> {
-  const pages = [lead.website];
-  for (const path of ['contact', 'pages/contact', 'about', 'pages/about']) pages.push(new URL(path, lead.website).toString());
-  const emails: string[] = [];
-  let markdown = '';
-  let title = lead.name;
-  for (const page of pages.slice(0, 3)) {
-    const result = await firecrawlScrape(page);
-    if (!result) continue;
-    markdown += '\n' + result.markdown;
-    if (result.title) title = title ?? result.title;
-    emails.push(...(result.markdown.match(EMAIL) ?? []).filter((mail) => !IGNORE_EMAIL.test(mail)));
-    if (emails.length) break;
+export async function enrichLead(lead:RawLead,scrape:typeof firecrawlScrape=firecrawlScrape):Promise<RawLead>{
+ const result:RawLead={...lead,contactSources:[...(lead.contactSources??[])]};
+ const pages=[lead.website];let markdown='',pagesRead=0;const emails=[...(lead.emails??[])];
+ for(let i=0;i<pages.length&&i<3;i++){
+  const page=pages[i],content=await scrape(page);if(!content)continue;pagesRead++;
+  markdown+='\n'+content.markdown;
+  const found=extractSiteContact(content.markdown,content.rawHtml??'',lead.domain);
+  if(i===0&&content.company&&!found.company)found.company=content.company.slice(0,200);
+  const fields:string[]=[];
+  for(const key of Object.keys(found) as (keyof typeof found)[])if(found[key]&&!result[key]){Object.assign(result,{[key]:found[key]});fields.push(key);}
+  emails.push(...(content.markdown.match(EMAIL)??[]).filter(mail=>!IGNORE_EMAIL.test(mail)));
+  if(i===0){
+   const links=[...content.markdown.matchAll(/\]\(([^)\s]+)\)/g)].flatMap(match=>{try{const url=new URL(match[1],page);return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&domainOf(url.href)===lead.domain?[url.href]:[];}catch{return [];}});
+   for(const kind of ['contact','about'])pages.push(links.find(url=>new RegExp('(?:/|-)'+kind+'(?:[-/]|$)','i').test(new URL(url).pathname))??new URL(kind,page).href);
   }
-  const ig = markdown.match(/instagram\.com\/([A-Za-z0-9_.]{2,40})/i)?.[1];
-  const li = markdown.match(/linkedin\.com\/(?:company|in)\/([A-Za-z0-9-_%]{2,80})/i)?.[1];
-  return {
-    ...lead,
-    name: title?.slice(0, 200),
-    emails: unique(emails.map((mail) => mail.toLowerCase())).slice(0, 3),
-    emailSource: emails.length ? 'site' : undefined,
-    instagram: ig,
-    linkedin: li,
-    excerpt: markdown.replace(/\s+/g, ' ').trim().slice(0, 600),
-    markdownChars: markdown.length,
-  };
+  if(fields.length||emails.length)result.contactSources!.push({source:'site',url:page,fields:[...fields,...(content.markdown.match(EMAIL)?['emails']:[])]});
+ }
+ result.emails=unique(emails.map(mail=>mail.toLowerCase())).slice(0,3);
+ if(result.emails.length&&!result.emailSource)result.emailSource='site';
+ result.excerpt=markdown.replace(/\s+/g,' ').trim().slice(0,2000)||lead.excerpt;
+ result.pagesRead=pagesRead;result.markdownChars=markdown.length;result.contactSources=result.contactSources!.slice(0,8);
+ return result;
 }
 
 /** Dedupe by domain, preferring the first search hit. */

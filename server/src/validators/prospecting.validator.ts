@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
+export const searchProfileSchema=z.object({
+ id:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),name:z.string().trim().min(1).max(60),
+ queries:z.array(z.string().trim().min(3).max(200)).min(1).max(20),
+ enrichLimit:z.number().int().min(1).max(80),hunterLimit:z.number().int().min(0).max(50),
+ minScore:z.number().int().min(0).max(100),llmScoring:z.boolean(),
+}).strict();
 export const runProspectingSchema = z.object({
-  queries: z.array(z.string().trim().min(3).max(200)).max(10).optional(),
+  profileId:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/).optional(),
+  queries: z.array(z.string().trim().min(3).max(200)).min(1).max(20).optional(),
   enrichLimit: z.number().int().min(1).max(80).optional(),
 }).strict();
 
@@ -10,6 +17,9 @@ export const rejectProspectSchema = z.object({
 }).strict();
 
 export const prospectingConfigSchema = z.object({
+  version:z.number().int().nonnegative().optional(),
+  activeProfileId:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/).optional(),
+  profiles:z.array(searchProfileSchema).min(1).max(20).refine(rows=>new Set(rows.map(p=>p.id)).size===rows.length,'方案标识重复').refine(rows=>new Set(rows.map(p=>p.name.toLowerCase())).size===rows.length,'方案名称不能重复').optional(),
   enabled: z.boolean().optional(),
   dailyTarget: z.number().int().min(1).max(50).optional(),
   queries: z.array(z.string().trim().min(3).max(200)).max(20).optional(),

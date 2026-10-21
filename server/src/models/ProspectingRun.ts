@@ -5,6 +5,8 @@ export interface IProspectingRun {
   day: string;
   status: 'running' | 'completed' | 'partial' | 'failed';
   queries: string[];
+  profileId?:string;profileName?:string;
+  settings?:{enrichLimit:number;hunterLimit:number;minScore:number;llmScoring:boolean};
   imported: number;
   deduped: number;
   enriched: number;
@@ -28,6 +30,8 @@ const ProspectingRunSchema = new Schema<IProspectingRun>({
   day: { type: String, required: true, index: true },
   status: { type: String, enum: ['running', 'completed', 'partial', 'failed'], default: 'running' },
   queries: { type: [String], default: [] },
+  profileId:String,profileName:String,
+  settings:{type:new Schema({enrichLimit:Number,hunterLimit:Number,minScore:Number,llmScoring:Boolean},{_id:false}),default:undefined},
   imported: { type: Number, default: 0 },
   deduped: { type: Number, default: 0 },
   enriched: { type: Number, default: 0 },

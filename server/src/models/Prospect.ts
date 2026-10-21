@@ -2,7 +2,8 @@ import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoos
 
 export type ProspectStatus = 'ready' | 'low' | 'needs_contact' | 'rejected' | 'converted';
 
-export interface IProspect {
+import type {LeadContact} from '../services/prospecting/lead-contact';
+export interface IProspect extends LeadContact {
   projectId: Types.ObjectId;
   day: string;                 // YYYY-MM-DD in the project timezone
   domain: string;
@@ -29,6 +30,7 @@ export interface IProspect {
   convertedBy?: Types.ObjectId;
   draftTaskId?: Types.ObjectId;
   rejectReason?: string;
+  contactRefreshToken?:string;contactRefreshUntil?:Date;contactRefreshedAt?:Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +46,9 @@ const ProspectSchema = new Schema<IProspect>({
   name: { type: String, trim: true, maxlength: 200 },
   company: { type: String, trim: true, maxlength: 200 },
   country: { type: String, trim: true, maxlength: 80 },
+  phone:{type:String,trim:true,maxlength:60},address:{type:String,trim:true,maxlength:500},industry:{type:String,trim:true,maxlength:120},
+  facebook:{type:String,trim:true,maxlength:300},whatsapp:{type:String,trim:true,maxlength:200},
+  contactSources:{type:[{_id:false,source:{type:String,enum:['site','hunter']},url:String,fields:[String]}],default:[]},
   emails: { type: [String], default: [] },
   emailSource: { type: String, enum: ['site', 'hunter'] },
   emailConfidence: { type: Number },
@@ -63,6 +68,7 @@ const ProspectSchema = new Schema<IProspect>({
   convertedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   draftTaskId: { type: Schema.Types.ObjectId, ref: 'AgentTask' },
   rejectReason: { type: String, maxlength: 500 },
+  contactRefreshToken:String,contactRefreshUntil:Date,contactRefreshedAt:Date,
 }, { timestamps: true, versionKey: false });
 
 ProspectSchema.index({ projectId: 1, domain: 1 }, { unique: true });

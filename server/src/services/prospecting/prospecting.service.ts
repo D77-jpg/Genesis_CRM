@@ -1,15 +1,17 @@
+import {randomUUID} from 'node:crypto';
 import { Types } from 'mongoose';
 import { createLogger } from '../../config/logger';
 import { Customer } from '../../models/Customer';
 import { DevelopmentLetter } from '../../models/DevelopmentLetter';
 import { MailMessage } from '../../models/MailMessage';
 import { Prospect, type ProspectStatus } from '../../models/Prospect';
-import { ProspectingConfig } from '../../models/ProspectingConfig';
+import { ProspectingConfig,type SearchProfile } from '../../models/ProspectingConfig';
+import {prospectCustomerInput} from './prospect-customer';
 import { ProspectingRun } from '../../models/ProspectingRun';
-import { requireProjectId } from '../../utils/access';
+import { requireProjectId,customerScope } from '../../utils/access';
 import { ApiError } from '../../utils/ApiError';
 import type { AuthUser } from '../../types/express';
-import { createCustomer } from '../customer.service';
+import { createCustomer,getCustomerByIdOrThrow,getCustomer } from '../customer.service';
 import { createAgentSession } from '../agent/agent.service';
 import { createAgentTask } from '../agent/task.service';
 import { dedupeLeads, domainOf, enrichLead, serperSearch, type RawLead } from './lead-source';
@@ -40,6 +42,8 @@ export interface ProspectDto {
   emailConfidence?: number;
   contactName?: string;
   contactTitle?: string;
+  phone?:string;address?:string;industry?:string;facebook?:string;whatsapp?:string;
+  contactSources?:RawLead['contactSources'];
   instagram?: string;
   linkedin?: string;
   snippet?: string;
@@ -60,6 +64,7 @@ export interface RunDto {
   day: string;
   status: 'running' | 'completed' | 'partial' | 'failed';
   queries: string[];
+  profileId?:string;profileName?:string;
   imported: number;
   deduped: number;
   enriched: number;
@@ -75,6 +80,8 @@ export interface RunDto {
 const toProspect = (raw: Record<string, unknown>): ProspectDto => ({
   id: String(raw._id), day: String(raw.day), domain: String(raw.domain), website: String(raw.website),
   name: raw.name ? String(raw.name) : undefined, company: raw.company ? String(raw.company) : undefined,
+  phone:raw.phone?String(raw.phone):undefined,address:raw.address?String(raw.address):undefined,industry:raw.industry?String(raw.industry):undefined,
+  facebook:raw.facebook?String(raw.facebook):undefined,whatsapp:raw.whatsapp?String(raw.whatsapp):undefined,contactSources:raw.contactSources as RawLead['contactSources'],
   country: raw.country ? String(raw.country) : undefined, emails: (raw.emails as string[]) ?? [],
   emailSource: raw.emailSource as 'site' | 'hunter' | undefined,
   emailConfidence: raw.emailConfidence ? Number(raw.emailConfidence) : undefined,
@@ -90,6 +97,7 @@ const toProspect = (raw: Record<string, unknown>): ProspectDto => ({
 
 const toRun = (raw: Record<string, unknown>): RunDto => ({
   id: String(raw._id), day: String(raw.day), status: raw.status as RunDto['status'], queries: (raw.queries as string[]) ?? [],
+  profileId:raw.profileId?String(raw.profileId):undefined,profileName:raw.profileName?String(raw.profileName):undefined,
   imported: Number(raw.imported ?? 0), deduped: Number(raw.deduped ?? 0), enriched: Number(raw.enriched ?? 0),
   hunterFound: Number(raw.hunterFound ?? 0),
   scored: Number(raw.scored ?? 0), selected: Number(raw.selected ?? 0), failed: (raw.failed as RunDto['failed']) ?? [],
@@ -104,10 +112,11 @@ export function dayIn(timezone: string) {
 }
 
 export async function getProspectingConfig(actor: AuthUser) {
-  const projectId = new Types.ObjectId(requireProjectId(actor));
-  const existing = await ProspectingConfig.findOne({ projectId }).lean();
-  if (existing) return existing;
-  return (await ProspectingConfig.create({ projectId, updatedBy: new Types.ObjectId(actor.id) })).toObject();
+ const projectId=new Types.ObjectId(requireProjectId(actor));
+ const existing=await ProspectingConfig.findOne({projectId}).lean()??await ProspectingConfig.findOneAndUpdate({projectId},{$setOnInsert:{projectId,updatedBy:actor.id}},{upsert:true,new:true,setDefaultsOnInsert:true}).lean();
+ const profiles:SearchProfile[]=existing.profiles?.length?existing.profiles:[{id:'default',name:'原默认方案',queries:existing.queries.length?existing.queries:DEFAULT_QUERIES,enrichLimit:existing.enrichLimit,hunterLimit:existing.hunterLimit??15,minScore:existing.minScore,llmScoring:existing.llmScoring??true}];
+ const activeProfileId=profiles.some(p=>p.id===existing.activeProfileId)?existing.activeProfileId!:profiles[0].id;
+ return {...existing,profiles,activeProfileId,version:existing.version??0};
 }
 
 async function mapLimit<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
@@ -127,9 +136,9 @@ async function executeRun(runId: string, actor: AuthUser) {
   const run = await ProspectingRun.findById(runId);
   if (!run) return;
   try {
-    const config = await getProspectingConfig(actor);
+    const config = run.settings ?? await getProspectingConfig(actor);
     const projectId = new Types.ObjectId(requireProjectId(actor));
-    const queries = run.queries.length ? run.queries : config.queries.length ? config.queries : DEFAULT_QUERIES;
+    const queries = run.queries.length ? run.queries : DEFAULT_QUERIES;
     const collected: RawLead[] = [];
     for (const query of queries) {
       try { collected.push(...await serperSearch(query, 10)); }
@@ -168,6 +177,8 @@ async function executeRun(runId: string, actor: AuthUser) {
             result.emailConfidence = found.emails[0].confidence;
             result.contactName = found.contactName;
             result.contactTitle = found.contactTitle;
+            result.company??=found.organization;result.phone??=found.phone;result.linkedin??=found.linkedin;
+            result.contactSources=[...(result.contactSources??[]),{source:'hunter',url:'https://hunter.io/search/'+result.domain,fields:['emails',...(found.organization?['company']:[]),...(found.contactName?['contactName']:[]),...(found.contactTitle?['contactTitle']:[]),...(found.phone?['phone']:[]),...(found.linkedin?['linkedin']:[])]}];
             run.hunterFound += 1;
           }
         } catch (error) {
@@ -199,7 +210,7 @@ async function executeRun(runId: string, actor: AuthUser) {
         {
           $setOnInsert: {
             projectId, day: run.day, domain: lead.domain, website: lead.website,
-            name: lead.name, company: lead.name, emails: lead.emails ?? [], instagram: lead.instagram,
+            name: lead.name, company: lead.company, country:lead.country,phone:lead.phone,address:lead.address,industry:lead.industry,facebook:lead.facebook,whatsapp:lead.whatsapp,contactSources:lead.contactSources, emails: lead.emails ?? [], instagram: lead.instagram,
             emailSource: lead.emailSource, emailConfidence: lead.emailConfidence,
             contactName: lead.contactName, contactTitle: lead.contactTitle,
             linkedin: lead.linkedin, snippet: lead.snippet, excerpt: lead.excerpt, sourceUrl: lead.sourceUrl,
@@ -224,16 +235,19 @@ async function executeRun(runId: string, actor: AuthUser) {
 }
 
 /** Starts a run and returns immediately; the page polls GET /prospecting/today. */
-export async function startProspecting(actor: AuthUser, input: { queries?: string[]; enrichLimit?: number } = {}) {
+export async function startProspecting(actor: AuthUser, input: { profileId?:string;queries?: string[]; enrichLimit?: number } = {}) {
   const projectId = new Types.ObjectId(requireProjectId(actor));
   const running = await ProspectingRun.findOne({ projectId, status: 'running', startedAt: { $gt: new Date(Date.now() - 15 * 60 * 1000) } }).lean();
   if (running) throw ApiError.conflict('已有一次生成正在运行，请稍后刷新');
   const config = await getProspectingConfig(actor);
-  if (input.enrichLimit) await ProspectingConfig.updateOne({ projectId }, { $set: { enrichLimit: input.enrichLimit } });
+  const selected=config.profiles.find(p=>p.id===(input.profileId??config.activeProfileId));
+  if(!selected)throw ApiError.badRequest('搜索方案不存在，请重新选择');
   const day = dayIn(config.timezone);
   const run = await ProspectingRun.create({
     projectId, day, status: 'running', triggeredBy: new Types.ObjectId(actor.id),
-    queries: input.queries?.length ? input.queries : config.queries,
+    queries: input.queries?.length ? input.queries : selected.queries,
+    profileId:selected.id,profileName:selected.name,
+    settings:{enrichLimit:input.enrichLimit??selected.enrichLimit,hunterLimit:selected.hunterLimit,minScore:selected.minScore,llmScoring:selected.llmScoring},
   });
   const actorSnapshot = { ...actor };
   void executeRun(String(run._id), actorSnapshot);
@@ -327,17 +341,7 @@ export async function approveProspect(actor: AuthUser, id: string) {
   if (!prospect.emails.length) throw ApiError.badRequest('该候选还没有邮箱，请先人工补联系方式或直接跳过');
   const config = await getProspectingConfig(actor);
   try {
-    const customer = await createCustomer({
-      name: prospect.contactName || prospect.company || prospect.name || prospect.domain,
-      company: prospect.company || prospect.name || prospect.domain,
-      email: prospect.emails[0],
-      website: prospect.website,
-      country: prospect.country,
-      status: 'pending',
-      priority: 'medium',
-      tags: ['自动开发'],
-      notes: `自动开发候选 · 评分 ${prospect.score}/100 · 邮箱来源 ${prospect.emailSource === 'hunter' ? 'Hunter' : '官网'}${prospect.contactTitle ? ` · 联系人 ${prospect.contactTitle}` : ''} · 来源 ${prospect.sourceUrl}`,
-    }, actor, { source: 'prospecting', ownerId: config.ownerId ? String(config.ownerId) : undefined });
+    const customer = await createCustomer(prospectCustomerInput(prospect), actor, { source: 'prospecting', ownerId: config.ownerId ? String(config.ownerId) : undefined });
     prospect.status = 'converted';
     prospect.customerId = new Types.ObjectId(customer.id);
     prospect.convertedBy = new Types.ObjectId(actor.id);
@@ -368,6 +372,50 @@ export async function approveProspect(actor: AuthUser, id: string) {
     if (error instanceof ApiError && error.statusCode === 409) throw ApiError.conflict('该邮箱或公司已经存在于客户列表');
     throw error;
   }
+}
+
+/** Explicit bounded re-acquisition for legacy records; paid API calls require admin. */
+export async function refreshProspectContact(actor:AuthUser,id:string){
+ if(actor.role!=='admin')throw ApiError.forbidden('仅管理员可重新采集官网资料');
+ if(!Types.ObjectId.isValid(id))throw ApiError.badRequest('候选 ID 格式不正确');
+ const projectId=requireProjectId(actor),row=await Prospect.findOne({_id:id,projectId});
+ if(!row)throw ApiError.notFound('候选不存在或不可访问');
+ if(row.customerId)await getCustomerByIdOrThrow(String(row.customerId),actor);
+ const token=randomUUID(),now=new Date();
+ const locked=await Prospect.findOneAndUpdate({_id:id,projectId,$and:[{$or:[{contactRefreshUntil:{$exists:false}},{contactRefreshUntil:{$lte:now}}]},{$or:[{contactRefreshedAt:{$exists:false}},{contactRefreshedAt:{$lt:new Date(now.getTime()-60000)}}]}]},{$set:{contactRefreshToken:token,contactRefreshUntil:new Date(now.getTime()+600000)}},{new:true});
+ if(!locked)throw ApiError.conflict('该候选正在更新或刚刚更新，请稍后再试');
+ try{
+  const result=await enrichLead(locked.toObject());
+  if(!result.pagesRead)throw ApiError.badRequest('官网未返回可读资料，请检查 Firecrawl 配置、额度或官网可访问性');
+  const keys=['company','country','phone','address','industry','instagram','linkedin','facebook','whatsapp','emails','emailSource','excerpt','contactSources'] as const;
+  const patch=Object.fromEntries(keys.flatMap(key=>result[key]===undefined?[]:[[key,result[key]]]));
+  await Prospect.updateOne({_id:id,projectId,contactRefreshToken:token},{$set:{...patch,contactRefreshedAt:new Date()}},{runValidators:true});
+  if(result.emails?.length){const config=await getProspectingConfig(actor),scored=scoreLead(result,config.minScore);await Prospect.updateOne({_id:id,projectId,contactRefreshToken:token,status:'needs_contact'},{$set:{status:scored.status,score:scored.score,scoreReasons:scored.reasons}});}
+  const latest=await Prospect.findOne({_id:id,projectId});
+  const synced=latest?.status==='converted'?await syncProspectCustomer(actor,id):undefined;
+  return {prospect:latest?toProspect(latest.toObject() as unknown as Record<string,unknown>):undefined,filledFields:synced?.filledFields??[]};
+ }finally{await Prospect.updateOne({_id:id,projectId,contactRefreshToken:token},{$unset:{contactRefreshToken:1,contactRefreshUntil:1}});}
+}
+
+/** Backfill existing converted records from acquired data; never replace manual edits. */
+export async function syncProspectCustomer(actor:AuthUser,id:string){
+ if(!Types.ObjectId.isValid(id))throw ApiError.badRequest('候选 ID 格式不正确');
+ const prospect=await Prospect.findOne({_id:id,projectId:requireProjectId(actor),status:'converted'});
+ if(!prospect?.customerId)throw ApiError.notFound('候选尚未转客户或不可访问');
+ const customer=await getCustomerByIdOrThrow(String(prospect.customerId),actor);
+ const input=prospectCustomerInput(prospect);
+ const keys=['company','title','country','phone','address','industry','instagram','linkedin','facebook','whatsapp'] as const;
+ const filled:string[]=[];
+ for(const key of keys){const value=input[key];if(!value)continue;
+  const changed=await Customer.updateOne({...customerScope(actor),_id:customer._id,[key]:{$in:['',null]}},{$set:{[key]:value}},{runValidators:true});
+  if(changed.modifiedCount)filled.push(key);
+ }
+ const marker='候选资料补齐 '+prospect.id;
+ const old=customer.notes??'';
+ if(!old.includes(marker)&&old.length<4500){
+  await Customer.updateOne({...customerScope(actor),_id:customer._id,notes:customer.notes??{$exists:false}},{$set:{notes:(old+'\n'+marker+'\n'+input.notes).trim().slice(0,5000)}},{runValidators:true});
+ }
+ return {customer:await getCustomer(String(customer._id),actor),filledFields:filled};
 }
 
 export async function rejectProspect(actor: AuthUser, id: string, reason?: string) {
@@ -440,9 +488,19 @@ export async function prospectingReport(actor: AuthUser, days = 14) {
   };
 }
 
-export async function updateProspectingConfig(actor: AuthUser, input: Record<string, unknown>) {  const projectId = new Types.ObjectId(requireProjectId(actor));
-  const patch: Record<string, unknown> = { ...input, updatedBy: new Types.ObjectId(actor.id) };
-  if (patch.ownerId) patch.ownerId = new Types.ObjectId(String(patch.ownerId));
-  const config = await ProspectingConfig.findOneAndUpdate({ projectId }, { $set: patch }, { new: true, upsert: true, runValidators: true }).lean();
-  return config;
+export async function updateProspectingConfig(actor:AuthUser,input:Record<string,unknown>){
+ const current=await getProspectingConfig(actor);
+ const {version,...values}=input;
+ const profiles=(values.profiles as SearchProfile[]|undefined)??current.profiles;
+ const activeProfileId=String(values.activeProfileId??current.activeProfileId);
+ const active=profiles.find(p=>p.id===activeProfileId);
+ if(!active)throw ApiError.badRequest('自动执行方案必须是已保存的方案');
+ // Older clients can still change the single active profile's fields.
+ const legacy=['queries','enrichLimit','hunterLimit','minScore','llmScoring'] as const;
+ if(!values.profiles)for(const key of legacy)if(values[key]!==undefined)Object.assign(active,{[key]:values[key]});
+ const patch={...values,profiles,activeProfileId,...Object.fromEntries(legacy.map(key=>[key,active[key]])),updatedBy:new Types.ObjectId(actor.id)};
+ const filter={projectId:current.projectId,...(version!==undefined?{version:version===0?{$in:[0,null]}:version}:{})};
+ const updated=await ProspectingConfig.findOneAndUpdate(filter,{$set:patch,$inc:{version:1}},{new:true,runValidators:true}).lean();
+ if(!updated)throw ApiError.conflict('搜索方案已被其他人修改，请重新打开设置');
+ return updated;
 }
