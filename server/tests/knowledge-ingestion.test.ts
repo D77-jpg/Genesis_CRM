@@ -286,3 +286,19 @@ test('optional upload metadata remains editable; staging validates overrides and
   await assert.rejects(service.saveChunkDraft(long.chunks[0].id,{},actor));
   assert.equal(await AgentKnowledge.countDocuments({importKey:'document-chunk:'+long.chunks[0].id}),0);
 });
+
+test('a Markdown file above the parser block limit is split at upload, so one drop still succeeds', async () => {
+  const body = Array.from({ length: 1300 }, (_, i) => `第 ${i + 1} 段：虚构条款，仅用于测试。`).join('\n\n');
+  const data = Buffer.from(body).toString('base64');
+  const split = await service.uploadDocument({ fileName: 'oversized-blocks.md', data, source: 'FICTIONAL S1 ONLY' }, actor) as { id: string; ids: string[]; count: number; duplicate: boolean };
+  assert.equal(split.count, 2); assert.equal(split.ids.length, 2);
+  const docs = await models.KnowledgeDocument.find({ _id: { $in: split.ids } }).lean();
+  assert.deepEqual(docs.map(d => d.originalName).sort(), ['oversized-blocks（第 1/2 部分）.md', 'oversized-blocks（第 2/2 部分）.md']);
+  for (const id of split.ids) {
+    const job = await models.KnowledgeParsing.findOne({ documentId: id }).sort({ revision: -1 });
+    await service.processKnowledgeDocument(String(job!.id));
+    assert.equal((await service.documentDetail(String(id), actor)).revisions[0].state, 'succeeded');
+  }
+  const again = await service.uploadDocument({ fileName: 'oversized-blocks.md', data, source: 'FICTIONAL S1 ONLY' }, actor) as { duplicate: boolean };
+  assert.equal(again.duplicate, true);
+});

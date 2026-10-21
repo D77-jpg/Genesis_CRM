@@ -85,8 +85,8 @@ export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKn
    try{
     mark(index,'正在上传');
     const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('文件读取失败'));reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.readAsDataURL(list[index]);});
-    const result=await apiPost<{id:string;duplicate:boolean}>('/knowledge-documents',{fileName:list[index].name,data});
-    mark(index,result.duplicate?'这个文件之前上传过':'已上传，正在读取内容');
+    const result=await apiPost<{id:string;duplicate:boolean;count?:number}>('/knowledge-documents',{fileName:list[index].name,data});
+    mark(index,result.duplicate?'这个文件之前上传过':(result.count??0)>1?`文件较长，已自动拆成 ${result.count} 份，分别读取中`:'已上传，正在读取内容');
     if(!first)first=result.id;
    }catch(e){mark(index,toErrorMessage(e,'上传失败'));}
   }
