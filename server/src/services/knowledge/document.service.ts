@@ -32,6 +32,14 @@ export const collectInput = z.object({ title: z.string().trim().min(1).max(160).
 export const COLLECTION_APPLICABILITY = '参考资料；对外报价、交期、认证等承诺须按已确认的条件使用。';
 const PART_CHARS = 11000;
 const HORIZONTAL_RULE = /^\s*(?:[-*_]\s*){3,}$/;
+// The parser refuses a document above 1,200 paragraph-level blocks (a 175 KB
+// Markdown knowledge base lands around 1,300). Splitting text files at upload
+// keeps that safety limit while still letting one drag-and-drop succeed: the
+// caller gets several ordinary documents instead of a "请拆分文档" failure.
+const TEXT_EXTENSIONS = new Set(['txt', 'md', 'markdown']);
+const PARSER_BLOCK_LIMIT = 1200;
+const SPLIT_BLOCK_TARGET = 900;
+const MAX_UPLOAD_PARTS = 20;
 export const digest = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 const id = (value: string) => { if (!Types.ObjectId.isValid(value)) throw ApiError.notFound('资料不存在或无权访问'); return value; };
 function admin(actor: AuthUser) { requireProjectId(actor); if (actor.role !== 'admin') throw ApiError.forbidden('原文与解析建议仅供项目管理员审核'); }
@@ -64,6 +72,77 @@ export async function uploadDocument(input: z.infer<typeof uploadInput>, actor: 
   const data = Buffer.from(value.data, 'base64');
   if(data.toString('base64')!==value.data)throw ApiError.badRequest('文件数据编码无效');
   if (!data.length || data.length > parserConfig.maxBytes) throw ApiError.badRequest('文件为空或超过 15MB');
+  const parts = splitOversizedText(value.fileName, extension, data);
+  if (parts) {
+    const ids: string[] = []; let duplicate = true;
+    for (const part of parts) {
+      const stored = await storeDocument({ ...value, fileName: part.name }, part.data, extension, actor);
+      ids.push(stored.id); duplicate = duplicate && stored.duplicate;
+    }
+    return { id: ids[0], ids, count: ids.length, duplicate };
+  }
+  return storeDocument(value, data, extension, actor);
+}
+
+// Text files that the parser would reject for block count are split here, so a
+// single upload still succeeds without the admin cutting the file by hand.
+// Mirrors server/parsers/knowledge_parser.py: text_blocks counts one block per
+// paragraph, one per heading, and one per Markdown table row.
+function countParserBlocks(text: string, markdown: boolean): number {
+  const pattern = markdown ? /[^\n]+(?:\n(?!\s*\n|#{1,6}\s)[^\n]+)*/g : /[^\n]+(?:\n(?!\s*\n)[^\n]+)*/g;
+  let blocks = 0, extra = 0;
+  for (const match of text.matchAll(pattern)) {
+    const lines = match[0].trim().split('\n');
+    if (!lines[0]?.trim()) continue;
+    blocks += 1;
+    if (markdown && lines.length > 2 && lines[0].includes('|') && /^[\s|:\-]+$/.test(lines[1] ?? ''))
+      extra += Math.max(lines.slice(2).filter(line => line.includes('|')).length - 1, 0);
+  }
+  return blocks + extra;
+}
+
+// Cut at blank lines and before headings, never inside a section or table row.
+function splitTextAtSections(text: string, parts: number): string[] {
+  const target = Math.ceil(text.length / parts), out: string[] = [];
+  let current: string[] = [], size = 0;
+  const flush = () => { const body = current.join('\n').trim(); if (body) out.push(body); current = []; size = 0; };
+  for (const line of text.split('\n')) {
+    const heading = /^#{1,6}\s/.test(line);
+    if (size >= target && out.length < parts - 1 && (heading || !line.trim())) flush();
+    current.push(line); size += line.length + 1;
+    if (size >= target && out.length < parts - 1 && !line.trim()) flush();
+  }
+  flush();
+  return out;
+}
+
+function decodeText(data: Buffer): string | null {
+  try { const text = new TextDecoder('utf-8', { fatal: true }).decode(data); return text.includes('\u0000') ? null : text; } catch { return null; }
+}
+
+function splitOversizedText(fileName: string, extension: string, data: Buffer): { name: string; data: Buffer }[] | null {
+  if (!TEXT_EXTENSIONS.has(extension)) return null;
+  const text = decodeText(data);
+  if (!text) return null;
+  const markdown = extension !== 'txt';
+  const blocks = countParserBlocks(text, markdown);
+  if (blocks <= PARSER_BLOCK_LIMIT) return null;
+  const dot = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')) : '';
+  const base = dot ? fileName.slice(0, -dot.length) : fileName;
+  let parts = Math.min(MAX_UPLOAD_PARTS, Math.max(2, Math.ceil(blocks / SPLIT_BLOCK_TARGET)));
+  let pieces = splitTextAtSections(text, parts);
+  // One part can still be table heavy; widen the split until every part fits.
+  while (pieces.length > 1 && pieces.some(piece => countParserBlocks(piece, markdown) > PARSER_BLOCK_LIMIT) && parts < MAX_UPLOAD_PARTS) {
+    parts += 1; pieces = splitTextAtSections(text, parts);
+  }
+  if (pieces.length < 2) return null;
+  return pieces.map((piece, index) => {
+    const suffix = `（第 ${index + 1}/${pieces.length} 部分）${dot}`;
+    return { name: (base.slice(0, Math.max(0, 180 - suffix.length)) + suffix), data: Buffer.from(piece, 'utf8') };
+  });
+}
+
+async function storeDocument(value: z.infer<typeof uploadInput>, data: Buffer, extension: string, actor: AuthUser) {
   const sha256 = digest(data);
   let existing = await KnowledgeDocument.findOne({ ...scope(actor), sha256, kind: 'project_document' });
   if (existing) {

@@ -42,6 +42,40 @@ export async function taskActor(task: Pick<IAgentTask,'projectId'|'userId'|'acto
  return {id: user.id, username: user.username, displayName: user.displayName,
   role: task.actorRole === 'admin' && user.role === 'admin' ? 'admin' : 'user', projectId: String(task.projectId)};
 }
+// What each step actually produced, without shipping its payload to the browser:
+// the task detail must show evidence counts, durations and the verification mode
+// for a run, and reviewers should not have to open the database to see them.
+function stepMetrics(key: string, payload: unknown) {
+ const value = (payload ?? undefined) as Record<string, unknown> | undefined;
+ const metrics: Record<string, number | string | undefined> = { bytes: payload === undefined ? 0 : JSON.stringify(payload).length };
+ if (key === 'read_context') metrics.sources = (value?.sourceCatalog as unknown[] | undefined)?.length ?? 0;
+ if (key === 'extract_requirements') { metrics.topics = (value?.topics as unknown[] | undefined)?.length ?? 0; metrics.questions = (value?.questions as unknown[] | undefined)?.length ?? 0; }
+ if (key === 'load_rules') metrics.rules = Array.isArray(payload) ? payload.length : 0;
+ if (key.startsWith('retrieve_')) {
+  const sources = (value?.sources as { content?: string }[] | undefined) ?? [];
+  metrics.sources = sources.length;
+  metrics.chars = sources.reduce((total, source) => total + (source.content?.length ?? 0), 0);
+  metrics.facts = (value?.facts as unknown[] | undefined)?.length ?? 0;
+  metrics.issues = (value?.issues as unknown[] | undefined)?.length ?? 0;
+ }
+ if (key === 'assess_evidence') {
+  metrics.missing = (value?.missing as unknown[] | undefined)?.length ?? 0;
+  metrics.conflicts = (value?.conflicts as unknown[] | undefined)?.length ?? 0;
+ }
+ if (key === 'generate_email') {
+  metrics.chars = (value?.emailDraft as { bodyText?: string } | undefined)?.bodyText?.length ?? 0;
+  metrics.facts = (value?.facts as unknown[] | undefined)?.length ?? 0;
+  metrics.gaps = (value?.gaps as unknown[] | undefined)?.length ?? 0;
+  metrics.tokens = (value?.usage as { totalTokens?: number } | undefined)?.totalTokens;
+ }
+ if (key === 'audit_claims') {
+  const review = value?.review as { factAudit?: { mode?: string; checks?: unknown[] }; issues?: unknown[] } | undefined;
+  metrics.verifyMode = review?.factAudit?.mode;
+  metrics.checks = review?.factAudit?.checks?.length ?? 0;
+  metrics.issues = review?.issues?.length ?? 0;
+ }
+ return metrics;
+}
 async function dto(task: AgentTaskDocument, actor: AuthUser) {
  const customer = task.customerId ? await getCustomerByIdOrThrow(String(task.customerId), actor) : undefined;
  if(task.sourceMailId)await agentMailOrThrow(String(task.sourceMailId),actor);
@@ -54,7 +88,7 @@ async function dto(task: AgentTaskDocument, actor: AuthUser) {
   // never presented as the current draft: the UI labels it and keeps 重新准备.
   staleDraftId: inputsChanged&&task.status==='awaiting_review'?task.draftId?.toString():undefined,
   sentLetterId: task.sentLetterId?.toString(), completedSteps: task.completedSteps, currentStep: task.currentStep,
-  workflowEpoch:task.workflowEpoch??0,workflowCalls:task.workflowCalls??0,workflowActiveMs:task.workflowActiveMs??0,previousArtifacts:inputsChanged?[]:task.previousArtifacts??[],workflow:(task.workflowRecords??[]).map(({payload,...record})=>({...record,label:workflowLabels[record.key]??record.key,partial:record.key==='audit_claims'&&(payload as {review?:{completeness?:string}}|undefined)?.review?.completeness==='partial'})),
+  workflowEpoch:task.workflowEpoch??0,workflowCalls:task.workflowCalls??0,workflowActiveMs:task.workflowActiveMs??0,previousArtifacts:inputsChanged?[]:task.previousArtifacts??[],workflow:(task.workflowRecords??[]).map(({payload,...record})=>({...record,label:workflowLabels[record.key]??record.key,metrics:stepMetrics(record.key,payload),partial:record.key==='audit_claims'&&(payload as {review?:{completeness?:string}}|undefined)?.review?.completeness==='partial'})),
   events: task.events, error: task.error?.code?task.error:undefined, attempts: task.attempts,
   candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), kind:task.kind,sourceMailId:task.sourceMailId?.toString(),mailAnalysisId:inputsChanged?undefined:task.mailAnalysisId?.toString(),automatic:Boolean(task.automationRuleId),parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:inputsChanged?undefined:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};
 }

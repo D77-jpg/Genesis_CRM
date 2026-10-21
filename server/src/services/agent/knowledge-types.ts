@@ -36,6 +36,28 @@ export interface KnowledgeReview {
 export interface ClaimCheck {id:string;text:string;status:'supported'|'unsupported'|'contradicted'|'unverifiable'|'non_claim';sourceIds:string[];reason:string;quotes?:{sourceId:string;quote:string;start:number;end:number}[]}
 export interface KnowledgeFreshness { checkedAt: string; changed: {sourceId:string;title:string;reason:string}[]; failed?:boolean }
 
+// One retrieved source points at one published entry; its provenance carries a
+// ref per parser chunk (tens for a 10,000-character entry). The citation panel
+// links to the document and a handful of chunk excerpts, so keep a bounded,
+// de-duplicated slice. The unbounded list made an ordinary bundle 400 KB and
+// tripped the 160 KB workflow step budget before any draft could be written.
+export const MAX_PROVENANCE_REFS = 4;
+export function boundedRefs(refs: Record<string, unknown>[] | undefined): Record<string, unknown>[] {
+  const seen = new Set<string>(), kept: Record<string, unknown>[] = [];
+  for (const ref of refs ?? []) {
+    const key = [ref.documentId, ref.parsingRevisionId, ref.chunkId].some(value => value !== undefined)
+      ? [ref.documentId, ref.parsingRevisionId, ref.chunkId].map(value => String(value ?? '')).join(':') : JSON.stringify(ref);
+    if (seen.has(key)) continue;
+    seen.add(key); kept.push(ref);
+    if (kept.length >= MAX_PROVENANCE_REFS) break;
+  }
+  return kept;
+}
+
+// One source without ranking/provenance diagnostics. The model cites sourceId;
+// the review panel keeps the full snapshot on the bundle.
+export function knowledgeSourceForModel(source:KnowledgeSource){const {index:_index,publication:_publication,...rest}=source;return rest;}
+
 // Administrator diagnostics are not facts for generation. Preserve the full selected
 // publication/snapshot, but never send rejected candidate excerpts or ranking traces.
 export function knowledgeForModel(bundle:KnowledgeBundle):KnowledgeBundle {

@@ -37,6 +37,21 @@ test('step cache is fenced, input-hashed and budgets survive retry',async()=>{
 test('expired fifth lease becomes an explicit non-retryable failure instead of looping forever',async()=>{
  const {AgentTask}=await import('../src/models/AgentTask');const created=await task('请写跟进邮件');await AgentTask.updateOne({_id:created.task.id},{$set:{status:'running',attempts:5,leaseToken:'dead',leaseUntil:new Date(0)}});await tasks.processAgentTask(created.task.id);const done=await tasks.getAgentTask(created.task.id,actor);assert.equal(done.status,'failed');assert.equal(done.error?.retryable,false);
 });
+test('oversized evidence keeps rules and topic sources instead of failing the whole draft',async()=>{
+ const {trimEvidenceBudget,evidenceWithinBudget}=await import('../src/services/agent/sales-evidence');
+ const source=(index:number,moq=false)=>({sourceId:'s'+index,knowledgeId:'k'+index,version:1,title:'Fictional source '+index,
+  category:'reference' as const,kind:'knowledge' as const,content:'条件与说明 '.repeat(400)+index,source:'fixture://fictional',
+  applicability:'all',products:[] as string[],validFrom:new Date(0).toISOString(),
+  terms:moq?[{topic:'moq' as const,value:'100',conditions:'standard styles only',mode:'confirmed' as const}]:[]});
+ const bundle={projectId:String(project),status:'ready' as const,issues:[],topics:['moq' as const],
+  sources:[source(0,true),...Array.from({length:30},(_,index)=>source(index+1))]};
+ assert.equal(evidenceWithinBudget(bundle),false);
+ const dropped=trimEvidenceBudget(bundle,['moq']);
+ assert.ok(dropped>0);assert.ok(evidenceWithinBudget(bundle));
+ assert.ok(bundle.sources.some(entry=>entry.terms.some(term=>term.topic==='moq')));
+ assert.ok(bundle.sources.every(entry=>entry.content.length>1000));
+});
+
 test('sales rule loading enforces project, publication, expiry and administrator scope',async()=>{
  const {appendKnowledge}=await import('../src/services/agent/knowledge.service');const {prepareSalesEvidence}=await import('../src/services/agent/sales-evidence');const admin={...actor,role:'admin' as const};const title='Fictional private rule '+randomUUID();
  await appendKnowledge(undefined,{expectedVersion:0,title,category:'sales_rules',source:'fixture://private',content:'Do not invent supplier promises.',products:[],tags:[],applicability:'all',terms:[],approved:true,accessScope:'admins'},admin);

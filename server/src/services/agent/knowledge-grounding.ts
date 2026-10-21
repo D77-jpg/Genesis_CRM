@@ -130,6 +130,8 @@ export function conditionalSentence(term:KnowledgeTerm,source:KnowledgeSource){
 }
 export function customerProfileOf(value:{name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}):CustomerFactProfile{return {name:value.name,company:value.company??'',country:value.country??'',industry:value.industry??'',interestedProducts:value.interestedProducts??''};}
 export interface GroundedEmailOptions {
+  // Paragraphs that already passed claim checking; they replace the generic opening.
+  verifiedProse?: string;
  knownRequirements?:{quantity?:number;quantityUnit?:string;destination?:string};
  customerWebsites?:import('./knowledge-types').CustomerWebsiteSnapshot[];
  customerProfile?:CustomerFactProfile;
@@ -163,7 +165,7 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  const seller=options.seller;
  const recipient=options.recipientName?.replace(/[\r\n]/g,' ').trim().slice(0,100);
  const outreach=options.taskType==='first_outreach';
- const intro=options.taskType==='quotation_explanation'?'Here are the quotation details available for review and any points still requiring confirmation.':options.taskType==='sample_reply'?'Here is the available information for your sample request.':options.taskType==='followup_review'?'I wanted to check whether you have any updates on your current requirements.':undefined;
+ const intro=options.verifiedProse??(options.taskType==='quotation_explanation'?'Here are the quotation details available for review and any points still requiring confirmation.':options.taskType==='sample_reply'?'Here is the available information for your sample request.':options.taskType==='followup_review'?'I wanted to check whether you have any updates on your current requirements.':undefined);
  const sections=[recipient?'Dear '+recipient+',':'Hello,',intro??(outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.'),
  answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'',
  outreach?'Would a brief discussion about your requirements be useful?':options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':'Could you please confirm your final specifications so we can agree on the next step?',

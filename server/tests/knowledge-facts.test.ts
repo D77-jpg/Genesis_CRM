@@ -142,11 +142,27 @@ test('one whole-message rewrite is followed by another audit, with a hard two-ch
  const result=await verifyGroundedEmail('We guarantee USD 888.',bundle(),{taskType:'inquiry_reply'},verifier);
  assert.equal(count,2);assert.equal(rewrites,1);assert.equal(result.review.completeness,'partial');assert.doesNotMatch(result.bodyText,/888|999/);assert.match(result.bodyText,/19 working days/);
 });
-test('semantic failure is distinct from no answer; a valid partial email stays readable',async()=>{
- const result=await verifyGroundedEmail('Unverified claim.',bundle(),{taskType:'inquiry_reply'},{model:'fixture',async check(){throw Error('isolated transport failure');}});
- assert.equal(result.review.factAudit?.mode,'unavailable');assert.ok(result.review.issues.some(i=>i.code==='semantic_unverified'));
- assert.match(result.bodyText,/Hello,[\s\S]*Thank you[\s\S]*19 working days[\s\S]*Could you please/);
+test('a transport failure keeps the generated draft as unverified, and invented numbers still drop to the condition letter',async()=>{
+ const verifier={model:'fixture',async check(){throw Error('isolated transport failure');}};
+ const kept=await verifyGroundedEmail('Hi, we make velvet pouches and gift boxes.\n\nBest regards,\nFixture Seller',bundle(),{taskType:'inquiry_reply'},verifier);
+ assert.equal(kept.review.factAudit?.mode,'unavailable');
+ assert.ok(kept.review.issues.some(i=>i.code==='semantic_unverified'));
+ assert.ok(kept.review.issues.some(i=>i.code==='draft_unverified'));
+ assert.match(kept.bodyText,/velvet pouches/);
+ const invented=await verifyGroundedEmail('Our price is USD 888 per piece.',bundle(),{taskType:'inquiry_reply'},verifier);
+ assert.doesNotMatch(invented.bodyText,/888/);
+ assert.match(invented.bodyText,/19 working days/);
 });
+test('unsupported introductory facts and commitments are never promoted to non-claims',async()=>{
+ const verifier:SemanticVerifier={model:'fixture',async check({segments}){return segments.map(p=>({...p,status:'unsupported',quotes:[],reason:'no direct support'}));}};
+ const rejected=await verifyGroundedEmail('We make packaging for jewelry brands.',bundle([source],[]),{taskType:'first_outreach'},verifier);
+ assert.doesNotMatch(rejected.bodyText,/We make packaging for jewelry brands/);
+ assert.ok(!rejected.review.issues.some(i=>i.code==='descriptive_unchecked'));
+ const blocked=await verifyGroundedEmail('Our MOQ is 73 pcs.',bundle(),{taskType:'inquiry_reply'},verifier);
+ assert.doesNotMatch(blocked.bodyText,/MOQ is 73/);
+ assert.equal(blocked.review.completeness,'partial');
+});
+
 test('an omitted topic is answered only after rendering its complete applicable fact, never by shared source ID',async()=>{
  const moq={...term,topic:'moq' as const,value:'73',unit:'pcs'};const b=bundle([{...source,terms:[moq,term]}],['moq','lead_time']);const card=conditionalSentence(moq,b.sources[0]);
  const result=await verifyGroundedEmail(card,b,{taskType:'inquiry_reply'},{model:'fixture',async check(){return [{id:'s0',status:'supported',quotes:[proof(card,card,source.sourceId+':term:0')],reason:'only MOQ answered'}];}});
@@ -233,10 +249,12 @@ test('real provider HTTP protocol validates JSON, unique Unicode quotes and reje
  try{const address=http.address();assert.ok(address&&typeof address==='object');const provider=new OpenAIResponsesProvider({apiKey:'fictional-loopback-only',baseUrl:`http://127.0.0.1:${address.port}/v1`,model:'loopback-not-a-real-model',timeoutMs:3000});const verifier=providerFactVerifier(provider,actor)!;
   const payload={segments:[{id:'s0',text:'We make cotton bags.'}],evidence:[{sourceId:'local-evidence',text:'😀 We make cotton bags.'}]};
   const rows=await verifier.check(payload);assert.equal(rows[0].quotes[0].start,10);assert.equal(rows[0].quotes[0].end,21);
+  const layoutPayload={...payload,evidence:[{sourceId:'local-evidence',text:'😀 We make cotton\nbags.'}]};
+  const layoutRows=await verifier.check(layoutPayload);assert.equal(layoutRows[0].quotes[0].quote,'cotton\nbags');assert.equal(layoutRows[0].quotes[0].start,10);assert.equal(layoutRows[0].quotes[0].end,21);
   assert.deepEqual(requests[0].tools,[]);assert.equal(requests[0].store,false);assert.equal(requests[0].parallel_tool_calls,false);
   assert.equal((requests[0].text as {format:{type:string;name:string}}).format.type,'json_schema');
   assert.equal((requests[0].text as {format:{name:string}}).format.name,'evidence_entailment');
-  await verifier.rewrite!({body:'Fictional only',allowed:[],issues:[]});assert.deepEqual(requests[1].text,{format:{type:'text'}});
+  await verifier.rewrite!({body:'Fictional only',allowed:[],issues:[]});assert.deepEqual(requests[2].text,{format:{type:'text'}});
   mode='invalid';await assert.rejects(()=>verifier.check(payload));mode='tool';await assert.rejects(()=>verifier.check(payload));
  }finally{await new Promise<void>((resolve,reject)=>http.close(error=>error?reject(error):resolve()));}
 });

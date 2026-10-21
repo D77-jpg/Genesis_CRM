@@ -7,7 +7,7 @@ import {AgentKnowledge,type KnowledgeRevision} from '../../models/AgentKnowledge
 import {requireProjectId} from '../../utils/access';
 import type {AuthUser} from '../../types/express';
 import {ApiError} from '../../utils/ApiError';
-import {KNOWLEDGE_CATEGORIES,POLICY_TOPICS,type KnowledgeBundle,type KnowledgeSource,type PolicyTopic} from './knowledge-types';
+import {KNOWLEDGE_CATEGORIES,POLICY_TOPICS,boundedRefs,type KnowledgeBundle,type KnowledgeSource,type PolicyTopic} from './knowledge-types';
 
 export const termInput=z.object({
  scope:factScopeInput.optional(),topic:z.enum(POLICY_TOPICS),value:z.string().trim().min(1).max(1200),
@@ -122,7 +122,7 @@ export function productApplies(products:string[]|undefined,text:string):boolean{
 }
 export function sourceOf(id:string,v:KnowledgeRevision):KnowledgeSource{
  return {sourceId:'knowledge:'+id+':v'+v.version,knowledgeId:id,version:v.version,title:v.title,
- category:v.category??'product',kind:'knowledge',content:v.content,source:v.source,publication:{contentHash:createHash('sha256').update(v.content).digest('hex'),location:{kind:'published_text',offsetUnit:'unicode_codepoints',start:0,end:Array.from(v.content).length},sourceRefs:v.sourceRefs??[]},
+ category:v.category??'product',kind:'knowledge',content:v.content,source:v.source,publication:{contentHash:createHash('sha256').update(v.content).digest('hex'),location:{kind:'published_text',offsetUnit:'unicode_codepoints',start:0,end:Array.from(v.content).length},sourceRefs:boundedRefs(v.sourceRefs)},
  applicability:v.applicability??'历史资料，适用条件需审核',products:v.products??[],
  validFrom:v.validFrom?.toISOString()??'',validUntil:v.validUntil?.toISOString(),terms:(v.terms??[]).map((t,publicationIndex)=>({...JSON.parse(JSON.stringify(t)),publicationIndex}))};
 }
