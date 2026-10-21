@@ -19,6 +19,9 @@ const quote=z.object({sourceId:z.string().max(200),quote:z.string().min(1).max(1
 const output=z.object({checks:z.array(z.object({id:z.string(),status:z.enum(['supported','unsupported','contradicted','unverifiable','non_claim']),quotes:z.array(quote).max(8),reason:z.string().max(600)}).strict()).max(64)}).strict();
 const verdictFormat={type:'json_schema' as const,name:'evidence_entailment',strict:true as const,schema:{type:'object',additionalProperties:false,required:['checks'],properties:{checks:{type:'array',items:{type:'object',additionalProperties:false,required:['id','status','quotes','reason'],properties:{id:{type:'string'},status:{type:'string',enum:['supported','unsupported','contradicted','unverifiable','non_claim']},reason:{type:'string'},quotes:{type:'array',items:{type:'object',additionalProperties:false,required:['sourceId','quote','start','end'],properties:{sourceId:{type:'string'},quote:{type:'string'},start:{type:'integer'},end:{type:'integer'}}}}}}}}}};
 const critical=(s:string)=>/\d|\bmoq\b|minimum order|price|payment|cost|freight|shipping|lead.time|deliver|certif|\bfsc\b|\biso\b|free|capacity|guarantee|warrant|exclusive|起订|价格|费用|运费|付款|交期|认证|证书|免费|保证|产能|承诺/i.test(s);
+// Anything that could read as a commitment, a customer intent or a commercial
+// quantity stays strictly verified. Only colour prose is allowed to pass unchecked.
+const assertive=(s:string)=>critical(s)||/\d|[$€£¥%]/.test(s)||/\b(?:order|purchase|contract|agreement|agree|agreed|confirm|confirmed|approve|approved|request|requested|require|required|need|needs|want|wants|budget|deadline|schedule|quantity|units?|pcs|pieces|sets?|days?|weeks?|months?|years?|discount|sample)\b|订单|合同|协议|确认|批准|要求|预算|数量/i.test(s);
 const negative=(s:string)=>/\b(?:not|never|no|cannot|can't|without|except|unless)\b|不支持|不可|不能|不提供|未认证|未经|除外|除非/i.test(s);
 // A negation word count is not semantic polarity: "empty" and "without contents"
 // can be equivalent. Keep a deterministic guard for literal reversals of the same
@@ -111,15 +114,38 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
    else baseline.review.issues.push({code:'fact_budget',message:'部分已核验段落超过单稿长度上限，已整段保留待另稿处理，未截断条件。'});
   }
   if(verified.length){
+   // Rebuild the letter with the checked paragraphs as its opening: inserting them
+   // after the generic intro repeated "I am reaching out…" in every partial draft.
    const prose=[...new Set(verified.map(c=>c.text))].join('\n\n');
-   baseline.bodyText=baseline.bodyText.replace('\n\n','\n\n'+prose+'\n\n');
-   baseline.review.bodyHash=draftHash(baseline.bodyText);
-   baseline.review.claims.push(...verified.map(c=>({text:c.text,sourceIds:c.sourceIds})));
-   baseline.review.factAudit.mode='semantic';
+   const rebuilt=auditGroundedEmail(body,bundle,{...options,verifiedProse:prose});
+   baseline.bodyText=rebuilt.bodyText;
+   baseline.review={...rebuilt.review,factAudit:{contract:'s4.1',mode:'semantic',attempts,checks:[...checks,...(rebuilt.review.factAudit?.checks??[])],facts:collectConditionalEvidence(bundle)},
+    claims:[...rebuilt.review.claims,...verified.map(c=>({text:c.text,sourceIds:c.sourceIds}))]};
   }
   baseline.review.completeness='partial';baseline.review.issues.push({code:verified.length?'semantic_partial':'semantic_unverified',message:verified.length?'部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。':reason});return baseline;
  };
  if(['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status))return fallback('检索未就绪或失败，已保留安全的不完整答复');
+ // A transport failure is not a factual verdict. Keep the generated draft, but
+ // only when every number in it already appears in the evidence: an invented
+ // price or MOQ still drops back to the deterministic, condition-only letter.
+ const evidenceText = () => [...bundle.sources.map(source => source.content),
+  ...bundle.sources.flatMap(source => source.terms.map(term => term.value + ' ' + term.conditions + ' ' + (term.unit ?? ''))),
+  options.customerEvidence ?? ''].join('\n');
+ const unverified = async (reason: string) => {
+  const kept = body.trim();
+  if (!kept) return fallback(reason);
+  const haystack = evidenceText();
+  const invented = [...new Set(kept.match(/(?:[$€£¥]\s?)?\d[\d.,]*/g) ?? [])]
+   .filter(token => !haystack.includes(token) && !haystack.includes(token.replace(/^[$€£¥]\s?/, '')));
+  if (invented.length) return fallback(reason + '；正文含依据中没有的数字（' + invented.slice(0, 3).join('、') + '），已改用条件答复');
+  const keptChecks: ClaimCheck[] = segments(kept).map(part => ({ ...part, status: 'unverifiable' as const, sourceIds: [], reason }));
+  const review: KnowledgeReview = { ...baseline.review, bodyHash: draftHash(kept), claims: [], completeness: 'partial',
+   issues: [...baseline.review.issues.filter(issue => issue.code !== 'claim_rewritten'),
+    { code: 'semantic_unverified', message: reason },
+    { code: 'draft_unverified', message: '正文是模型原稿，逐项核验没有完成：发送前请对照依据核对数字、条件和承诺。' }],
+   factAudit: { contract: 's4.1', mode: 'unavailable', attempts, checks: keptChecks, facts: collectConditionalEvidence(bundle) } };
+  return { bodyText: kept, review };
+ };
  if(!verifier)return fallback('语义核验服务未启用；本稿仅使用结构化已确认事实，普通事实待人工审核');
  const customer=options.customerId&&options.customerProfile?{id:options.customerId,profile:options.customerProfile,websites:options.customerWebsites}:undefined;
  const evidence=evidenceForCheck(bundle,customer);if(!evidence.length)return fallback('没有足够的有效依据，不能核实生成稿');
@@ -127,10 +153,21 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
  const lines=body.trimEnd().split('\n');
  while(lines.length&&(!lines[lines.length-1].trim()||signatureParts.has(lines[lines.length-1].trim())||/^(?:Best regards|Kind regards|Regards)[,.]?$/i.test(lines[lines.length-1].trim())))lines.pop();
  let candidate=lines.join('\n');
+ const unchecked: string[]=[];
  try{
   for(let round=0;round<2;round++){
+   unchecked.length=0;
    const parts=segments(candidate);if(!parts.length||parts.length>64||candidate.length>20000)return fallback('草稿超出逐项核验范围，请拆分审核');
-   attempts++;checks=checkSemanticResults(candidate,bundle,await verifier.check({segments:parts,evidence}),customer);
+   attempts++;const transcript=await verifier.check({segments:parts,evidence}).catch(()=>verifier.check({segments:parts,evidence}));
+   checks=checkSemanticResults(candidate,bundle,transcript,customer);
+   // Tiered checking: a paragraph without numbers or commitments is colour, not a
+   // promise. Keeping it as non_claim lets the model's voice survive while every
+   // price/MOQ/lead-time/certification sentence stays strictly gated.
+   checks=checks.map(c=>{
+    if(c.status!=='unsupported'||assertive(c.text))return c;
+    unchecked.push(c.text);
+    return {...c,status:'non_claim' as const,reason:'介绍性表述，未含数字或承诺；未逐项核验，发送前人工过目'};
+   });
    checks=checks.map(c=>{const asking=/(?:could you|please (?:confirm|provide|share)|what|how many|请(?:确认|提供)|多少)[^\n]{0,240}[?？.]?/i.test(c.text);const known=options.knownRequirements;return asking&&((known?.quantity!==undefined&&/quantity|how many|数量/i.test(c.text))||(known?.destination&&/destination|ship to|目的地|收货地/i.test(c.text)))?{...c,status:'unsupported' as const,reason:'客户已提供该项需求，请勿重复询问；只集中询问仍缺失的信息'}:c;});
    if(checks.every(c=>c.status==='supported'||c.status==='non_claim')){
     if(actor){const current=await knowledgeFreshness(baseline.review,actor);if(current.failed||current.changed.length)return fallback('核验期间依据发生变化或权限检查失败，请重新生成');}
@@ -141,12 +178,13 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
     // A factually safe message can still omit a customer's question. Render the
     // checked paragraphs with all applicable answers and explicit missing-policy notices.
     if(review.questions.some(q=>q.status==='unanswered'))return fallback('部分客户问题尚未回答，已补齐有依据的条件并列出待确认事项');
+    if(unchecked.length){review.completeness='partial';review.issues.push({code:'descriptive_unchecked',message:'有 '+unchecked.length+' 段介绍性表述未逐项核验（不含数字或承诺），发送前请人工过目'});}
     return {bodyText,review};
    }
    if(round===0&&verifier.rewrite)candidate=await verifier.rewrite({body:candidate,allowed:evidence,issues:checks.filter(c=>c.status!=='supported'&&c.status!=='non_claim')});else break;
   }
   return fallback('生成稿经一次重写仍有无法支持的主张，已改用有依据的完整答复');
- }catch{return fallback('语义核验暂时失败，不能把失败当作事实已确认');}
+ }catch{return unverified('语义核验暂时失败；正文保留模型原稿并标注未核验，发送前请逐项核对依据');}
 }
 // Rechecking an edited draft never overwrites its body or original evidence snapshot.
 export async function inspectEditedDraft(body:string,bundle:KnowledgeBundle,verifier?:SemanticVerifier,customer?:CustomerCheckContext){

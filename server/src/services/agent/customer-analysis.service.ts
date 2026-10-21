@@ -3,7 +3,7 @@ import {websiteCustomerEvidence} from '../website/research.service';
 import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesMailKind,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
-import {knowledgeForModel} from './knowledge-types';
+import {knowledgeForModel,knowledgeSourceForModel} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
 import {knowledgeFreshness,customerProfileOf} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
@@ -146,7 +146,9 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   const prepared=await prepareSalesEvidence(actor,{request:goal,history:inbound.slice().reverse().map(m=>m.text).join('\n'),productHint:[customer.interestedProducts,customer.productCategory,customer.industry,...new Set(websiteSources.map(item=>item.content.productHint))].filter(Boolean).join(' '),kind:taskKind??salesMailKind(goal),customerId,ids:knowledgeIds},workflow);
   const knowledgeContext=prepared.bundle;
   const knowledge=knowledgeContext.sources;
-  for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...item,approved:true});
+  // The catalog repeats every source for citation lookup; provenance diagnostics
+  // (per-chunk refs, ranking indexes) are not facts and doubled the model input.
+  for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},knowledgeSourceForModel(item) as unknown as Record<string,unknown>);
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
   return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext) }, sources };
 }
@@ -239,8 +241,11 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
     if(research.state!=='ready'){grounded.review.issues.push({code:'customer_research_gap',message:research.message});grounded.review.completeness='partial';}
     parsed.emailDraft.bodyText=grounded.bodyText;
-    // A generated subject is not an unchecked channel for numeric commitments.
-    parsed.emailDraft.subject=salesSubjects[taskKind];
+    // A generated subject is not an unchecked channel for numeric commitments:
+    // keep it only when it is short and free of numbers or currencies.
+    const proposedSubject = (parsed.emailDraft.subject ?? '').trim();
+    const subjectSafe = proposedSubject.length >= 8 && proposedSubject.length <= 90 && !/[\d€£$¥%]|USD|EUR|GBP|RMB|CNY/i.test(proposedSubject);
+    parsed.emailDraft.subject = subjectSafe ? proposedSubject : salesSubjects[taskKind];
     const known = new Set(context.sources.map((source) => source.sourceId));
     const facts = verifiedClaims(parsed.facts, known);
     const gaps = verifiedClaims(parsed.gaps, known);

@@ -142,11 +142,29 @@ test('one whole-message rewrite is followed by another audit, with a hard two-ch
  const result=await verifyGroundedEmail('We guarantee USD 888.',bundle(),{taskType:'inquiry_reply'},verifier);
  assert.equal(count,2);assert.equal(rewrites,1);assert.equal(result.review.completeness,'partial');assert.doesNotMatch(result.bodyText,/888|999/);assert.match(result.bodyText,/19 working days/);
 });
-test('semantic failure is distinct from no answer; a valid partial email stays readable',async()=>{
- const result=await verifyGroundedEmail('Unverified claim.',bundle(),{taskType:'inquiry_reply'},{model:'fixture',async check(){throw Error('isolated transport failure');}});
- assert.equal(result.review.factAudit?.mode,'unavailable');assert.ok(result.review.issues.some(i=>i.code==='semantic_unverified'));
- assert.match(result.bodyText,/Hello,[\s\S]*Thank you[\s\S]*19 working days[\s\S]*Could you please/);
+test('a transport failure keeps the generated draft as unverified, and invented numbers still drop to the condition letter',async()=>{
+ const verifier={model:'fixture',async check(){throw Error('isolated transport failure');}};
+ const kept=await verifyGroundedEmail('Hi, we make velvet pouches and gift boxes.\n\nBest regards,\nFixture Seller',bundle(),{taskType:'inquiry_reply'},verifier);
+ assert.equal(kept.review.factAudit?.mode,'unavailable');
+ assert.ok(kept.review.issues.some(i=>i.code==='semantic_unverified'));
+ assert.ok(kept.review.issues.some(i=>i.code==='draft_unverified'));
+ assert.match(kept.bodyText,/velvet pouches/);
+ const invented=await verifyGroundedEmail('Our price is USD 888 per piece.',bundle(),{taskType:'inquiry_reply'},verifier);
+ assert.doesNotMatch(invented.bodyText,/888/);
+ assert.match(invented.bodyText,/19 working days/);
 });
+test('intro prose without numbers or commitments survives a failed check; commitments never do',async()=>{
+ const verifier={model:'fixture',async check({segments}:{segments:{id:string;text:string}[]}){return segments.map(p=>({...p,status:'unsupported' as const,quotes:[],reason:'no direct support'}));}};
+ const kept=await verifyGroundedEmail('Hi,\n\nWe make packaging for jewelry brands.\n\nBest regards,\nFixture Seller',bundle([source],[]),{taskType:'first_outreach'},verifier);
+ assert.equal(kept.review.factAudit?.mode,'semantic');
+ assert.ok(kept.review.issues.some(i=>i.code==='descriptive_unchecked'));
+ assert.match(kept.bodyText,/We make packaging for jewelry brands/);
+ assert.equal(kept.review.completeness,'partial');
+ const blocked=await verifyGroundedEmail('Our MOQ is 73 pcs.',bundle(),{taskType:'inquiry_reply'},verifier);
+ assert.doesNotMatch(blocked.bodyText,/MOQ is 73/);
+ assert.ok(blocked.review.issues.some(i=>i.code==='semantic_unverified')||blocked.review.issues.some(i=>i.code==='semantic_partial'));
+});
+
 test('an omitted topic is answered only after rendering its complete applicable fact, never by shared source ID',async()=>{
  const moq={...term,topic:'moq' as const,value:'73',unit:'pcs'};const b=bundle([{...source,terms:[moq,term]}],['moq','lead_time']);const card=conditionalSentence(moq,b.sources[0]);
  const result=await verifyGroundedEmail(card,b,{taskType:'inquiry_reply'},{model:'fixture',async check(){return [{id:'s0',status:'supported',quotes:[proof(card,card,source.sourceId+':term:0')],reason:'only MOQ answered'}];}});
