@@ -46,6 +46,7 @@ Gold Supplier on Alibaba.com since 2014 · ISO 9001 / FSC® / BSCI Certified
 - **结尾直接写在正文里**：打开写信/审核弹窗时，正文末尾会自动带上固定结尾（第一行当前账号姓名），业务员在编辑器里就能核对、也能直接改。
   - 编辑器（Quill）里是**文字版**结尾：`<img>`/`<hr>` 这类块级内容在富文本回写时会被丢掉，所以编辑区只保留文字。
   - **预览**页签和真正发出去的邮件里是**完整版**：带 GENESIS PACKAGING logo 和分隔线。服务端落库/渲染时会把文字结尾升级成完整版（`ensureSignature()`），纯文本保持不变，所以审核哈希不会跳变。
+- **老草稿的旧落款会被清掉**：历史草稿里常见的 `Best regards,` + 姓名 + 公司 + 网址 会在打开时先剔除，再补固定结尾，不会出现两套签名。前端按段落/`<br>` 分行判断，服务端 `stripTrailingSignoff()` / `stripSignatureText()` 用同一口径兜底。
 - **模板中心**的模板正文不要再写 `Best, {{senderName}} {{companyName}}` 这类落款；写了也会被 `stripTrailingSignoff()` 去掉再换成固定结尾（富文本把落款拆成多个 `<p>` 也能处理）。
 - 只有「预览」页签看到的是渲染后的完整邮件，编辑区保留模板占位符（`{{firstName}}` 等），这是既有行为。
 

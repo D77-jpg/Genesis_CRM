@@ -767,10 +767,57 @@ export function letterSignatureHtml(name: string): string {
   return `<p><strong>${who}</strong></p><p>${escapeSignatureText(LETTER_SIGNATURE.title)}</p><p></p>${lines}`;
 }
 
+/** 结尾里的落款词 / 联系方式 / 姓名行（与 server 端 stripTrailingSignoff 的口径一致） */
+function isSignoffLine(text: string): boolean {
+  return /^(?:(?:best|kind|warm|many)(?:\s+(?:regards|wishes|thanks))?|regards|sincerely|thanks)[,.!\s]*$/i.test(text);
+}
+function isContactLine(text: string): boolean {
+  if (text.length > 120) return false;
+  return /^(?:\{\{\s*(?:senderName|companyName|companyWebsite|senderEmail)\s*\}\}|genesis|www\.|https?:\/\/|[^@\s]+@[^@\s]+\.[a-z]{2,})/i.test(text);
+}
+function isNameLine(text: string): boolean {
+  return text.length <= 60 && text.split(/\s+/).length <= 4 && !/\d/.test(text) && !isContactLine(text);
+}
+
+/**
+ * 去掉正文尾部的老式落款（`Best regards,` / 姓名 / 公司 / 网址）。
+ * 老草稿里常见这一串，直接追加固定结尾会出现两套签名，所以先剥掉再补。
+ */
+export function stripLegacySignoff(html: string): string {
+  if (typeof DOMParser === 'undefined') return html;
+  const doc = new DOMParser().parseFromString(`<div id="signature-root">${html}</div>`, 'text/html');
+  const root = doc.getElementById('signature-root');
+  if (!root) return html;
+  let sawStrong = false;
+  for (let guard = 0; guard < 12; guard++) {
+    const last = root.lastElementChild as HTMLElement | null;
+    if (!last) break;
+    // 一个段落里可能用 <br> 连写多行（老模板就是这样），按行判断
+    const lines = last.innerHTML
+      .split(/<br\s*\/?>/i)
+      .map((line) => {
+        const holder = doc.createElement('span');
+        holder.innerHTML = line;
+        return (holder.textContent ?? '').trim();
+      })
+      .filter(Boolean);
+    if (!lines.length) break;
+    const strong = (isSignoffLine(lines[0]) && lines.slice(1).every((line) => isContactLine(line) || isNameLine(line)))
+      || lines.every((line) => isContactLine(line));
+    const nameOnly = lines.length === 1 && isNameLine(lines[0]) && sawStrong;
+    if (!strong && !nameOnly) break;
+    last.remove();
+    sawStrong = sawStrong || strong;
+  }
+  return root.innerHTML;
+}
+
 /** 正文还没有固定结尾时补在最后；已有则原样返回 */
 export function appendSignatureHtml(html: string, name: string): string {
-  if (html.includes(LETTER_SIGNATURE.marker)) return html;
-  return `${html}${html ? '<p></p>' : ''}${letterSignatureHtml(name)}`;
+  // 已经有固定结尾：只清理可能残留的旧落款，不重复追加
+  if (html.includes(LETTER_SIGNATURE.marker)) return stripLegacySignoff(html);
+  const cleaned = stripLegacySignoff(html);
+  return `${cleaned}${cleaned ? '<p></p>' : ''}${letterSignatureHtml(name)}`;
 }
 
 /**

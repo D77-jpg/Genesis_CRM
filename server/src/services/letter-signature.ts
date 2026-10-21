@@ -116,40 +116,54 @@ export function stripSignatureText(text: string, known: readonly (string | undef
     return lines.slice(0, cut).join('\n').trim();
   }
 
-  // 没有落款词时只剥掉纯联系方式的尾巴
-  let end = lines.length;
-  while (end > 0 && (!lines[end - 1].trim() || isContact(lines[end - 1].trim()))) end--;
-  return lines.slice(0, end).join('\n').trim();
+  // 没有落款词时：剥掉「联系方式 + 姓名」组成的尾巴（老草稿常见：姓名 / 公司 / 网址），
+  // 但要求这一串里至少有一行是明确的联系方式，避免把正文最后一句当成签名删掉。
+  const trailing: string[] = [];
+  let index = lines.length - 1;
+  while (index >= 0) {
+    const line = lines[index].trim();
+    if (!line) { trailing.push(''); index--; continue; }
+    if (isContact(line) || isNameLike(line)) { trailing.push(line); index--; continue; }
+    break;
+  }
+  const hasContact = trailing.some((line) => line && isContact(line));
+  if (!hasContact) return lines.join('\n').trim();
+  return lines.slice(0, index + 1).join('\n').trim();
 }
 
 /**
- * 去掉模板自带的老式落款（`Best,` + 署名 + 公司），避免和固定结尾重复出现两次。
- * 富文本编辑器会把落款拆成多个段落（`<p>Best regards,</p><p>{{senderName}}</p>…`），
- * 所以按「最后一个段落」反复剥，直到不再变化。
+ * 去掉模板自带的老式落款（`Best,` + 署名 + 公司 + 网址），避免和固定结尾重复出现两次。
+ * 富文本编辑器会把落款拆成多个段落（`<p>Best regards,</p><p>Genesis Admin</p>…`），
+ * 所以按「最后一个段落」反复剥，直到不再变化；姓名单行只在已经剥掉落款/联系方式后才允许删。
  */
 export function stripTrailingSignoff(content: string): string {
   let current = content;
-  for (let guard = 0; guard < 8; guard++) {
-    const next = stripLastSignoffBlock(current);
-    if (next === current) break;
-    current = next;
+  let sawStrong = false;
+  for (let guard = 0; guard < 12; guard++) {
+    const result = stripLastSignoffBlock(current, sawStrong);
+    if (!result) break;
+    current = result.html;
+    sawStrong = sawStrong || result.strong;
   }
   return current;
 }
 
-function stripLastSignoffBlock(content: string): string {
+function stripLastSignoffBlock(content: string, sawStrong: boolean): { html: string; strong: boolean } | undefined {
   const match = content.match(/(<(?:p|div)[^>]*>)((?:(?!<\/p>|<\/div>)[\s\S])*)(<\/p>|<\/div>)\s*$/i);
-  if (!match || match.index === undefined) return content;
+  if (!match || match.index === undefined) return undefined;
   const lines = match[2]
     .split(/<br\s*\/?>/i)
     .map((line) => line.replace(/<[^>]+>/g, '').trim())
     .filter(Boolean);
-  if (!lines.length || lines.length > 8) return content;
-  // 一个段落要么以落款词开头，要么整段只有占位符/联系方式，才算落款的一部分
+  if (!lines.length || lines.length > 8) return undefined;
+  const contact = (line: string) => PLACEHOLDER_ONLY.test(line) || /^(?:genesis|www\.|https?:\/\/|[^@\s]+@)/i.test(line);
+  const nameLike = (line: string) => !contact(line) && line.split(/\s+/).length <= 4 && !/[.!?]$/.test(line) && !/\d/.test(line);
+  // 落款词、纯联系方式、或（已剥过落款/联系方式之后的）姓名单行都算结尾的一部分
   const isSignoff = SIGNOFF_LINE.test(lines[0]);
-  const allSignatureish = lines.every((line) => PLACEHOLDER_ONLY.test(line) || /^(?:genesis|www\.|https?:\/\/|[^@\s]+@)/i.test(line));
-  if (!isSignoff && !allSignatureish) return content;
-  return content.slice(0, match.index).trim();
+  const allContact = lines.every(contact);
+  const singleName = lines.length === 1 && nameLike(lines[0]) && sawStrong;
+  if (!isSignoff && !allContact && !singleName) return undefined;
+  return { html: content.slice(0, match.index).trim(), strong: isSignoff || allContact };
 }
 
 /**
@@ -164,8 +178,10 @@ export function ensureSignature(content: string, name: string): string {
     const text = htmlToPlainText(content);
     const { body, name: signerFromBody } = splitSignatureText(text);
     const signer = signerFromBody || signatureName(name);
+    // 老草稿里可能还留着「姓名 / 公司 / 网址」这类旧落款，先剥掉再补固定结尾
+    const cleanBody = stripSignatureText(body);
     // 用单个换行衔接，和编辑器里「每段一行」的排版保持一致，纯文本不增加空行
-    const bodyHtml = body ? `${escapeHtml(body).replace(/\r?\n/g, '<br>')}<br>` : '';
+    const bodyHtml = cleanBody ? `${escapeHtml(cleanBody).replace(/\r?\n/g, '<br>')}<br>` : '';
     return `${bodyHtml}${renderSignatureHtml(signer)}`;
   }
   const signer = signatureName(name);

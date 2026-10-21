@@ -120,6 +120,24 @@ test('固定结尾：编辑器写入的文字结尾在落库前升级成带 logo
   assert.equal(ensureSignature(upgraded, 'Genesis Admin'), upgraded);
 });
 
+test('固定结尾：老草稿的 Best regards/姓名/公司/网址 不会再和新结尾重复', () => {
+  const legacyHtml = '<p>Dear Stiles,</p><p>Body paragraph.</p>'
+    + '<p>Best regards,</p><p>Genesis Admin</p><p>Genesis (Xiamen) Bags Co., Ltd.</p><p>https://www.genesisbags.com</p>';
+  const signed = ensureSignature(legacyHtml, 'Genesis Admin');
+  const text = htmlToPlainText(signed);
+  assert.ok(!text.includes('Best regards'));
+  assert.equal((text.match(/Genesis \(Xiamen\) Bags Co\., Ltd\./g) ?? []).length, 1);
+  assert.equal((text.match(/https:\/\/www\.genesisbags\.com/g) ?? []).length, 0);
+  assert.equal((text.match(/Gold Supplier on Alibaba\.com since 2014/g) ?? []).length, 1);
+  // 已经有固定结尾但前面还留着旧落款：升级成 HTML 版时一并清掉
+  const mixed = `${legacyHtml}<p>Genesis Admin</p><p>${LETTER_SIGNATURE.title}</p><p></p>`
+    + LETTER_SIGNATURE.lines.map((line) => `<p>${line}</p>`).join('');
+  const upgraded = ensureSignature(mixed, 'Genesis Admin');
+  const upgradedText = htmlToPlainText(upgraded);
+  assert.equal((upgradedText.match(/Genesis \(Xiamen\) Bags Co\., Ltd\./g) ?? []).length, 1);
+  assert.equal((upgradedText.match(/Gold Supplier on Alibaba\.com since 2014/g) ?? []).length, 1);
+});
+
 test('固定结尾：模型自己写的落款先剥掉，再加系统签名', () => {
   const modelBody = 'Dear Diane,\n\nWe make custom boxes.\n\nBest regards,\nDouglas\nGenesis (Xiamen) Bags Co., Ltd.\nhttps://www.genesisbags.com';
   const cleaned = stripSignatureText(modelBody, ['Douglas', 'Genesis (Xiamen) Bags Co., Ltd.', 'https://www.genesisbags.com']);
