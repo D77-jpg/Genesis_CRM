@@ -1039,6 +1039,11 @@ export function CustomerDetailPage(): React.JSX.Element {
         letter={resendTarget}
         initialDraft={composeDraft}
         onSent={handleSent}
+        onReviewed={(reviewed) => {
+          // 审核结论即时体现在草稿列表与当前弹窗上
+          setResendTarget(reviewed);
+          pendingDrafts.refresh();
+        }}
       />
 
       <LetterViewDialog

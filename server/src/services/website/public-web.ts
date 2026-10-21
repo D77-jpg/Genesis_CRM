@@ -23,8 +23,8 @@ export async function publicTarget(raw:string,resolver:(hostname:string,options:
  if(!addresses.length||addresses.some(item=>!publicIpv4(item.address)))throw new WebsiteError('private_address','该域名解析到受限地址，已停止采集');
  return {url,address:addresses[0].address};
 }
-export interface WebResponse {url:string;text:string;status:number}
-export type WebsiteFetcher=(url:string,kind?:'html'|'robots')=>Promise<WebResponse>;
+export interface WebResponse {url:string;text:string;status:number;/** 归档快照时间（ISO）；实时抓取为空 */archivedAt?:string}
+export type WebsiteFetcher=(url:string,kind?:'html'|'robots'|'json')=>Promise<WebResponse>;
 // Resolve and pin every connection, including redirects. No cookies, auth, proxy environment or script execution.
 export const fetchWebsite:WebsiteFetcher=async(raw,kind='html')=>{
  const initial=websiteUrl(raw);let current=initial;
@@ -35,16 +35,17 @@ export const fetchWebsite:WebsiteFetcher=async(raw,kind='html')=>{
   const result=await new Promise<{status:number;location?:string;text:string}>((resolve,reject)=>{
    const request=(current.protocol==='https:'?httpsRequest:httpRequest)(current,{
     family:4,agent:false,lookup:(_hostname,_options,done)=>done(null,dns.address,4),
-    headers:{'User-Agent':'GenesisCRM-Research/1.0','Accept':kind==='robots'?'text/plain':'text/html, application/xhtml+xml','Accept-Encoding':'identity'},
+    headers:{'User-Agent':'GenesisCRM-Research/1.0','Accept':kind==='robots'?'text/plain':kind==='json'?'application/json':'text/html, application/xhtml+xml','Accept-Encoding':'identity'},
    },response=>{
     const status=response.statusCode??0;
     if([301,302,303,307,308].includes(status)){response.destroy();resolve({status,location:response.headers.location,text:''});return;}
     if(kind==='robots'&&status===404){response.destroy();resolve({status,text:''});return;}
     if(status<200||status>=300){response.destroy();reject(new WebsiteError('http_error',status===403||status===429?'网站限制访问，请人工核对或稍后重试':'官网返回访问错误（'+status+'）'));return;}
     const mime=response.headers['content-type']??'';
-    if(!(kind==='robots'?/^text\/plain/i:/^(?:text\/html|application\/xhtml\+xml)/i).test(mime)||response.headers['content-encoding']&&!/^identity$/i.test(response.headers['content-encoding'])){response.destroy();reject(new WebsiteError('unsupported_content','网页格式或压缩方式不支持，请人工核对'));return;}
+    const mimeOk=kind==='robots'?/^text\/plain/i.test(mime):kind==='json'?/^(?:application\/json|text\/plain)/i.test(mime):/^(?:text\/html|application\/xhtml\+xml)/i.test(mime);
+    if(!mimeOk||response.headers['content-encoding']&&!/^identity$/i.test(response.headers['content-encoding'])){response.destroy();reject(new WebsiteError('unsupported_content','网页格式或压缩方式不支持，请人工核对'));return;}
     if(/charset\s*=\s*(?!utf-8|utf8|us-ascii)[\w-]+/i.test(mime)){response.destroy();reject(new WebsiteError('unsupported_encoding','网页不是 UTF-8 编码，请人工核对'));return;}
-    const chunks:Buffer[]=[];let size=0;const max=kind==='robots'?128*1024:2*1024*1024;
+    const chunks:Buffer[]=[];let size=0;const max=kind==='html'?2*1024*1024:128*1024;
     response.on('data',(part:Buffer)=>{size+=part.length;if(size>max){response.destroy(new WebsiteError('page_limit','页面过大，已停止读取'));return;}chunks.push(part);});
     response.once('error',reject);response.once('end',()=>resolve({status,text:Buffer.concat(chunks).toString('utf8')}));
    });

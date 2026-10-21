@@ -57,6 +57,15 @@ export interface IDevelopmentLetter {
   claimedAt?: Date;
   attempts: number;
   needsReview: boolean;
+  /** 人工审核结论；没有该字段表示草稿尚未审核。审核是业务员对自己草稿的自检，不记录理由。 */
+  review?: {
+    decision: 'approved' | 'rejected';
+    at: Date;
+    by?: Types.ObjectId;
+    byName?: string;
+    /** 审核时的主题 + 纯文本正文指纹，内容变化后审核失效。 */
+    contentHash: string;
+  };
   markAsDeveloped: boolean;
   effectsPending: boolean;
   tracking?: {
@@ -157,6 +166,13 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
     claimedAt: Date,
     attempts: { type: Number, default: 0 },
     needsReview: { type: Boolean, default: false },
+    review: {
+      decision: { type: String, enum: ['approved', 'rejected'] },
+      at: Date,
+      by: { type: Schema.Types.ObjectId, ref: 'User' },
+      byName: { type: String, trim: true, maxlength: 120 },
+      contentHash: { type: String, match: /^[a-f0-9]{64}$/ },
+    },
     markAsDeveloped: { type: Boolean, default: true },
     effectsPending: { type: Boolean, default: false },
     tracking: {

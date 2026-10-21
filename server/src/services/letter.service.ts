@@ -28,6 +28,8 @@ import {
   DevelopmentLetter,
   LetterTemplate,
   Project,
+  User,
+  UserMailAccount,
   type CustomerDocument,
   type ICustomer,
   type IDevelopmentLetter,
@@ -45,12 +47,14 @@ import {
   type PlaceholderValues,
 } from '../utils/text';
 import { getCustomerByIdOrThrow } from './customer.service';
+import { ensureSignature, signatureName } from './letter-signature';
 import { getActiveChannel, getProjectActiveChannel } from './mailer.service';
 import { assertCustomerAccess, customerRefScope, projectScope, requireProjectId } from '../utils/access';
 import type { AuthUser } from '../types/express';
 import type {
   ListLettersQuery,
   ResendLetterInput,
+  ReviewLetterInput,
   SendLetterInput,
 } from '../validators/letter.validator';
 
@@ -63,6 +67,15 @@ export interface LetterCustomerSummary {
   company?: string;
   email?: string;
   status: CustomerStatus;
+}
+
+/** 草稿的人工审核结论（没有该字段表示尚未审核） */
+export interface LetterReviewSummary {
+  decision: 'approved' | 'rejected';
+  at: Date;
+  by?: string;
+  byName?: string;
+  contentHash: string;
 }
 
 /** 对外输出的开发信 DTO（id 为字符串，customerId 已扁平化） */
@@ -90,6 +103,7 @@ export interface LetterDto {
   scheduledAt?: Date;
   threadId?: string;
   needsReview?: boolean;
+  review?: LetterReviewSummary;
   error?: string;
   sentBy?: string;
   senderAddress?: string;
@@ -103,16 +117,34 @@ export interface LetterDto {
 /* 占位符渲染                                                          */
 /* ------------------------------------------------------------------ */
 
-/** 由客户 + 环境变量构造完整的占位符取值表 */
-async function buildValues(customer: Partial<ICustomer>): Promise<PlaceholderValues> {
+/**
+ * 由客户 + 环境变量构造完整的占位符取值表。
+ * `signerName` 是「当前使用账号」的姓名，签名和 {{senderName}} 必须用同一个值。
+ */
+async function buildValues(customer: Partial<ICustomer>, signerName?: string): Promise<PlaceholderValues> {
   const project = customer.projectId ? await Project.findById(customer.projectId).lean() : null;
   return {
     ...buildPlaceholderValues(customer),
     companyName: project?.companyName || env.COMPANY_NAME,
     companyWebsite: project?.website || env.COMPANY_WEBSITE,
     moq: project?.moq || env.COMPANY_MOQ,
-    senderName: project?.senderName || env.SENDER_NAME,
+    senderName: signerName || project?.senderName || env.SENDER_NAME,
   };
+}
+
+/**
+ * 签名第一行取「当前使用账号」：个人发件邮箱显示名 → 登录账号姓名 → 项目署名。
+ * 开发信结尾因此跟着账号走，而不是所有账号共用一个名字。
+ */
+async function resolveSignerName(projectId?: Types.ObjectId | string, userId?: string): Promise<string> {
+  if (userId) {
+    const account = await UserMailAccount.findOne({ userId, ...(projectId ? { projectId } : {}) }).select('displayName').lean();
+    if (account?.displayName) return signatureName(account.displayName);
+    const user = await User.findById(userId).select('displayName').lean();
+    if (user?.displayName) return signatureName(user.displayName);
+  }
+  const project = projectId ? await Project.findById(projectId).select('senderName').lean() : null;
+  return signatureName(project?.senderName, env.SENDER_NAME);
 }
 
 export interface RenderedLetter {
@@ -125,14 +157,16 @@ export interface RenderedLetter {
 
 /**
  * 渲染开发信（不发送、不落库），供「预览」接口与发送流程共用。
+ * 正文若还没有固定结尾，这里补上——预览、草稿、实际发送看到的是同一份内容。
  */
 export async function renderLetter(
   customer: Partial<ICustomer>,
   subject: string,
   content: string,
   recipientEmailOverride?: string,
+  signerName?: string,
 ): Promise<RenderedLetter> {
-  const values = await buildValues(customer);
+  const values = await buildValues(customer, signerName);
   const recipientEmail = (recipientEmailOverride || customer.email || '').trim().toLowerCase();
 
   if (!recipientEmail) {
@@ -141,11 +175,13 @@ export async function renderLetter(
     ]);
   }
 
+  const withSignature = ensureSignature(content, values.senderName);
+
   return {
     // 主题走纯文本渲染（不转义），正文走 HTML 渲染（转义，防存储型 XSS）
     subject: renderTemplate(subject, values, { escape: false }),
-    html: safeMailHtml(renderTemplate(content, values, { escape: true })),
-    text: htmlToPlainText(renderTemplate(content, values, { escape: false })),
+    html: safeMailHtml(renderTemplate(withSignature, values, { escape: true })),
+    text: htmlToPlainText(renderTemplate(withSignature, values, { escape: false })),
     recipientEmail,
     recipientName: customer.name ?? '',
   };
@@ -161,6 +197,19 @@ function buildLetterFilter(query: ListLettersQuery): FilterQuery<IDevelopmentLet
   if (query.customerId) filter.customerId = new Types.ObjectId(query.customerId);
   if (query.status && query.status !== 'all') filter.status = query.status;
   if (query.channel && query.channel !== 'all') filter.channel = query.channel;
+  if (query.review && query.review !== 'all') {
+    // 走 $and，避免和下面 search 的 $or 互相覆盖
+    const andConditions: Record<string, unknown>[] = [];
+    if (query.review === 'todo') {
+      // $ne 也匹配缺字段的文档：没有结论、或只有空 review 对象（upsert 默认值）的都算还要处理
+      andConditions.push({ 'review.decision': { $ne: 'rejected' } });
+    } else if (query.review === 'pending') {
+      andConditions.push({ $or: [{ review: { $exists: false } }, { 'review.decision': { $exists: false } }] });
+    } else {
+      andConditions.push({ 'review.decision': query.review });
+    }
+    filter.$and = andConditions;
+  }
   if (query.search) {
     const regex = new RegExp(escapeRegExp(query.search.trim()), 'i');
     filter.$or = [{ subject: regex }, { recipientName: regex }, { recipientEmail: regex }];
@@ -203,6 +252,31 @@ function toCustomerSummary(value: unknown): LetterCustomerSummary | undefined {
   };
 }
 
+/** 审核指纹：主题 + 纯文本正文，二者任一变化审核即失效。 */
+function reviewContentHash(subject: string, contentText: string): string {
+  return createHash('sha256').update(JSON.stringify([subject, contentText])).digest('hex');
+}
+
+/**
+ * 只有同时带结论与指纹的审核记录才算数。
+ * Mongoose 在 upsert（setDefaultsOnInsert）时可能写入空的 review 对象，不能当成「已审核」。
+ */
+function activeReview(value: IDevelopmentLetter['review'] | undefined): IDevelopmentLetter['review'] | undefined {
+  return value?.decision && value.contentHash ? value : undefined;
+}
+
+function toReviewSummary(value: unknown): LetterReviewSummary | undefined {
+  const raw = value as Partial<LetterReviewSummary> | null | undefined;
+  if (!raw || (raw.decision !== 'approved' && raw.decision !== 'rejected')) return undefined;
+  return {
+    decision: raw.decision,
+    at: raw.at as Date,
+    ...(raw.by ? { by: String(raw.by) } : {}),
+    ...(raw.byName ? { byName: raw.byName } : {}),
+    contentHash: String(raw.contentHash ?? ''),
+  };
+}
+
 /**
  * 把 Mongo 文档（lean 或 hydrated 均可）转换成对外 DTO。
  * customerId 可能是 ObjectId，也可能是 populate 后的对象，两种都要兼容。
@@ -212,6 +286,7 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
   const summary = toCustomerSummary(rawCustomerId);
   const customerId = summary?.id ?? String(rawCustomerId ?? '');
   const tracking = trackingSummary(doc.tracking);
+  const review = toReviewSummary(doc.review);
 
   return {
     id: String((doc._id ?? doc.id ?? '').toString()),
@@ -231,6 +306,7 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     scheduledAt: doc.scheduledAt as Date | undefined,
     threadId: doc.threadId as string | undefined,
     needsReview: Boolean(doc.needsReview),
+    ...(review ? { review } : {}),
     status: doc.status as IDevelopmentLetter['status'],
     channel: doc.channel as IDevelopmentLetter['channel'],
     ...(doc.sentAt ? { sentAt: doc.sentAt as Date } : {}),
@@ -355,7 +431,13 @@ async function persistAndSend(options: {
     userId,
   } = options;
 
-  const rendered = await renderLetter(customer, subjectTemplate, contentTemplate, recipientEmailOverride);
+  const rendered = await renderLetter(
+    customer,
+    subjectTemplate,
+    contentTemplate,
+    recipientEmailOverride,
+    await resolveSignerName(customer.projectId, userId),
+  );
   const sender = await resolveSenderIdentity(String(customer.projectId), userId, saveAsDraft);
   const activeChannel = sender.channel;
 
@@ -377,13 +459,20 @@ async function persistAndSend(options: {
     rendered.subject = /^re:/i.test(replySubject) ? replySubject : 'Re: ' + replySubject;
   }
 
+  // 审核快照的 bodyHash 必须对应「实际落库的正文」，否则审核页会误报
+  // 「主题或正文已修改，依据对应的是原生成版本」。签名/渲染都会改变正文，
+  // 所以这里用渲染结果重算一次基线。
+  const knowledgeReview = options.knowledgeReview
+    ? { ...options.knowledgeReview, bodyHash: draftHash(rendered.text) }
+    : undefined;
+
   // 1) 草稿：直接落库，不发送、不改客户状态
   if (saveAsDraft) {
     const payload = {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
       ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
-      ...(options.knowledgeReview ? {knowledgeReview:options.knowledgeReview} : {}),
+      ...(knowledgeReview ? {knowledgeReview} : {}),
       projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
@@ -457,7 +546,7 @@ async function persistAndSend(options: {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
       ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
-      ...(options.knowledgeReview ? {knowledgeReview:options.knowledgeReview} : {}),
+      ...(knowledgeReview ? {knowledgeReview} : {}),
       projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail, subject: rendered.subject,
       senderAddress: sender.senderAddress,
@@ -576,18 +665,33 @@ export async function resendLetter(
   // 优先用原始模板（含占位符），没有模板时退化为已渲染的正文
   const contentTemplate = input.content ?? original.template ?? original.content;
   const subjectTemplate = input.subject ?? original.subject;
+  const priorReview = activeReview(original.review);
+  const signerName = await resolveSignerName(customer.projectId, actor?.id);
 
   if (input.saveAsDraft) {
     if (original.status !== 'draft') throw ApiError.conflict('只有草稿可以继续保存');
-    const rendered = await renderLetter(customer, subjectTemplate, contentTemplate, input.recipientEmail ?? original.recipientEmail);
-    const saved = await DevelopmentLetter.findOneAndUpdate({_id: original._id, projectId: customer.projectId, status:'draft'}, {$set:{
+    const rendered = await renderLetter(customer, subjectTemplate, contentTemplate, input.recipientEmail ?? original.recipientEmail, signerName);
+    // 保存草稿等于换了一份待审内容：无论之前是通过还是不通过，结论都失效，重新审核。
+    const update: Record<string, unknown> = {$set:{
       subject:rendered.subject, content:rendered.html, contentText:rendered.text, template:contentTemplate,
       recipientEmail:rendered.recipientEmail, recipientName:rendered.recipientName,
-    }}, {new:true});
+    }};
+    if (priorReview) update.$unset = {review: 1};
+    const saved = await DevelopmentLetter.findOneAndUpdate({_id: original._id, projectId: customer.projectId, status:'draft'}, update, {new:true});
     if (!saved) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
     return {letter:toLetterDto(saved.toObject() as unknown as Record<string,unknown>),customer:customer.toJSON() as unknown as ICustomer & {id:string},
       channel:saved.channel,delivered:false,message:'草稿已更新，未发送'};
   }
+
+  // 审核结论是发送前的硬约束：不通过的稿和审核后又被改动的稿都不能直接发出。
+  if (original.status === 'draft' && priorReview) {
+    if (priorReview.decision === 'rejected') throw ApiError.conflict('草稿已标记为不通过，请先审核通过再发送');
+    const current = await renderLetter(customer, subjectTemplate, contentTemplate, input.recipientEmail ?? original.recipientEmail, signerName);
+    if (priorReview.contentHash !== reviewContentHash(current.subject, current.text)) {
+      throw ApiError.conflict('审核后内容已变化，请重新审核后再发送');
+    }
+  }
+
   return persistAndSend({
     customer,
     subjectTemplate,
@@ -605,6 +709,65 @@ export async function resendLetter(
     inReplyTo: original.inReplyTo,
     references: original.references,
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* 草稿审核                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 草稿审核：通过 / 不通过 / 撤销结论。
+ * 审核是业务员对自己草稿的自检，只记录结论，不需要填写理由。
+ * - 通过：把当前编辑内容渲染后与审核结论一起落库，发送时校验指纹，保证发给客户的就是审核过的内容；
+ * - 不通过：这封草稿不发送，只记录结论（未保存的编辑不落库，改内容请走「保存草稿」）；
+ * - 撤销：清掉结论，草稿回到待审核。
+ */
+export async function reviewLetter(id: string, input: ReviewLetterInput, actor?: AuthUser): Promise<LetterDto> {
+  if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('开发信 ID 格式不正确');
+
+  const letter = await DevelopmentLetter.findOne({ _id: id, ...projectScope(actor) });
+  if (!letter) throw ApiError.notFound(`开发信不存在或已被删除（id=${id}）`);
+  if (letter.status !== 'draft') throw ApiError.conflict('只有尚未发送的草稿可以审核');
+
+  if (input.decision === 'clear') {
+    const cleared = await DevelopmentLetter.findOneAndUpdate({ _id: letter._id, status: 'draft' }, { $unset: { review: 1 } }, { new: true });
+    if (!cleared) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
+    logger.info(`letter review cleared id=${letter.id} by=${actor?.id ?? 'system'}`);
+    return toLetterDto(cleared.toObject() as unknown as Record<string, unknown>);
+  }
+
+  const customer = await getCustomerByIdOrThrow(String(letter.customerId), actor);
+  const decision = input.decision === 'approve' ? ('approved' as const) : ('rejected' as const);
+  const base = {
+    decision,
+    at: new Date(),
+    ...(actor?.id ? { by: new Types.ObjectId(actor.id) } : {}),
+    ...(actor?.displayName || actor?.username ? { byName: actor?.displayName || actor?.username } : {}),
+  };
+
+  let update: Record<string, unknown>;
+  if (decision === 'rejected') {
+    update = { $set: { review: { ...base, contentHash: reviewContentHash(letter.subject, letter.contentText) } } };
+  } else {
+    const contentTemplate = input.content ?? letter.template ?? letter.content;
+    const rendered = await renderLetter(customer, input.subject ?? letter.subject, contentTemplate, input.recipientEmail ?? letter.recipientEmail, await resolveSignerName(customer.projectId, actor?.id));
+    update = {
+      $set: {
+        subject: rendered.subject,
+        content: rendered.html,
+        contentText: rendered.text,
+        template: contentTemplate,
+        recipientEmail: rendered.recipientEmail,
+        recipientName: rendered.recipientName,
+        review: { ...base, contentHash: reviewContentHash(rendered.subject, rendered.text) },
+      },
+    };
+  }
+
+  const updated = await DevelopmentLetter.findOneAndUpdate({ _id: letter._id, status: 'draft' }, update, { new: true });
+  if (!updated) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
+  logger.info(`letter ${decision} id=${letter.id} by=${actor?.id ?? 'system'}`);
+  return toLetterDto(updated.toObject() as unknown as Record<string, unknown>);
 }
 
 /* ------------------------------------------------------------------ */
@@ -697,7 +860,7 @@ export async function previewLetter(
   actor?: AuthUser,
 ): Promise<RenderedLetter> {
   const customer = await getCustomerByIdOrThrow(customerId, actor);
-  return renderLetter(customer, subject, content, recipientEmail);
+  return renderLetter(customer, subject, content, recipientEmail, await resolveSignerName(customer.projectId, actor?.id));
 }
 
 export interface LetterStats {

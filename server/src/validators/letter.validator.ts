@@ -62,6 +62,21 @@ export const resendLetterSchema = z.object({
   markAsDeveloped: z.boolean().default(true),
 });
 
+/** 草稿审核结论：approve 通过（可一并提交当前编辑内容）、reject 不通过、clear 撤销结论回到待审核。 */
+export const reviewLetterSchema = z
+  .object({
+    decision: z.enum(['approve', 'reject', 'clear']),
+    subject: z.string().trim().min(1).max(300).optional(),
+    content: htmlContentSchema.optional(),
+    recipientEmail: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, { message: '收件人邮箱格式不正确' })
+      .optional(),
+  })
+  .strict();
+
 export const listLettersQuerySchema = paginationQuerySchema.extend({
   /** 按客户过滤 */
   customerId: objectIdSchema.optional(),
@@ -69,6 +84,8 @@ export const listLettersQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(200).optional(),
   status: z.enum(['all', 'draft', 'sent', 'failed']).optional(),
   channel: z.enum(['all', 'mock', 'smtp']).optional(),
+  /** 按审核结论过滤：todo = 还需要处理的（不含已标记不通过的草稿） */
+  review: z.enum(['all', 'todo', 'pending', 'approved', 'rejected']).optional(),
   sentFrom: isoDateSchema.optional(),
   sentTo: isoDateSchema.optional(),
 });
@@ -81,4 +98,5 @@ export { idParamsSchema, letterStatusSchema };
 
 export type SendLetterInput = z.infer<typeof sendLetterSchema>;
 export type ResendLetterInput = z.infer<typeof resendLetterSchema>;
+export type ReviewLetterInput = z.infer<typeof reviewLetterSchema>;
 export type ListLettersQuery = z.infer<typeof listLettersQuerySchema>;

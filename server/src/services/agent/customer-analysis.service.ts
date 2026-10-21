@@ -5,7 +5,7 @@ import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
 import {knowledgeForModel,knowledgeSourceForModel} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
-import {knowledgeFreshness,customerProfileOf} from './knowledge-grounding';
+import {draftHash,knowledgeFreshness,customerProfileOf} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
 import {chargeTaskBudget} from './task-budget';
 import { Types } from 'mongoose';
@@ -29,7 +29,7 @@ import { MailMessage } from '../../models/MailMessage';
 import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
 import { requireProjectId } from '../../utils/access';
-import { escapeHtml } from '../../utils/text';
+import { renderLetterContent, signatureName } from '../letter-signature';
 import { getCustomerByIdOrThrow, updateCustomer } from '../customer.service';
 import { sendLetter } from '../letter.service';
 import { getCustomerTimeline } from '../timeline.service';
@@ -353,12 +353,12 @@ export async function saveAnalysisEmailDraft(id: string, input: ConfirmAgentAnal
     approvalStatus: 'approved', executionStatus: 'pending', approvedBy: new Types.ObjectId(actor.id), approvedAt: new Date(),
   });
   try {
-    const content = `<p>${escapeHtml(locked.emailDraft.bodyText).replace(/\r?\n/g, '<br>')}</p>`;
+    const content = renderLetterContent(locked.emailDraft.bodyText, signatureName(actor.displayName));
     const result = await sendLetter({
       customerId: String(locked.customerId), subject: locked.emailDraft.subject, content, markAsDeveloped: false,
       saveAsDraft: true, requestKey: `agent-analysis-email:${locked.id}`,
     }, actor);
-    if(locked.knowledgeReview)await DevelopmentLetter.updateOne({_id:result.letter.id,projectId:requireProjectId(actor),knowledgeReview:{$exists:false}},{$set:{knowledgeReview:locked.knowledgeReview}});
+    if(locked.knowledgeReview)await DevelopmentLetter.updateOne({_id:result.letter.id,projectId:requireProjectId(actor),knowledgeReview:{$exists:false}},{$set:{knowledgeReview:{...locked.knowledgeReview,bodyHash:draftHash(result.letter.contentText)}}});
     if (result.letter.status !== 'draft' || result.delivered) throw ApiError.internal('草稿安全校验失败');
     const completed = await AgentCustomerAnalysis.findOneAndUpdate(
       { _id: locked._id, ...identifiers, emailConfirmationKey: input.idempotencyKey },

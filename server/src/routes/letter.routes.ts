@@ -9,6 +9,7 @@ import {
   idParamsSchema,
   listLettersQuerySchema,
   resendLetterSchema,
+  reviewLetterSchema,
   sendLetterSchema,
 } from '../validators/letter.validator';
 import { z } from 'zod';
@@ -21,6 +22,7 @@ import {
   listLettersHandler,
   previewLetterHandler,
   resendLetterHandler,
+  reviewLetterHandler,
   sendLetterHandler,
 } from '../controllers/letter.controller';
 
@@ -52,6 +54,7 @@ router.post('/', validate({ body: sendLetterSchema }), sendLetterHandler);
 /* ---------- 单条操作 ---------- */
 router.get('/:id', validate({ params: idParamsSchema }), getLetterHandler);
 router.post('/:id/resend', validate({ params: idParamsSchema, body: resendLetterSchema }), resendLetterHandler);
+router.post('/:id/review', validate({ params: idParamsSchema, body: reviewLetterSchema }), reviewLetterHandler);
 router.delete('/:id', validate({ params: idParamsSchema }), deleteLetterHandler);
 
 export default router;

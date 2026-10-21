@@ -59,3 +59,6 @@ Monarc Jewellery*.md
 # Local Python adapters must not commit interpreter caches.
 __pycache__/
 *.pyc
+
+# ---- Local agent workspace (screenshots, scratch scripts, tool caches) ----
+.dsh/

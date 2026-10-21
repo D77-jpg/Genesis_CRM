@@ -33,7 +33,7 @@ export interface KnowledgeReview {
   issues: KnowledgeIssue[]; context: {customerWebsites?:CustomerWebsiteSnapshot[];customerProfile?:CustomerFactProfile;factContext?:FactContext;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string};
   bodyHash: string;
 }
-export interface ClaimCheck {id:string;text:string;status:'supported'|'unsupported'|'contradicted'|'unverifiable'|'non_claim';sourceIds:string[];reason:string;quotes?:{sourceId:string;quote:string;start:number;end:number}[]}
+export interface ClaimCheck {id:string;text:string;status:'supported'|'unsupported'|'contradicted'|'unverifiable'|'non_claim';sourceIds:string[];reason:string;quotes?:{sourceId:string;quote:string;start:number;end:number}[];/** 原段落序号：核验按句子做，重建时据此把同段句子合回一段 */block?:number}
 export interface KnowledgeFreshness { checkedAt: string; changed: {sourceId:string;title:string;reason:string}[]; failed?:boolean }
 
 // One retrieved source points at one published entry; its provenance carries a

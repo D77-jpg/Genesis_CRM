@@ -728,8 +728,22 @@ export const STATUS_TEXT_MAP: Record<string, CustomerStatus> = {
 export const DEFAULT_LETTER_TEMPLATE = `<p>Hi {{firstName}},</p>
 <p>I came across {{company}} and noticed your focus on {{industry}}.</p>
 <p>At {{companyName}}, we produce FSC-certified custom packaging from {{moq}} — most factories start at 500 to 1,000.</p>
-<p>Would it be useful if I sent over a few structures that could fit your current range?</p>
-<p>Best,<br>{{senderName}}<br>{{companyName}}</p>`;
+<p>Would it be useful if I sent over a few structures that could fit your current range?</p>`;
+
+/**
+ * 开发信固定结尾（与服务端 server/src/services/letter-signature.ts 保持一致）。
+ * 发送时由服务端追加，模板正文不要再写落款；这里只用于界面上「客户会看到的结尾」预览。
+ */
+export const LETTER_SIGNATURE = {
+  marker: 'Gold Supplier on Alibaba.com since 2014',
+  title: 'Sales Manager, Genesis (Xiamen) Bags Co., Ltd.',
+  lines: [
+    'Genesis Bags · Custom Packaging Manufacturer · Xiamen· Where Packaging Begins',
+    'WhatsApp +86 153 0600 1357 · sales@genesisbags.com',
+    'genesisbags.com · genesisgroup.en.alibaba.com',
+    'Gold Supplier on Alibaba.com since 2014 · ISO 9001 / FSC® / BSCI Certified',
+  ],
+} as const;
 
 export const DEFAULT_LETTER_SUBJECT = '{{company}} packaging — samples from {{moq}}';
 
