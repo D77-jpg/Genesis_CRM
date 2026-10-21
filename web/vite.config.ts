@@ -26,6 +26,9 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: false,
+    // Editors and agents save atomically through hidden temp directories; on
+    // Windows the watcher can hit EBUSY on those files and crash the dev server.
+    watch: { ignored: ['**/node_modules/**', '**/.git/**', '**/.*.tmpdir/**', '**/.*.tmp'] },
     proxy: {
       '/api': {
         target: API_TARGET,
