@@ -732,7 +732,9 @@ export const DEFAULT_LETTER_TEMPLATE = `<p>Hi {{firstName}},</p>
 
 /**
  * 开发信固定结尾（与服务端 server/src/services/letter-signature.ts 保持一致）。
- * 发送时由服务端追加，模板正文不要再写落款；这里只用于界面上「客户会看到的结尾」预览。
+ * 编辑器里直接把它写进正文尾部，业务员看到的就是客户会收到的样子；
+ * 服务端渲染时只做幂等兜底（已有标记就不再追加）。
+ * logo 用同源相对路径方便预览，发送前服务端会换成公网绝对地址。
  */
 export const LETTER_SIGNATURE = {
   marker: 'Gold Supplier on Alibaba.com since 2014',
@@ -744,6 +746,119 @@ export const LETTER_SIGNATURE = {
     'Gold Supplier on Alibaba.com since 2014 · ISO 9001 / FSC® / BSCI Certified',
   ],
 } as const;
+
+function escapeSignatureText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * 结尾 HTML（编辑器版本）：只写文字，不带图片。
+ * 富文本编辑器（Quill）会把 `<img>`/`<hr>` 这类块级内容在回写时丢掉，
+ * 所以编辑器里只放文字结尾；服务端落库/发送前会补上 logo 与分隔线（文字不变）。
+ */
+export function letterSignatureHtml(name: string): string {
+  const who = escapeSignatureText((name || '').trim() || 'Sales Team');
+  const lines = LETTER_SIGNATURE.lines.map(escapeSignatureText).join('<br>');
+  return `<p><strong>${who}</strong><br>${escapeSignatureText(LETTER_SIGNATURE.title)}<br>${lines}</p>`;
+}
+
+/** 结尾里的落款词 / 联系方式 / 姓名行（与 server 端 stripTrailingSignoff 的口径一致） */
+function isSignoffLine(text: string): boolean {
+  return /^(?:(?:best|kind|warm|many)(?:\s+(?:regards|wishes|thanks))?|regards|sincerely|thanks)[,.!\s]*$/i.test(text);
+}
+function isContactLine(text: string): boolean {
+  if (text.length > 120) return false;
+  return /^(?:\{\{\s*(?:senderName|companyName|companyWebsite|senderEmail)\s*\}\}|genesis|www\.|https?:\/\/|[^@\s]+@[^@\s]+\.[a-z]{2,})/i.test(text);
+}
+function isNameLine(text: string): boolean {
+  return text.length <= 60 && text.split(/\s+/).length <= 4 && !/\d/.test(text) && !isContactLine(text);
+}
+
+/**
+ * 去掉正文尾部的老式落款（`Best regards,` / 姓名 / 公司 / 网址）。
+ * 老草稿里常见这一串，直接追加固定结尾会出现两套签名，所以先剥掉再补。
+ */
+export function stripLegacySignoff(html: string): string {
+  if (typeof DOMParser === 'undefined') return html;
+  const doc = new DOMParser().parseFromString(`<div id="signature-root">${html}</div>`, 'text/html');
+  const root = doc.getElementById('signature-root');
+  if (!root) return html;
+  let sawStrong = false;
+  for (let guard = 0; guard < 12; guard++) {
+    const last = root.lastElementChild as HTMLElement | null;
+    if (!last) break;
+    // 一个段落里可能用 <br> 连写多行（老模板就是这样），按行判断
+    const lines = last.innerHTML
+      .split(/<br\s*\/?>/i)
+      .map((line) => {
+        const holder = doc.createElement('span');
+        holder.innerHTML = line;
+        return (holder.textContent ?? '').trim();
+      })
+      .filter(Boolean);
+    if (!lines.length) break;
+    const strong = (isSignoffLine(lines[0]) && lines.slice(1).every((line) => isContactLine(line) || isNameLine(line)))
+      || lines.every((line) => isContactLine(line));
+    const nameOnly = lines.length === 1 && isNameLine(lines[0]) && sawStrong;
+    if (!strong && !nameOnly) break;
+    last.remove();
+    sawStrong = sawStrong || strong;
+  }
+  return root.innerHTML;
+}
+
+/** 正文还没有固定结尾时补在最后；已有则原样返回 */
+export function appendSignatureHtml(html: string, name: string): string {
+  // 已经有固定结尾：只清理可能残留的旧落款，不重复追加
+  if (html.includes(LETTER_SIGNATURE.marker)) return stripLegacySignoff(html);
+  const cleaned = stripLegacySignoff(html);
+  return `${cleaned}${cleaned ? '<p></p>' : ''}${letterSignatureHtml(name)}`;
+}
+
+/**
+ * 仅用于「预览」页签：把编辑器里的文字结尾补上品牌 logo 再展示。
+ * 落库/发送时服务端会做同样的事（ensureSignature），这里只是让预览所见即所得。
+ */
+export function withSignatureLogo(html: string): string {
+  if (!html.includes(LETTER_SIGNATURE.marker) || /genesis-logo/.test(html)) return html;
+  if (typeof DOMParser === 'undefined') return html;
+  const doc = new DOMParser().parseFromString(`<div id="signature-preview-root">${html}</div>`, 'text/html');
+  const root = doc.getElementById('signature-preview-root');
+  if (!root) return html;
+  const title = LETTER_SIGNATURE.title;
+  const logoSrc = '/api/brand/genesis-logo.png';
+  const logoTag = `<img src="${logoSrc}" alt="Genesis Packaging" width="150" style="display:block;width:150px;height:auto;margin:4px 0">`;
+  const dropEmptyBlocks = (start: Element): void => {
+    let next = start.nextElementSibling;
+    while (next && !(next.textContent ?? '').trim()) {
+      const after = next.nextElementSibling;
+      next.remove();
+      next = after;
+    }
+  };
+  // 结尾可能是「标题独占一段」，也可能整段用 <br> 连写，两种都支持
+  const standalone = [...root.querySelectorAll('p,div')].find((el) => (el.textContent ?? '').trim() === title);
+  if (standalone?.parentElement) {
+    const holder = doc.createElement('p');
+    holder.innerHTML = logoTag;
+    standalone.parentElement.insertBefore(holder, standalone.nextSibling);
+    dropEmptyBlocks(holder);
+    return root.innerHTML;
+  }
+  const host = [...root.querySelectorAll('p,div')].find((el) => el.innerHTML.includes(title));
+  if (host) {
+    host.innerHTML = host.innerHTML.replace(`${title}<br>`, `${title}<br>${logoTag}<br>`);
+    if (!host.innerHTML.includes(logoSrc)) host.innerHTML = host.innerHTML.replace(title, `${title}<br>${logoTag}`);
+    dropEmptyBlocks(host);
+    return root.innerHTML;
+  }
+  return html;
+}
 
 export const DEFAULT_LETTER_SUBJECT = '{{company}} packaging — samples from {{moq}}';
 

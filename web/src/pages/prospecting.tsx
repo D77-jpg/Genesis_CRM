@@ -8,6 +8,11 @@ import { PageHeader } from '@/components/common/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { usePageTitle } from '@/hooks/use-ui';
 import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -28,15 +33,26 @@ function scoreClass(score: number) {
   return 'bg-muted text-muted-foreground';
 }
 
-function ProspectCard({ prospect, today, busy, onApprove, onReject,onSync,onRefresh }: {
+function ProspectCard({ prospect, today, busy, onApprove, onReject,onSync,onRefresh,selectable,selected,onToggle }: {
   prospect: Prospect; today: string; busy: boolean;
   onApprove: (id: string) => void; onReject: (id: string) => void;onSync?:(id:string)=>void;onRefresh?:(id:string)=>void;
+  /** 可批量转换的候选才显示勾选框 */
+  selectable?: boolean; selected?: boolean; onToggle?: (id: string) => void;
 }) {
   const converted = prospect.status === 'converted';
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className={cn('rounded-lg border bg-card p-4', selected && 'border-primary/50 ring-1 ring-primary/20')}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
+          {selectable ? (
+            <Checkbox
+              checked={Boolean(selected)}
+              disabled={busy}
+              onCheckedChange={() => onToggle?.(prospect.id)}
+              aria-label={`选择 ${prospect.name || prospect.company || prospect.domain}`}
+              className="mt-3"
+            />
+          ) : null}
           <span className={cn('mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold', scoreClass(prospect.score))} title="规则评分">
             {prospect.score}
           </span>
@@ -113,6 +129,9 @@ export function ProspectingPage(): React.JSX.Element {
   const [report, setReport] = React.useState<ProspectingReport | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState<string | null>(null);
+  /** 一键转换进度；null 表示没在批量转换 */
+  const [batch, setBatch] = React.useState<{ total: number; done: number } | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [runOpen, setRunOpen] = React.useState(false);
   const [configOpen, setConfigOpen] = React.useState(false);
   const load = React.useCallback(async () => {
@@ -168,6 +187,66 @@ export function ProspectingPage(): React.JSX.Element {
   const sync = async(id:string)=>{setBusy(id);try{const result=await apiPost<{filledFields:string[]}>('/prospecting/'+id+'/sync-customer',{});toast.success(result.filledFields.length?'已补齐 '+result.filledFields.length+' 个空字段':'资料已核对',{description:'只补空字段，保留已有内容；来源与简介也可在候选资料中查看。'});await load();}catch(error){toast.error('补齐失败',{description:toErrorMessage(error)});}finally{setBusy(null);}};
   const refreshContact=async(id:string)=>{setBusy(id);try{const result=await apiPost<{filledFields:string[]}>('/prospecting/'+id+'/refresh-contact',{},{timeout:600000});toast.success('官网资料已更新',{description:result.filledFields.length?'已补齐客户 '+result.filledFields.length+' 个空字段':'已保留可读取资料，客户已有内容未覆盖。'});await load();}catch(error){toast.error('重新采集失败',{description:toErrorMessage(error)});}finally{setBusy(null);}};
   const openConfig = () => setConfigOpen(true);
+
+  /** 勾中的候选 id（只对可转换的候选生效） */
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  /** 本次确认框要转换的候选 */
+  const [pendingTargets, setPendingTargets] = React.useState<Prospect[]>([]);
+
+  const isConvertible = React.useCallback(
+    (item: Prospect) => item.status !== 'converted' && item.emails.length > 0,
+    [],
+  );
+
+  const toggleSelected = React.useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const convertSelectedOrGroup = (targets: Prospect[], groupItems: Prospect[]) => {
+    const picked = groupItems.filter((item) => selected.has(item.id) && isConvertible(item));
+    const chosen = picked.length ? picked : targets;
+    if (!chosen.length) return;
+    setPendingTargets(chosen);
+    setConfirmOpen(true);
+  };
+
+  /**
+   * 批量转客户：逐个调用单条 approve，失败的跳过并继续，最后汇总。
+   * 单条接口本身是幂等的（并发/重试都只建一次客户），所以这里按顺序跑，进度可见。
+   */
+  const approveAll = async () => {
+    const targets = pendingTargets;
+    setConfirmOpen(false);
+    if (!targets.length) return;
+    setBatch({ total: targets.length, done: 0 });
+    let ok = 0;
+    let failed = 0;
+    let draftErrors = 0;
+    for (const prospect of targets) {
+      try {
+        const result = await apiPost<{ customer?: { id: string; name: string }; draftTaskId?: string; draftError?: string }>(`/prospecting/${prospect.id}/approve`, {});
+        ok += 1;
+        if (result?.draftError) draftErrors += 1;
+      } catch {
+        failed += 1;
+      }
+      setBatch((prev) => (prev ? { total: prev.total, done: prev.done + 1 } : prev));
+    }
+    setBatch(null);
+    setSelected(new Set());
+    setPendingTargets([]);
+    await load();
+    toast.success(`已转换 ${ok} 个客户`, {
+      description: [
+        failed ? `${failed} 个失败，可稍后重试` : '',
+        draftErrors ? `${draftErrors} 个首封草稿未创建` : '首封草稿在后台生成，完成后在“查看草稿”里审核',
+      ].filter(Boolean).join('；'),
+    });
+  };
 
   const run = data?.run;
   const counts = data?.counts;
@@ -233,20 +312,60 @@ export function ProspectingPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      {groups.filter((group) => group.items.length).map((group) => (
+      {groups.filter((group) => group.items.length).map((group) => {
+        // 只对「可以发送 / 需要补联系方式」提供批量转换：评分不足和已跳过不应该被一键转走
+        const supportsBulk = group.key === 'ready' || group.key === 'needs_contact';
+        const convertible = supportsBulk ? group.items.filter(isConvertible) : [];
+        const chosen = convertible.filter((item) => selected.has(item.id));
+        const allChosen = convertible.length > 0 && chosen.length === convertible.length;
+        return (
         <section key={group.key} className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-medium">{group.title}</h2>
             <Badge variant="muted">{group.items.length}</Badge>
+            {convertible.length ? (
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={Boolean(batch)}
+                  onClick={() => setSelected((prev) => {
+                    const next = new Set(prev);
+                    if (allChosen) convertible.forEach((item) => next.delete(item.id));
+                    else convertible.forEach((item) => next.add(item.id));
+                    return next;
+                  })}
+                >
+                  {allChosen ? '取消全选' : `全选（${convertible.length}）`}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={Boolean(batch) || !convertible.length}
+                  title={chosen.length
+                    ? `只转换勾选的 ${chosen.length} 个候选`
+                    : `把本组 ${convertible.length} 个已有邮箱的候选一次转为正式客户，并各自创建首封开发信草稿（不发送）`}
+                  onClick={() => convertSelectedOrGroup(convertible, group.items)}
+                >
+                  {batch ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+                  {batch
+                    ? `转换中 ${batch.done}/${batch.total}`
+                    : chosen.length ? `转换选中（${chosen.length}）` : `一键转为客户（${convertible.length}）`}
+                </Button>
+              </div>
+            ) : null}
           </div>
           <div className="space-y-2">
             {group.items.map((prospect) => (
-              <ProspectCard key={prospect.id} prospect={prospect} today={data?.day ?? ''} busy={busy === prospect.id}
+              <ProspectCard key={prospect.id} prospect={prospect} today={data?.day ?? ''} busy={busy === prospect.id || Boolean(batch)}
+                selectable={supportsBulk && isConvertible(prospect)} selected={selected.has(prospect.id)} onToggle={toggleSelected}
                 onRefresh={isAdmin?id=>void refreshContact(id):undefined} onApprove={(id) => void approve(id)} onReject={(id) => void reject(id)} />
             ))}
           </div>
         </section>
-      ))}
+        );
+      })}
 
       {converted.length ? (
         <section className="space-y-2">
@@ -309,6 +428,22 @@ export function ProspectingPage(): React.JSX.Element {
 
       <ProspectingRunDialog open={runOpen} onOpenChange={setRunOpen} onCompleted={()=>void load()}/>
       <ProspectingSettingsDialog open={configOpen} onOpenChange={setConfigOpen} onCompleted={()=>{toast.success('搜索方案已保存');void load();}}/>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>一键转为客户？</AlertDialogTitle>
+            <AlertDialogDescription>
+              将把 {pendingTargets.length} 个候选转为正式客户，并各自创建首封开发信草稿（不会发送邮件）。
+              没有邮箱的候选会自动跳过；转换过程中失败的会单独汇总，可稍后重试。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void approveAll()}>开始转换</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

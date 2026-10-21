@@ -13,7 +13,11 @@ function stripUnexpectedImages(html: string): string {
   const allowed = brandLogoUrl();
   return html.replace(/<img\b[^>]*>/gi, (tag) => {
     const src = /src\s*=\s*"([^"]*)"/i.exec(tag)?.[1] ?? /src\s*=\s*'([^']*)'/i.exec(tag)?.[1] ?? '';
-    return src === allowed ? tag : '';
+    // 前端编辑器里用同源相对路径（/api/brand/...）方便预览，发送前统一换成公网绝对地址；
+    // 除这张 logo 之外的图片一律删除。
+    if (src === allowed) return tag;
+    if (src === BRAND_LOGO_PATH) return tag.replace(/src\s*=\s*("[^"]*"|'[^']*')/i, `src="${allowed}"`);
+    return '';
   });
 }
 
