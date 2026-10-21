@@ -16,7 +16,7 @@
  */
 import env from '../config/env';
 import { BRAND_LOGO_PATH } from '../constants/brand-logo';
-import { escapeHtml } from '../utils/text';
+import { escapeHtml, htmlToPlainText } from '../utils/text';
 
 export const LETTER_SIGNATURE = {
   /** 固定职位行：所有业务员对外统一使用 */
@@ -152,9 +152,22 @@ function stripLastSignoffBlock(content: string): string {
   return content.slice(0, match.index).trim();
 }
 
-/** 保证正文带固定结尾：已有就不动，没有就补上（模板自带的落款先去掉） */
+/**
+ * 保证正文带固定结尾。
+ * - 正文里还没有结尾：HTML 正文补 HTML 版（带 logo），纯文本正文补纯文本版；
+ * - 正文里已有编辑器写入的文字结尾（没有 logo/分隔线）：升级成 HTML 版，
+ *   纯文本保持不变，避免审核哈希与已保存正文不一致。
+ */
 export function ensureSignature(content: string, name: string): string {
-  if (hasSignature(content)) return content;
+  if (hasSignature(content)) {
+    if (/genesis-logo/.test(content)) return content;
+    const text = htmlToPlainText(content);
+    const { body, name: signerFromBody } = splitSignatureText(text);
+    const signer = signerFromBody || signatureName(name);
+    // 用单个换行衔接，和编辑器里「每段一行」的排版保持一致，纯文本不增加空行
+    const bodyHtml = body ? `${escapeHtml(body).replace(/\r?\n/g, '<br>')}<br>` : '';
+    return `${bodyHtml}${renderSignatureHtml(signer)}`;
+  }
   const signer = signatureName(name);
   // 纯文本正文保持纯文本：不引入标签，否则会被当成 HTML 邮件并挂上追踪像素
   if (!/<[a-z!/][^>]*>/i.test(content)) {

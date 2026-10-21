@@ -732,7 +732,9 @@ export const DEFAULT_LETTER_TEMPLATE = `<p>Hi {{firstName}},</p>
 
 /**
  * 开发信固定结尾（与服务端 server/src/services/letter-signature.ts 保持一致）。
- * 发送时由服务端追加，模板正文不要再写落款；这里只用于界面上「客户会看到的结尾」预览。
+ * 编辑器里直接把它写进正文尾部，业务员看到的就是客户会收到的样子；
+ * 服务端渲染时只做幂等兜底（已有标记就不再追加）。
+ * logo 用同源相对路径方便预览，发送前服务端会换成公网绝对地址。
  */
 export const LETTER_SIGNATURE = {
   marker: 'Gold Supplier on Alibaba.com since 2014',
@@ -744,6 +746,43 @@ export const LETTER_SIGNATURE = {
     'Gold Supplier on Alibaba.com since 2014 · ISO 9001 / FSC® / BSCI Certified',
   ],
 } as const;
+
+function escapeSignatureText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * 结尾 HTML（编辑器版本）：只写文字，不带图片。
+ * 富文本编辑器（Quill）会把 `<img>`/`<hr>` 这类块级内容在回写时丢掉，
+ * 所以编辑器里只放文字结尾；服务端落库/发送前会补上 logo 与分隔线（文字不变）。
+ */
+export function letterSignatureHtml(name: string): string {
+  const who = escapeSignatureText((name || '').trim() || 'Sales Team');
+  const lines = LETTER_SIGNATURE.lines.map((line) => `<p>${escapeSignatureText(line)}</p>`).join('');
+  return `<p><strong>${who}</strong></p><p>${escapeSignatureText(LETTER_SIGNATURE.title)}</p><p></p>${lines}`;
+}
+
+/** 正文还没有固定结尾时补在最后；已有则原样返回 */
+export function appendSignatureHtml(html: string, name: string): string {
+  if (html.includes(LETTER_SIGNATURE.marker)) return html;
+  return `${html}${html ? '<p></p>' : ''}${letterSignatureHtml(name)}`;
+}
+
+/**
+ * 仅用于「预览」页签：把编辑器里的文字结尾补上品牌 logo 再展示。
+ * 落库/发送时服务端会做同样的事（ensureSignature），这里只是让预览所见即所得。
+ */
+export function withSignatureLogo(html: string): string {
+  if (!html.includes(LETTER_SIGNATURE.marker) || /genesis-logo/.test(html)) return html;
+  const titleBlock = `<p>${LETTER_SIGNATURE.title}</p>`;
+  const logoBlock = '<p><img src="/api/brand/genesis-logo.png" alt="Genesis Packaging" width="180"></p>';
+  return html.includes(titleBlock) ? html.replace(titleBlock, `${titleBlock}${logoBlock}`) : html;
+}
 
 export const DEFAULT_LETTER_SUBJECT = '{{company}} packaging — samples from {{moq}}';
 

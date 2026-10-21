@@ -72,10 +72,11 @@ import { selectCompany, selectPlaceholderDefs, useMetaStore } from '@/store/meta
 import {
   DEFAULT_LETTER_SUBJECT,
   DEFAULT_LETTER_TEMPLATE,
-  LETTER_SIGNATURE,
   MAIL_CHANNEL_LABEL,
   STORAGE_KEYS,
   TEMPLATE_CATEGORY_LABEL,
+  appendSignatureHtml,
+  withSignatureLogo,
 } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 import type { CurrentMailSender, Customer, DevelopmentLetter, LetterReview, SendLetterResult } from '@/types';
@@ -264,6 +265,8 @@ export function SendLetterDialog({
   const [reviewBaseline, setReviewBaseline] = React.useState<{ subject: string; content: string; recipientEmail: string } | null>(null);
   const [reviewBusy, setReviewBusy] = React.useState(false);
   const reviewLock = React.useRef(false);
+  /** 当前登录账号：固定结尾第一行取它的姓名（有个人发件邮箱时优先用邮箱显示名） */
+  const authUser = useAuthStore((state) => state.user);
 
   const {
     register,
@@ -304,9 +307,11 @@ export function SendLetterDialog({
       ? { subject: letter.subject, content: letter.template || letter.content }
       : initialDraft ?? (loadSavedTemplate() ?? { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE });
 
+    // 固定结尾直接写进正文，审核时看到的就是客户会收到的完整内容（回复不预填，避免光标落在签名后）
+    const signerName = senderStatus?.account?.displayName || authUser?.displayName || '';
     const values: SendLetterFormValues = {
       subject: reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : source.subject ?? '',
-      content: reply ? '' : source.content ?? '',
+      content: reply ? '' : appendSignatureHtml(source.content ?? '', signerName),
       recipientEmail: reply?.from ?? letter?.recipientEmail ?? customer?.email ?? '',
       // 只有「待开发」客户才需要推进状态，已联系及之后的客户默认关掉更贴合直觉
       markAsDeveloped: customer?.status === 'pending',
@@ -363,7 +368,8 @@ export function SendLetterDialog({
   const preview = React.useMemo(
     () => ({
       subject: renderTemplate(debouncedSubject, placeholderValues, { escape: false }),
-      html: renderTemplate(debouncedContent, placeholderValues, { escape: true }),
+      // 预览里把结尾的 logo 补上（服务端落库/发送时会做同样的事）
+      html: withSignatureLogo(renderTemplate(debouncedContent, placeholderValues, { escape: true })),
     }),
     [debouncedSubject, debouncedContent, placeholderValues],
   );
@@ -612,11 +618,6 @@ export function SendLetterDialog({
 
   const statusView = reviewStatusView(review, reviewDirty);
 
-  // 结尾由服务端统一追加，名字跟着当前发件账号走；正文里已经有结尾时不再重复展示
-  const authUser = useAuthStore((state) => state.user);
-  const signatureName = senderStatus?.account?.displayName || authUser?.displayName || '';
-  const showSignaturePreview = isDraftReview && !(content ?? '').includes(LETTER_SIGNATURE.marker);
-
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送
   useSaveShortcut(() => {
     if (open && !sending) void submit(true);
@@ -657,12 +658,12 @@ export function SendLetterDialog({
       const template = templateItems.find((item) => item.id === id);
       if (!template) return;
       setValue('subject', reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : template.subject ?? '', { shouldValidate: true, shouldDirty: true });
-      setValue('content', template.content ?? '', { shouldValidate: true, shouldDirty: true });
+      setValue('content', reply ? (template.content ?? '') : appendSignatureHtml(template.content ?? '', senderStatus?.account?.displayName || authUser?.displayName || ''), { shouldValidate: true, shouldDirty: true });
       setAppliedTemplateId(reply || letter ? null : template.id);
       setActiveTab('edit');
       toast.success('已导入模板', { description: template.name });
     },
-    [templateItems, setValue, reply, letter],
+    [templateItems, setValue, reply, letter, senderStatus?.account?.displayName, authUser?.displayName],
   );
 
   const contentLength = (content ?? '').replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length;
@@ -949,20 +950,8 @@ export function SendLetterDialog({
                     <li>1. 核对收件人、主题与正文中的承诺</li>
                     <li>2. 查看下方依据，确认没有待确认项</li>
                     <li>3. 通过后才会真正发送给客户；标记不通过不会发送</li>
+                    <li>4. 结尾（签名 + logo）已写在正文末尾，可直接核对</li>
                   </ul>
-
-                  {showSignaturePreview ? (
-                    <div className="rounded-md border bg-muted/30 p-2.5">
-                      <p className="text-2xs font-medium text-muted-foreground">结尾（发送时统一追加，正文里不用写落款）</p>
-                      <div className="mt-1.5 space-y-0.5 text-2xs leading-5 text-muted-foreground">
-                        <p className="font-semibold text-foreground">{signatureName || '当前账号姓名'}</p>
-                        <p>{LETTER_SIGNATURE.title}</p>
-                        <img src="/api/brand/genesis-logo.png" alt="Genesis Packaging" width={120} className="my-1 h-auto w-[120px]" />
-                        <div className="my-1 w-16 border-t border-border" aria-hidden />
-                        {LETTER_SIGNATURE.lines.map((line) => <p key={line}>{line}</p>)}
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
               </section>
             ) : null}
