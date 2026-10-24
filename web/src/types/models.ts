@@ -285,7 +285,7 @@ export type CustomerStatus =
 /** 跟进时间筛选：全部 / 今天 / 已逾期 / 未来 */
 export type FollowUpFilter = 'all' | 'today' | 'overdue' | 'upcoming';
 /** 客户数据来源 */
-export type CustomerSource = 'manual' | 'excel' | 'seed' | 'integration' | 'prospecting';
+export type CustomerSource = 'manual' | 'excel' | 'seed' | 'integration' | 'prospecting' | 'mail';
 /**
  * 客户跟进优先级：high 高 / medium 中 / low 低。
  * 与 Grade（客户价值等级 A/B/C）是不同概念，可任意组合（如 A 级 + Low）。
@@ -390,6 +390,8 @@ export interface CustomerListQuery extends PaginationParams {
   search?: string;
   status?: CustomerStatus | 'all';
   industry?: string;
+  /** 国家筛选（统一后的中文简称，服务端按全部别名匹配） */
+  country?: string;
   grade?: string;
   source?: CustomerSource;
   /** 业务来源筛选（自由文本 / 'all' 表示不限） */
@@ -886,12 +888,22 @@ export interface ImportFailure {
   reason: string;
 }
 
+/** 导入体检提示：info = 系统已自动整理好；warn = 需要人补数据或确认 */
+export interface ImportWarning {
+  row?: number;
+  name?: string;
+  email?: string;
+  level: 'info' | 'warn';
+  reason: string;
+}
+
 export interface ImportResult {
   total: number;
   created: number;
   updated: number;
   skipped: number;
   failures: ImportFailure[];
+  warnings: ImportWarning[];
   dryRun: boolean;
 }
 
@@ -973,6 +985,8 @@ export interface UserMailAccount {
   imapVerificationStatus: MailVerificationStatus;
   imapVerifiedAt?: string | Date;
   lastImapVerificationError?: string;
+  /** 改了发件地址时，旧地址邮件的去向 */
+  legacyMail?: { moved: number; archived: number; address: string; to?: string };
   dailyLimit: number;
   usedToday: number;
   createdAt: string | Date;
@@ -1076,6 +1090,12 @@ export interface Prospect {
   score: number;
   aiScore?: number;
   reasons: string[];
+  /** serper = 搜索抓取；excel = 业务员导入的线索 */
+  source: 'serper' | 'excel';
+  grade?: string;
+  priority?: string;
+  notes?: string;
+  leadSource?: string;
   status: ProspectStatus;
   customerId?: string;
   draftTaskId?: string;
@@ -1106,6 +1126,11 @@ export interface ProspectingToday {
   run: ProspectingRun | null;
   prospects: Prospect[];
   counts: { total: number; ready: number; needsContact: number; low: number; converted: number; carriedFromEarlier: number };
+  /** 池子里还有没返回的（用 offset 翻页） */
+  hasMore?: boolean;
+  openTotal?: number;
+  offset?: number;
+  status?: string;
 }
 
 export interface ProspectingDaily {
@@ -1213,6 +1238,8 @@ export interface CustomerBrief {
   id: string;
   name: string;
   company?: string;
+  country?: string;
+  industry?: string;
   status: CustomerStatus;
   grade?: string;
   nextFollowUpAt?: string | Date | null;

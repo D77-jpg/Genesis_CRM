@@ -8,7 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { AlertTriangle, KeyRound, LogIn, Mail, User } from 'lucide-react';
+import { AlertTriangle, KeyRound, LogIn, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -97,17 +97,20 @@ export function LoginPage(): React.JSX.Element {
       </div>
 
       <div className="w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <Mail className="h-6 w-6" aria-hidden />
+        <div className="mb-7 flex flex-col items-center gap-4 text-center">
+          <span className="brand-mark flex h-14 w-14 items-center justify-center rounded-[1.125rem] text-white">
+            <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden>
+              <path d="M7.2 16.8a4.6 4.6 0 0 1 0-9.2h9.6a4.6 4.6 0 0 1 0 9.2H7.2Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+              <circle cx="12" cy="12.2" r="2.1" fill="currentColor" />
+            </svg>
           </span>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">登录工作空间</h1>
-            <p className="mt-1 text-sm text-muted-foreground">客户管理 · 销售跟进 · 邮件开发</p>
+            <h1 className="text-[1.5rem] font-semibold tracking-[-0.02em] sm:text-[1.75rem]">登录工作空间</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">客户管理 · 销售跟进 · 邮件开发</p>
           </div>
         </div>
 
-        <div className="workspace-surface rounded-xl border bg-card p-6 sm:p-8">
+        <div className="panel rounded-[1.75rem] p-6 sm:p-8" style={{ boxShadow: 'var(--shadow-island)' }}>
           <form
             className="space-y-4"
             noValidate

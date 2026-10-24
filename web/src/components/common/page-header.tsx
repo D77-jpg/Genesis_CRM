@@ -46,8 +46,8 @@ export function PageHeader({
               {backLabel}
             </Button>
           ) : null}
-          <h1 className="break-words text-xl font-semibold leading-tight tracking-tight sm:text-2xl">{title}</h1>
-          {description ? <p className="mt-1.5 max-w-4xl text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
+          <h1 className="break-words text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] sm:text-[1.6875rem]">{title}</h1>
+          {description ? <p className="mt-1.5 max-w-4xl text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p> : null}
         </div>
         {actions ? <div className="workspace-page-actions flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </div>

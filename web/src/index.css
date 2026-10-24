@@ -3,95 +3,137 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   主题变量（shadcn/ui 约定）
+   主题变量
+   ------------------------------------------------------------------
+   设计基调（参考 LoopAI CRM）：
+     · 画布：淡薰衣草渐变；工作区：白色「悬浮岛」+
+     · 主色：紫罗兰 #7C5CFF；标签：薄荷 / 玫瑰 / 琥珀柔色
+     · 大圆角 + 极轻描边 + 柔和弥散阴影
    所有颜色以 HSL 分量存储，配合 tailwind.config.ts 的 hsl(var(--x)) 使用。
    ========================================================================== */
 @layer base {
   :root {
-    --background: 216 33% 97%;
-    --foreground: 222 36% 17%;
+    --background: 252 62% 96%;
+    --foreground: 251 22% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 36% 17%;
+    --card-foreground: 251 22% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 36% 17%;
+    --popover-foreground: 251 22% 12%;
 
-    /* 主色：天空蓝，呼应「待开发」的状态色 */
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    /* 主色：紫罗兰 */
+    --primary: 254 100% 68%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 254 100% 96%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 252 45% 96%;
+    --secondary-foreground: 251 24% 22%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215 19% 42%;
+    --muted: 252 42% 96.5%;
+    --muted-foreground: 251 11% 48%;
 
-    --accent: 218 75% 96%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 254 100% 97%;
+    --accent-foreground: 254 55% 42%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 350 84% 58%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    --border: 252 42% 92%;
+    --input: 252 40% 89%;
+    --ring: 254 100% 68%;
 
-    --radius: 0.625rem;
+    /* 次级面板 / 内凹区域 */
+    --surface: 252 50% 98%;
+    --surface-foreground: 251 22% 12%;
+
+    /* 柔色标签（浅底 + 深字） */
+    --mint: 162 72% 34%;
+    --mint-soft: 160 74% 93%;
+    --rose: 350 84% 56%;
+    --rose-soft: 350 100% 96%;
+    --amber: 32 90% 42%;
+    --amber-soft: 40 100% 93%;
+    --violet-soft: 254 100% 96%;
+
+    --radius: 0.875rem;
     --workspace-content-width: 1600px;
-    --workspace-shadow: 0 1px 2px hsl(222 36% 17% / 0.035);
-    --workspace-panel-shadow: 0 8px 30px hsl(222 36% 17% / 0.10);
+    --workspace-shadow: 0 1px 2px hsl(252 34% 22% / 0.035);
+    --workspace-panel-shadow: 0 18px 44px -28px hsl(254 60% 40% / 0.32);
     --workspace-motion: 160ms;
 
-    /* 侧边栏 */
+    /* 阴影阶梯 */
+    --shadow-card: 0 1px 2px hsl(252 34% 22% / 0.035), 0 10px 28px -22px hsl(254 55% 38% / 0.28);
+    --shadow-island: 0 24px 60px -34px hsl(254 55% 32% / 0.35), 0 2px 8px hsl(252 34% 22% / 0.04);
+    --shadow-pop: 0 18px 46px -18px hsl(254 50% 30% / 0.26), 0 2px 8px hsl(252 34% 22% / 0.06);
+
+    /* 侧边栏（移动端抽屉） */
     --sidebar: 0 0% 100%;
-    --sidebar-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 218 90% 96%;
-    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-foreground: 251 22% 12%;
+    --sidebar-accent: 254 100% 97%;
+    --sidebar-border: 252 42% 93%;
 
     /* 业务状态色 */
-    --status-pending: 217 76% 46%;
-    --status-developed: 142 70% 30%;
-    --status-failed: 0 65% 43%;
+    --status-pending: 244 76% 60%;
+    --status-developed: 162 74% 32%;
+    --status-failed: 350 84% 56%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 252 32% 7%;
+    --foreground: 250 30% 96%;
 
-    --card: 222.2 47% 8%;
-    --card-foreground: 210 40% 98%;
+    --card: 252 26% 11%;
+    --card-foreground: 250 30% 96%;
 
-    --popover: 222.2 47% 9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 252 26% 12%;
+    --popover-foreground: 250 30% 96%;
 
-    --primary: 217 91% 66%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 254 100% 74%;
+    --primary-foreground: 252 40% 10%;
+    --primary-soft: 254 40% 20%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 252 22% 17%;
+    --secondary-foreground: 250 30% 96%;
 
-    --muted: 217.2 32.6% 15.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 252 22% 16%;
+    --muted-foreground: 250 14% 66%;
 
-    --accent: 217.2 32.6% 20%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 254 30% 20%;
+    --accent-foreground: 254 90% 90%;
 
-    --destructive: 0 63% 45%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 350 76% 56%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 20%;
-    --input: 217.2 32.6% 22%;
-    --ring: 217 91% 66%;
+    --border: 252 20% 20%;
+    --input: 252 20% 23%;
+    --ring: 254 100% 74%;
 
-    --sidebar: 222.2 47% 7%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-accent: 217.2 32.6% 18%;
-    --sidebar-border: 217.2 32.6% 18%;
+    --surface: 252 24% 13%;
+    --surface-foreground: 250 30% 96%;
 
-    --status-pending: 217 91% 65%;
-    --status-developed: 142 69% 50%;
-    --status-failed: 0 72% 60%;
+    --mint: 162 74% 62%;
+    --mint-soft: 162 40% 18%;
+    --rose: 350 88% 72%;
+    --rose-soft: 350 40% 20%;
+    --amber: 38 92% 66%;
+    --amber-soft: 36 40% 20%;
+    --violet-soft: 254 34% 20%;
+
+    --workspace-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --workspace-panel-shadow: 0 18px 44px -26px hsl(0 0% 0% / 0.7);
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.28);
+    --shadow-island: 0 24px 60px -34px hsl(0 0% 0% / 0.75);
+    --shadow-pop: 0 18px 46px -18px hsl(0 0% 0% / 0.7), 0 2px 8px hsl(0 0% 0% / 0.35);
+
+    --sidebar: 252 26% 10%;
+    --sidebar-foreground: 250 30% 96%;
+    --sidebar-accent: 254 30% 19%;
+    --sidebar-border: 252 20% 19%;
+
+    --status-pending: 244 90% 74%;
+    --status-developed: 162 70% 54%;
+    --status-failed: 350 88% 68%;
   }
 
   * {
@@ -106,27 +148,46 @@
     @apply bg-background text-foreground font-sans antialiased;
     line-height: 1.6;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.005em;
+    /* 画布：淡薰衣草渐变 + 柔光雾团（参考稿的紫色氛围） */
+    background-image:
+      radial-gradient(58rem 38rem at 8% -12%, hsl(258 100% 93% / 0.95), transparent 62%),
+      radial-gradient(48rem 34rem at 96% -6%, hsl(222 100% 94% / 0.85), transparent 58%),
+      radial-gradient(44rem 30rem at 74% 108%, hsl(274 100% 95% / 0.9), transparent 62%);
+    background-attachment: fixed;
     /* 避免模态框滚动穿透时的布局抖动 */
     scrollbar-gutter: stable;
   }
 
-  /* 键盘可达性：仅在键盘操作时显示 focus ring */
+  .dark body {
+    background-image:
+      radial-gradient(58rem 38rem at 8% -12%, hsl(258 70% 20% / 0.7), transparent 62%),
+      radial-gradient(48rem 34rem at 96% -6%, hsl(222 70% 18% / 0.6), transparent 58%),
+      radial-gradient(44rem 30rem at 74% 108%, hsl(274 70% 20% / 0.55), transparent 62%);
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+  }
+
+  /* 键盘可达性：仅在键盘操作时显示 focus ring（保持轻柔，避免和组件自带聚焦环叠成粗描边） */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-ring/35 ring-offset-2 ring-offset-background;
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply rounded-full bg-border;
+    @apply rounded-full;
+    background: hsl(var(--primary) / 0.16);
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/40;
+    background: hsl(var(--primary) / 0.28);
   }
 }
 
@@ -153,12 +214,30 @@
   }
 }
 
-/* Shared workspace rhythm. Business pages keep their own data and actions. */
+/* ==========================================================================
+   工作区共享节奏
+   业务页保留自己的数据与操作，只统一定义容器、工具条、表格等外壳样式。
+   ========================================================================== */
 @layer components {
   .workspace-page { @apply min-w-0 space-y-5; }
   .workspace-surface { box-shadow: var(--workspace-shadow); }
+
+  /* 卡片 / 悬浮岛：白底 + 极轻描边 + 大圆角 + 柔和弥散阴影 */
+  .panel {
+    @apply min-w-0 rounded-2xl border border-border/80 bg-card text-card-foreground;
+    box-shadow: var(--shadow-card);
+  }
+  .panel-flat {
+    @apply min-w-0 rounded-2xl border border-border/70 bg-card text-card-foreground;
+  }
+  /* 内凹区域：淡薰衣草底，用于表头、漏斗背景、说明块 */
+  .well {
+    @apply rounded-2xl border border-border/60 bg-surface;
+  }
+
   .workspace-toolbar {
-    @apply flex min-w-0 flex-wrap items-center gap-2 rounded-lg border bg-card p-3 sm:p-4;
+    @apply flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-border/80 bg-card p-3 sm:p-4;
+    box-shadow: var(--shadow-card);
   }
   .workspace-toolbar > :first-child { flex-shrink: 0; }
   [data-ui="field"] { min-height: 36px; }
@@ -167,7 +246,7 @@
     @apply sr-only;
   }
   .workspace-skip-link:focus {
-    @apply fixed left-4 top-3 z-[100] h-auto w-auto rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground;
+    @apply fixed left-4 top-3 z-[100] h-auto w-auto rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground;
     clip: auto;
     clip-path: none;
   }
@@ -186,12 +265,68 @@
   .workspace-page :is(dl, article, section) { min-width: 0; }
   .workspace-page :is(dd, article p) { overflow-wrap: anywhere; }
   .workspace-page select:not([aria-hidden="true"]) {
-    @apply min-h-9 rounded-md border border-input bg-card px-3 py-1 text-sm;
+    @apply min-h-9 rounded-xl border border-input bg-card px-3 py-1 text-sm;
   }
   .workspace-page details > summary {
-    @apply rounded-md transition-colors hover:text-foreground;
+    @apply rounded-xl transition-colors hover:text-foreground;
   }
   .workspace-page-actions > button { flex-shrink: 0; }
+
+  /* ---------------------------- 柔色标签 ---------------------------- */
+  .chip {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium leading-none;
+  }
+  .chip-mint { background: hsl(var(--mint-soft)); color: hsl(var(--mint)); }
+  .chip-rose { background: hsl(var(--rose-soft)); color: hsl(var(--rose)); }
+  .chip-amber { background: hsl(var(--amber-soft)); color: hsl(var(--amber)); }
+  .chip-violet { background: hsl(var(--violet-soft)); color: hsl(var(--primary)); }
+  .chip-muted { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+  .chip-outline {
+    @apply border border-border bg-card text-muted-foreground;
+  }
+
+  /* ---------------------------- 品牌与头像 ---------------------------- */
+  .brand-mark {
+    background-image: linear-gradient(140deg, hsl(262 100% 68%), hsl(254 100% 62%) 55%, hsl(230 100% 66%));
+    box-shadow: 0 8px 20px -10px hsl(254 90% 55% / 0.75), inset 0 1px 0 hsl(0 0% 100% / 0.35);
+  }
+  .avatar-bubble {
+    background-image: linear-gradient(150deg, hsl(258 100% 96%), hsl(230 100% 95%));
+    color: hsl(254 55% 46%);
+  }
+  .dark .avatar-bubble {
+    background-image: linear-gradient(150deg, hsl(254 40% 24%), hsl(230 40% 22%));
+    color: hsl(254 90% 84%);
+  }
+  /* 头像叠加（品牌区的成员堆叠） */
+  .avatar-stack > * + * { margin-left: -0.5rem; }
+
+  /* 主按钮渐变（参考稿的「Run Analysis」胶囊按钮） */
+  .btn-gradient {
+    background-image: linear-gradient(100deg, hsl(226 96% 68%), hsl(252 96% 68%) 46%, hsl(272 96% 70%));
+    color: hsl(0 0% 100%);
+    box-shadow: 0 12px 26px -14px hsl(252 90% 52% / 0.85), inset 0 1px 0 hsl(0 0% 100% / 0.22);
+  }
+  .btn-gradient:hover { filter: brightness(1.05); }
+
+  /* AI 助手区：淡紫渐变 */
+  .assistant-surface {
+    background-image:
+      linear-gradient(165deg, hsl(258 100% 97%), hsl(262 100% 96%) 42%, hsl(232 100% 97%));
+    border: 1px solid hsl(254 100% 92%);
+  }
+  .dark .assistant-surface {
+    background-image: linear-gradient(165deg, hsl(254 36% 17%), hsl(262 36% 15%) 45%, hsl(232 34% 16%));
+    border-color: hsl(254 30% 24%);
+  }
+
+  /* 区块小标题（跟随参考稿的字重与字距） */
+  .section-title {
+    @apply text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground;
+  }
+  .section-subtitle {
+    @apply text-xs text-muted-foreground;
+  }
 }
 
 @media (max-width: 639px) {
@@ -343,6 +478,14 @@
 /* 结尾里的品牌 logo：块级显示、去掉行内基线留白，避免和下一行之间出现大空档 */
 .mail-preview img {
   @apply my-1.5 block h-auto max-w-full;
+}
+/*
+ * 早期版本的固定结尾在 logo 下面画了一条 <hr>，新版签名已经不带分隔线。
+ * 历史草稿/已发信件的 HTML 是固化的，这里在渲染层统一隐藏，
+ * 只针对「紧跟图片之后的分隔线」，不影响正文里作者自己插的分隔线。
+ */
+.mail-preview img + hr {
+  display: none;
 }
 .mail-preview ul {
   @apply my-2 list-disc pl-6;

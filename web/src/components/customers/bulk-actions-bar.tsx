@@ -75,7 +75,7 @@ export function BulkActionsBar({
         项
       </span>
 
-      {onPrepareDrafts&&<Button variant="outline" className="min-h-11" disabled={busyOrDisabled||selectedCount>20} onClick={onPrepareDrafts}>Agent 批量准备草稿</Button>}
+      {onPrepareDrafts&&<Button variant="outline" className="min-h-11" disabled={busyOrDisabled||selectedCount>20} onClick={onPrepareDrafts}>批量生成开发信草稿</Button>}
       <Separator orientation="vertical" className="hidden h-5 sm:block" />
 
       <Select

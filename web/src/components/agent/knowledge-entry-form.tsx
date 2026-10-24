@@ -31,7 +31,7 @@ export function KnowledgeEntryForm({entry,onSaved,onCancel}:{entry?:ProjectKnowl
     tags:form.tags.split(/[,，]/).map(s=>s.trim()).filter(Boolean),products:form.products.split(/[,，]/).map(s=>s.trim()).filter(Boolean),applicability:form.applicability,
     validFrom:new Date(form.validFrom).toISOString(),...(form.validUntil?{validUntil:new Date(form.validUntil).toISOString()}:{}),terms:form.terms});
    onSaved();
-  }catch(e){setError(knowledgeError(e,'资料尚未保存，请检查字段与版本'));}finally{setBusy(false);}
+  }catch(e){setError(knowledgeError(e,'资料还没保存，请检查填写的内容和版本'));}finally{setBusy(false);}
  }
  const ready=!busy&&!!form.title.trim()&&!!form.content.trim()&&!!form.source.trim()&&!!form.applicability.trim()&&!!form.validFrom;
  return <section className="space-y-5">

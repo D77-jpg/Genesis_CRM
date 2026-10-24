@@ -17,6 +17,7 @@ export function useCustomerList(): void {
   const search = useCustomerStore((state) => state.search);
   const status = useCustomerStore((state) => state.status);
   const industry = useCustomerStore((state) => state.industry);
+  const country = useCustomerStore((state) => state.country);
   const grade = useCustomerStore((state) => state.grade);
   const leadSource = useCustomerStore((state) => state.leadSource);
   const priority = useCustomerStore((state) => state.priority);
@@ -32,7 +33,7 @@ export function useCustomerList(): void {
 
   useEffect(() => {
     void fetchList();
-  }, [search, status, industry, grade, leadSource, priority, hasEmail, tag, ownerId, followUp, page, limit, sortBy, sortOrder, fetchList]);
+  }, [search, status, industry, country, grade, leadSource, priority, hasEmail, tag, ownerId, followUp, page, limit, sortBy, sortOrder, fetchList]);
 }
 
 /** 开发信记录页：条件变化时自动拉取 */
@@ -60,6 +61,13 @@ export function useIndustries(): void {
 }
 
 /** 标签词汇表（客户页首次进入时拉一次） */
+export function useCountries(): void {
+  const fetchCountries = useCustomerStore((state) => state.fetchCountries);
+  useEffect(() => {
+    void fetchCountries();
+  }, [fetchCountries]);
+}
+
 export function useTags(): void {
   const fetchTags = useCustomerStore((state) => state.fetchTags);
   useEffect(() => {
@@ -90,7 +98,7 @@ export interface CustomerLettersQuery {
 export function useCustomer(id: string | undefined) {
   return useAsync<Customer>(
     async () => {
-      if (!id) throw new Error('缺少客户 ID');
+      if (!id) throw new Error('没有指定客户');
       return apiGet<Customer>(`/customers/${id}`);
     },
     [id],

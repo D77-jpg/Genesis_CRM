@@ -290,16 +290,16 @@ export function ScratchpadPanel(): React.JSX.Element | null {
     try {
       const saved = await saveRef.current();
       if (!saved) {
-        toast.error('请先完成随手记同步', { description: '内容未同步时不会交给 Agent，避免提取旧版本。' });
+        toast.error('这条随手记还没保存到服务器', { description: '先同步一次再让 AI 识别，免得用的是旧内容。' });
         return;
       }
       const preview = await apiPost<AgentCustomerPreview>('/agent/scratchpad-customer/previews', {
         idempotencyKey: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       });
       openAgentCustomerPreview(preview.id);
-      toast.success('客户信息已提取', { description: '请在创建前核对标记为“不确定”的字段。' });
+      toast.success('客户信息已提取', { description: '请在创建前核对标记为“不确定”的内容。' });
     } catch (error) {
-      toast.error('Agent 提取失败', { description: `${toErrorMessage(error)}。随手记没有改动。` });
+      toast.error('AI 没识别出来', { description: `${toErrorMessage(error)}。随手记内容没有改动。` });
     } finally {
       setExtracting(false);
     }
@@ -334,10 +334,10 @@ export function ScratchpadPanel(): React.JSX.Element | null {
       <WorkspaceDrawer
         title="个人随手记"
         onClose={closePanel}
-        className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[420px]"
+        className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-border/70 bg-card shadow-[var(--shadow-pop)] sm:inset-y-3 sm:right-3 sm:w-[420px] sm:rounded-3xl sm:border"
       >
         <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <span className="brand-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
             <StickyNote className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
@@ -399,7 +399,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
             <div className="flex items-start gap-2">
               <UserRoundPlus className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-              <div className="min-w-0 flex-1"><p className="text-sm font-medium">交给 Agent 整理成客户</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">先提取并查重，再由你编辑确认。原随手记始终保留。</p></div>
+              <div className="min-w-0 flex-1"><p className="text-sm font-medium">让 AI 整理成客户</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">先提取并查重，再由你编辑确认。原随手记始终保留。</p></div>
             </div>
             <Button type="button" className="mt-3 w-full" onClick={() => void handleExtractCustomer()} disabled={!content.trim() || extracting || status === 'loading' || status === 'saving' || status === 'offline' || status === 'conflict'}>
               {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRoundPlus className="h-4 w-4" />}
@@ -428,7 +428,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
           <AlertDialogHeader>
             <AlertDialogTitle>清空当前随手记？</AlertDialogTitle>
             <AlertDialogDescription>
-              清空后会自动同步到服务器。若内容仍有用，建议先复制保存到其他位置。
+              清空后会同步到服务器。内容如果还要用，先复制到别处保存。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

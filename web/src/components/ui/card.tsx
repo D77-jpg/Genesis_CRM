@@ -1,11 +1,15 @@
 /**
- * Card —— 页面区块容器
+ * Card —— 页面区块容器（白色悬浮卡片：大圆角 + 极轻描边 + 柔和阴影）
  */
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('workspace-surface min-w-0 rounded-lg border bg-card text-card-foreground', className)} {...props} />
+  <div
+    ref={ref}
+    className={cn('panel min-w-0 rounded-2xl border border-border/80 bg-card text-card-foreground', className)}
+    {...props}
+  />
 ));
 Card.displayName = 'Card';
 
@@ -18,7 +22,11 @@ CardHeader.displayName = 'CardHeader';
 
 const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn('text-sm font-semibold leading-snug tracking-tight sm:text-base', className)} {...props} />
+    <h3
+      ref={ref}
+      className={cn('text-[0.9375rem] font-semibold leading-snug tracking-[-0.01em] sm:text-base', className)}
+      {...props}
+    />
   ),
 );
 CardTitle.displayName = 'CardTitle';
@@ -37,19 +45,20 @@ CardContent.displayName = 'CardContent';
 
 const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex flex-wrap items-center gap-2 border-t p-4 sm:p-5', className)} {...props} />
+    <div ref={ref} className={cn('flex flex-wrap items-center gap-2 border-t border-border/70 p-4 sm:p-5', className)} {...props} />
   ),
 );
 CardFooter.displayName = 'CardFooter';
 
 /**
- * 统计卡片：仪表盘用，图标 + 数值 + 说明。
+ * 统计卡片（仪表盘 / AI 用量）：标签 + 柔色变化标签 + 大数字 + 说明。
  */
 export function StatCard({
   label,
   value,
   hint,
   icon,
+  badge,
   tone = 'default',
   className,
 }: {
@@ -57,25 +66,33 @@ export function StatCard({
   value: React.ReactNode;
   hint?: React.ReactNode;
   icon?: React.ReactNode;
+  /** 右上角柔色变化标签，例如 +4 / -8% */
+  badge?: React.ReactNode;
   tone?: 'default' | 'pending' | 'developed' | 'failed' | 'primary';
   className?: string;
 }): React.JSX.Element {
   const toneClass = {
     default: 'bg-muted text-muted-foreground',
-    primary: 'bg-primary/10 text-primary',
-    pending: 'bg-primary/10 text-primary',
-    developed: 'bg-primary/10 text-primary',
-    failed: 'bg-status-failed/10 text-status-failed',
+    primary: 'chip-violet',
+    pending: 'chip-violet',
+    developed: 'chip-mint',
+    failed: 'chip-rose',
   }[tone];
 
   return (
-    <Card className={cn('p-4 sm:p-5', className)}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 break-words text-xs font-medium text-muted-foreground">{label}</p>
-        {icon ? <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md sm:h-8 sm:w-8', toneClass)}>{icon}</div> : null}
+    <Card className={cn('p-4 sm:p-[1.375rem]', className)}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 break-words pt-0.5 text-[0.8125rem] font-medium text-foreground/70">{label}</p>
+        {badge ? (
+          <span className={cn('chip shrink-0', toneClass)}>{badge}</span>
+        ) : icon ? (
+          <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', toneClass)}>{icon}</div>
+        ) : null}
       </div>
-      <p className="mt-2 break-all text-2xl font-semibold tabular-nums tracking-tight sm:text-[1.75rem]">{value}</p>
-      {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
+      <p className="mt-3 break-all text-[1.75rem] font-semibold leading-none tracking-[-0.02em] tabular-nums sm:text-[2rem]">
+        {value}
+      </p>
+      {hint ? <div className="mt-2 text-xs leading-relaxed text-muted-foreground">{hint}</div> : null}
     </Card>
   );
 }

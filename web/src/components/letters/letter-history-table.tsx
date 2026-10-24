@@ -90,7 +90,7 @@ export function LetterHistoryTable({
     return (
       <EmptyState
         title="还没有发送过开发信"
-        description="发送后会在这里留下完整记录，包括发送时间、通道与结果"
+        description="发送后会在这里留下完整记录，包括发送时间、发送方式和结果"
         action={
           onSendFirst ? (
             <Button type="button" size="sm" onClick={onSendFirst}>
@@ -125,7 +125,7 @@ export function LetterHistoryTable({
             {sortable('subject', '主题')}
             <TableHead className="hidden min-w-[12rem] sm:table-cell">收件人</TableHead>
             {sortable('status', '状态')}
-            <TableHead className="hidden lg:table-cell">通道</TableHead>
+            <TableHead className="hidden lg:table-cell">发送方式</TableHead>
             {sortable('sentAt', '发送时间')}
             <TableHead className="w-32 text-right">操作</TableHead>
           </TableRow>

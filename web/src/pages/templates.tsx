@@ -173,7 +173,7 @@ export function TemplatesPage(): React.JSX.Element {
 
       <Card className="space-y-4 p-4" aria-label="模板效果">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div><h2 className="font-semibold">模板效果</h2><p className="text-xs text-muted-foreground">按发送窗口汇总同项目客户的关联事件；发送数为信件数，样本数为去重收件客户数。</p></div>
+          <div><h2 className="font-semibold">模板效果</h2><p className="text-xs text-muted-foreground">看每个模板发出去之后，客户有没有回复、问到报价、最终成交。</p></div>
           <Select value={String(windowDays)} onValueChange={(value) => setWindowDays(Number(value) as 30 | 90 | 180)}>
             <SelectTrigger className="w-32" aria-label="统计窗口"><SelectValue /></SelectTrigger>
             <SelectContent>{([30, 90, 180] as const).map((days) => <SelectItem key={days} value={String(days)}>近 {days} 天</SelectItem>)}</SelectContent>
@@ -182,17 +182,16 @@ export function TemplatesPage(): React.JSX.Element {
         {performanceLoading ? <p role="status">正在加载效果统计…</p> : null}
         {performanceError ? <div role="alert" className="text-sm text-destructive">{performanceError} <Button type="button" variant="outline" size="sm" onClick={() => setRefreshVersion((value) => value + 1)}>重试</Button></div> : null}
         {performance ? <>
-          <p className="text-xs text-muted-foreground">窗口：{new Date(performance.windowStart).toLocaleDateString()}—{new Date(performance.windowEnd).toLocaleDateString()} · 低样本门槛：{performance.sampleThreshold} 位客户 · 未归因发送：{performance.unattributed} 封（不猜测模板归属）。</p>
-          <p className="rounded-md border bg-muted/40 p-2 text-xs">非因果提示：{performance.correlationDisclaimer}</p>
-          {performance.templates.length === 0 ? <p className="text-sm text-muted-foreground">此窗口暂无已归因的发送记录。</p> : <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">按模板 ID 稳定展示，不按转化率排名；低样本不参与排名或效果优劣判断。同一模板的不同内容快照分开展示。</p>
+          <p className="text-xs text-muted-foreground">{new Date(performance.windowStart).toLocaleDateString()}—{new Date(performance.windowEnd).toLocaleDateString()} · 覆盖少于 {performance.sampleThreshold} 位客户的模板只展示、不比较{performance.unattributed > 0 ? ` · 另有 ${performance.unattributed} 封早期邮件没记录用的哪个模板，未计入` : ''}。</p>
+          <p className="rounded-md border bg-muted/40 p-2 text-xs leading-5">提醒：这些数字只说明「发信之后客户有没有动作」，不能证明是模板带来的回复或成交；同一个客户可能先后收到过多个模板。</p>
+          {performance.templates.length === 0 ? <p className="text-sm text-muted-foreground">这段时间还没有用模板发出开发信。</p> : <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">按模板名称排列，不按转化率排名；样本太少的模板只展示数字，不比较优劣。</p>
             {performance.templates.map((entry) => <div key={JSON.stringify([entry.templateId, entry.templateNameSnapshot, entry.templateContentHash])} className="space-y-2 rounded-md border p-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2"><strong>{entry.templateNameSnapshot || '（旧记录无名称快照）'}</strong>{entry.deleted ? <span className="rounded bg-muted px-2 py-0.5 text-xs">已删除模板 · 历史快照</span> : null}{entry.insufficientSample ? <span className="text-xs text-amber-700">低样本，不排名</span> : null}</div>
-              <p className="break-all text-xs text-muted-foreground">模板 ID：{entry.templateId} · 内容快照 SHA-256：{entry.templateContentHash || '旧记录未保留'}</p>
-              <p>发送 {entry.metrics.sent} 封 · 样本 {entry.sampleSize} 位去重客户{entry.insufficientSample ? `（未达 ${performance.sampleThreshold}）` : ''}</p>
+              <div className="flex flex-wrap items-center gap-2"><strong>{entry.templateNameSnapshot || '（早期模板，名称未保存）'}</strong>{entry.deleted ? <span className="rounded bg-muted px-2 py-0.5 text-xs">模板已删除 · 保留历史</span> : null}{entry.insufficientSample ? <span className="text-xs text-amber-700">样本偏少，仅参考</span> : null}</div>
+              <p>发送 {entry.metrics.sent} 封 · 覆盖 {entry.sampleSize} 位客户{entry.insufficientSample ? `（少于 ${performance.sampleThreshold} 位，仅供参考）` : ''}</p>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{STAGES.map(({ key, label }) => {
                 const rate = entry.rates[key];
-                return <p key={key} className="rounded bg-muted/30 p-2 text-xs">{label}：{entry.metrics[key]} 位 · {rate.numerator}/{rate.denominator}（{rate.rate === null ? '无分母' : `${(rate.rate * 100).toFixed(1)}%`}）{entry.insufficientSample ? ' · 仅展示不排名' : ''}</p>;
+                return <p key={key} className="rounded bg-muted/30 p-2 text-xs">{label}：{entry.metrics[key]} 位{rate.rate === null ? '' : ` · 占 ${(rate.rate * 100).toFixed(0)}%`}</p>;
               })}</div>
             </div>)}</div>}
         </> : null}

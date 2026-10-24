@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import {
   CalendarClock,
   Check,
+  ChevronRight,
   CircleSlash,
   Eye,
   FileText,
@@ -130,7 +131,7 @@ function RecipientSenderCard({
   senderHint?: string;
 }): React.JSX.Element {
   return (
-    <section className="rounded-lg border bg-card">
+    <section className="rounded-2xl border border-border/80 bg-card shadow-card">
       <div className="grid gap-3 p-3 sm:grid-cols-2 sm:gap-4">
         <div className="flex min-w-0 items-start gap-2.5">
           <span
@@ -211,7 +212,7 @@ function notifyLetterResult(result: SendLetterResult, asDraft: boolean): void {
     toast.error('发送失败，记录已保存', { description: result.message });
   } else if (result.channel === 'mock') {
     toast.info(result.message || '开发信已记录（模拟发送）', {
-      description: `通道：${MAIL_CHANNEL_LABEL[result.channel] ?? result.channel}`,
+      description: `发送方式：${MAIL_CHANNEL_LABEL[result.channel] ?? result.channel}`,
     });
   } else {
     toast.success(result.message || '开发信已发送', { description: `收件人：${result.letter.recipientEmail}` });
@@ -670,7 +671,13 @@ export function SendLetterDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-6xl">
+      <DialogContent
+        className="max-w-6xl"
+        // 审核时是"读信 + 看检查项"，别一进来就把光标塞进收件人输入框
+        onOpenAutoFocus={(event) => {
+          if (isDraftReview) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isDraftReview ? <ShieldCheck className="h-4 w-4 text-primary" aria-hidden /> : <Send className="h-4 w-4 text-primary" aria-hidden />}
@@ -678,7 +685,7 @@ export function SendLetterDialog({
           </DialogTitle>
           <DialogDescription>
             {isDraftReview
-              ? '左侧核对要发给客户的内容，右侧看生成依据；没问题就通过并发送，觉得不能用直接标记不通过（不用写理由）。'
+              ? '左侧核对要发给客户的内容，右侧列出需要你确认的事；没问题就通过并发送，觉得不能用直接标记不通过（不用写理由）。'
               : letter
                 ? '已带出原信内容，可修改后再次发送；会新增一条发送记录。'
                 : '正文中的 {{占位符}} 会在发送时自动替换为该客户的真实信息。'}
@@ -720,7 +727,7 @@ export function SendLetterDialog({
             ) : null}
 
             {/* ---------------- 邮件内容：编辑 / 预览 / 中英对照 ---------------- */}
-            <section className="min-w-0 rounded-lg border bg-card">
+            <section className="min-w-0 rounded-2xl border border-border/80 bg-card shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2">
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                   <FileText className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -740,7 +747,7 @@ export function SendLetterDialog({
                   <span className="text-xs text-muted-foreground">从模板导入</span>
                   <Select value={TEMPLATE_PICK_NONE} onValueChange={handleApplyTemplate}>
                     <SelectTrigger className="h-7 w-auto min-w-[9rem] max-w-full text-xs" aria-label="选择模板">
-                      <SelectValue placeholder="选择模板…" />
+                      <SelectValue placeholder="选择模板…">选择模板…</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {templateItems.map((template) => (
@@ -817,17 +824,24 @@ export function SendLetterDialog({
                     <div>
                       <Label htmlFor="letter-content">正文</Label>
 
-                      <PlaceholderBar
-                        className="mt-1.5"
-                        defs={placeholderDefs}
-                        values={placeholderValues}
-                        onInsert={(def) => insertPlaceholder(def.token)}
-                        disabled={sending}
-                      />
+                      <details className="group mt-1.5 rounded-md border border-dashed bg-muted/20">
+                        <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground">
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+                          插入客户信息占位符（发送时自动替换成真实内容）
+                        </summary>
+                        <PlaceholderBar
+                          className="border-0 bg-transparent"
+                          defs={placeholderDefs}
+                          values={placeholderValues}
+                          onInsert={(def) => insertPlaceholder(def.token)}
+                          disabled={sending}
+                        />
+                      </details>
 
                       <div id="letter-content" className="mt-2">
                         <LetterEditor
                           ref={editorRef}
+                          className={isDraftReview ? 'min-h-[26rem]' : undefined}
                           value={content ?? ''}
                           onChange={(html) => setValue('content', html, { shouldValidate: true, shouldDirty: true })}
                           onBlur={() => setValue('content', content ?? '', { shouldValidate: true })}
@@ -885,7 +899,7 @@ export function SendLetterDialog({
                   {/* ---------------- 中英对照 ---------------- */}
                   <TabsContent value="bilingual" className="space-y-3 pt-1">
                     <div className="grid gap-3 lg:grid-cols-2">
-                      <section className="min-w-0 rounded-md border bg-card">
+                      <section className="min-w-0 rounded-xl border border-border/80 bg-card">
                         <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2">
                           <span className="text-xs font-medium text-muted-foreground">English（原文）</span>
                           <span className="text-2xs text-muted-foreground">实际发送</span>
@@ -935,7 +949,7 @@ export function SendLetterDialog({
           {/* ---------------- 右栏：依据核对 → 审核结论 → 发送设置 ---------------- */}
           <aside className="min-w-0 space-y-4 lg:sticky lg:top-0">
             {isDraftReview ? (
-              <section className="rounded-lg border bg-card">
+              <section className="rounded-2xl border border-border/80 bg-card shadow-card">
                 <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2">
                   <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                     <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
@@ -943,27 +957,25 @@ export function SendLetterDialog({
                   </h3>
                   <Badge variant={statusView.variant}>{statusView.label}</Badge>
                 </div>
-                <div className="space-y-2.5 p-3">
+                <div className="space-y-2 p-3">
                   <p className="text-xs leading-5 text-muted-foreground">{statusView.description}</p>
-
-                  <ul className="space-y-1 border-t pt-2 text-2xs leading-5 text-muted-foreground">
-                    <li>1. 核对收件人、主题与正文中的承诺</li>
-                    <li>2. 查看下方依据，确认没有待确认项</li>
-                    <li>3. 通过后才会真正发送给客户；标记不通过不会发送</li>
-                    <li>4. 结尾（签名 + logo）已写在正文末尾，可直接核对</li>
-                  </ul>
+                  <p className="text-2xs leading-5 text-muted-foreground">
+                    通过后才会真正发给客户；标记不通过不会发送。签名和 logo 已在正文末尾，可直接核对。
+                  </p>
                 </div>
               </section>
             ) : null}
 
-            <KnowledgeReviewPanel
-              letterId={letter?.id}
-              analysisId={initialDraft?.analysisId}
-              currentBody={htmlToPlainText(content ?? '')}
-              currentSubject={subject}
-            />
+            <section className="rounded-2xl border border-border/80 bg-card shadow-card p-3">
+              <KnowledgeReviewPanel
+                letterId={letter?.id}
+                analysisId={initialDraft?.analysisId}
+                currentBody={htmlToPlainText(content ?? '')}
+                currentSubject={subject}
+              />
+            </section>
 
-            <section className="rounded-lg border bg-card p-3">
+            <section className="rounded-2xl border border-border/80 bg-card shadow-card p-3">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                 <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden />
                 发送设置
@@ -998,7 +1010,7 @@ export function SendLetterDialog({
                     发送成功后标记为「已联系」
                   </Label>
                   <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                    关闭后客户状态保持不变，开发信仍会记入历史。通道：{MAIL_CHANNEL_LABEL[activeChannel] ?? activeChannel}。
+                    关闭后客户状态保持不变，开发信仍会记入历史。发送方式：{MAIL_CHANNEL_LABEL[activeChannel] ?? activeChannel}。
                   </p>
                 </div>
               </div>

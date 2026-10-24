@@ -26,13 +26,13 @@ export function UserMenu({ className }: { className?: string }): React.JSX.Eleme
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          'flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-md py-1 pl-1 pr-2 text-sm outline-none transition-colors',
-          'hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
+          'flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-xl py-1 pl-1 pr-2 text-sm outline-none transition-colors',
+          'hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/70',
           className,
         )}
         aria-label="用户菜单"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        <span className="avatar-bubble flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ring-2 ring-card">
           {initials(displayName)}
         </span>
         <span className="hidden max-w-[8rem] truncate text-xs font-medium sm:inline">{displayName}</span>

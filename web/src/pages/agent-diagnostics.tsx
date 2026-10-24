@@ -24,11 +24,11 @@ function EvaluationCard({ evaluation }: { evaluation: AgentEvalRun }): React.JSX
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div>
-          <CardTitle>功能检查</CardTitle>
-          <CardDescription>{formatDateTime(evaluation.createdAt)} · {evaluation.model}</CardDescription>
+          <CardTitle>自检</CardTitle>
+          <CardDescription>{formatDateTime(evaluation.createdAt)} · {/mock/i.test(evaluation.model) ? '演示模型' : evaluation.model}</CardDescription>
         </div>
         <Badge variant={passed ? 'developed' : evaluation.status === 'failed' ? 'destructive' : 'secondary'}>
-          {evaluation.status === 'failed' ? '运行失败' : `${evaluation.passedCases}/${evaluation.totalCases} 通过`}
+          {evaluation.status === 'failed' ? '没跑完' : `${evaluation.passedCases}/${evaluation.totalCases} 项通过`}
         </Badge>
       </CardHeader>
       <CardContent>
@@ -74,9 +74,9 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
     try {
       // 固定集逐项运行以避免突发流量；真实 Provider 下允许覆盖全局 60 秒请求超时。
       const result = await apiPost<AgentEvalRun>('/agent/admin/evaluations/run', undefined, { timeout: 360_000 });
-      toast.success(`功能检查完成：${result.passedCases}/${result.totalCases} 通过`);
+      toast.success(`自检完成：${result.passedCases}/${result.totalCases} 项通过`);
       await load();
-    } catch (reason) { toast.error(toErrorMessage(reason, '功能检查运行失败')); }
+    } catch (reason) { toast.error(toErrorMessage(reason, '自检没能跑完')); }
     finally { setRunning(false); }
   }
 
@@ -89,7 +89,7 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
     <div className="workspace-page">
       <PageHeader
         title="AI 使用情况"
-        description={`近 ${data.periodDays} 天的用量与处理记录。查看账号用量、处理结果，并检查 AI 功能是否正常。`}
+        description={`近 ${data.periodDays} 天 AI 助手的使用情况：谁用了多少、跑得顺不顺、有没有出错。`}
         actions={(
           <>
             <Button variant="outline" onClick={() => void load()} disabled={loading}>
@@ -97,39 +97,39 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
             </Button>
             <Button onClick={() => void runEvaluation()} disabled={running}>
               {running ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-              运行功能检查
+              自检一下
             </Button>
           </>
         )}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Agent 运行" value={tokens(data.totals.runs)} hint={`${data.totals.failed} 次失败`} icon={<Activity className="h-4 w-4" aria-hidden />} tone="primary" />
-        <StatCard label="Token 用量" value={tokens(data.totals.totalTokens)} hint={`单用户日上限 ${tokens(data.limits.dailyTokensPerUser)}`} icon={<ShieldCheck className="h-4 w-4" aria-hidden />} />
-        <StatCard label="估算成本" value={money(data.totals.estimatedCostUsd)} hint={data.pricing.configured ? '按已设置的模型单价估算' : '尚未配置模型单价'} icon={<Coins className="h-4 w-4" aria-hidden />} />
-        <StatCard label="功能检查" value={latestEval ? percent(latestEval.score) : '未运行'} hint={`${data.dataset.cases} 项检查`} icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} tone={latestEval?.score === 1 ? 'developed' : 'pending'} />
+        <StatCard label="AI 调用次数" value={tokens(data.totals.runs)} hint={`${data.totals.failed} 次没成功`} icon={<Activity className="h-4 w-4" aria-hidden />} tone="primary" />
+        <StatCard label="用量（Token）" value={tokens(data.totals.totalTokens)} hint={`每人每天上限 ${tokens(data.limits.dailyTokensPerUser)}`} icon={<ShieldCheck className="h-4 w-4" aria-hidden />} />
+        <StatCard label="估算花费" value={money(data.totals.estimatedCostUsd)} hint={data.pricing.configured ? '按设置的单价估算' : '还没设置单价'} icon={<Coins className="h-4 w-4" aria-hidden />} />
+        <StatCard label="自检" value={latestEval ? percent(latestEval.score) : '还没跑过'} hint={`共 ${data.dataset.cases} 项检查`} icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} tone={latestEval?.score === 1 ? 'developed' : 'pending'} />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>每用户使用与审批</CardTitle>
-          <CardDescription>成功率同时显示文字和数值；额度按当前项目、用户和 UTC 日期隔离。</CardDescription>
+          <CardTitle>每个人用了多少</CardTitle>
+          <CardDescription>额度按「每人每天」算，每天北京时间早上 8 点重置。</CardDescription>
         </CardHeader>
         <CardContent className="px-0 sm:px-0">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>用户</TableHead><TableHead>运行</TableHead><TableHead>Token / 成本</TableHead><TableHead>工具成功率</TableHead><TableHead>审批结果</TableHead><TableHead>资料保护</TableHead><TableHead>今日额度</TableHead>
+              <TableHead>用户</TableHead><TableHead>使用情况</TableHead><TableHead>用量 · 花费</TableHead><TableHead>执行成功率</TableHead><TableHead>需要确认的操作</TableHead><TableHead>安全</TableHead><TableHead>今日已用</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {data.users.map((user) => (
                 <TableRow key={user.userId}>
                   <TableCell><p className="font-medium">{user.displayName || user.username}</p><p className="text-xs text-muted-foreground">{user.role === 'admin' ? '管理员' : '业务员'} · {user.status === 'active' ? '启用' : '停用'}</p></TableCell>
-                  <TableCell><p className="tabular-nums">{user.runs} 次 · {percent(user.successRate)}</p><p className="text-xs text-muted-foreground">平均 {user.averageDurationMs} ms</p></TableCell>
+                  <TableCell><p className="tabular-nums">{user.runs} 次 · {percent(user.successRate)}</p><p className="text-xs text-muted-foreground">平均每次 {(user.averageDurationMs / 1000).toFixed(1)} 秒</p></TableCell>
                   <TableCell><p className="tabular-nums">{tokens(user.totalTokens)}</p><p className="text-xs text-muted-foreground">{money(user.estimatedCostUsd)}</p></TableCell>
                   <TableCell><span className="tabular-nums">{user.toolCalls} 次 · {percent(user.toolSuccessRate)}</span></TableCell>
                   <TableCell><p>批准 {user.approvals.approved} · 拒绝 {user.approvals.rejected}</p><p className="text-xs text-muted-foreground">待审批 {user.approvals.pending} · 无需审批 {user.approvals.notRequired}</p></TableCell>
-                  <TableCell><p>可疑指令 {user.injectionSignals}</p><p className="text-xs text-muted-foreground">资料过长 {user.truncatedRuns}</p></TableCell>
-                  <TableCell><p>{user.today.requests}/{data.limits.dailyRunsPerUser} 次</p><p className="text-xs text-muted-foreground">{tokens(user.today.tokens + user.today.reservedTokens)} tokens</p></TableCell>
+                  <TableCell><p>可疑指令 {user.injectionSignals}</p><p className="text-xs text-muted-foreground">超长资料 {user.truncatedRuns}</p></TableCell>
+                  <TableCell><p>{user.today.requests}/{data.limits.dailyRunsPerUser} 次</p><p className="text-xs text-muted-foreground">{tokens(user.today.tokens + user.today.reservedTokens)} Token</p></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -140,11 +140,11 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
       <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <div className="space-y-4">
           {data.evaluations.length ? data.evaluations.map((evaluation) => <EvaluationCard key={evaluation.id} evaluation={evaluation} />) : (
-            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">尚未运行功能检查。</CardContent></Card>
+            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">还没跑过自检。</CardContent></Card>
           )}
         </div>
         <Card>
-          <CardHeader><CardTitle>最近失败</CardTitle><CardDescription>查看未完成的处理及重试原因，不显示客户正文或服务密钥。</CardDescription></CardHeader>
+          <CardHeader><CardTitle>没做完或出错的</CardTitle><CardDescription>看看哪些处理没做完、卡在哪一步；这里不会显示客户邮件正文和密钥。</CardDescription></CardHeader>
           <CardContent className="space-y-2">
             {data.recentFailures.length ? data.recentFailures.map((failure) => (
               <div key={failure.id} className="flex items-start gap-2 rounded-md border p-3">
@@ -152,7 +152,7 @@ export function AgentDiagnosticsPage(): React.JSX.Element {
                 <div className="min-w-0"><p className="break-all text-sm font-medium">{agentFailureLabel(failure.errorCode)}</p><p className="text-xs text-muted-foreground">{agentRunLabel(failure.kind)} · {formatDateTime(failure.createdAt)}</p></div>
                 <span className="ml-auto flex shrink-0 items-center gap-1 text-xs text-muted-foreground"><Timer className="h-3.5 w-3.5" aria-hidden />{failure.durationMs} ms</span>
               </div>
-            )) : <p className="py-6 text-center text-sm text-muted-foreground">所选周期内没有失败记录。</p>}
+            )) : <p className="py-6 text-center text-sm text-muted-foreground">这段时间都跑得很顺，没有出错记录。</p>}
           </CardContent>
         </Card>
       </div>

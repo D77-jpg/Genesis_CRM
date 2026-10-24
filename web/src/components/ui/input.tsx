@@ -1,5 +1,5 @@
 /**
- * Input —— shadcn/ui 风格文本输入框
+ * Input —— 文本输入框（圆角胶囊风、淡薰衣草描边、柔和聚焦环）
  */
 import * as React from 'react';
 import { cn } from '@/lib/utils';
@@ -17,13 +17,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, inval
     aria-invalid={invalid || undefined}
     className={cn(
       [
-        'flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-none',
-        'transition-colors file:border-0 file:bg-card file:text-sm file:font-medium file:text-foreground',
-        'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        'focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-55',
-        'read-only:bg-muted/40',
+        'flex h-10 w-full rounded-xl border border-input/80 bg-card px-3.5 py-1 text-sm shadow-none',
+        'transition-[border-color,box-shadow] file:border-0 file:bg-card file:text-sm file:font-medium file:text-foreground',
+        'placeholder:text-muted-foreground/80',
+        'focus-visible:outline-none focus-visible:border-primary/45 focus-visible:ring-4 focus-visible:ring-primary/12 focus-visible:ring-offset-0',
+        'disabled:cursor-not-allowed disabled:opacity-55',
+        'read-only:bg-surface',
       ].join(' '),
-      invalid && 'border-destructive focus-visible:ring-destructive',
+      invalid && 'border-destructive/60 focus-visible:border-destructive focus-visible:ring-destructive/15',
       className,
     )}
     {...props}

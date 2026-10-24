@@ -18,6 +18,8 @@ import {
   CUSTOMER_STATUS_OPTIONS,
   FOLLOW_UP_FILTER_OPTIONS,
 } from '@/constants';
+import { countryInfo } from '@/lib/country';
+import { CountryFlag } from '@/components/common/country-flag';
 import { useDebouncedCallback } from '@/hooks/use-debounce';
 import type { HasEmailFilter } from '@/store/customer.store';
 import type { CustomerPriority, CustomerStatus, FollowUpFilter, OwnerOption } from '@/types';
@@ -31,6 +33,8 @@ export interface CustomerFilterValues {
   search: string;
   status: CustomerStatus | 'all';
   industry: string;
+  /** 国家筛选（统一后的中文简称，'' 表示不限） */
+  country: string;
   grade: string;
   /** 业务来源筛选（'' 表示不限） */
   leadSource: string;
@@ -49,6 +53,8 @@ export interface CustomerFiltersProps {
   values: CustomerFilterValues;
   /** 行业候选（来自已有数据） */
   industries: string[];
+  /** 国家候选（已归一，来自已有数据） */
+  countries: string[];
   /** 等级候选（来自当前页数据） */
   grades: string[];
   /** 标签词汇表（所有客户标签去重） */
@@ -74,7 +80,7 @@ function FilterSelect({
 }: {
   label: string;
   value: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: React.ReactNode }[];
   onValueChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
@@ -156,6 +162,7 @@ function GradeFilter({
 export function CustomerFilters({
   values,
   industries,
+  countries,
   grades,
   tags,
   owners,
@@ -168,6 +175,22 @@ export function CustomerFilters({
   const industryOptions = React.useMemo(
     () => [{ value: ALL, label: '全部行业' }, ...industries.map((item) => ({ value: item, label: item }))],
     [industries],
+  );
+  // 国家下拉带国旗图标，一眼看出客户所在市场
+  const countryOptions = React.useMemo(
+    () => [
+      { value: ALL, label: '全部国家' },
+      ...countries.map((item) => ({
+        value: item,
+        label: (
+          <span className="flex items-center gap-2">
+            <CountryFlag value={item} />
+            {countryInfo(item)?.name ?? item}
+          </span>
+        ),
+      })),
+    ],
+    [countries],
   );
   const tagOptions = React.useMemo(
     () => [{ value: ALL, label: '全部标签' }, ...tags.map((tag) => ({ value: tag, label: tag }))],
@@ -232,6 +255,14 @@ export function CustomerFilters({
         value={values.hasEmail}
         options={EMAIL_OPTIONS}
         onValueChange={(hasEmail) => onChange({ hasEmail: hasEmail as HasEmailFilter })}
+        disabled={disabled}
+      />
+
+      <FilterSelect
+        label="国家"
+        value={values.country || ALL}
+        options={countryOptions}
+        onValueChange={(country) => onChange({ country: country === ALL ? '' : country })}
         disabled={disabled}
       />
 

@@ -19,7 +19,14 @@ Table.displayName = 'Table';
 
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <thead ref={ref} className={cn('sticky top-0 z-10 bg-muted/55 [&_tr]:border-b', className)} {...props} />
+    <thead
+      ref={ref}
+      className={cn(
+        'sticky top-0 z-10 bg-surface/95 backdrop-blur-sm [&_tr]:border-b [&_tr]:border-border/70',
+        className,
+      )}
+      {...props}
+    />
   ),
 );
 TableHeader.displayName = 'TableHeader';
@@ -33,7 +40,7 @@ TableBody.displayName = 'TableBody';
 
 const TableFooter = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <tfoot ref={ref} className={cn('border-t bg-muted/50 font-medium [&>tr]:last:border-b-0', className)} {...props} />
+    <tfoot ref={ref} className={cn('border-t border-border/70 bg-surface/60 font-medium [&>tr]:last:border-b-0', className)} {...props} />
   ),
 );
 TableFooter.displayName = 'TableFooter';
@@ -43,7 +50,8 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        'border-b transition-colors hover:bg-accent/55 data-[state=selected]:bg-primary/5 data-[disabled]:opacity-60',
+        'border-b border-border/60 transition-colors last:border-0',
+        'hover:bg-accent/70 data-[state=selected]:bg-primary/5 data-[disabled]:opacity-60',
         className,
       )}
       {...props}
@@ -57,7 +65,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        'h-10 whitespace-nowrap px-3 text-left align-middle text-xs font-semibold tracking-normal text-muted-foreground',
+        'h-11 whitespace-nowrap px-3 text-left align-middle text-xs font-medium tracking-normal text-muted-foreground',
         className,
       )}
       {...props}
@@ -68,7 +76,7 @@ TableHead.displayName = 'TableHead';
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn('px-3 py-3 align-middle', className)} {...props} />
+    <td ref={ref} className={cn('px-3 py-3.5 align-middle', className)} {...props} />
   ),
 );
 TableCell.displayName = 'TableCell';
@@ -108,13 +116,13 @@ function SortableHeader({
         type="button"
         onClick={() => onSort(field)}
         className={cn(
-          'flex h-10 w-full items-center gap-1 px-3 text-left text-xs font-semibold tracking-normal transition-colors',
-          'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'flex h-11 w-full items-center gap-1 px-3 text-left text-xs font-medium tracking-normal transition-colors',
+          'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70',
           active ? 'text-foreground' : 'text-muted-foreground',
         )}
       >
         {children}
-        <Icon className={cn('h-3.5 w-3.5 shrink-0', active ? 'opacity-90' : 'opacity-40')} aria-hidden />
+        <Icon className={cn('h-3.5 w-3.5 shrink-0', active ? 'text-primary opacity-90' : 'opacity-40')} aria-hidden />
       </button>
     </TableHead>
   );

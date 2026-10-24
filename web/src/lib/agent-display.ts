@@ -10,5 +10,5 @@ export function agentFailureLabel(code: string): string {
  return '本次处理未完成，请稍后重试或联系管理员。';
 }
 export function agentRunLabel(kind:string):string {
- return ({chat:'业务对话',scratchpad:'随手记整理',customer_analysis:'客户分析',mail_analysis:'邮件分析',evaluation:'功能检查'} as Record<string,string>)[kind] ?? '业务处理';
+ return ({chat:'业务对话',scratchpad:'随手记整理',customer_analysis:'客户分析',mail_analysis:'邮件分析',evaluation:'自检'} as Record<string,string>)[kind] ?? '业务处理';
 }

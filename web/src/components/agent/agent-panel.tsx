@@ -94,7 +94,7 @@ function routeContext(pathname: string, search: string): AgentContext {
 
 function contextLabel(context: AgentContext): string {
   if (context.type === 'customer') return '当前客户';
-  if (context.type === 'mail') return '当前邮件线程';
+  if (context.type === 'mail') return '当前这封邮件';
   return '当前项目';
 }
 
@@ -112,17 +112,17 @@ function sameContext(left: AgentContext, right: AgentContext): boolean {
 
 function suggestions(context: AgentContext): string[] {
   if (context.type === 'customer') return ['帮我给这个客户写第一封开发信', '请给这个客户写报价说明邮件，不要发送', '请给这个客户写样品回复邮件，不要发送', '请给这个客户写跟进邮件，不要发送', '总结客户时间线'];
-  if (context.type === 'mail') return ['请回复这封询盘邮件，不要发送', '请写样品回复邮件，不要发送', '请写报价说明邮件，不要发送', '总结当前邮件线程'];
+  if (context.type === 'mail') return ['请回复这封询盘邮件，不要发送', '请写样品回复邮件，不要发送', '请写报价说明邮件，不要发送', '总结这封邮件的往来'];
   return ['总结今天的销售工作区', '有哪些逾期客户需要优先处理？', '给我一份今日工作建议'];
 }
 
 function actionLabel(toolName: string): string {
   const labels: Record<string, string> = {
-    search_customers: '检索客户',
+    search_customers: '查找客户',
     prepare_first_outreach_draft: '准备并保存开发信草稿',
     get_current_customer: '读取当前客户',
     get_customer_timeline: '读取客户时间线',
-    get_mail_thread: '读取邮件线程',
+    get_mail_thread: '读取邮件往来',
     get_customer_followups: '读取跟进记录',
     get_customer_quotations: '读取报价记录',
     get_dashboard_summary: '读取仪表盘',
@@ -142,7 +142,7 @@ function actionLabel(toolName: string): string {
     save_mail_followup_record: '确认保存跟进记录',
   };
   return labels[toolName] ?? ({
-    search_product_knowledge:'检索项目知识',list_customer_attachments:'查看客户附件',read_customer_attachment:'读取附件正文',
+    search_product_knowledge:'查项目资料',list_customer_attachments:'查看客户附件',read_customer_attachment:'读取附件正文',
   } as Record<string,string>)[toolName] ?? '处理业务资料';
 }
 
@@ -494,7 +494,7 @@ export function AgentPanel(): React.JSX.Element | null {
     <WorkspaceDrawer
       title="销售助手"
       onClose={() => setOpen(false)}
-      className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-l bg-card shadow-[var(--workspace-panel-shadow)] sm:top-16 sm:w-[min(520px,100vw)] lg:w-[560px]"
+      className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-border/70 bg-card shadow-[var(--shadow-pop)] sm:inset-y-3 sm:right-3 sm:w-[min(520px,calc(100vw-1.5rem))] sm:rounded-3xl sm:border lg:w-[560px]"
     >
       <div className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-gradient-to-b from-primary/[0.06] to-transparent px-4 py-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary ring-1 ring-primary/15">
@@ -660,7 +660,7 @@ export function AgentPanel(): React.JSX.Element | null {
                 {message.role === 'assistant' && message.uiAction && <Button type="button" className="mt-3" onClick={() => openOutreachComposer(message.uiAction!)}>打开首封开发信</Button>}
               </article>
             ))}
-            {sending && <div className="mr-20 flex items-center gap-2 rounded-xl border bg-card px-3 py-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在读取 CRM 数据并分析…</div>}
+            {sending && <div className="mr-20 flex items-center gap-2 rounded-2xl border border-border/80 bg-card shadow-card px-3 py-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在读取 CRM 数据并分析…</div>}
           </div>
 
           {error && <p role="alert" className="mx-4 mb-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}

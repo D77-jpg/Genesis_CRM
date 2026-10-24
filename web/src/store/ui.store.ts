@@ -69,7 +69,8 @@ interface UiState {
 
 export const useUiStore = create<UiState>()((set, get) => ({
   theme: detectInitialTheme(),
-  sidebarCollapsed: readStorage<boolean>(STORAGE_KEYS.sidebar, false),
+  // 侧边栏每次进入都默认展开（折叠只是当前会话内的临时操作，不做持久化）
+  sidebarCollapsed: false,
   mobileNavOpen: false,
   scratchpadOpen: false,
   agentOpen: false,
@@ -97,7 +98,6 @@ export const useUiStore = create<UiState>()((set, get) => ({
   },
 
   setSidebarCollapsed: (collapsed) => {
-    writeStorage(STORAGE_KEYS.sidebar, collapsed);
     set({ sidebarCollapsed: collapsed });
   },
 

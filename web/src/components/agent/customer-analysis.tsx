@@ -196,13 +196,13 @@ export function CustomerAnalysisView({ analysisId, onRecordsChanged }: { analysi
         {followUpLocked && analysis.scheduledAt && <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-300">已安排：{formatDateTime(analysis.scheduledAt)}</p>}
       </section>
 
-      <Button type="button" variant="ghost" className="mt-4 w-full" onClick={clearAnalysis}>返回 Agent 对话</Button>
+      <Button type="button" variant="ghost" className="mt-4 w-full" onClick={clearAnalysis}>返回对话</Button>
 
       <AlertDialog open={confirmAction !== null} onOpenChange={(open) => { if (!open) { setConfirmAction(null); setReviewed(false); } }}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>{confirmAction === 'email' ? '确认保存开发信草稿？' : '确认安排下一次跟进？'}</AlertDialogTitle><AlertDialogDescription>{confirmAction === 'email' ? '邮件会保存到草稿箱，审核后可再发送。' : `将把客户的下一次跟进时间更新为 ${dueAt ? formatDateTime(new Date(dueAt)) : '所选时间'}。`}</AlertDialogDescription></AlertDialogHeader>
           <label className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm"><Checkbox checked={reviewed} onCheckedChange={(value) => setReviewed(value === true)} /><span>{confirmAction === 'email' ? '我已核对收件对象、英文主题和正文，仅保存草稿。' : '我已核对跟进时间和目的，确认写入客户记录。'}</span></label>
-          <div className="flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />确认动作会记录操作人、时间和结果，并受幂等保护。Agent 没有直接发送邮件的能力。</div>
+          <div className="flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />每次确认都会记录是谁做的、什么时候、结果如何；同一个动作不会重复执行。AI 不能自己发邮件，必须由你确认。</div>
           <AlertDialogFooter><AlertDialogCancel disabled={saving}>返回核对</AlertDialogCancel><AlertDialogAction disabled={!reviewed || saving} onClick={(event) => { event.preventDefault(); void confirm(); }}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmAction === 'email' ? <Mail className="h-4 w-4" /> : <CalendarClock className="h-4 w-4" />}{confirmAction === 'email' ? '确认保存草稿' : '确认安排跟进'}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
