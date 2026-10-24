@@ -17,7 +17,7 @@
     "test:lead-import": "node --require ./tests/os-user-info.cjs --import tsx --test tests/prospect-import.test.ts",
     "test:import": "node --require ./tests/os-user-info.cjs --import tsx --test tests/customer-import.test.ts",
     "test:country": "node --require ./tests/os-user-info.cjs --import tsx --test tests/country-normalize.test.ts",
-    "test:mail": "node --require ./tests/os-user-info.cjs --import tsx --test tests/mail-center.test.ts tests/pop3-client.test.ts tests/letter-signature.test.ts",
+    "test:mail": "node --require ./tests/os-user-info.cjs --import tsx --test tests/mail-center.test.ts tests/pop3-client.test.ts tests/letter-signature.test.ts tests/letter-validator.test.ts",
     "test:template-feedback": "node --require ./tests/os-user-info.cjs --import tsx --test tests/template-feedback.test.ts",
     "test:scratchpad": "node --require ./tests/os-user-info.cjs --import tsx --test tests/scratchpad.test.ts",
     "test:knowledge": "node --require ./tests/os-user-info.cjs --import tsx --test tests/project-knowledge.test.ts",
