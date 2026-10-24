@@ -142,13 +142,13 @@ jobs:
           npm ci --prefix web --install-links=true
       - name: Guarded braces regression (actual locked web consumers)
         run: npm run test:braces --prefix web
-      # Existing SheetJS xlsx advisories GHSA-4r6h-8v6p-xvw6 and
-      # GHSA-5pgg-2g8v-p4x9 have no npm fix (review by 2026-10-26).
-      # All other high/critical advisories fail CI; revisit this exception at expiry.
-      - name: Server audit (temporary xlsx exception)
-        run: node scripts/audit-gate.cjs server xlsx
-      - name: Web audit (temporary xlsx exception)
-        run: node scripts/audit-gate.cjs web xlsx
+      # Every high/critical production advisory fails CI. xlsx is no longer exempt:
+      # SheetJS 0.20.3 is installed from the official CDN tarball, which is outside
+      # GHSA-4r6h-8v6p-xvw6 and GHSA-5pgg-2g8v-p4x9.
+      - name: Server audit
+        run: node scripts/audit-gate.cjs server
+      - name: Web audit
+        run: node scripts/audit-gate.cjs web
       - name: Install pinned Gitleaks v8.24.0
         run: |
           curl --fail --location --retry 3 --silent --show-error \

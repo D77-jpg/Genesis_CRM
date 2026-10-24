@@ -9,6 +9,7 @@
     "build": "rimraf dist && tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "smoke:xlsx": "node --import tsx scripts/smoke-xlsx.ts",
     "seed": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/seed.ts",
     "reset": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/seed.ts --reset",
     "test:name": "node --require ./tests/os-user-info.cjs --import tsx --test tests/company-name.test.ts",
@@ -64,7 +65,7 @@
     "pdf-parse": "2.4.5",
     "pdfkit": "^0.20.2",
     "sanitize-html": "^2.17.7",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.6.7"
   },
   "devDependencies": {
