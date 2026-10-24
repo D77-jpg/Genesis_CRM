@@ -12,6 +12,16 @@ export const objectIdSchema = z
 
 export const idParamsSchema = z.object({ id: objectIdSchema });
 
+/**
+ * 可选的 ObjectId 关联字段。
+ * 前端把「没有选中项」写成空串是很常见的（例如跟进草稿没有 agentAnalysisId），
+ * 这里把 '' / null 一律当成「没传」，避免一个空洞变成 422「无效的 ID 格式」。
+ */
+export const optionalObjectIdSchema = z.preprocess(
+  (value) => (value === '' || value === null ? undefined : value),
+  objectIdSchema.optional(),
+);
+
 export const idsBodySchema = z.object({
   ids: z.array(objectIdSchema).min(1, '请至少选择一条记录').max(MAX_PAGE_SIZE * 5, '单次操作条数过多'),
 });

@@ -435,7 +435,9 @@ export function SendLetterDialog({
           })
         : sendLetter({
             customerId: customer!.id,
-            agentAnalysisId: initialDraft?.analysisId,
+            // 跟进草稿的 seed 里 analysisId 是空串，这里要收敛成 undefined，
+            // 否则后端会当成「无效的 ID」直接 422。
+            agentAnalysisId: initialDraft?.analysisId || undefined,
             templateId: attributedTemplate && attributedTemplate.subject === values.subject && attributedTemplate.content === values.content
                ? attributedTemplate.id : undefined,
             requestKey: requestKey.current,

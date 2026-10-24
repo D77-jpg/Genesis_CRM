@@ -3,7 +3,7 @@
  */
 import { z } from 'zod';
 import { LETTER_STATUS } from '../constants';
-import { idParamsSchema, isoDateSchema, objectIdSchema, paginationQuerySchema } from './common';
+import { idParamsSchema, isoDateSchema, objectIdSchema, optionalObjectIdSchema, paginationQuerySchema } from './common';
 
 const letterStatusSchema = z.enum(LETTER_STATUS);
 
@@ -22,13 +22,13 @@ const htmlContentSchema = z
 export const sendLetterSchema = z.object({
   scheduledAt: z.string().datetime().transform((v) => new Date(v)).optional(),
   requestKey: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/).optional(),
-  agentTaskId:objectIdSchema.optional(),
-  agentAnalysisId: objectIdSchema.optional(),
-  replyToId: objectIdSchema.optional(),
+  agentTaskId: optionalObjectIdSchema,
+  agentAnalysisId: optionalObjectIdSchema,
+  replyToId: optionalObjectIdSchema,
   /** 目标客户；也可通过 URL /customers/:id/letters 传入 */
-  customerId: objectIdSchema.optional(),
+  customerId: optionalObjectIdSchema,
   /** 仅在 subject/content 均与同项目模板原文完全一致时接受归因。 */
-  templateId: objectIdSchema.optional(),
+  templateId: optionalObjectIdSchema,
   // 不在校验器中 trim 原始主题：templateId 的原文一致性校验必须能看到请求原值。
   subject: z.string().min(1, '邮件主题为必填项').max(300, '邮件主题不能超过 300 个字符')
     .refine((v) => v.trim().length > 0, '邮件主题为必填项'),
@@ -79,7 +79,7 @@ export const reviewLetterSchema = z
 
 export const listLettersQuerySchema = paginationQuerySchema.extend({
   /** 按客户过滤 */
-  customerId: objectIdSchema.optional(),
+  customerId: optionalObjectIdSchema,
   /** 关键字：主题 / 收件人 / 收件邮箱 */
   search: z.string().trim().max(200).optional(),
   status: z.enum(['all', 'draft', 'sent', 'failed']).optional(),
