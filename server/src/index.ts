@@ -3,6 +3,7 @@ import {stopKnowledgeIndexWorker} from './services/knowledge/index.service';
 import {stopAgentTaskWorker} from './services/agent/task.service';
 import {semanticPool} from './services/knowledge/embedding';
 import {startProspectingScheduler, stopProspectingScheduler} from './services/prospecting/scheduler';
+import {startOutreachFollowUpWorker} from './services/outreach-followup.service';
 /**
  * 服务启动入口
  * ------------------------------------------------------------------
@@ -52,6 +53,7 @@ async function bootstrap(): Promise<void> {
     mailTimers.push(setInterval(() => void runMailQueue(), env.MAIL_WORKER_INTERVAL_MS));
     mailTimers.push(setInterval(() => void syncInbox(), env.IMAP_SYNC_INTERVAL_MS));
     startProspectingScheduler();
+    startOutreachFollowUpWorker();
 
     server.listen(env.PORT, env.HOST, () => {
       logger.info('==============================================');

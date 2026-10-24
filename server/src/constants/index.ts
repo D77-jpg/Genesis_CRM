@@ -32,7 +32,19 @@ export const MAIL_CHANNEL = ['mock', 'smtp'] as const;
 export type MailChannel = (typeof MAIL_CHANNEL)[number];
 
 /** 客户来源（数据溯源：手工 / Excel / 初始化 / 集成 API 同步 / 自动开发候选） */
-export const CUSTOMER_SOURCE = ['manual', 'excel', 'seed', 'integration', 'prospecting'] as const;
+export const CUSTOMER_SOURCE = ['manual', 'excel', 'seed', 'integration', 'prospecting', 'mail'] as const;
+
+/* ---------------------------- 开发信跟进节奏 ---------------------------- */
+
+/**
+ * 开发信跟进间隔（天）：第 1 封发出后 3 天没回复→提醒第 2 封；
+ * 第 2 封后 7 天没回复→提醒第 3 封；第 3 封后 14 天仍无回复→判定弃用。
+ */
+export const OUTREACH_FOLLOWUP_DAYS = [3, 7, 14] as const;
+/** 最多跟进到第几封（含首次开发信） */
+export const OUTREACH_MAX_STEPS = 3;
+/** 三次开发无回复时打在客户身上的标签 */
+export const OUTREACH_ABANDON_TAG = '三次无回复';
 export type CustomerSource = (typeof CUSTOMER_SOURCE)[number];
 
 /* ---------------------------- Integration API v1 ---------------------------- */

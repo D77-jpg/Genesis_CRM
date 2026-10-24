@@ -2,7 +2,8 @@ import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesSubjects,type Sales
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
 import {knowledgeForModel} from './knowledge-types';
-import {Project} from '../../models';
+import {Customer,Project} from '../../models';
+import {resolveSignerName} from '../signer.service';
 import {getCurrentMailSender} from '../mail-account.service';
 import {agentMailOrThrow,inboundAgentScope} from './mail-access';
 import {chargeTaskBudget} from './task-budget';
@@ -182,7 +183,10 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     const knowledge=knowledgeContext.sources.map(k=>({...k,approved:true}));
     const project=await Project.findById(requireProjectId(actor)).select('companyName website senderName');
     const sender=await getCurrentMailSender(actor.projectId!,actor.id);
-    const seller={companyName:project?.companyName??'Company name pending confirmation',senderName:sender.account?.displayName||actor.displayName||project?.senderName||actor.displayName,senderEmail:sender.account?.email,website:project?.website};
+    // 落款跟着「这封信该由谁发」走：客户负责人 → 当前账号 → 项目署名
+    const owner=context.customer?await Customer.findById(context.customer.id).select('ownerId').lean():null;
+    const signerName=await resolveSignerName({projectId:requireProjectId(actor),ownerId:owner?.ownerId,actorId:actor.id});
+    const seller={companyName:project?.companyName??'Company name pending confirmation',senderName:signerName,senderEmail:sender.account?.email,website:project?.website};
     const overhead=JSON.stringify({knowledgeContext,seller,customer:context.customer,salesRequirements:prepared.requirements,userRequest:options?.userRequest,taskType:options?.taskKind}).length+500;
     const limited=limitRecentItems(context.messages,m=>m.text,(m,text)=>({...m,text}),Math.max(1000,env.AI_MAX_INPUT_CHARS-overhead));
     const modelInput={taskType:options?.taskKind??'inquiry_reply' as SalesMailKind,userRequest:options?.userRequest,salesRequirements:prepared.requirements,customer:context.customer,messages:limited.items,productKnowledge:knowledge,seller,knowledgeContext};

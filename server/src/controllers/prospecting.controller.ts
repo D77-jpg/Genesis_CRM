@@ -8,9 +8,17 @@ import {
   approveProspect, getProspectingConfig, prospectingReport, prospectingToday, rejectProspect,
   startProspecting, updateProspectingConfig,syncProspectCustomer,refreshProspectContact,
 } from '../services/prospecting/prospecting.service';
+import { importProspects } from '../services/prospecting/import-prospects';
+import { cancelEnrichRun, getEnrichRun, previewEnrich, startEnrichRun } from '../services/prospecting/enrich.service';
 
 export const todayHandler = asyncHandler(async (req: Request, res: Response) => {
-  sendSuccess(res, await prospectingToday(req.user!));
+  const query = req.query as { status?: string; limit?: string; offset?: string };
+  const options = {
+    status: query.status,
+    limit: query.limit === undefined ? undefined : Number(query.limit),
+    offset: query.offset === undefined ? undefined : Number(query.offset),
+  };
+  sendSuccess(res, await prospectingToday(req.user!, options));
 });
 
 export const runHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -26,6 +34,28 @@ export const syncCustomerHandler=asyncHandler(async(req:Request,res:Response)=>{
 
 export const rejectHandler = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, await rejectProspect(req.user!, req.params.id, (req.body as { reason?: string }).reason));
+});
+
+export const importHandler = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await importProspects(req.user!, req.body as { rows: unknown[]; dryRun?: boolean }));
+});
+
+export const enrichPreviewHandler = asyncHandler(async (req: Request, res: Response) => {
+  const scope = req.query as { grade?: string; source?: string };
+  sendSuccess(res, await previewEnrich(req.user!, scope));
+});
+
+export const startEnrichHandler = asyncHandler(async (req: Request, res: Response) => {
+  const body = req.body as { modes: ('site' | 'hunter' | 'discover')[]; scope?: { grade?: string; source?: string }; limit?: number };
+  sendSuccess(res, await startEnrichRun(req.user!, body), 202);
+});
+
+export const enrichRunHandler = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await getEnrichRun(req.user!, req.params.id));
+});
+
+export const cancelEnrichHandler = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await cancelEnrichRun(req.user!, req.params.id));
 });
 
 export const reportHandler = asyncHandler(async (req: Request, res: Response) => {

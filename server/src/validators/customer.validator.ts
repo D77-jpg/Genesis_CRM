@@ -168,6 +168,8 @@ export const listCustomersQuerySchema = paginationQuerySchema.extend({
   /** 状态筛选，all 或不传表示全部 */
   status: customerStatusFilterSchema.optional(),
   industry: z.string().trim().max(120).optional(),
+  /** 国家筛选：存的是统一后的中文简称，服务端按全部别名匹配 */
+  country: z.string().trim().max(120).optional(),
   grade: z.string().trim().max(20).optional(),
   source: customerSourceSchema.optional(),
   /** 业务来源筛选（精确匹配自由字符串；'all' / 空 = 不限） */
@@ -357,3 +359,16 @@ export type ImportRow = z.infer<typeof importRowSchema>;
 export type BulkTagsInput = z.infer<typeof bulkAddTagsSchema>;
 export type BulkAssignOwnerInput = z.infer<typeof bulkAssignOwnerSchema>;
 export type BulkSetFollowUpInput = z.infer<typeof bulkSetFollowUpSchema>;
+
+/**
+ * 新建客户前的查重预检：把要填的邮箱 / 网站 / 公司名 / 电话带上来，
+ * 返回库里可能重复的客户，前端先提示一句再保存。
+ */
+export const duplicateCheckQuerySchema = z.object({
+  email: z.string().trim().max(200).optional(),
+  website: z.string().trim().max(300).optional(),
+  company: z.string().trim().max(200).optional(),
+  name: z.string().trim().max(200).optional(),
+  phone: z.string().trim().max(60).optional(),
+  excludeId: z.string().trim().optional(),
+});

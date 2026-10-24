@@ -4,7 +4,6 @@
  * 结尾不允许每个业务员各写一套，统一由服务端追加：
  *   第一行  当前使用账号的姓名（个人发件邮箱显示名 → 登录账号姓名 → 项目署名）
  *   第二行  固定职位与公司
- *   细线
  *   固定联系方式、站点与资质行
  *
  * 三条约束：
@@ -36,12 +35,18 @@ export const SIGNATURE_MARKER = LETTER_SIGNATURE.lines[3];
 const SIGNOFF_LINE = /^(?:(?:best|kind|warm|many)(?:\s+(?:regards|wishes|thanks))?|regards|sincerely|thanks)[,.!\s]*$/i;
 const PLACEHOLDER_ONLY = /^\{\{\s*(?:senderName|companyName|companyWebsite|senderEmail)\s*\}\}$/i;
 
+/** 账号名常常是全大写（CARLOS）：对外署名转成正常大小写，缩写（ISO/USA）保持原样 */
+const tidySignatureName = (value: string) => value
+  .split(/\s+/)
+  .map((token) => (/^[A-Z]{4,}$/.test(token) ? token[0] + token.slice(1).toLowerCase() : token))
+  .join(' ');
+
 /** 结尾第一行：优先当前账号姓名，其次项目署名，最后兜底 */
 export function signatureName(preferred?: string | null, fallback?: string | null): string {
   const first = (preferred ?? '').replace(/[\r\n]+/g, ' ').trim();
-  if (first) return first;
+  if (first) return tidySignatureName(first);
   const second = (fallback ?? '').replace(/[\r\n]+/g, ' ').trim();
-  return second || 'Sales Team';
+  return second ? tidySignatureName(second) : 'Sales Team';
 }
 
 /** 纯文本版签名（生成稿 / contentText / 邮件 text 部分） */
@@ -70,7 +75,7 @@ export function renderSignatureHtml(name: string): string {
     ? `<img src="${escapeHtml(logoUrl)}" alt="Genesis Packaging" width="160" style="display:block;border:0;width:160px;height:auto;margin:6px 0">`
     : '';
   return `<div style="margin-top:14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6">`
-    + `<strong>${who}</strong><br>${escapeHtml(LETTER_SIGNATURE.title)}<br>${logo}<hr><br>${lines}</div>`;
+    + `<strong>${who}</strong><br>${escapeHtml(LETTER_SIGNATURE.title)}<br>${logo}<br>${lines}</div>`;
 }
 
 /** 把正文里的固定签名切出来（名字取签名块第一行），没有签名时 body 原样返回 */

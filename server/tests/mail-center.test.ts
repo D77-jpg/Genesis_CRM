@@ -921,3 +921,64 @@ test('87 审核结论决定草稿能否发送，不通过无需理由、审核�
   const rejectedOnly = await request('GET', '/letters?review=rejected&limit=50', salesToken, undefined, 200);
   assert.ok(rejectedOnly.items.every((item: { review?: { decision: string } }) => item.review?.decision === 'rejected'));
 });
+
+test('开发信跟进节奏：3/7/14 排期、回信停表、三次无回复弃用', async () => {
+  const outreach = await import('../src/services/outreach-followup.service');
+  const day = 86_400_000;
+  const cadenceEmail = `outreach.cadence.${suffix}@example.com`;
+  const customer = await models.Customer.create({
+    projectId, ownerId: salesId, name: `Outreach Cadence ${suffix}`, email: cadenceEmail,
+    status: 'pending', source: 'manual', tags: [],
+  });
+  const admin = { id: adminId, projectId, role: 'admin', username: 'admin' } as unknown as Parameters<typeof outreach.listOutreachFollowUps>[1];
+
+  // 第一封发出 → 3 天后排下一次
+  await outreach.scheduleOutreachFollowUp({ projectId, customerId: customer._id, outreachStep: 1, sentAt: new Date() });
+  let doc = await models.Customer.findById(customer._id).lean();
+  assert.equal(doc?.outreachStep, 1);
+  assert.equal(Math.round(((doc?.nextFollowUpAt as Date).getTime() - Date.now()) / day), 3);
+
+  // 逾期未回复 → 出现在跟进提醒，提示发第 2 封
+  await models.Customer.updateOne({ _id: customer._id }, { $set: { nextFollowUpAt: new Date(Date.now() - 2 * day) } });
+  const dueList = await outreach.listOutreachFollowUps(projectId, admin);
+  const item = dueList.items.find((row) => row.customerId === String(customer._id));
+  assert.equal(item?.nextStep, 2);
+  assert.equal(item?.overdueDays, 2);
+
+  // 客户回信 → 立刻停表
+  await mailModels.MailMessage.create({
+    projectId, dedupKey: `cadence-reply-${suffix}`, threadId: `cadence-${suffix}`, from: cadenceEmail,
+    subject: 'Re: cadence fixture', sentAt: new Date(), customerId: customer._id, visibility: 'private',
+  });
+  await outreach.syncOutreachFollowUps(projectId);
+  doc = await models.Customer.findById(customer._id).lean();
+  assert.equal(doc?.nextFollowUpAt, null);
+  assert.equal(doc?.status, 'replied');
+  const afterReply = await outreach.listOutreachFollowUps(projectId, admin);
+  assert.ok(!afterReply.items.some((row) => row.customerId === String(customer._id)));
+
+  // 第三封后 14 天仍无回复 → 弃用
+  await mailModels.MailMessage.deleteMany({ customerId: customer._id });
+  await models.Customer.updateOne({ _id: customer._id }, { $set: {
+    status: 'contacted', outreachStep: 3, outreachRepliedAt: null,
+    outreachLastAt: new Date(Date.now() - 15 * day), nextFollowUpAt: new Date(Date.now() - day),
+  } });
+  await outreach.syncOutreachFollowUps(projectId);
+  doc = await models.Customer.findById(customer._id).lean();
+  assert.equal(doc?.status, 'lost');
+  assert.ok((doc?.tags ?? []).includes('三次无回复'));
+  assert.ok(doc?.outreachAbandonedAt);
+});
+test('跟进草稿：按上一封生成第 2 封，不带签名；没发过信的客户报错', async () => {
+  const draft = await request('POST', '/letters/follow-up-draft', salesToken, { customerId }, 200, '');
+  assert.match(String(draft.subject), /^re:\s/i);
+  assert.ok(Number(draft.step) >= 2);
+  assert.ok(String(draft.text).length > 80);
+  assert.ok(!/best regards|sincerely/i.test(String(draft.text)), '草稿不应自带签名，弹窗会追加标准签名');
+  assert.equal(draft.previousSubject.length > 0, true);
+  const bare = await models.Customer.create({
+    projectId, ownerId: salesId, name: 'Bare Follow-up ' + suffix, email: 'bare.followup.' + suffix + '@example.com',
+    status: 'pending', source: 'manual',
+  });
+  await request('POST', '/letters/follow-up-draft', salesToken, { customerId: String(bare._id) }, 400, '');
+});

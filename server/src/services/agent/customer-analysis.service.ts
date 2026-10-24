@@ -16,6 +16,7 @@ import { getCurrentMailSender } from '../mail-account.service';
 import type { AgentProvider } from './provider';
 import {
   Project,
+  Customer,
   AgentAction,
   AgentCustomerAnalysis,
   AgentRun,
@@ -29,7 +30,8 @@ import { MailMessage } from '../../models/MailMessage';
 import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
 import { requireProjectId } from '../../utils/access';
-import { renderLetterContent, signatureName } from '../letter-signature';
+import { renderLetterContent } from '../letter-signature';
+import { resolveSignerName } from '../signer.service';
 import { getCustomerByIdOrThrow, updateCustomer } from '../customer.service';
 import { sendLetter } from '../letter.service';
 import { getCustomerTimeline } from '../timeline.service';
@@ -194,10 +196,13 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     {
       const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
       const sender = await getCurrentMailSender(String(requireProjectId(actor)), actor.id);
+      // 落款跟着「这封信该由谁发」走：客户负责人 → 当前账号 → 项目署名
+      const owner = await Customer.findById(input.customerId).select('ownerId').lean();
+      const signerName = await resolveSignerName({ projectId: requireProjectId(actor), ownerId: owner?.ownerId, actorId: actor.id });
       context.input.firstOutreach = Boolean(options?.firstOutreach);
       context.input.userRequest = options?.userRequest;
       context.input.seller = { companyName: project?.companyName || 'Company name pending confirmation',
-        website: project?.website, senderName: sender.account?.displayName || actor.displayName || project?.senderName || actor.displayName,
+        website: project?.website, senderName: signerName,
         senderEmail: sender.account?.email };
     }
     const serializedInput = JSON.stringify(context.input);
@@ -353,7 +358,9 @@ export async function saveAnalysisEmailDraft(id: string, input: ConfirmAgentAnal
     approvalStatus: 'approved', executionStatus: 'pending', approvedBy: new Types.ObjectId(actor.id), approvedAt: new Date(),
   });
   try {
-    const content = renderLetterContent(locked.emailDraft.bodyText, signatureName(actor.displayName));
+    const owner = await Customer.findById(locked.customerId).select('ownerId').lean();
+    const signer = await resolveSignerName({ projectId: requireProjectId(actor), ownerId: owner?.ownerId, actorId: actor.id });
+    const content = renderLetterContent(locked.emailDraft.bodyText, signer);
     const result = await sendLetter({
       customerId: String(locked.customerId), subject: locked.emailDraft.subject, content, markAsDeveloped: false,
       saveAsDraft: true, requestKey: `agent-analysis-email:${locked.id}`,

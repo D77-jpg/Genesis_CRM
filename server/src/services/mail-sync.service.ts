@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { Types } from 'mongoose';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ImapFlow } from 'imapflow';
@@ -6,7 +7,8 @@ import { Pop3Client, type Pop3Connection, type Pop3Options } from './pop3-client
 import { simpleParser, type AddressObject } from 'mailparser';
 import env from '../config/env';
 import { MailMessage, MailSyncState } from '../models/MailMessage';
-import { Customer, DevelopmentLetter, Project } from '../models';
+import { Customer, DevelopmentLetter, Project, User } from '../models';
+import { Prospect } from '../models/Prospect';
 import { attachmentAllowed, mailError, normalizeSubject, safeMailHtml } from './mail-security';
 import { createLogger } from '../config/logger';
 import { htmlToPlainText } from '../utils/text';
@@ -72,6 +74,67 @@ export async function findThread(customerId: unknown, subject: string, reference
 }
 
 /** Shared by real IMAP and MIME fixture tests. No credentials in this interface. */
+const FREE_MAIL_DOMAINS = new Set(['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.jp', 'hotmail.com', 'outlook.com',
+  'qq.com', '163.com', '126.com', 'foxmail.com', 'aol.com', 'icloud.com', 'me.com', 'live.com', 'msn.com',
+  'proton.me', 'protonmail.com', 'mail.com', 'gmx.com', 'yandex.com', 'web.de']);
+
+/**
+ * 给一封来信找归属：客户的邮箱精确匹配优先，其次线索池（邮箱精确 / 公司域名）。
+ * 业务员只按自己名下的客户匹配，否则信关联到别人的客户后本人反而看不见。
+ */
+async function matchMailOwner(projectId: string, from: string, mailboxUserId?: string): Promise<{
+  customerId: Types.ObjectId | null; prospectId: Types.ObjectId | null;
+}> {
+  const sender = from.trim().toLowerCase();
+  if (!sender) return { customerId: null, prospectId: null };
+  const admin = mailboxUserId ? await isMailboxOwnerAdmin(mailboxUserId) : false;
+  const ownerScope = mailboxUserId && !admin ? { ownerId: new Types.ObjectId(mailboxUserId) } : {};
+  const customerHits = await Customer.find({ projectId, email: sender, ...ownerScope }).limit(2).select('_id').lean();
+  if (customerHits.length === 1) return { customerId: customerHits[0]._id as Types.ObjectId, prospectId: null };
+  if (customerHits.length > 1) return { customerId: null, prospectId: null };
+  const domain = sender.split('@')[1] || '';
+  const or: Record<string, unknown>[] = [{ emails: sender }];
+  if (domain && !FREE_MAIL_DOMAINS.has(domain)) or.push({ domain });
+  const prospectHits = await Prospect.find({ projectId, $or: or }).limit(2)
+    .select('_id customerId').lean();
+  if (prospectHits.length !== 1) return { customerId: null, prospectId: null };
+  const prospect = prospectHits[0] as { _id: Types.ObjectId; customerId?: Types.ObjectId };
+  if (!prospect.customerId) return { customerId: null, prospectId: prospect._id };
+  // 线索已经转成客户：挂到客户上，但业务员只能挂到自己名下的客户
+  const owned = await Customer.findOne({
+    _id: prospect.customerId, projectId, ...(admin ? {} : { ownerId: new Types.ObjectId(String(mailboxUserId)) }),
+  }).select('_id').lean();
+  return { customerId: owned ? prospect.customerId : null, prospectId: prospect._id };
+}
+
+async function isMailboxOwnerAdmin(userId: string): Promise<boolean> {
+  if (!Types.ObjectId.isValid(userId)) return false;
+  const owner = await User.findById(userId).select('role').lean();
+  return (owner as { role?: string } | null)?.role === 'admin';
+}
+
+/**
+ * 把「未关联客户」的历史邮件按发件人邮箱补上客户关联。
+ * 只处理发件人邮箱唯一命中一个客户的情况，模糊情况留给人工。
+ */
+export async function relinkMailCustomers(input: { projectId: string; limit?: number }): Promise<{
+  scanned: number; linked: number; prospects: number; unmatched: number;
+}> {
+  const limit = Math.min(Math.max(input.limit ?? 5000, 1), 20000);
+  const rows = await MailMessage.find({ projectId: input.projectId, deleted: { $ne: true }, customerId: null })
+    .select('_id from mailboxUserId').limit(limit).lean();
+  let linked = 0; let prospects = 0; let unmatched = 0;
+  for (const row of rows as { _id: Types.ObjectId; from?: string; mailboxUserId?: Types.ObjectId }[]) {
+    const from = String(row.from || '');
+    if (!from.trim()) { unmatched += 1; continue; }
+    const owner = await matchMailOwner(input.projectId, from, row.mailboxUserId ? String(row.mailboxUserId) : undefined);
+    if (!owner.customerId && !owner.prospectId) { unmatched += 1; continue; }
+    await MailMessage.updateOne({ _id: row._id }, { $set: { customerId: owner.customerId, prospectId: owner.prospectId } });
+    if (owner.customerId) linked += 1; else prospects += 1;
+  }
+  return { scanned: rows.length, linked, prospects, unmatched };
+}
+
 export async function importMail(source: Buffer, account?: string, projectId?: string, mailbox?: {
   mailAccountId: string; userId: string; address: string;
 }) {
@@ -85,9 +148,7 @@ export async function importMail(source: Buffer, account?: string, projectId?: s
   const dedupKey = createHash('sha256').update(`${accountKey}|${messageId || createHash('sha256').update(source).digest('hex')}`).digest('hex');
   const exists = await MailMessage.findOne({ projectId: scopedProjectId, dedupKey });
   if (exists) return exists;
-  const matches = await Customer.find({ projectId: scopedProjectId, email: from,
-    ...(mailbox ? { ownerId: mailbox.userId } : {}) }).limit(2).select('_id');
-  const customerId = matches.length === 1 ? matches[0]._id : null;
+  const { customerId, prospectId } = await matchMailOwner(scopedProjectId, from, mailbox?.userId);
   const references = (Array.isArray(parsed.references) ? parsed.references : parsed.references ? [parsed.references] : []).slice(-50);
   const threadId = await findThread(customerId, parsed.subject || '', [...references, parsed.inReplyTo || ''], from, scopedProjectId, mailbox?.mailAccountId);
   const savedFiles: string[] = [];
@@ -109,7 +170,8 @@ export async function importMail(source: Buffer, account?: string, projectId?: s
       attachments.push({ ...meta, filename });
     }
     const sentAt = parsed.date && Number.isFinite(parsed.date.getTime()) ? parsed.date : new Date();
-    const doc = await MailMessage.create({ visibility: mailbox ? 'private' : 'project_shared', projectId: scopedProjectId, dedupKey, customerId, threadId, messageId, inReplyTo: parsed.inReplyTo,
+    const doc = await MailMessage.create({
+    prospectId, visibility: mailbox ? 'private' : 'project_shared', projectId: scopedProjectId, dedupKey, customerId, threadId, messageId, inReplyTo: parsed.inReplyTo,
       ...(mailbox ? { mailAccountId: mailbox.mailAccountId, mailboxUserId: mailbox.userId, mailboxAddress: mailbox.address } : {}),
       references, subject: (parsed.subject || '').slice(0, 998), normalizedSubject: normalizeSubject(parsed.subject || ''),
       from, fromName: parsed.from?.value[0]?.name, to: addresses(parsed.to), cc: addresses(parsed.cc),

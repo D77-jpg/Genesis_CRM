@@ -397,7 +397,7 @@ test('customer analysis separates sourced facts and suggestions, then saves only
   assert.ok(analysis.followUpPlan.sourceIds?.every((id: string) => analysis.sources.some((source) => source.sourceId === id)));
   const knownSources = new Set(analysis.sources.map((source) => source.sourceId));
   assert.ok(analysis.facts.flatMap((claim) => claim.sourceIds).every((id) => knownSources.has(id)));
-  assert.match(analysis.emailDraft.bodyText, /^Dear Olivia Stone,/);
+  assert.match(analysis.emailDraft.bodyText, /^Dear Olivia,/);
 
   const repeated = await analysisWorkflow.createCustomerAnalysis({
     customerId: customer.id, idempotencyKey: 'analysis-v12-create-0001',

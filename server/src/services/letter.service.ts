@@ -28,8 +28,6 @@ import {
   DevelopmentLetter,
   LetterTemplate,
   Project,
-  User,
-  UserMailAccount,
   type CustomerDocument,
   type ICustomer,
   type IDevelopmentLetter,
@@ -46,8 +44,10 @@ import {
   renderTemplate,
   type PlaceholderValues,
 } from '../utils/text';
+import { OUTREACH_MAX_STEPS } from '../constants';
 import { getCustomerByIdOrThrow } from './customer.service';
-import { ensureSignature, signatureName } from './letter-signature';
+import { ensureSignature } from './letter-signature';
+import { resolveSignerName } from './signer.service';
 import { getActiveChannel, getProjectActiveChannel } from './mailer.service';
 import { assertCustomerAccess, customerRefScope, projectScope, requireProjectId } from '../utils/access';
 import type { AuthUser } from '../types/express';
@@ -133,18 +133,12 @@ async function buildValues(customer: Partial<ICustomer>, signerName?: string): P
 }
 
 /**
- * 签名第一行取「当前使用账号」：个人发件邮箱显示名 → 登录账号姓名 → 项目署名。
- * 开发信结尾因此跟着账号走，而不是所有账号共用一个名字。
+ * 签名第一行取「实际发信的业务员」：客户负责人 → 当前账号 → 项目署名。
+ * 具体顺序见 services/signer.service.ts；开发信结尾因此跟着人走，
+ * 而不是所有账号共用一个名字（也不会退回成 Sales Team 这种泛称）。
  */
-async function resolveSignerName(projectId?: Types.ObjectId | string, userId?: string): Promise<string> {
-  if (userId) {
-    const account = await UserMailAccount.findOne({ userId, ...(projectId ? { projectId } : {}) }).select('displayName').lean();
-    if (account?.displayName) return signatureName(account.displayName);
-    const user = await User.findById(userId).select('displayName').lean();
-    if (user?.displayName) return signatureName(user.displayName);
-  }
-  const project = projectId ? await Project.findById(projectId).select('senderName').lean() : null;
-  return signatureName(project?.senderName, env.SENDER_NAME);
+async function signerNameFor(customer: Partial<ICustomer>, actorId?: string): Promise<string> {
+  return resolveSignerName({ projectId: customer.projectId, ownerId: customer.ownerId, actorId });
 }
 
 export interface RenderedLetter {
@@ -420,6 +414,8 @@ async function persistAndSend(options: {
   knowledgeRechecks?:Record<string,unknown>[];
   agentDraftId?:Types.ObjectId;
   agentOutreachId?: Types.ObjectId;
+  /** 重发同一封信时不要重复计开发封数 */
+  countAsOutreach?: boolean;
 }): Promise<SendLetterResult> {
   const {
     customer,
@@ -431,12 +427,20 @@ async function persistAndSend(options: {
     userId,
   } = options;
 
+  // 这是本轮开发的第几封：回复类邮件不算；已弃用的客户重新发信按新一轮算
+  const countedOutreach = options.countAsOutreach !== false;
+  const isOutreach = countedOutreach && !options.replyToId && !options.inReplyTo;
+  const currentStep = Number(customer.outreachStep ?? 0);
+  const outreachStep = isOutreach
+    ? (customer.outreachAbandonedAt ? 1 : Math.min(currentStep + 1, OUTREACH_MAX_STEPS))
+    : undefined;
+
   const rendered = await renderLetter(
     customer,
     subjectTemplate,
     contentTemplate,
     recipientEmailOverride,
-    await resolveSignerName(customer.projectId, userId),
+    await signerNameFor(customer, userId),
   );
   const sender = await resolveSenderIdentity(String(customer.projectId), userId, saveAsDraft);
   const activeChannel = sender.channel;
@@ -556,6 +560,7 @@ async function persistAndSend(options: {
       ...options.templateAttribution,
       status: options.scheduledAt ? 'scheduled' : 'queued', channel: activeChannel,
       messageId: newMessageId(), threadId, inReplyTo, references,
+      ...(outreachStep ? { outreachStep } : {}),
       scheduledAt: options.scheduledAt, nextAttemptAt: due, markAsDeveloped,
       sentBy: userId ? new Types.ObjectId(userId) : undefined,
       ...(prepared.tracking ? { tracking: prepared.tracking } : {}),
@@ -666,7 +671,7 @@ export async function resendLetter(
   const contentTemplate = input.content ?? original.template ?? original.content;
   const subjectTemplate = input.subject ?? original.subject;
   const priorReview = activeReview(original.review);
-  const signerName = await resolveSignerName(customer.projectId, actor?.id);
+  const signerName = await signerNameFor(customer, actor?.id);
 
   if (input.saveAsDraft) {
     if (original.status !== 'draft') throw ApiError.conflict('只有草稿可以继续保存');
@@ -708,6 +713,7 @@ export async function resendLetter(
     threadId: original.threadId,
     inReplyTo: original.inReplyTo,
     references: original.references,
+    countAsOutreach: false,
   });
 }
 
@@ -750,7 +756,7 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
     update = { $set: { review: { ...base, contentHash: reviewContentHash(letter.subject, letter.contentText) } } };
   } else {
     const contentTemplate = input.content ?? letter.template ?? letter.content;
-    const rendered = await renderLetter(customer, input.subject ?? letter.subject, contentTemplate, input.recipientEmail ?? letter.recipientEmail, await resolveSignerName(customer.projectId, actor?.id));
+    const rendered = await renderLetter(customer, input.subject ?? letter.subject, contentTemplate, input.recipientEmail ?? letter.recipientEmail, await signerNameFor(customer, actor?.id));
     update = {
       $set: {
         subject: rendered.subject,
@@ -860,7 +866,7 @@ export async function previewLetter(
   actor?: AuthUser,
 ): Promise<RenderedLetter> {
   const customer = await getCustomerByIdOrThrow(customerId, actor);
-  return renderLetter(customer, subject, content, recipientEmail, await resolveSignerName(customer.projectId, actor?.id));
+  return renderLetter(customer, subject, content, recipientEmail, await signerNameFor(customer, actor?.id));
 }
 
 export interface LetterStats {

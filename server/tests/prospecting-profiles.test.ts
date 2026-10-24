@@ -87,11 +87,11 @@ test('a chosen run snapshots settings and does not overwrite defaults even if co
   while(complete?.status==='running'&&Date.now()<until){await new Promise(resolve=>setTimeout(resolve,20));complete=await ProspectingRun.findById(run.id);}
   assert.equal(complete?.status,'completed');assert.equal(complete?.profileId,'a');assert.deepEqual(complete?.queries,['one-off fictional query']);assert.equal(complete?.settings?.enrichLimit,1);assert.equal(complete?.settings?.hunterLimit,0);assert.equal(complete?.settings?.minScore,0);
   const stored=await Prospect.findOne({projectId:actor.projectId,domain:lead.domain});assert.ok(stored);for(const [key,value] of Object.entries(fields))assert.equal(stored.get(key),value,key);
-  const converted=await approveProspect(actor,stored.id);assert.equal(converted.customer.country,'US');assert.equal(converted.customer.phone,fields.phone);assert.equal(converted.customer.address,fields.address);assert.equal(converted.customer.industry,fields.industry);assert.equal(converted.customer.instagram,fields.instagram);assert.ok(converted.customer.notes?.includes('网站自述'));
+  const converted=await approveProspect(actor,stored.id);assert.equal(converted.customer.country,'美国') /* 客户记录统一存中文简称 */;assert.equal(converted.customer.phone,fields.phone);assert.equal(converted.customer.address,fields.address);assert.equal(converted.customer.industry,fields.industry);assert.equal(converted.customer.instagram,fields.instagram);assert.ok(converted.customer.notes?.includes('网站自述'));
   const today=await prospectingToday(actor);assert.equal(today.prospects.find(p=>p.id===stored.id)?.country,'US');assert.equal(today.prospects.find(p=>p.id===stored.id)?.linkedin,fields.linkedin);
   const {Customer}=await import('../src/models');
   await Customer.updateOne({_id:converted.customer.id},{$unset:{country:1,instagram:1},$set:{phone:'Manually edited phone',notes:'My manual note'}});
-  const synced=await syncProspectCustomer(actor,stored.id);assert.equal(synced.customer.country,'US');assert.equal(synced.customer.instagram,fields.instagram);assert.equal(synced.customer.phone,'Manually edited phone');assert.ok(synced.customer.notes?.startsWith('My manual note'));
+  const synced=await syncProspectCustomer(actor,stored.id);assert.equal(synced.customer.country,'美国');assert.equal(synced.customer.instagram,fields.instagram);assert.equal(synced.customer.phone,'Manually edited phone');assert.ok(synced.customer.notes?.startsWith('My manual note'));
   const again=await syncProspectCustomer(actor,stored.id);assert.deepEqual(again.filledFields,[]);assert.equal(again.customer.notes,synced.customer.notes);
   await assert.rejects(()=>syncProspectCustomer({...actor,projectId:otherProject},stored.id));
   await assert.rejects(()=>syncProspectCustomer({...actor,id:String(new Types.ObjectId()),role:'user'},stored.id));
@@ -108,7 +108,7 @@ test('legacy website re-acquisition is explicit, capped, permission-scoped and f
   await assert.rejects(()=>refreshProspectContact({...actor,role:'user'},stored.id));assert.equal(calls,0);
   await assert.rejects(()=>refreshProspectContact({...actor,projectId:otherProject},stored.id));assert.equal(calls,0);
   const refreshed=await refreshProspectContact(actor,stored.id);assert.equal(calls,3);assert.equal(refreshed.prospect?.country,'US');
-  const customer=await Customer.findById(stored.customerId);assert.equal(customer?.country,'US');assert.equal(customer?.address,fields.address);assert.equal(customer?.phone,'Keep manual phone');
+  const customer=await Customer.findById(stored.customerId);assert.equal(customer?.country,'美国');assert.equal(customer?.address,fields.address);assert.equal(customer?.phone,'Keep manual phone');
   await assert.rejects(()=>refreshProspectContact(actor,stored.id),/刚刚更新/);assert.equal(calls,3);
  }finally{globalThis.fetch=actualFetch;delete process.env.LEAD_FIRECRAWL_API_KEY;}
 });

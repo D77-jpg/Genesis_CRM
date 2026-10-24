@@ -8,6 +8,7 @@ import env from '../config/env';
 import { sendMail, type SendMailPayload, type SendMailResult } from './mailer.service';
 import { createLogger } from '../config/logger';
 import { auditMailResult, reserveMailAttempt } from './mail-account.service';
+import { scheduleOutreachFollowUp } from './outreach-followup.service';
 
 const logger = createLogger('mail-queue');
 export const newMessageId = () => `<${randomUUID()}@crm.genesis.local>`;
@@ -31,6 +32,12 @@ async function reconcile(id: string): Promise<void> {
   }
   await recordAgentSendReceipt(letter.id);
   if (letter.markAsDeveloped) await Customer.updateOne({ _id: letter.customerId, projectId: letter.projectId, status: 'pending' }, { $set: { status: 'contacted' } });
+  // 开发信按 3/7/14 的节奏自动排下一次跟进（有回复就靠同步停表）
+  try {
+    await scheduleOutreachFollowUp(letter);
+  } catch (error) {
+    logger.warn('排开发信跟进失败（不影响投递结果）：', error instanceof Error ? error.message : String(error));
+  }
   await DevelopmentLetter.updateOne({ _id: id, projectId: letter.projectId, status: { $in: ['sent', 'opened'] } }, { $set: { effectsPending: false } });
 }
 

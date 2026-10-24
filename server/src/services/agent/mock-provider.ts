@@ -10,6 +10,8 @@ import type {
   CustomerAnalysisResult,
   MailThreadAnalysisRequest,
   MailThreadAnalysisResult,
+  FollowUpDraftRequest,
+  FollowUpDraftResult,
 } from './provider';
 
 function lineValue(content: string, labels: string[]): string {
@@ -122,6 +124,18 @@ export class MockAgentProvider implements AgentProvider {
 
   async extractCustomer(request: CustomerExtractionRequest): Promise<CustomerExtractionResult> {
     return { ...mockExtract(request.content), usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } };
+  }
+
+  async draftFollowUp(request: FollowUpDraftRequest): Promise<FollowUpDraftResult> {
+    const { step, customer, previous } = request.input;
+    const date = new Date(previous.sentAt).toISOString().slice(0, 10);
+    const subject = /^re:/i.test(previous.subject) ? previous.subject : `Re: ${previous.subject}`;
+    const bodyText = [
+      `Dear ${customer.salutation || customer.name},`,
+      `Following up on my email of ${date} about "${previous.subject}" — I know inboxes fill up quickly, so this is just a short nudge (${step} of 3).`,
+      'Would it help if I put together a small sample set, or a quick price range for the sizes you normally use? If the timing is not right, a one-line reply is enough and I will close the loop for now.',
+    ].join('\n\n');
+    return { subject, bodyText, usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } };
   }
 
   async analyzeCustomer(request: CustomerAnalysisRequest): Promise<CustomerAnalysisResult> {

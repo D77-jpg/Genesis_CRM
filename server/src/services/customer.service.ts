@@ -9,6 +9,8 @@ import { AgentCustomerAnalysis, AgentMailThreadAnalysis, Customer, CustomerEvent
 import { CUSTOMER_STATUS, type CustomerStatus, type CustomerSource } from '../constants';
 import { ApiError } from '../utils/ApiError';
 import { buildPaginated, parsePagination, sortableFields, type Paginated } from '../utils/pagination';
+import { countryAliasList, normalizeCountry, resolveCountry } from '../utils/country';
+import { assertNoCustomerDuplicate, buildDuplicateIndex, describeDuplicate, findCustomerDuplicates, lookupDuplicate } from './customer-duplicate';
 import { escapeRegExp } from '../utils/text';
 import { assertCustomerAccess, customerScope, isAdmin, projectScope, requireProjectId } from '../utils/access';
 import { createLogger } from '../config/logger';
@@ -79,6 +81,12 @@ export function buildCustomerFilter(query: ListCustomersQuery): FilterQuery<ICus
   }
   if (query.industry) {
     filter.industry = new RegExp(escapeRegExp(query.industry.trim()), 'i');
+  }
+  // 国家筛选：库里可能还存着 UK / England / 英国 等不同写法，
+  // 所以用「该国家的全部已知写法」做精确匹配，避免归一前后筛不到。
+  if (query.country) {
+    const aliases = countryAliasList(query.country).map((alias) => escapeRegExp(alias));
+    filter.country = new RegExp(`^(${aliases.join('|')})$`, 'i');
   }
   if (query.grade) {
     filter.grade = query.grade.trim();
@@ -213,8 +221,17 @@ export async function createCustomer(
   actor?: AuthUser,
   options?: { agentCreationKey?: string; source?: CustomerSource; ownerId?: string },
 ): Promise<CustomerDto> {
+  // 查重：邮箱撞库直接拒绝（DB 唯一索引兜底，这里提前拦并说清撞的是哪一位客户）。
+  // 同网站 / 同公司名只提示不拦——同一家公司的第二个联系人也是正常业务。
+  await assertNoCustomerDuplicate(
+    requireProjectId(actor),
+    { email: input.email, website: input.website, company: input.company, name: input.name, phone: input.phone },
+    { strictDomain: false },
+  );
   const payload: Record<string, unknown> = {
     ...input,
+    // 国家统一成中文简称（UK / England / 英国 都存成「英国」）
+    ...(typeof input.country === 'string' ? { country: normalizeCountry(input.country) ?? '' } : {}),
     projectId: requireProjectId(actor),
     source: (options?.source ?? 'manual') as CustomerSource,
     createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
@@ -249,6 +266,9 @@ export async function updateCustomer(
 
   // 未传字段保持原值；显式空串清空文本；null 保留用于清除负责人 / 跟进时间。
   const patch = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined));
+  // 国家统一成中文简称，避免同一个国家出现多种写法
+  // 「United Kingdom / New Zealand」「Ireland (Dublin)」这类写法：取第一个认得的国家
+  if (typeof patch.country === 'string') patch.country = resolveCountry(patch.country).value;
   // 严格分配制：业务员不能转移客户归属（负责人仅管理员可调整）
   if (actor && !isAdmin(actor)) delete patch.ownerId;
 
@@ -424,6 +444,19 @@ export interface ImportFailure {
   reason: string;
 }
 
+/**
+ * 导入「能进来但值得看一眼」的提示：
+ * 例如国家写了多国、行业写了三种、没有邮箱（发不了开发信）。
+ * info = 系统已经自动整理好了；warn = 需要业务员确认或补数据。
+ */
+export interface ImportWarning {
+  row?: number;
+  name?: string;
+  email?: string;
+  level: 'info' | 'warn';
+  reason: string;
+}
+
 export interface ImportResult {
   /** 提交总行数 */
   total: number;
@@ -431,6 +464,8 @@ export interface ImportResult {
   updated: number;
   skipped: number;
   failures: ImportFailure[];
+  /** 数据体检提示（不影响落库） */
+  warnings: ImportWarning[];
   /** 是否只是预检（dryRun） */
   dryRun: boolean;
 }
@@ -455,6 +490,59 @@ type ValidRow = { row: ImportRow; index: number };
  * 这一步刻意放在服务层而不是 HTTP 入口（入口用的是宽松 schema），
  * 目的是让「一批里混了几行脏数据」时仍然能导入其余行，而不是整批报错。
  */
+/**
+ * 行级数据体检：不拦导入，只把「能进来但会变成脏数据」的情况挑出来。
+ * 规则刻意保守 —— 只报能自动判断的（多值、无邮箱、姓名=公司），不做主观改名。
+ */
+/** 导出供单测：行级数据体检 */
+export function collectWarnings(row: ImportRow, index: number): ImportWarning[] {
+  const warnings: ImportWarning[] = [];
+  const base = { row: rowLabel(row, index), name: row.name, email: row.email };
+
+  const country = resolveCountry(row.country);
+  if (row.country) {
+    if (country.mixed) {
+      warnings.push({
+        ...base,
+        level: 'warn',
+        reason: `国家写了几个（${row.country}），已按第一个入库：${country.value || '无法识别'}`,
+      });
+    } else if (country.unknown) {
+      warnings.push({
+        ...base,
+        level: 'warn',
+        reason: `国家「${row.country}」不在词库里，按原样保留，国家筛选会单独出现一项`,
+      });
+    } else if (country.changed) {
+      warnings.push({ ...base, level: 'info', reason: `国家「${row.country}」已归一为 ${country.value}` });
+    }
+  }
+
+  const industries = (row.industry ?? '')
+    .split(/\s*[/／、,，;；]\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (industries.length > 1) {
+    warnings.push({
+      ...base,
+      level: 'warn',
+      reason: `行业写了 ${industries.length} 个（${row.industry}），行业筛选会把它当成独立一项，建议统一成一个`,
+    });
+  }
+
+  if (!row.email) {
+    warnings.push({ ...base, level: 'warn', reason: '没有邮箱，发不了开发信，需要补邮箱或手动指定收件人' });
+  }
+
+  const name = (row.name ?? '').trim().toLowerCase();
+  const company = (row.company ?? '').trim().toLowerCase();
+  if (name && company && name === company && !row.title) {
+    warnings.push({ ...base, level: 'warn', reason: '姓名和公司同名且没有职位，可能没抓到联系人' });
+  }
+
+  return warnings;
+}
+
 function validateRows(customers: ImportCustomersInput['customers'], failures: ImportFailure[]): ValidRow[] {
   const valid: ValidRow[] = [];
 
@@ -496,6 +584,22 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
 
   // 0) 行级校验，过滤掉脏数据
   const validRows = validateRows(customers, failures);
+
+  // 0.5) 数据体检：能入库但值得看一眼的（预检和正式导入都返回）
+  const warnings = validRows.flatMap(({ row, index }) => collectWarnings(row, index));
+
+  // 0.8) 同网站 / 同公司名的客户也捞出来：这类重复躲得过邮箱判重，得提醒一句
+  const duplicateIndex = await buildDuplicateIndex(
+    requireProjectId(actor),
+    validRows.map(({ row }) => ({
+      email: row.email,
+      website: row.website,
+      company: row.company,
+      name: row.name,
+      phone: row.phone,
+    })),
+    customerScope(actor),
+  );
 
   // 1) 先把库里已存在的邮箱捞出来，构建 email -> _id 映射
   const emails = validRows
@@ -547,6 +651,20 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
       return;
     }
 
+    // 没有邮箱撞库，但网站或公司名已经在库里 → 提醒（不拦，导完人工核对）
+    const nearDuplicate = lookupDuplicate(
+      duplicateIndex,
+      { email: undefined, website: row.website, company: row.company, name: row.name, phone: row.phone },
+      { strictDomain: false },
+    ).soft;
+    if (nearDuplicate) {
+      warnings.push({
+        ...label,
+        level: 'warn',
+        reason: `${describeDuplicate(nearDuplicate)}，导入后请核对是否同一家`,
+      });
+    }
+
     toInsert.push({
       ...buildPatchFromRow(row, defaultStatus),
       projectId: requireProjectId(actor),
@@ -564,6 +682,7 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
       updated: toUpdate.length,
       skipped: failures.length,
       failures,
+      warnings,
       dryRun: true,
     };
   }
@@ -626,7 +745,8 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
     created,
     updated,
     skipped: failures.length,
-    failures: failures.slice(0, 100), // 最多回传 100 条错误，避免响应体过大
+    failures: failures.slice(0, 100),
+    warnings: warnings.slice(0, 300), // 最多回传 100 条错误，避免响应体过大
     dryRun: false,
   };
 
@@ -637,7 +757,8 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
 }
 
 /** 把导入行转换成模型 patch（去掉空值、统一状态） */
-function buildPatchFromRow(row: ImportRow, defaultStatus: CustomerStatus): Partial<ICustomer> {
+/** 导出供单测：导入行 → 客户字段（含国家归一） */
+export function buildPatchFromRow(row: ImportRow, defaultStatus: CustomerStatus): Partial<ICustomer> {
   const patch: Partial<ICustomer> = { status: row.status ?? defaultStatus };
   const fields: (keyof ImportRow)[] = [
     'name',
@@ -675,6 +796,9 @@ function buildPatchFromRow(row: ImportRow, defaultStatus: CustomerStatus): Parti
       (patch as Record<string, unknown>)[field] = value.trim();
     }
   });
+  // Excel 里的国家写法五花八门，导入时统一成中文简称
+  // 「United Kingdom / New Zealand」「Ireland (Dublin)」这类写法：取第一个认得的国家
+  if (typeof patch.country === 'string') patch.country = resolveCountry(patch.country).value;
   // 优先级已在导入校验层归一化为 high/medium/low，这里直接透传
   if (row.priority) patch.priority = row.priority;
   if (row.tags && row.tags.length > 0) patch.tags = row.tags;
@@ -771,6 +895,24 @@ export async function listIndustries(actor?: AuthUser): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
 }
 
+/**
+ * 获取去重后的国家列表，供前端筛选下拉使用。
+ * 库里可能同时存在 UK / England / 英国，这里按归一后的简称合并计数后返回。
+ */
+export async function listCountries(actor?: AuthUser): Promise<string[]> {
+  const rows = (await Customer.distinct('country', customerScope(actor))) as unknown[];
+  const counts = new Map<string, number>();
+  rows.forEach((raw) => {
+    if (typeof raw !== 'string') return;
+    const name = normalizeCountry(raw);
+    if (!name) return;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  });
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-Hans-CN'))
+    .map(([name]) => name);
+}
+
 /** 获取去重后的标签列表，作为「可复用系统标签」词汇表供前端下拉与筛选 */
 export async function listTags(actor?: AuthUser): Promise<string[]> {
   const rows = (await Customer.distinct('tags', customerScope(actor))) as unknown[];
@@ -808,4 +950,24 @@ export async function migrateLegacyCustomerStatus(): Promise<number> {
     logger.info(`兼容迁移：已将 ${modified} 个旧「developed」客户状态迁移为「contacted」`);
   }
   return modified;
+}
+
+/**
+ * 新建 / 编辑客户前的查重预检（只查不写）。
+ * 业务员的口径与自己名下的客户一致，管理员可看全项目。
+ */
+export async function checkCustomerDuplicates(
+  actor: AuthUser | undefined,
+  input: { email?: string; website?: string; company?: string; name?: string; phone?: string; excludeId?: string },
+) {
+  const report = await findCustomerDuplicates(requireProjectId(actor), input, { strictDomain: false });
+  const toItem = (item: (typeof report.hard)[number]) => ({
+    id: item.id,
+    name: item.name,
+    company: item.company ?? null,
+    email: item.email ?? null,
+    matched: item.matched,
+    reason: describeDuplicate(item),
+  });
+  return { hard: report.hard.map(toItem), soft: report.soft.map(toItem) };
 }

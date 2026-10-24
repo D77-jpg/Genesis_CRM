@@ -12,8 +12,9 @@ import { ApiError } from '../utils/ApiError';
 import { customerRefScope, isAdmin, projectScope } from '../utils/access';
 import { MailMessage, MailSyncState } from '../models/MailMessage';
 import { DevelopmentLetter, Customer } from '../models';
+import { Prospect } from '../models/Prospect';
 import { getCustomerByIdOrThrow } from '../services/customer.service';
-import { findThread, mailboxKey, personalMailboxKey, syncInbox, syncPersonalInbox } from '../services/mail-sync.service';
+import { findThread, mailboxKey, personalMailboxKey, relinkMailCustomers, syncInbox, syncPersonalInbox } from '../services/mail-sync.service';
 import { sendLetterSchema } from '../validators/letter.validator';
 import { sendLetter } from '../services/letter.service';
 import type { AuthUser } from '../types/express';
@@ -21,6 +22,8 @@ import { safeMailHtml } from '../services/mail-security';
 import { trackingSummary } from '../services/mail-tracking.service';
 import { getProjectMailConfig, imapConfigured, smtpConfigured } from '../services/project-mail-config.service';
 import { getMailAccount } from '../services/mail-account.service';
+import { buildMailCustomerPlan, importMailCustomers } from '../services/mail-customer-import.service';
+import { listOutreachFollowUps } from '../services/outreach-followup.service';
 
 import {inboundAgentScope} from '../services/agent/mail-access';
 const router = Router();
@@ -31,11 +34,22 @@ const listQuery = z.object({
   folder: z.enum(['inbox', 'unknown', 'sent', 'tasks']).default('inbox'),
   page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(25),
 });
-async function withCustomerNames<T extends { customerId?: unknown }>(items: T[]) {
+async function withCustomerNames<T extends { customerId?: unknown; prospectId?: unknown }>(items: T[]) {
   const ids = items.map(i => i.customerId).filter(Boolean);
   const customers = await Customer.find({ _id: { $in: ids } }).select('name');
   const names = new Map(customers.map(c => [String(c._id), c.name]));
-  return items.map(i => ({ ...i, html: '', text: '', history: undefined, customerName: names.get(String(i.customerId)) }));
+  // 未转客户的来信挂在线索上：把线索公司名一并带出去
+  const prospectIds = items.map(i => i.prospectId).filter(Boolean);
+  const prospects = prospectIds.length
+    ? await Prospect.find({ _id: { $in: prospectIds } }).select('company name domain').lean()
+    : [];
+  const prospectNames = new Map(prospects.map(p => [String(p._id), String((p as { company?: string; name?: string; domain?: string }).company
+    || (p as { name?: string }).name || (p as { domain?: string }).domain || '')]));
+  return items.map(i => ({
+    ...i, html: '', text: '', history: undefined,
+    customerName: names.get(String(i.customerId)),
+    prospectName: i.prospectId ? prospectNames.get(String(i.prospectId)) : undefined,
+  }));
 }
 async function inbound(id: string, actor: AuthUser) {
   const doc = await MailMessage.findOne({ deleted: { $ne: true }, _id: id, ...await inboundAgentScope(actor) });
@@ -65,6 +79,23 @@ function outgoingDto(doc: InstanceType<typeof DevelopmentLetter>) {
     threadId: doc.threadId || String(doc._id), attachments: [], read: true };
 }
 
+// 开发信跟进提醒：到期（含今天到期）仍未回复、该发下一封的客户
+router.get('/outreach-followups', asyncHandler(async (req, res) => {
+  sendSuccess(res, await listOutreachFollowUps(String(req.user!.projectId), req.user!));
+}));
+// 从邮件建客户：先看方案（dryRun），确认后一次入库
+router.get('/mail-customers/plan', asyncHandler(async (req, res) => {
+  if (!isAdmin(req.user!)) throw ApiError.forbidden('只有管理员可以从邮件建客户');
+  sendSuccess(res, await buildMailCustomerPlan(String(req.user!.projectId)));
+}));
+router.post('/mail-customers/import', asyncHandler(async (req, res) => {
+  if (!isAdmin(req.user!)) throw ApiError.forbidden('只有管理员可以从邮件建客户');
+  sendSuccess(res, await importMailCustomers({ projectId: String(req.user!.projectId), actor: req.user! }));
+}));
+router.post('/relink', asyncHandler(async (req, res) => {
+  if (!isAdmin(req.user!)) throw ApiError.forbidden('只有管理员可以补关联客户');
+  sendSuccess(res, await relinkMailCustomers({ projectId: String(req.user!.projectId) }));
+}));
 router.get('/status', asyncHandler(async (req, res) => {
   const projectId = req.user!.projectId!;
   const [config, account] = await Promise.all([getProjectMailConfig(projectId), getMailAccount(projectId, req.user!.id)]);
@@ -111,7 +142,9 @@ router.get('/', validate({ query: listQuery }), asyncHandler(async (req, res) =>
     const [docs, total] = await Promise.all([DevelopmentLetter.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit), DevelopmentLetter.countDocuments(filter)]);
     sendSuccess(res, buildPaginated(await withCustomerNames(docs.map(outgoingDto)), total, page, limit));
   } else {
-    const filter = { deleted: { $ne: true }, ...await inboundAgentScope(req.user!), ...(folder === 'unknown' ? { customerId: null } : {}) };
+    // 公司共享邮箱的信不进个人收件箱：每个人只看自己邮箱收到的信。
+    // 「未关联邮件」例外——管理员要靠它把陌生来信建客户/线索。
+    const filter = { deleted: { $ne: true }, ...(folder === 'inbox' ? { visibility: { $ne: 'project_shared' } } : {}), ...await inboundAgentScope(req.user!), ...(folder === 'unknown' ? { customerId: null } : {}) };
     const [docs, total] = await Promise.all([MailMessage.find({ ...filter, deleted: { $ne: true } }).sort({ sentAt: -1 }).skip((page - 1) * limit).limit(limit), MailMessage.countDocuments(filter)]);
     sendSuccess(res, buildPaginated(await withCustomerNames(docs.map(d => incomingDto(d, req.user!))), total, page, limit));
   }

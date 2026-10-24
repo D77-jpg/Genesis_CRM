@@ -106,6 +106,28 @@ export interface MailThreadAnalysisResult {
 
 export interface MailThreadAnalysisRequest { input: MailThreadAnalysisInput; safetyIdentifier: string }
 
+export interface FollowUpDraftInput {
+  /** 这是第几封（2 或 3） */
+  step: number;
+  customer: { name: string; salutation: string; company?: string; email?: string };
+  /** 上一封开发信 */
+  previous: { subject: string; sentAt: string; excerpt: string };
+  seller: { companyName: string; senderName: string };
+  /** 允许在跟进信里提到的事实（为空时只能做不含新事实的礼貌跟进） */
+  allowedFacts: string[];
+}
+
+export interface FollowUpDraftResult {
+  subject: string;
+  bodyText: string;
+  usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+}
+
+export interface FollowUpDraftRequest {
+  input: FollowUpDraftInput;
+  safetyIdentifier: string;
+}
+
 export interface AgentProvider {
   readonly name: AgentProviderName;
   readonly model: string;
@@ -114,6 +136,8 @@ export interface AgentProvider {
   extractCustomer(request: CustomerExtractionRequest): Promise<CustomerExtractionResult>;
   analyzeCustomer(request: CustomerAnalysisRequest): Promise<CustomerAnalysisResult>;
   analyzeMailThread(request: MailThreadAnalysisRequest): Promise<MailThreadAnalysisResult>;
+  /** 写第 2 / 3 封跟进信：基于上一封的实际内容，不引入新事实 */
+  draftFollowUp(request: FollowUpDraftRequest): Promise<FollowUpDraftResult>;
 }
 
 export class AgentProviderError extends Error {
