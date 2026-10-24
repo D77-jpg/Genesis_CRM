@@ -1,13 +1,21 @@
+/**
+ * 发送前检查（原「依据与风险」）
+ * ------------------------------------------------------------------
+ * 业务员打开草稿只看一件事：**现在能不能发**。
+ * 所以这里不再罗列「承诺数 / 引用依据 / 检索状态」这类内部指标，而是给出待办清单：
+ *   一条要确认的事 = 一行，说人话 + 直接给按钮（核对当前修改 / 重新生成）。
+ * 都通过时只显示一句「检查通过」，内部明细全部收进折叠区。
+ */
 import { KnowledgeCitation } from './knowledge-citation';
 import * as React from 'react';
 import {
+  CheckCircle2,
   ChevronRight,
   FileSearch,
   Loader2,
   RefreshCw,
   ShieldCheck,
   TriangleAlert,
-  Wrench,
 } from 'lucide-react';
 import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
@@ -26,23 +34,24 @@ interface EvidenceResult {
   reviewBodyChanged?: boolean;
 }
 
+/** 内部检索状态 → 业务员看得懂的一句话 */
 const stateLabels: Record<string, string> = {
-  index_not_ready: '检索资料尚未就绪',
-  index_stale: '检索资料需要更新',
-  ready: '已检索有效知识',
-  no_match: '没有匹配的有效知识',
-  expired: '相关知识已过期',
-  conflict: '存在来源冲突',
-  retrieval_failed: '检索暂时失败',
+  index_not_ready: '资料还没准备好',
+  index_stale: '资料需要更新',
+  ready: '资料已核对',
+  no_match: '没找到可引用的资料',
+  expired: '相关资料已过期',
+  conflict: '资料之间有冲突',
+  retrieval_failed: '资料检索失败',
 };
 
 const statusActions: Record<string, string> = {
-  index_not_ready: '请管理员进入「知识库 → 检索准备」，准备资料后重新生成。',
+  index_not_ready: '请管理员进入「知识库 → 检索准备」准备资料后再生成。',
   index_stale: '请管理员更新检索资料，再按最新依据重新生成。',
-  no_match: '请缩小产品或问题范围，或请管理员补充并发布相关知识。',
-  expired: '请业务负责人确认新政策，更新有效期后重新生成。',
-  conflict: '请业务负责人核对冲突来源，确认前不要对外承诺。',
-  retrieval_failed: '请稍后重试；当前草稿只保留有依据的部分。',
+  no_match: '可以缩小产品或问题范围，或请管理员补充并发布相关资料。',
+  expired: '请业务负责人确认新政策，更新有效期后再用。',
+  conflict: '先请业务负责人核对冲突来源，确认前不要对外承诺。',
+  retrieval_failed: '稍后重试即可；当前草稿只保留了有依据的部分。',
 };
 
 const checkStatusLabels: Record<FactCheck['status'], string> = {
@@ -74,22 +83,25 @@ const questionLabels: Record<string, string> = {
   'Product details': '产品细节',
 };
 
-function Stat({ label, value, tone = 'default' }: { label: string; value: number; tone?: 'default' | 'warning' }) {
-  return (
-    <div className="rounded-md border bg-background px-2.5 py-2">
-      <dt className="text-2xs text-muted-foreground">{label}</dt>
-      <dd className={tone === 'warning' && value > 0 ? 'text-base font-semibold text-amber-700 dark:text-amber-400' : 'text-base font-semibold tabular-nums'}>
-        {value}
-      </dd>
-    </div>
-  );
+/** 把内部措辞翻成人话 */
+const plainReason = (reason: string) =>
+  reason
+    .replace(/[，,]?\s*请重新生成。?/g, '')
+    .replace(/官网调查快照已变化或当前不可访问/g, '官网快照打不开或有变化')
+    .replace(/已发生变化/g, '有变化')
+    .trim();
+
+const clip = (text: string, max = 42) => (text.length > max ? `${text.slice(0, max)}…` : text);
+
+/** 待确认事项：一行一件事，能点的直接给按钮 */
+interface Todo {
+  key: string;
+  title: string;
+  detail?: string;
+  bullets?: string[];
+  action?: 'recheck' | 'regenerate';
 }
 
-/**
- * 草稿依据与风险面板。
- * 只保留审核时真正需要决策的信息：结论、风险、依据数量；
- * 详细来源、问题与复核明细收进可展开区域，避免在审核弹窗里堆成一堵墙。
- */
 export function KnowledgeReviewPanel({
   review,
   freshness,
@@ -128,7 +140,7 @@ export function KnowledgeReviewPanel({
     let active = true;
     void apiGet<EvidenceResult>(letterId ? '/letters/' + letterId : '/agent/customer-analyses/' + analysisId)
       .then((data) => { if (active) setLoaded(data); })
-      .catch((e) => { if (active) setError(toErrorMessage(e, '无法读取草稿依据，请稍后重试')); });
+      .catch((e) => { if (active) setError(toErrorMessage(e, '无法读取这封草稿的依据，请稍后重试')); });
     return () => { active = false; };
   }, [letterId, analysisId]);
 
@@ -139,7 +151,7 @@ export function KnowledgeReviewPanel({
     try {
       setLoaded(await apiGet<EvidenceResult>('/letters/' + letterId));
     } catch (e) {
-      setError(toErrorMessage(e, '暂时无法核对资料状态，请稍后重试'));
+      setError(toErrorMessage(e, '暂时查不到资料状态，请稍后重试'));
     } finally {
       setBusy(false);
     }
@@ -174,7 +186,7 @@ export function KnowledgeReviewPanel({
     try {
       setNext(await apiPost('/agent/knowledge-drafts/' + letterId + '/regenerate', { requestKey: requestKey.current }));
     } catch (e) {
-      setError(toErrorMessage(e, '重新生成尚未完成，原草稿仍保留'));
+      setError(toErrorMessage(e, '重新生成没成功，原草稿还在'));
     } finally {
       setBusy(false);
     }
@@ -192,7 +204,7 @@ export function KnowledgeReviewPanel({
       );
       if (latestEditing.current === submittedIdentity) setAudit(result);
     } catch (e) {
-      if (latestEditing.current === submittedIdentity) setError(toErrorMessage(e, '复核尚未完成，原草稿保留'));
+      if (latestEditing.current === submittedIdentity) setError(toErrorMessage(e, '核对没成功，原草稿保留'));
     } finally {
       setAuditing(false);
     }
@@ -212,117 +224,217 @@ export function KnowledgeReviewPanel({
   };
 
   const answered = value?.questions.filter((q) => q.status === 'answered').length ?? 0;
-  const pending = value?.questions.filter((q) => q.status !== 'answered').length ?? 0;
+  const pendingQuestions = value?.questions.filter((q) => q.status !== 'answered') ?? [];
   const sourceCount = value?.sources.length ?? 0;
+  const claimCount = value?.claims.length ?? 0;
   const subjectChanged = currentSubject !== undefined && loaded.subject !== undefined && currentSubject !== loaded.subject;
   const bodyChanged = Boolean(loaded.reviewBodyChanged || editingChanged || subjectChanged);
   const freshnessChanged = Boolean(current?.changed.length);
   const freshnessFailed = Boolean(current?.failed);
-  const needsAttention = value?.completeness === 'partial' || freshnessChanged || freshnessFailed;
+  // 「请告诉我你们的起订量是？」这类问句不是承诺，不该混进「缺依据」清单里吓人
+  const isQuestion = (text: string) => {
+    const value = text.trim().replace(/["'”』】）)]+\$/g, '');
+    if (value.endsWith('?')) return true;
+    return /^(could|can|would|will|do|does|did|is|are|may|shall|should|what|when|which|how|please|let me know|i'?d like|we'?d like)\b/i.test(value);
+  };
+  const riskyChecks = (value?.factAudit?.checks ?? []).filter(
+    (c) => (c.status === 'unsupported' || c.status === 'contradicted' || c.status === 'unverifiable') && !isQuestion(c.text),
+  );
   const needsRegenerate = freshnessChanged || freshnessFailed || ['no_match', 'index_stale', 'index_not_ready', 'expired', 'conflict'].includes(value?.status ?? '');
-  const riskyChecks = value?.factAudit?.checks.filter((c) => c.status === 'unsupported' || c.status === 'contradicted' || c.status === 'unverifiable').length ?? 0;
+
+  // 变化的依据去重：同一份资料反复出现时只留一行
+  const changedReasons = (() => {
+    const seen = new Set<string>();
+    const rows: string[] = [];
+    for (const item of current?.changed ?? []) {
+      const reason = plainReason(item.reason);
+      const key = `${item.title}|${reason}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(`${item.title}：${reason}`);
+    }
+    return rows;
+  })();
+
+  /** 待办清单：只列必须由人拍板的事 */
+  const todos: Todo[] = [];
+  if (bodyChanged) {
+    todos.push({
+      key: 'body',
+      title: '依据对的是改稿前的版本',
+      detail: '你改过主题或正文，核对一下改的地方有没有动到数字和交期，没问题直接发。',
+      action: letterId ? 'recheck' : undefined,
+    });
+  }
+  if (freshnessChanged) {
+    todos.push({
+      key: 'sources',
+      title: `${changedReasons.length} 条资料有变化`,
+      bullets: changedReasons.slice(0, 3),
+      detail: changedReasons.length > 3 ? `另有 ${changedReasons.length - 3} 条同类变化，展开下方明细可见` : undefined,
+      action: letterId && needsRegenerate ? 'regenerate' : undefined,
+    });
+  }
+  if (freshnessFailed) {
+    todos.push({
+      key: 'freshness',
+      title: '暂时查不到资料状态',
+      detail: '发送前请人工确认正文里的数字、交期和承诺。',
+    });
+  }
+  if (riskyChecks.length > 0) {
+    todos.push({
+      key: 'claims',
+      title: `${riskyChecks.length} 处说法没找到依据`,
+      bullets: riskyChecks.slice(0, 3).map((check) => `信中这句「${clip(check.text)}」${checkStatusLabels[check.status]}`),
+      detail: riskyChecks.length > 3 ? `另有 ${riskyChecks.length - 3} 处，展开下方明细可见` : '这类内容建议改掉，或先跟生产确认再发。',
+    });
+  }
+  if (pendingQuestions.length > 0) {
+    todos.push({
+      key: 'questions',
+      title: `${pendingQuestions.length} 个客户问题还没确认`,
+      bullets: pendingQuestions.slice(0, 3).map((q) => questionLabels[q.question] ?? q.question),
+      detail: pendingQuestions.length > 3 ? `另有 ${pendingQuestions.length - 3} 个` : '信里如果答了这些，先确认口径。',
+    });
+  }
+  if (value && statusActions[value.status]) {
+    todos.push({
+      key: 'status',
+      title: stateLabels[value.status] ?? '资料状态待确认',
+      detail: statusActions[value.status],
+      action: letterId && needsRegenerate ? 'regenerate' : undefined,
+    });
+  }
+  if (value?.issues.some((i) => i.code === 'draft_unverified')) {
+    todos.push({
+      key: 'unverified',
+      title: '这封稿子没做逐项核对',
+      detail: '发送前请对照依据确认数字、条件和承诺。',
+    });
+  }
+
+  const clean = todos.length === 0;
 
   return (
-    <section className="space-y-3" aria-label="草稿知识依据">
+    <section className="space-y-2.5" aria-label="发送前检查">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold">
           <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
-          依据与风险
+          发送前检查
         </h3>
         {value ? (
-          <Badge variant={needsAttention ? 'outline' : 'developed'}>
-            {needsAttention ? '有需要确认的内容' : '依据已核对'}
-          </Badge>
+          clean ? (
+            <Badge variant="developed">
+              <CheckCircle2 className="h-3 w-3" aria-hidden />
+              可以发
+            </Badge>
+          ) : (
+            <Badge variant="outline">{todos.length} 项要确认</Badge>
+          )
         ) : null}
       </div>
-
-      {freshnessFailed ? (
-        <div role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs leading-5">
-          <p className="flex items-center gap-1.5 font-medium"><TriangleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />暂时无法核对依据状态</p>
-          <p className="mt-1 text-muted-foreground">发送前请人工核对正文中的数字、交期和承诺。</p>
-        </div>
-      ) : null}
-
-      {freshnessChanged ? (
-        <div role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs leading-5">
-          <p className="flex items-center gap-1.5 font-medium"><TriangleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />草稿使用的依据已发生变化</p>
-          <p className="mt-1 text-muted-foreground">原草稿保留生成时的内容与依据，发送前请重新核对。</p>
-          {current?.changed.map((item) => <p key={item.sourceId} className="mt-1 break-words">{item.title}：{item.reason}</p>)}
-        </div>
-      ) : null}
-
-      {bodyChanged ? (
-        <p className="flex items-start gap-1.5 rounded-md bg-amber-500/10 px-2.5 py-2 text-xs leading-5 text-amber-800 dark:text-amber-300">
-          <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-          主题或正文已修改，依据对应的是原生成版本，请核对修改后的承诺。
-        </p>
-      ) : null}
 
       {error ? <p role="alert" className="text-sm leading-6 text-destructive">{error}</p> : null}
 
       {value ? (
         <>
-          {sourceCount > 0 ? (
-            value.questions.length > 0 ? (
-              <dl className="grid grid-cols-3 gap-2">
-                <Stat label="已确认" value={answered} />
-                <Stat label="待确认" value={pending} tone="warning" />
-                <Stat label="引用依据" value={sourceCount} />
-              </dl>
-            ) : (
-              <dl className="grid grid-cols-2 gap-2">
-                <Stat label="承诺数" value={value.claims.length} />
-                <Stat label="引用依据" value={sourceCount} />
-              </dl>
-            )
-          ) : (
-            <div className="rounded-lg border border-dashed bg-muted/30 p-3">
-              <p className="text-xs font-medium">没有匹配到可引用的已发布资料</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">当前草稿主要基于客户档案生成。发送前请人工核对数字、交期和承诺，不要直接采信模型表述。</p>
+          {clean ? (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs leading-5">
+              <p className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                检查通过
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {sourceCount > 0
+                  ? '收件人、正文里的数字和承诺都对得上已有资料，直接通过并发送就行。'
+                  : '这封信没有引用我方政策，主要基于客户档案生成，确认收件人和称呼没问题即可。'}
+              </p>
             </div>
+          ) : (
+            <ul className="space-y-2">
+              {todos.map((todo) => (
+                <li key={todo.key} className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs leading-5">
+                  <p className="flex items-start gap-1.5 font-medium">
+                    <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                    <span className="flex-1">{todo.title}</span>
+                  </p>
+                  {todo.bullets?.length ? (
+                    <ul className="mt-1.5 space-y-1 pl-5 text-muted-foreground">
+                      {todo.bullets.map((line) => (
+                        <li key={line} className="list-disc break-words">{line}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {todo.detail ? <p className="mt-1.5 pl-5 text-muted-foreground">{todo.detail}</p> : null}
+                  {todo.action ? (
+                    <div className="mt-2 pl-5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-2xs"
+                        disabled={auditing || busy || (todo.action === 'regenerate' && Boolean(next))}
+                        onClick={() => void (todo.action === 'recheck' ? recheck() : regenerate())}
+                      >
+                        {auditing || busy
+                          ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                          : todo.action === 'recheck'
+                            ? <FileSearch className="h-3 w-3" aria-hidden />
+                            : <RefreshCw className="h-3 w-3" aria-hidden />}
+                        {todo.action === 'recheck' ? '核对当前修改' : '按最新依据重新生成'}
+                      </Button>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           )}
 
+          {audit ? (
+            <div role="status" className="rounded-md border bg-muted/20 p-2.5 text-xs leading-5">
+              <p className="font-medium">{audit.mode === 'semantic' ? '已按当前内容重新核对' : '语义核对没跑起来，请人工确认'}</p>
+              <details className="mt-1">
+                <summary className="min-h-9 cursor-pointer py-1 text-primary">看 {audit.checks.length} 项核对结果</summary>
+                {audit.checks.map((check, index) => (
+                  <div key={check.id + index} className="border-l pl-2.5">
+                    <p className="break-words">{check.text}</p>
+                    <p className="text-2xs text-muted-foreground">{checkStatusLabels[check.status]} · {check.reason}</p>
+                  </div>
+                ))}
+              </details>
+            </div>
+          ) : null}
+
           <p className="text-2xs leading-5 text-muted-foreground">
-            {stateLabels[value.status] ?? '待核对'} · 生成于 {formatDateTime(value.generatedAt)}
+            {sourceCount > 0
+              ? `依据 ${sourceCount} 条资料 · 信里 ${claimCount} 项承诺`
+              : stateLabels[value.status] ?? '待核对'}
+            {value.generatedAt ? ` · 生成于 ${formatDateTime(value.generatedAt)}` : ''}
           </p>
 
-          {riskyChecks > 0 ? (
-            <p role="status" className="flex items-start gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-2 text-xs leading-5">
-              <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span>
-                有 <strong className="font-medium">{riskyChecks}</strong> 条承诺缺少依据或需人工确认，发送前请逐条核对（详见「查看内部审核信息」）。
-              </span>
-            </p>
-          ) : null}
-
-          {statusActions[value.status] ? (
-            <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-2 text-xs leading-5">
-              <span className="font-medium">下一步：</span>{statusActions[value.status]}
-            </p>
-          ) : null}
-
-          {value.issues.some((i) => i.code === 'draft_unverified') ? (
-            <p role="status" className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-2 text-xs leading-5 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-              本稿未完成逐项核验，发送前请对照依据核对数字、条件和承诺。
-            </p>
+          {next ? (
+            <Button asChild size="sm" className="w-full">
+              <a href={'/customers/' + next.customerId + '?knowledgeDraft=' + next.letterId}>打开新生成的草稿</a>
+            </Button>
           ) : null}
 
           <details className="group rounded-lg border bg-muted/20">
             <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium">
               <FileSearch className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              查看内部审核信息
+              看依据明细
               <span className="ml-auto text-2xs font-normal text-muted-foreground">
-                {value.claims.length} 项承诺 · {value.questions.length} 个问题
+                {sourceCount} 条资料 · {claimCount} 项承诺
               </span>
               <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
             </summary>
             <div className="space-y-4 border-t px-3 py-3 text-xs leading-5">
-              <p className="text-2xs text-muted-foreground">仅供内部审核，不会自动写入客户邮件。</p>
+              <p className="text-2xs text-muted-foreground">仅供内部核对，不会出现在发给客户的邮件里。</p>
 
               <section>
-                <h4 className="font-semibold">使用的知识与版本</h4>
+                <h4 className="font-semibold">用到的资料（{sourceCount}）</h4>
                 {!value.sources.length ? (
-                  <p className="mt-1.5 text-muted-foreground">尚无可用依据，请补充资料后重新生成。</p>
+                  <p className="mt-1.5 text-muted-foreground">这封信没有引用我方政策资料，主要基于客户档案。</p>
                 ) : (
                   <ul className="mt-2 space-y-2">
                     {value.sources.map((source) => (
@@ -331,7 +443,7 @@ export function KnowledgeReviewPanel({
                         <p className="mt-1 break-words text-2xs leading-5 text-muted-foreground">{source.source}</p>
                         <p className="mt-1.5 break-words">适用：{source.applicability}</p>
                         <details className="mt-1.5">
-                          <summary className="min-h-9 cursor-pointer text-2xs text-primary">查看生成时的相关片段</summary>
+                          <summary className="min-h-9 cursor-pointer text-2xs text-primary">看用到的原文</summary>
                           <p className="whitespace-pre-wrap break-words text-2xs leading-5 text-muted-foreground">{source.content}</p>
                           <KnowledgeCitation source={source} letterId={letterId} />
                         </details>
@@ -342,9 +454,9 @@ export function KnowledgeReviewPanel({
               </section>
 
               <section>
-                <h4 className="font-semibold">关键承诺与依据</h4>
+                <h4 className="font-semibold">信里的数字与承诺（{claimCount}）</h4>
                 {!value.claims.length ? (
-                  <p className="mt-1.5 text-muted-foreground">未加入数值型交易承诺。</p>
+                  <p className="mt-1.5 text-muted-foreground">没有写具体数字或交期承诺。</p>
                 ) : (
                   <ul className="mt-2 space-y-2">
                     {value.claims.map((claim, i) => (
@@ -358,15 +470,15 @@ export function KnowledgeReviewPanel({
               </section>
 
               <section>
-                <h4 className="font-semibold">客户问题</h4>
+                <h4 className="font-semibold">客户关心的问题（{answered}/{value.questions.length} 已确认）</h4>
                 {!value.questions.length ? (
-                  <p className="mt-1.5 text-muted-foreground">本次没有提取到具体政策问题。</p>
+                  <p className="mt-1.5 text-muted-foreground">这封邮件里没有提到具体政策问题。</p>
                 ) : (
                   <ul className="mt-2 space-y-1.5">
                     {value.questions.map((q, i) => (
                       <li key={i} className="break-words">
                         <span className={q.status === 'answered' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>
-                          {q.status === 'answered' ? '已回答' : '待确认'} ·{' '}
+                          {q.status === 'answered' ? '已确认' : '待确认'} ·{' '}
                         </span>
                         {questionLabels[q.question] ?? q.question}
                       </li>
@@ -377,18 +489,18 @@ export function KnowledgeReviewPanel({
 
               {value.factAudit ? (
                 <section>
-                  <h4 className="font-semibold">逐项事实核对（{value.factAudit.checks.length}）</h4>
+                  <h4 className="font-semibold">逐句核对（{value.factAudit.checks.length}）</h4>
                   <p className="mt-1 text-2xs leading-5 text-muted-foreground">
                     {value.factAudit.mode === 'semantic'
-                      ? '已做语义核对，交易承诺另核数值与完整条件'
+                      ? '已按语义逐句核对，交易承诺另核了数值和完整条件。'
                       : value.factAudit.mode === 'deterministic'
-                        ? '仅呈现已确认的条件记录，普通事实待审'
-                        : '语义核验未完成，逐项结论均需人工核对'}。核对不代表证书真实性或协议效力已自动确认。
+                        ? '只呈现已确认的条件记录，普通事实仍需人工看。'
+                        : '语义核对没跑起来，逐句结论都需要人工确认'}核对不代表证书或协议已自动生效。
                   </p>
                   {value.factAudit.checks.length ? (
                     <ul className="mt-1 divide-y">
                       {value.factAudit.checks.map((check, i) => {
-                        const quote = check.quotes ?? [];
+                        const quotes = check.quotes ?? [];
                         return (
                           <li key={check.id + i} className="space-y-1 py-2">
                             <p className="break-words">{check.text}</p>
@@ -402,11 +514,11 @@ export function KnowledgeReviewPanel({
                             >
                               {checkStatusLabels[check.status]} · {check.reason}
                             </p>
-                            {quote.map((item, j) => {
+                            {quotes.map((item, j) => {
                               const cited = value.sources.find((s) => s.sourceId === item.sourceId);
                               return (
                                 <details key={j}>
-                                  <summary className="min-h-9 cursor-pointer py-1 text-2xs text-primary">查看精确引用</summary>
+                                  <summary className="min-h-9 cursor-pointer py-1 text-2xs text-primary">看引用的原话</summary>
                                   <p className="whitespace-pre-wrap break-words text-2xs leading-5 text-muted-foreground">{item.quote}</p>
                                   {cited ? <KnowledgeCitation source={cited} letterId={letterId} /> : null}
                                 </details>
@@ -417,12 +529,12 @@ export function KnowledgeReviewPanel({
                       })}
                     </ul>
                   ) : (
-                    <p className="mt-1.5 text-2xs text-muted-foreground">未提取到需要逐项核对的承诺。</p>
+                    <p className="mt-1.5 text-2xs text-muted-foreground">没有需要逐句核对的承诺。</p>
                   )}
 
                   {value.factAudit.facts.length ? (
                     <details className="mt-1">
-                      <summary className="min-h-9 cursor-pointer py-1 text-2xs text-primary">查看条件适用性（{value.factAudit.facts.length}）</summary>
+                      <summary className="min-h-9 cursor-pointer py-1 text-2xs text-primary">看条件适用性（{value.factAudit.facts.length}）</summary>
                       <ul className="mt-1 space-y-2">
                         {value.factAudit.facts.map((fact) => (
                           <li key={fact.id} className="border-l pl-2.5 text-2xs leading-5">
@@ -441,74 +553,38 @@ export function KnowledgeReviewPanel({
 
               {value.issues.length > 0 ? (
                 <section>
-                  <h4 className="font-semibold">缺口、过期与冲突</h4>
+                  <h4 className="font-semibold">缺口、过期与冲突（{value.issues.length}）</h4>
                   <ul className="mt-1.5 list-disc space-y-1.5 pl-4">
-                    {value.issues.map((issue, i) => <li key={i} className="break-words text-muted-foreground">{issue.message}</li>)}
+                    {value.issues.map((issue, i) => (
+                      <li key={i} className="break-words text-muted-foreground">{issue.message}</li>
+                    ))}
                   </ul>
                 </section>
               ) : null}
-            </div>
-          </details>
 
-          {bodyChanged && letterId ? (
-            <Button type="button" variant="outline" size="sm" className="w-full" disabled={auditing} onClick={() => void recheck()}>
-              {auditing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileSearch className="h-3.5 w-3.5" aria-hidden />}
-              核对当前修改
-            </Button>
-          ) : null}
-
-          {letterId ? (
-            <details className="group rounded-lg border">
-              <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium">
-                <Wrench className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                核对工具
-                <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
-              </summary>
-              <div className="space-y-2 border-t px-3 py-3">
-                <Button type="button" variant="outline" size="sm" className="w-full" disabled={auditing} onClick={() => void recheck()}>
-                  {auditing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileSearch className="h-3.5 w-3.5" aria-hidden />}
-                  核对当前编辑内容
-                </Button>
-                <p className="text-2xs leading-5 text-muted-foreground">核对当前主题与正文，保留原稿和原生成依据。继续修改后需重新核对。</p>
-
-                {audit ? (
-                  <div role="status" className="space-y-2 rounded-md border bg-background p-2.5 text-xs leading-5">
-                    <p className="font-medium">{audit.mode === 'semantic' ? '本次逐项核对结果' : '语义核验未完成，请人工确认'}</p>
-                    <details>
-                      <summary className="min-h-9 cursor-pointer py-1 text-primary">查看 {audit.checks.length} 项复核明细</summary>
-                      {audit.checks.map((c, i) => (
-                        <div key={c.id + i} className="border-l pl-2.5">
-                          <p className="break-words">{c.text}</p>
-                          <p className="text-2xs text-muted-foreground">{checkStatusLabels[c.status]} · {c.reason}</p>
-                        </div>
-                      ))}
-                    </details>
-                  </div>
-                ) : null}
-
-                <div className="flex flex-col gap-2 border-t pt-2">
-                  <Button type="button" variant="ghost" size="sm" className="justify-start" disabled={busy} onClick={() => void refreshEvidence()}>
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <RefreshCw className="h-3.5 w-3.5" aria-hidden />}
-                    核对资料是否更新
+              {letterId ? (
+                <div className="flex flex-wrap gap-2 border-t pt-2">
+                  <Button type="button" variant="ghost" size="sm" className="h-7 text-2xs" disabled={busy} onClick={() => void refreshEvidence()}>
+                    {busy ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <RefreshCw className="h-3 w-3" aria-hidden />}
+                    查一下资料有没有更新
                   </Button>
                   {needsRegenerate ? (
-                    <Button type="button" variant="outline" size="sm" className="justify-start" disabled={busy || Boolean(next)} onClick={() => void regenerate()}>
-                      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <RefreshCw className="h-3.5 w-3.5" aria-hidden />}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-2xs"
+                      disabled={busy || Boolean(next)}
+                      onClick={() => void regenerate()}
+                    >
+                      <RefreshCw className="h-3 w-3" aria-hidden />
                       按最新依据重新生成
                     </Button>
                   ) : null}
-                  {next ? (
-                    <Button asChild size="sm" className="w-full">
-                      <a href={'/customers/' + next.customerId + '?knowledgeDraft=' + next.letterId}>打开新草稿审核</a>
-                    </Button>
-                  ) : null}
-                  {needsRegenerate && !next ? (
-                    <p className="text-2xs leading-5 text-muted-foreground">生成新草稿，保留当前版本。</p>
-                  ) : null}
                 </div>
-              </div>
-            </details>
-          ) : null}
+              ) : null}
+            </div>
+          </details>
         </>
       ) : null}
     </section>

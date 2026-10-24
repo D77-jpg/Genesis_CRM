@@ -1,10 +1,12 @@
 /**
  * Excel 导入向导
  * ------------------------------------------------------------------
- * 三步流程：
+ * 四步流程：
  *   1. 选择文件（拖拽 / 点击 / 下载模板）—— 浏览器端用 xlsx 解析，不上传文件
- *   2. 选择工作表 + 列映射 + 数据检查 + 导入设置
- *   3. 导入结果（新增 / 更新 / 跳过 / 失败明细）
+ *   2. 选择工作表 + 列映射 + 数据检查 + 导入设置（导入到线索池 / 直接建客户）
+ *   3. 导入预检：先 dryRun 让后端真正跑一遍判重与校验，列出「新增 / 更新 /
+ *      跳过 / 数据提醒」，确认没问题再落库，避免一条脏数据直接进客户库
+ *   4. 导入结果（新增 / 更新 / 跳过 / 失败明细）
  *
  * 解析与校验都在前端完成，用户在提交前就能看到「将会导入什么」，
  * 后端仍会用 zod 做权威校验，失败行会通过 __row 精确定位。
@@ -12,11 +14,13 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import {
+  ArrowLeft,
   CheckCircle2,
   FileSpreadsheet,
   FileUp,
   Loader2,
   RotateCcw,
+  ShieldCheck,
   StepForward,
   TriangleAlert,
   Upload,
@@ -39,7 +43,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ColumnMapper, ImportPreview } from './column-mapper';
 import { downloadFile } from '@/lib/download';
 import { formatFileSize } from '@/lib/format';
-import { toErrorMessage } from '@/lib/api';
+import { apiPost, toErrorMessage } from '@/lib/api';
 import {
   MAX_IMPORT_FILE_SIZE,
   MAX_IMPORT_ROWS,
@@ -56,13 +60,24 @@ import {
 import { useCustomerStore } from '@/store/customer.store';
 import { cn } from '@/lib/utils';
 import { CUSTOMER_STATUS_OPTIONS } from '@/constants';
-import type { CustomerStatus, ImportResult } from '@/types';
+import type { CustomerStatus, ImportFailure, ImportResult, ImportWarning } from '@/types';
 
-type Step = 'file' | 'map' | 'done';
+type Step = 'file' | 'map' | 'check' | 'done';
+
+/** 导入目标：先进线索池审核，还是直接建客户 */
+type ImportTarget = 'prospect' | 'customer';
 
 export interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * 从哪个页面打开：决定「导入到哪」的默认值与是否让用户改。
+   * customers  = 客户管理（默认线索池，可切直接建客户）
+   * prospecting = 今日开发（就是线索池，不显示目标选择）
+   */
+  entry?: 'customers' | 'prospecting';
+  /** 导入成功后回调（今日开发用它刷新列表） */
+  onImported?: (result: ImportResult) => void;
 }
 
 /** 步骤指示器 */
@@ -70,6 +85,7 @@ function StepIndicator({ step }: { step: Step }): React.JSX.Element {
   const steps: { key: Step; label: string }[] = [
     { key: 'file', label: '选择文件' },
     { key: 'map', label: '列映射与检查' },
+    { key: 'check', label: '导入预检' },
     { key: 'done', label: '导入结果' },
   ];
   const currentIndex = steps.findIndex((item) => item.key === step);
@@ -100,7 +116,9 @@ function StepIndicator({ step }: { step: Step }): React.JSX.Element {
   );
 }
 
-export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.JSX.Element {
+export function ImportDialog({ open, onOpenChange, entry = 'customers', onImported }: ImportDialogProps): React.JSX.Element {
+  // 从今日开发进来：导入的一定是线索，不给切换目标的机会
+  const lockTarget = entry === 'prospecting';
   const importCustomers = useCustomerStore((state) => state.importCustomers);
   const mutating = useCustomerStore((state) => state.mutating);
 
@@ -113,9 +131,14 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
   const [dragging, setDragging] = React.useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = React.useState(false);
 
+  // 默认进线索池：Excel 数据质量参差，先审核再转客户最稳妥
+  const [target, setTarget] = React.useState<ImportTarget>('prospect');
+  const effectiveTarget: ImportTarget = lockTarget ? 'prospect' : target;
   const [onDuplicate, setOnDuplicate] = React.useState<'skip' | 'update'>('skip');
   const [defaultStatus, setDefaultStatus] = React.useState<CustomerStatus>('pending');
   const [importResult, setImportResult] = React.useState<ImportResult | null>(null);
+  /** 预检结果（dryRun），确认后才真正写入 */
+  const [checkResult, setCheckResult] = React.useState<ImportResult | null>(null);
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -137,6 +160,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
     setMapping({});
     setParseError(null);
     setImportResult(null);
+    setCheckResult(null);
+    setTarget('prospect');
     setOnDuplicate('skip');
     setDefaultStatus('pending');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -176,11 +201,11 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
       setSheetName(first.name);
       setMapping(autoMapColumns(first.headers));
       setStep('map');
-      toast.success('文件解析完成', {
+      toast.success('文件读取完成', {
         description: `${parsed.fileName} · ${first.rows.length.toLocaleString('zh-CN')} 行`,
       });
     } catch (error) {
-      setParseError(toErrorMessage(error, '文件解析失败，请确认文件格式是否损坏'));
+      setParseError(toErrorMessage(error, '这个文件读不出来，请确认是不是损坏或加密了'));
     } finally {
       setParsing(false);
     }
@@ -216,31 +241,52 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
 
   /* ---------------------------- 提交导入 ---------------------------- */
 
-  const submitImport = React.useCallback(async () => {
-    if (!mappingResult || mappingResult.customers.length === 0) return;
+  /**
+   * 先预检再写库：
+   *   dryRun=true 时后端只做判重 + 校验，返回「新增 / 更新 / 跳过 / 提醒」，
+   *   用户看过清单点确认，才会用 dryRun=false 再跑一次真正落库。
+   */
+  const runImport = React.useCallback(
+    async (dryRun: boolean) => {
+      if (!mappingResult || mappingResult.customers.length === 0) return;
 
-    try {
-      const result = await importCustomers({
-        customers: mappingResult.customers,
-        onDuplicate,
-        defaultStatus,
-        dryRun: false,
-      });
-      if (!result) throw new Error('导入未返回结果');
+      try {
+        const result =
+          effectiveTarget === 'prospect'
+            ? await apiPost<ImportResult>('/prospecting/import', { rows: mappingResult.customers, dryRun })
+            : await importCustomers({
+                customers: mappingResult.customers,
+                onDuplicate,
+                defaultStatus,
+                dryRun,
+              });
+        if (!result) throw new Error('导入未返回结果');
 
-      setImportResult(result);
-      setStep('done');
+        if (dryRun) {
+          setCheckResult(result);
+          setStep('check');
+          return;
+        }
 
-      const summary = `新增 ${result.created} 条，更新 ${result.updated} 条，跳过 ${result.skipped} 条`;
-      if (result.failures.length > 0) {
-        toast.warning('导入完成，但部分行失败', { description: `${summary}；失败 ${result.failures.length} 条` });
-      } else {
-        toast.success('导入完成', { description: summary });
+        setImportResult(result);
+        onImported?.(result);
+        setStep('done');
+
+        const noun = effectiveTarget === 'prospect' ? '线索' : '客户';
+        const summary = `新增 ${noun} ${result.created} 条${effectiveTarget === 'customer' ? `，更新 ${result.updated} 条` : ''}，跳过 ${result.skipped} 条`;
+        if (result.failures.length > 0) {
+          toast.warning('导入完成，但部分行失败', { description: `${summary}；失败 ${result.failures.length} 条` });
+        } else if (result.warnings.length > 0) {
+          toast.success('导入完成', { description: `${summary}；${result.warnings.length} 条数据提醒可在结果里查看` });
+        } else {
+          toast.success('导入完成', { description: summary });
+        }
+      } catch (error) {
+        toast.error('导入失败', { description: toErrorMessage(error, 'Excel 导入失败') });
       }
-    } catch (error) {
-      toast.error('导入失败', { description: toErrorMessage(error, 'Excel 导入失败') });
-    }
-  }, [mappingResult, importCustomers, onDuplicate, defaultStatus]);
+    },
+    [mappingResult, importCustomers, onDuplicate, defaultStatus, effectiveTarget, onImported],
+  );
 
   const handleOpenChange = React.useCallback(
     (next: boolean) => {
@@ -261,11 +307,11 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-4 w-4 text-primary" aria-hidden />
-            从 Excel 导入客户
+            {lockTarget ? '从 Excel 导入线索' : '从 Excel 导入客户'}
           </DialogTitle>
           <DialogDescription>
             支持 .xlsx / .xls / .csv / .ods，单文件不超过 {Math.round(MAX_IMPORT_FILE_SIZE / 1024 / 1024)} MB，单次最多{' '}
-            {MAX_IMPORT_ROWS.toLocaleString('zh-CN')} 行。文件在浏览器本地解析，不会上传原始文件。
+            {MAX_IMPORT_ROWS.toLocaleString('zh-CN')} 行。文件只在你电脑上读取，不会上传到服务器。
           </DialogDescription>
           <div className="pt-1">
             <StepIndicator step={step} />
@@ -296,7 +342,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
                 {parsing ? (
                   <>
                     <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
-                    <p className="text-sm font-medium">正在解析文件…</p>
+                    <p className="text-sm font-medium">正在读取文件…</p>
                   </>
                 ) : (
                   <>
@@ -399,7 +445,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
                 <Alert variant="warning">
                   <TriangleAlert aria-hidden />
                   <AlertTitle>请先映射「姓名」列</AlertTitle>
-                  <AlertDescription>姓名是唯一必填字段，映射后才能继续导入。</AlertDescription>
+                  <AlertDescription>姓名是必填项，对应好列才能继续导入。</AlertDescription>
                 </Alert>
               ) : null}
 
@@ -418,7 +464,27 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
               <Separator />
 
               {/* 导入设置 */}
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className={cn('rounded-md border bg-muted/20 p-3', lockTarget && 'hidden')}>
+                <Label className="text-xs">导入到</Label>
+                <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                  <TargetOption
+                    active={target === 'prospect'}
+                    onSelect={() => setTarget('prospect')}
+                    disabled={mutating}
+                    title="今日开发线索池（先审核再转客户）"
+                    description="导入后进「今日开发」，逐条补齐联系方式、确认是目标客户，再点「转为客户」。Excel 数据不会直接变成客户。"
+                  />
+                  <TargetOption
+                    active={target === 'customer'}
+                    onSelect={() => setTarget('customer')}
+                    disabled={mutating}
+                    title="直接建客户"
+                    description="导入后立刻出现在客户管理里，可选重复策略（跳过 / 覆盖更新）。适合已经核实过的名单。"
+                  />
+                </div>
+              </div>
+
+              <div className={cn('grid gap-3 sm:grid-cols-2', effectiveTarget === 'prospect' && 'hidden')}>
                 <div>
                   <Label htmlFor="import-duplicate" className="text-xs">
                     重复数据处理
@@ -473,12 +539,61 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
             </div>
           )}
 
-          {/* ---------------- 第三步：结果 ---------------- */}
+          {/* ---------------- 第三步：导入预检 ---------------- */}
+          {step === 'check' && checkResult && (
+            <div className="space-y-4">
+              <Alert variant={checkResult.failures.length > 0 || hasBlockingWarning(checkResult) ? 'warning' : 'success'}>
+                {checkResult.failures.length > 0 || hasBlockingWarning(checkResult) ? (
+                  <TriangleAlert aria-hidden />
+                ) : (
+                  <ShieldCheck aria-hidden />
+                )}
+                <AlertTitle>
+                  {checkResult.failures.length > 0 || hasBlockingWarning(checkResult)
+                    ? '预检完成，有需要你确认的数据'
+                    : '预检通过，可以导入'}
+                </AlertTitle>
+                <AlertDescription>
+                  下面是这次导入的预检结果：还没有保存任何数据，你点确认之后才会真正写入
+                  {effectiveTarget === 'prospect' ? '线索池（今日开发）' : '客户库'}。
+                  {mappingResult && mappingResult.stats.invalidRows > 0 ? (
+                    <>
+                      {' '}
+                      另有 {mappingResult.stats.invalidRows} 行因为没填姓名（唯一必填项）在列映射阶段就被跳过了，不会提交。
+                    </>
+                  ) : null}
+                </AlertDescription>
+              </Alert>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <ResultTile label={effectiveTarget === 'prospect' ? '可入库线索' : '可新增客户'} value={checkResult.created} tone="positive" />
+                <ResultTile label="将更新" value={checkResult.updated} tone="positive" />
+                <ResultTile
+                  label="会被跳过"
+                  value={checkResult.skipped}
+                  tone={checkResult.skipped > 0 ? 'negative' : 'default'}
+                />
+                <ResultTile
+                  label="数据提醒"
+                  value={checkResult.warnings.length}
+                  tone={checkResult.warnings.length > 0 ? 'negative' : 'default'}
+                />
+              </div>
+
+              {checkResult.failures.length > 0 ? (
+                <FailureTable failures={checkResult.failures} title="下面这些行不会导入（资料不完整，或客户库／线索池里已经有了）" />
+              ) : null}
+
+              {checkResult.warnings.length > 0 ? <WarningList warnings={checkResult.warnings} /> : null}
+            </div>
+          )}
+
+          {/* ---------------- 第四步：结果 ---------------- */}
           {step === 'done' && importResult && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <ResultTile label="提交行数" value={importResult.total} />
-                <ResultTile label="新增客户" value={importResult.created} tone="positive" />
+                <ResultTile label={effectiveTarget === 'prospect' ? '新增线索' : '新增客户'} value={importResult.created} tone="positive" />
                 <ResultTile label="更新客户" value={importResult.updated} tone="positive" />
                 {/* 后端的 skipped 已经把 failures 计进去了，这里不能再加一次 */}
                 <ResultTile
@@ -489,43 +604,30 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
               </div>
 
               {importResult.failures.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="flex items-center gap-1.5 text-xs font-medium">
-                    <TriangleAlert className="h-3.5 w-3.5 text-destructive" aria-hidden />
-                    以下 {importResult.failures.length} 行未能导入
-                  </p>
-                  <div className="max-h-64 overflow-y-auto rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="w-16">行号</TableHead>
-                          <TableHead>姓名</TableHead>
-                          <TableHead>邮箱</TableHead>
-                          <TableHead>原因</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {importResult.failures.map((failure, index) => (
-                          <TableRow key={`${failure.row ?? 'x'}-${index}`}>
-                            <TableCell className="text-xs tabular-nums text-muted-foreground">
-                              {failure.row ?? '—'}
-                            </TableCell>
-                            <TableCell className="max-w-[10rem] truncate text-xs">{failure.name || '—'}</TableCell>
-                            <TableCell className="max-w-[12rem] truncate text-xs">{failure.email || '—'}</TableCell>
-                            <TableCell className="text-xs text-destructive">{failure.reason}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
+                <FailureTable failures={importResult.failures} title={`以下 ${importResult.failures.length} 行未能导入`} />
               ) : (
                 <Alert variant="success">
                   <CheckCircle2 aria-hidden />
                   <AlertTitle>全部导入成功</AlertTitle>
-                  <AlertDescription>客户列表已刷新，可以直接开始发送开发信。</AlertDescription>
+                  <AlertDescription>
+                    {effectiveTarget === 'prospect'
+                      ? '线索已进入「今日开发」，审核通过后才会转成客户并生成开发信草稿。'
+                      : '客户列表已刷新，可以直接开始发送开发信。'}
+                  </AlertDescription>
                 </Alert>
               )}
+
+              {importResult.warnings.length > 0 ? <WarningList warnings={importResult.warnings} /> : null}
+
+              {effectiveTarget === 'prospect' && importResult.created > 0 ? (
+                <Alert variant="info">
+                  <ShieldCheck aria-hidden />
+                  <AlertTitle>下一步：去今日开发审核</AlertTitle>
+                  <AlertDescription>
+                    导入的 {importResult.created} 条线索已在「今日开发」里，按等级和优先级排好序；确认无误点「转为客户」，系统会自动建客户并准备首封开发信草稿。
+                  </AlertDescription>
+                </Alert>
+              ) : null}
             </div>
           )}
         </DialogBody>
@@ -545,12 +647,30 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
               </Button>
               <Button
                 type="button"
-                onClick={() => void submitImport()}
+                onClick={() => void runImport(true)}
                 loading={mutating}
                 disabled={!canSubmit || missingNameColumn}
               >
+                {!mutating ? <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> : null}
+                预检 {mappingResult?.customers.length ?? 0} 条{effectiveTarget === 'prospect' ? '线索' : '客户'}
+              </Button>
+            </>
+          )}
+
+          {step === 'check' && checkResult && (
+            <>
+              <Button type="button" variant="ghost" onClick={() => setStep('map')} disabled={mutating}>
+                <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+                返回调整
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void runImport(false)}
+                loading={mutating}
+                disabled={!canSubmit || checkResult.created + checkResult.updated === 0}
+              >
                 {!mutating ? <StepForward className="h-3.5 w-3.5" aria-hidden /> : null}
-                导入 {mappingResult?.customers.length ?? 0} 条客户
+                确认导入 {checkResult.created + checkResult.updated} 条{effectiveTarget === 'prospect' ? '线索' : '客户'}
               </Button>
             </>
           )}
@@ -569,6 +689,151 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.J
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** 预检里「需要人看一眼」的提醒：没邮箱、国家/行业多值这类 */
+function hasBlockingWarning(result: ImportResult): boolean {
+  return result.warnings.some((warning) => warning.level === 'warn');
+}
+
+/** 失败 / 跳过行的明细表，预检和结果页共用 */
+function FailureTable({ failures, title }: { failures: ImportFailure[]; title: string }): React.JSX.Element {
+  return (
+    <div className="space-y-2">
+      <p className="flex items-center gap-1.5 text-xs font-medium">
+        <TriangleAlert className="h-3.5 w-3.5 text-destructive" aria-hidden />
+        {title}
+      </p>
+      <div className="max-h-64 overflow-y-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-16">行号</TableHead>
+              <TableHead>姓名</TableHead>
+              <TableHead>邮箱</TableHead>
+              <TableHead>原因</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {failures.map((failure, index) => (
+              <TableRow key={`${failure.row ?? 'x'}-${index}`}>
+                <TableCell className="text-xs tabular-nums text-muted-foreground">{failure.row ?? '—'}</TableCell>
+                <TableCell className="max-w-[10rem] truncate text-xs">{failure.name || '—'}</TableCell>
+                <TableCell className="max-w-[12rem] truncate text-xs">{failure.email || '—'}</TableCell>
+                <TableCell className="text-xs text-destructive">{failure.reason}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+/** 导入目标单选卡片 */
+function TargetOption({
+  active,
+  onSelect,
+  disabled,
+  title,
+  description,
+}: {
+  active: boolean;
+  onSelect: () => void;
+  disabled?: boolean;
+  title: string;
+  description: string;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      aria-pressed={active}
+      className={cn(
+        'rounded-md border px-3 py-2 text-left transition-colors',
+        active ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-background hover:bg-muted/40',
+        disabled && 'cursor-not-allowed opacity-60',
+      )}
+    >
+      <span className="flex items-center gap-1.5 text-xs font-medium">
+        <span
+          className={cn(
+            'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border',
+            active ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+          )}
+          aria-hidden
+        >
+          {active ? <CheckCircle2 className="h-3 w-3" /> : null}
+        </span>
+        {title}
+      </span>
+      <span className="mt-1 block text-2xs leading-relaxed text-muted-foreground">{description}</span>
+    </button>
+  );
+}
+
+/** 提醒明细表 */
+function WarningTable({ warnings }: { warnings: ImportWarning[] }): React.JSX.Element {
+  return (
+    <div className="max-h-56 overflow-y-auto rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-16">行号</TableHead>
+            <TableHead>姓名</TableHead>
+            <TableHead>提示</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {warnings.map((warning, index) => (
+            <TableRow key={`${warning.row ?? 'x'}-${index}`}>
+              <TableCell className="text-xs tabular-nums text-muted-foreground">{warning.row ?? '—'}</TableCell>
+              <TableCell className="max-w-[9rem] truncate text-xs">{warning.name || '—'}</TableCell>
+              <TableCell className={cn('text-xs', warning.level === 'warn' ? 'text-status-following' : 'text-muted-foreground')}>
+                {warning.reason}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+/**
+ * 数据提醒清单，按「要不要人处理」分组：
+ *   建议处理：没邮箱、国家/行业写了多个、姓名=公司 —— 直接铺开
+ *   已自动整理：国家写法归一之类 —— 折叠起来，避免一屏全是同一句
+ */
+function WarningList({ warnings }: { warnings: ImportWarning[] }): React.JSX.Element {
+  const actionable = warnings.filter((warning) => warning.level === 'warn');
+  const autoFixed = warnings.filter((warning) => warning.level === 'info');
+
+  return (
+    <div className="space-y-2">
+      {actionable.length > 0 ? (
+        <>
+          <p className="flex items-center gap-1.5 text-xs font-medium">
+            <TriangleAlert className="h-3.5 w-3.5 text-status-following" aria-hidden />
+            以下 {actionable.length} 条建议先补一下数据（不补也能导入）
+          </p>
+          <WarningTable warnings={actionable} />
+        </>
+      ) : null}
+
+      {autoFixed.length > 0 ? (
+        <details className="rounded-md border bg-muted/20 px-3 py-2">
+          <summary className="cursor-pointer text-xs text-muted-foreground">
+            另有 {autoFixed.length} 条已由系统自动整理（国家写法归一、去城市补充），点开看明细
+          </summary>
+          <div className="mt-2">
+            <WarningTable warnings={autoFixed} />
+          </div>
+        </details>
+      ) : null}
+    </div>
   );
 }
 

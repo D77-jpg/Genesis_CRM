@@ -93,6 +93,15 @@ export function MailAccountDialog({ open, onOpenChange, user }: {
       const payload = { ...form, password: form.password || undefined };
       let saved = await apiPut<UserMailAccount>(`/mail-accounts/users/${user.id}`, payload);
       setAccount(saved);
+      if (saved.legacyMail && (saved.legacyMail.moved || saved.legacyMail.archived)) {
+        const legacy = saved.legacyMail;
+        const summary = legacy.moved
+          ? `${legacy.moved} 封 ${legacy.address} 的邮件已交还给 ${legacy.to} 的邮箱`
+          : `${legacy.archived} 封 ${legacy.address} 的邮件已从收件箱归档`;
+        toast.info('发件地址换了，旧邮件已处理', {
+          description: `${summary}；这些邮件不属于新信箱，不会再出现在你的收件箱。`,
+        });
+      }
       setForm(toForm(saved, user));
       if (verifyAfter) {
         const result = await apiPost<MailAccountVerificationResult>(`/mail-accounts/users/${user.id}/verify`);

@@ -13,14 +13,14 @@ import {
 } from './common';
 
 const customerStatusSchema = z.enum(CUSTOMER_STATUS, {
-  errorMap: () => ({ message: '客户状态取值非法' }),
+  error: '客户状态取值非法',
 });
 
 const customerSourceSchema = z.enum(CUSTOMER_SOURCE);
 
 /** 客户跟进优先级：high / medium / low */
 const customerPrioritySchema = z.enum(CUSTOMER_PRIORITY, {
-  errorMap: () => ({ message: '客户优先级取值非法' }),
+  error: '客户优先级取值非法',
 });
 
 /**
@@ -71,7 +71,7 @@ const nextFollowUpInputSchema = z
 
 /** 自定义标签：数组本身可为空，但单个标签不允许是空字符串 */
 const tagsSchema = z
-  .array(z.string().trim().min(1, '标签不能为空').max(40, '单个标签不能超过 40 个字符'))
+  .array(z.string().trim().min(1, '标签不能为空').max(40, '单个标签不能超过 40 个字符'), { error: '标签格式不正确' })
   .max(30, '标签最多 30 个');
 
 /** 客户可写字段（创建 / 更新共用） */
@@ -125,7 +125,21 @@ export const createCustomerSchema = z.object({
 });
 
 // Creation/import still normalize empty text. Updates distinguish omitted from explicitly cleared.
-const clearableText = <T extends z.ZodTypeAny>(schema: T) => z.union([z.string().trim().length(0), schema]);
+// zod 4 的 union 失败时会把各分支的提示拼在一起，默认会冒出英文（Too big / Invalid input），
+// 这里用字面量 '' 作「清空」分支 + 自定义 error，取真正的字段提示，业务员才不会看到英文报错。
+const clearableText = <T extends z.ZodTypeAny>(schema: T, fallback = '内容格式不正确') =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? '' : value),
+    z.union([z.literal(''), schema], {
+      error: (issue) => {
+        const branches = (issue as { errors?: unknown }).errors;
+        const flat = Array.isArray(branches) ? (branches as unknown[][]).flat() : [];
+        const issues = flat as { message?: string }[];
+        const specific = issues.find((item) => item.message && !/^Too (big|small)|^Invalid input|^Invalid option/i.test(item.message));
+        return specific?.message ?? issues[issues.length - 1]?.message ?? fallback;
+      },
+    }),
+  );
 
 export const updateCustomerSchema = z
   .object({
@@ -168,6 +182,8 @@ export const listCustomersQuerySchema = paginationQuerySchema.extend({
   /** 状态筛选，all 或不传表示全部 */
   status: customerStatusFilterSchema.optional(),
   industry: z.string().trim().max(120).optional(),
+  /** 国家筛选：存的是统一后的中文简称，服务端按全部别名匹配 */
+  country: z.string().trim().max(120).optional(),
   grade: z.string().trim().max(20).optional(),
   source: customerSourceSchema.optional(),
   /** 业务来源筛选（精确匹配自由字符串；'all' / 空 = 不限） */
@@ -357,3 +373,16 @@ export type ImportRow = z.infer<typeof importRowSchema>;
 export type BulkTagsInput = z.infer<typeof bulkAddTagsSchema>;
 export type BulkAssignOwnerInput = z.infer<typeof bulkAssignOwnerSchema>;
 export type BulkSetFollowUpInput = z.infer<typeof bulkSetFollowUpSchema>;
+
+/**
+ * 新建客户前的查重预检：把要填的邮箱 / 网站 / 公司名 / 电话带上来，
+ * 返回库里可能重复的客户，前端先提示一句再保存。
+ */
+export const duplicateCheckQuerySchema = z.object({
+  email: z.string().trim().max(200).optional(),
+  website: z.string().trim().max(300).optional(),
+  company: z.string().trim().max(200).optional(),
+  name: z.string().trim().max(200).optional(),
+  phone: z.string().trim().max(60).optional(),
+  excludeId: z.string().trim().optional(),
+});

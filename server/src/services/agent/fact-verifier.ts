@@ -4,7 +4,7 @@ import env from '../../config/env';
 import type {AuthUser} from '../../types/express';
 import type {AgentProvider} from './provider';
 import type {KnowledgeBundle,KnowledgeReview,ClaimCheck,CustomerFactProfile} from './knowledge-types';
-import {auditGroundedEmail,conditionalSentence,draftHash,knowledgeFreshness,normalizeFact,transformNumbersMatch,type GroundedEmailOptions} from './knowledge-grounding';
+import {auditGroundedEmail,conditionalSentence,draftHash,knowledgeFreshness,normalizeFact,salutationName,transformNumbersMatch,type GroundedEmailOptions} from './knowledge-grounding';
 import {collectConditionalEvidence} from './conditional-facts';
 import {renderSignatureText,signatureName,stripSignatureText} from '../letter-signature';
 import {agentSafetyIdentifier,reserveAgentQuota,settleAgentQuota} from './runtime-guard';
@@ -67,7 +67,19 @@ const courtesy=(s:string)=>{
 };
 // Only closed, data-seeking forms are exempt. Open-ended questions can hide
 // arbitrary promises ("Could you please reply, we can hold stock for you?").
-const request=(s:string)=>/^(?:(?:could you please|please|would you please) (?:confirm|share|provide) (?:your |the )?(?:delivery address|shipping address|address|destination|requirements|packaging requirements|specifications|final specifications|contact details|artwork|design preferences)|would a brief discussion about your requirements be useful)[?？.]?$/i.test(s)||/^请(?:确认|提供|告知)(?:您的|贵司的)?(?:收货地址|地址|目的地|需求|包装需求|规格|最终规格|联系方式|设计稿)[?？。]?$/u.test(s);
+// 承诺型词汇：出现这些词就不算「纯询问」，必须走逐段核验。
+const COMMITMENT_WORDS=/\b(?:moq|minimum|price|pricing|payment|cost|discount|freight|shipping|lead[ -]?time|deliver\w*|certif\w*|fsc|iso|bsci|free|capacity|guarantee|warrant|exclusive|stock|inventory|refund|replace|reserve|hold|sample\w*|offer|deal)\b|价格|报价|交期|运费|认证|免费|库存|现货|备货|样品|折扣|退款|保证|优惠|承诺/i;
+// 纯信息询问：客户侧的提问不会替我方做承诺，但如果句子里带数字、承诺词或我方口吻，
+// 就可能是「Could you please reply, we can hold stock for you?」这类夹带承诺的问句，一律不豁免。
+const askOnly=(s:string)=>{
+ const value=s.trim();
+ if(!/[?？]\s*$/.test(value))return false;
+ if(/\d/.test(value.normalize('NFKC')))return false;
+ if(COMMITMENT_WORDS.test(value))return false;
+ if(/\b(?:we|our|us|i)\b|我们|我方|我司/i.test(value))return false;
+ return /^(?:could|can|would|will|do|does|did|is|are|may|might|shall|should|what|when|where|which|who|how|any|have|has|please|kindly|let me know|would you mind)\b/i.test(value);
+};
+const request=(s:string)=>/^(?:(?:could you please|please|would you please) (?:confirm|share|provide) (?:your |the )?(?:delivery address|shipping address|address|destination|requirements|packaging requirements|specifications|final specifications|contact details|artwork|design preferences)|would a brief discussion about your requirements be useful|would it help if i sent a few options that fit your product line)[?？.]?$/i.test(s)||/^请(?:确认|提供|告知)(?:您的|贵司的)?(?:收货地址|地址|目的地|需求|包装需求|规格|最终规格|联系方式|设计稿)[?？。]?$/u.test(s)||askOnly(s);
 // 按段落核验：一个段落里的分句不能各自「救回」，否则等于绕过整段支持检查。
 // block 记录段落序号，重建草稿时按原顺序拼回去。（句子级切分被否决过：会把
 // 段落里不被支持的分句单独放行，见 knowledge-facts 的「不救回不支持的分句」用例。）
@@ -146,7 +158,7 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
   // Never salvage a clause from a rejected paragraph or promote customer facts into
   // supplier promises. The deterministic renderer still owns all conditional terms.
   const verified:ClaimCheck[]=[];let remaining=20000-baseline.bodyText.length-4;
-  for(const item of checks.filter(c=>c.status==='supported'&&(!critical(c.text)||customerDescription(c.text,c.quotes??[],customer)))){
+  for(const item of checks.filter(c=>(c.status==='supported'&&(!critical(c.text)||customerDescription(c.text,c.quotes??[],customer)))||(c.status==='non_claim'&&!critical(c.text)&&!courtesy(c.text)))){
    if(verified.some(c=>c.text===item.text))continue;
    if(item.text.length+2<=remaining){verified.push(item);remaining-=item.text.length+2;}
    else baseline.review.issues.push({code:'fact_budget',message:'部分已核验段落超过单稿长度上限，已整段保留待另稿处理，未截断条件。'});
@@ -164,8 +176,17 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
   }
   baseline.review.completeness='partial';baseline.review.issues.push({code:verified.length?'semantic_partial':'semantic_unverified',message:verified.length?'部分生成表述缺少依据，已保留整段核验通过的内容与已确认条件，其余待人工核对。':reason});
   // 兜底稿也不要丢掉模型写的称呼：把审计渲染的「Dear X,」换成生成稿里的那一句。
+  // 称呼由服务端按客户数据决定；模型只有写对「已知联系人名字」时才允许覆盖，
+  // 否则 "Dear there," 这类空称呼会原样发给客户。
   const opening=segments(body)[0];
-  if(opening&&courtesy(opening.text)){const lines=baseline.bodyText.split('\n');if(/^dear\b/i.test(lines[0]??'')){lines[0]=opening.text;baseline.bodyText=lines.join('\n');}}
+  const greetingName=opening&&courtesy(opening.text)
+   ?(/^(?:hello|hi|hey|dear|good\s+(?:morning|afternoon|evening))[\s,!:]+(.+)$/iu.exec(opening.text.trim())?.[1]??'').replace(/[,.!！。\s]+$/u,'').trim()
+   :'';
+  const knownFirst=salutationName(options.recipientName,options.customerProfile?.company).toLowerCase();
+  if(greetingName&&knownFirst&&greetingName.toLowerCase()===knownFirst){
+   const lines=baseline.bodyText.split('\n');
+   if(/^(?:dear|hello|hi)\b/i.test(lines[0]??'')){lines[0]=opening!.text;baseline.bodyText=lines.join('\n');}
+  }
   return baseline;
  };
  if(['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status))return fallback('检索未就绪或失败，已保留安全的不完整答复');
@@ -185,7 +206,10 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
   const invented = [...new Set(kept.match(/(?:[$€£¥]\s?)?\d[\d.,]*/g) ?? [])]
    .filter(token => !haystack.includes(token) && !haystack.includes(token.replace(/^[$€£¥]\s?/, '')));
   if (invented.length) return fallback(reason + '；正文含依据中没有的数字（' + invented.slice(0, 3).join('、') + '），已改用条件答复');
-  const keptChecks: ClaimCheck[] = segments(kept).map(part => ({ ...part, status: 'unverifiable' as const, sourceIds: [], reason }));
+  // 礼貌语和纯提问不需要核验：和正文一样标成待确认会让审核页把称呼也当成风险项
+  const keptChecks: ClaimCheck[] = segments(kept).map(part => (courtesy(part.text) || request(part.text)
+    ? { ...part, status: 'non_claim' as const, sourceIds: [], reason: '礼貌语或不含交易承诺的询问' }
+    : { ...part, status: 'unverifiable' as const, sourceIds: [], reason }));
   const bodyText = [kept, signature].filter(Boolean).join('\n\n');
   const review: KnowledgeReview = { ...baseline.review, bodyHash: draftHash(bodyText), claims: [], completeness: 'partial',
    issues: [...baseline.review.issues.filter(issue => issue.code !== 'claim_rewritten'),

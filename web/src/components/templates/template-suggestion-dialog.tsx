@@ -124,7 +124,7 @@ export function TemplateSuggestionDialog({ template, onClose, onCopied }: Props)
           {error ? <p role="alert" className="text-destructive">{error}</p> : null}
           {suggestion ? <>
             <p className="text-muted-foreground">以下为根据现有记录整理的规则建议，实际效果需在使用后观察。</p>
-            <p>原模板快照：{suggestion.sourceTemplateSnapshot.name} · 主题：{suggestion.sourceTemplateSnapshot.subject}</p>
+            <p>参考模板：{suggestion.sourceTemplateSnapshot.name} · 主题：{suggestion.sourceTemplateSnapshot.subject}</p>
             <p>核实已发送：{suggestion.sourceSummary.sentCount} 封；最低样本门槛：{suggestion.sourceSummary.minimumSampleSize}。仅依据已确认的发送记录提供建议，不代表效果预测。</p>
             <ul className="list-disc space-y-1 pl-5">{suggestion.explanation.map((line, index) => <li key={index}>{line}</li>)}</ul>
             <section className="space-y-2 rounded-md border p-3">

@@ -9,11 +9,11 @@ import { QUOTATION_CURRENCY, QUOTATION_STATUS } from '../constants';
 import { idParamsSchema, isoDateSchema, objectIdSchema, optionalText, paginationQuerySchema } from './common';
 
 const quotationStatusSchema = z.enum(QUOTATION_STATUS, {
-  errorMap: () => ({ message: '报价单状态取值非法' }),
+  error: '报价单状态取值非法',
 });
 
 const quotationCurrencySchema = z.enum(QUOTATION_CURRENCY, {
-  errorMap: () => ({ message: '报价币种取值非法' }),
+  error: '报价币种取值非法',
 });
 
 /** 状态筛选：全部 + 6 种报价状态 */

@@ -162,7 +162,7 @@ export function ScratchpadCustomerPreviewView({ previewId, onRecordsChanged }: {
 
       {isMail && <section className="mb-4 space-y-3 rounded-md border p-3 text-sm"><h4 className="font-semibold">邮件信息核验 · 事实 / 推断 / 不确定项</h4><p className="text-xs text-muted-foreground">事实来自邮件记录；推断来自不可信邮件内容和模型，请逐项核对原邮件。来源邮件 ID：{preview.sourceMailId ?? '未提供'}</p><div><p className="font-medium">已记录事实</p>{preview.facts?.length ? <ul className="mt-1 space-y-1">{preview.facts.map((item, index) => <li key={`${item.field}-${index}`} className="rounded bg-muted/50 p-2">{FIELD_LABELS[item.field] ?? item.field}：{item.value} <span className="text-xs text-muted-foreground">· 邮件 {item.mailId}</span></li>)}</ul> : <p className="mt-1 text-xs text-muted-foreground">没有可核验的事实，请核对原邮件。</p>}</div><div><p className="font-medium">模型推断</p>{preview.inferences?.length ? <ul className="mt-1 space-y-1">{preview.inferences.map((item, index) => <li key={`${item.field}-${index}`} className="rounded bg-muted/50 p-2">{FIELD_LABELS[item.field] ?? item.field}：{item.value} <span className="text-xs text-muted-foreground">· {item.reason} · 邮件 {item.mailId}</span></li>)}</ul> : <p className="mt-1 text-xs text-muted-foreground">没有模型推断。</p>}</div><div><p className="font-medium">待核对的不确定项</p>{preview.uncertainties.length ? <ul className="mt-1 space-y-1">{preview.uncertainties.map((item, index) => <li key={`${item.field}-${index}`} className="rounded bg-amber-500/5 p-2">{FIELD_LABELS[item.field] ?? item.field}：{item.reason}</li>)}</ul> : <p className="mt-1 text-xs text-muted-foreground">没有列出不确定项，仍需人工核对。</p>}</div></section>}
 
-      {isMail && hasChanges && <p className="mb-4 text-xs text-amber-700 dark:text-amber-300">字段已修改：请先保存并重新查重，再核对结果及确认创建。</p>}
+      {isMail && hasChanges && <p className="mb-4 text-xs text-amber-700 dark:text-amber-300">资料有改动：先保存并重新查重，再确认创建。</p>}
       {isMail && preview.duplicates.length === 0 && <p className="mb-4 rounded-md border p-3 text-xs text-muted-foreground">当前查重未发现可能重复客户；仍请人工核对，不能保证不存在重复。</p>}
       {preview.duplicates.length > 0 && (
         <Alert className="mb-4 border-amber-500/30 bg-amber-500/5">
@@ -184,7 +184,7 @@ export function ScratchpadCustomerPreviewView({ previewId, onRecordsChanged }: {
       </form>
 
       {preview.status === 'created' && preview.createdCustomerId && <div className="mt-4 flex gap-2"><Button type="button" onClick={() => { setAgentOpen(false); navigate(`/customers/${preview.createdCustomerId}`); }}>查看客户</Button><Button type="button" variant="outline" onClick={clearPreview}>返回对话</Button></div>}
-      {preview.status === 'cancelled' && <Button type="button" variant="outline" className="mt-4" onClick={clearPreview}><RotateCcw className="h-4 w-4" />返回 Agent 对话</Button>}
+      {preview.status === 'cancelled' && <Button type="button" variant="outline" className="mt-4" onClick={clearPreview}><RotateCcw className="h-4 w-4" />返回对话</Button>}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

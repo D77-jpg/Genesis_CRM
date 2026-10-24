@@ -24,7 +24,7 @@ function stepChips(step: TaskWorkflowStep): string[] {
   if (step.key === 'load_rules') chips.push('规则 ' + num(m.rules) + ' 条');
   if (step.key.startsWith('retrieve_')) chips.push('依据 ' + num(m.sources) + ' 条', num(m.chars) + ' 字符', '条件事实 ' + num(m.facts));
   if (step.key === 'assess_evidence') chips.push('缺失 ' + num(m.missing), '冲突 ' + num(m.conflicts));
-  if (step.key === 'generate_email') chips.push('正文 ' + num(m.chars) + ' 字符', '事实 ' + num(m.facts), '缺口 ' + num(m.gaps), num(m.tokens) + ' tokens');
+  if (step.key === 'generate_email') chips.push('正文 ' + num(m.chars) + ' 字', '依据 ' + num(m.facts) + ' 条', '待补 ' + num(m.gaps) + ' 项', '用量 ' + num(m.tokens));
   if (step.key === 'audit_claims') chips.push('核验 ' + (verifyLabels[m.verifyMode ?? ''] ?? '—'), '逐项 ' + num(m.checks) + ' 条', '提示 ' + num(m.issues));
   if (step.key === 'research_customer' && step.tool) chips.push('官网抓取');
   return chips;
@@ -54,7 +54,7 @@ export function TaskProcessPanel({ task }: { task: TaskProcess }) {
           ['总耗时', seconds(task.workflowActiveMs), task.workflowCalls ? task.workflowCalls + ' 次步骤' : ''],
           ['依据', retrieval ? num(retrieval.metrics?.sources) + ' 条' : '—', retrieval?.metrics?.chars ? num(retrieval.metrics.chars) + ' 字符' : ''],
           ['核验', unavailable ? '未完成' : partial ? '部分核验' : verified ? '已核验' : '—', audit?.metrics?.checks !== undefined ? '逐项 ' + num(audit.metrics.checks) + ' 条' : ''],
-          ['预算', task.tokenBudget ? Math.round(((task.budgetCharged ?? 0) / task.tokenBudget) * 100) + '%' : '—', task.tokenBudget ? num(task.budgetCharged) + ' / ' + num(task.tokenBudget) : ''],
+          ['额度', task.tokenBudget ? Math.round(((task.budgetCharged ?? 0) / task.tokenBudget) * 100) + '%' : '—', task.tokenBudget ? num(task.budgetCharged) + ' / ' + num(task.tokenBudget) : ''],
         ].map(([label, value, hint]) => (
           <div key={label} className="rounded-md border bg-background px-3 py-2">
             <dt className="text-[11px] leading-4 text-muted-foreground">{label}</dt>

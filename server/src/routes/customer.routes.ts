@@ -15,6 +15,7 @@ import {
   bulkSetFollowUpSchema,
   createCustomerSchema,
   idParamsSchema,
+  duplicateCheckQuerySchema,
   importCustomersSchema,
   listCustomersQuerySchema,
   updateCustomerSchema,
@@ -38,8 +39,10 @@ import {
   downloadTemplateHandler,
   exportCustomersHandler,
   getCustomerHandler,
+  checkDuplicatesHandler,
   importCustomersHandler,
   listCustomersHandler,
+  listCountriesHandler,
   listIndustriesHandler,
   listOwnersHandler,
   listTagsHandler,
@@ -90,10 +93,13 @@ router.use(requireAuth);
 /* ---------- 静态路径（必须在 /:id 之前） ---------- */
 router.get('/export', validate({ query: listCustomersQuerySchema }), exportCustomersHandler);
 router.get('/template', downloadTemplateHandler);
+router.get('/countries', listCountriesHandler);
 router.get('/industries', listIndustriesHandler);
 router.get('/tags', listTagsHandler);
 // 负责人名单本质是「用户花名册」，仅管理员分配客户时需要，对业务员隐藏
 router.get('/owners', requireRole('admin'), listOwnersHandler);
+// 查重预检：新建客户前先问一句「库里是不是已经有了」
+router.get('/duplicates', validate({ query: duplicateCheckQuerySchema }), checkDuplicatesHandler);
 
 /* ---------- 集合级操作 ---------- */
 router.get('/', validate({ query: listCustomersQuerySchema }), listCustomersHandler);

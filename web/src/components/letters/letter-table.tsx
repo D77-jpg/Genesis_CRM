@@ -236,7 +236,7 @@ export function LetterTable({
                 <SortableHeader field="status" activeField={sortBy} activeOrder={sortOrder} onSort={handleSort}>
                   状态
                 </SortableHeader>
-                <TableHead>通道</TableHead>
+                <TableHead>发送方式</TableHead>
                 <SortableHeader field="sentAt" activeField={sortBy} activeOrder={sortOrder} onSort={handleSort}>
                   发送时间
                 </SortableHeader>

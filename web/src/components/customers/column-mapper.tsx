@@ -70,7 +70,7 @@ export function ColumnMapper({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-          左侧是系统字段，右侧选择对应的 Excel 列；已自动识别 {mappedCount} / {IMPORT_FIELDS.length} 个字段
+          左边是客户资料项，右边选 Excel 里对应的列；已自动认出 {mappedCount} / {IMPORT_FIELDS.length} 项
         </p>
         <Button type="button" variant="outline" size="sm" onClick={onAutoMap} disabled={disabled}>
           重新自动识别
@@ -158,7 +158,7 @@ export function ImportPreview({ sheet, mapping, result }: ImportPreviewProps): R
 
       {sheet.truncated ? (
         <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-          该工作表行数较多，仅解析了前 {sheet.rows.length.toLocaleString('zh-CN')} 行。如需导入全部数据，请拆分成多个文件后分批导入。
+          这个工作表行数较多，只读取了前 {sheet.rows.length.toLocaleString('zh-CN')} 行。要导入全部数据，请拆成几个文件分批导入。
         </p>
       ) : null}
 

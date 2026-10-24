@@ -17,7 +17,7 @@ export function Toaster(props: ToasterProps): React.JSX.Element {
       duration={4000}
       toastOptions={{
         classNames: {
-          toast: 'group toast rounded-md border-border bg-background text-foreground shadow-lg',
+          toast: 'group toast rounded-2xl border-border/70 bg-card text-foreground shadow-[var(--shadow-pop)]',
           description: 'text-muted-foreground',
           actionButton: 'bg-primary text-primary-foreground',
           cancelButton: 'bg-muted text-muted-foreground',

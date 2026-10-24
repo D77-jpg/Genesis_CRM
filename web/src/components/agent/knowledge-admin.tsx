@@ -161,8 +161,8 @@ export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKn
 
  async function rebuild(){
   setBusy(true);setError('');
-  try{await apiPost('/knowledge-index/rebuild',{requestKey:crypto.randomUUID()});setNotice('正在更新检索，通常几秒完成。');await loadStatus();}
-  catch(e){setError(toErrorMessage(e,'更新检索失败'));}finally{setBusy(false);}
+  try{await apiPost('/knowledge-index/rebuild',{requestKey:crypto.randomUUID()});setNotice('正在整理资料，通常几秒就好。');await loadStatus();}
+  catch(e){setError(toErrorMessage(e,'整理失败，请稍后再试'));}finally{setBusy(false);}
  }
 
  if(editing!==null)return <div className="p-4 sm:p-6 lg:p-7"><KnowledgeEntryForm key={editing==='new'?'new':editing.id} entry={editing==='new'?null:editing}
@@ -182,7 +182,7 @@ export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKn
    <div className="rounded-lg border px-3 py-2"><p className="text-xs text-muted-foreground">待确认</p><p className="mt-0.5 text-xl font-semibold tabular-nums">{pending.length}</p></div>
    <div className="rounded-lg border px-3 py-2"><p className="text-xs text-muted-foreground">已发布</p><p className="mt-0.5 text-xl font-semibold tabular-nums">{published.length}</p></div>
    <div className="rounded-lg border px-3 py-2"><p className="text-xs text-muted-foreground">原始文件</p><p className="mt-0.5 text-xl font-semibold tabular-nums">{files.length}</p></div>
-   <div className="rounded-lg border px-3 py-2"><p className="text-xs text-muted-foreground">助手检索</p><p className="mt-0.5 flex items-center gap-1 text-sm font-semibold">{status?.ready?<CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden/>:status&&status.status!=='updating'?<AlertCircle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden/>:null}<span className="truncate">{indexLabel}</span></p></div>
+   <div className="rounded-lg border px-3 py-2"><p className="text-xs text-muted-foreground">AI 能搜到</p><p className="mt-0.5 flex items-center gap-1 text-sm font-semibold">{status?.ready?<CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden/>:status&&status.status!=='updating'?<AlertCircle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden/>:null}<span className="truncate">{indexLabel}</span></p></div>
   </div>
 
   {error&&<div role="alert" className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm leading-6 text-destructive">{error}<Button variant="ghost" className="ml-2 min-h-11 px-2" onClick={()=>void loadAll()}>重新加载</Button></div>}
@@ -248,7 +248,7 @@ export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKn
   {status&&!status.ready&&!!status.effectivePublications&&<div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm"><p className="flex items-center gap-2"><AlertCircle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden/>{status.status==='updating'?'正在为助手准备检索，发布后会立即生效。':status.status==='stale'?'助手还在用上一次的资料，最新发布尚未生效。':'助手还没有可用的检索，更新后即可使用。'}</p>{status.status!=='updating'&&<Button variant="outline" className="min-h-11" disabled={busy} onClick={()=>void rebuild()}>立即更新</Button>}</div>}
 
   <details className="mt-6 border-t pt-3 text-sm"><summary className="flex min-h-11 cursor-pointer items-center gap-2 py-2 text-muted-foreground"><ChevronDown className="h-4 w-4" aria-hidden/>技术信息（一般不用看）</summary>
-   <div className="space-y-2 py-2 text-xs leading-6 text-muted-foreground"><p>检索状态：{status?.status??'—'} · 有效发布 {status?.effectivePublications??0} 篇{status?.storageIssue?' · '+status.storageIssue:''}</p><p>发布、修订、停用后会自动更新检索；失败时可以在这里手动重试。</p><Button variant="outline" className="min-h-11" disabled={busy} onClick={()=>void rebuild()}>重建检索</Button></div>
+   <div className="space-y-2 py-2 text-xs leading-6 text-muted-foreground"><p>当前状态：{status?.status??'—'} · 可用资料 {status?.effectivePublications??0} 篇{status?.storageIssue?' · '+status.storageIssue:''}</p><p>发布、修订、停用后会自动更新检索；失败时可以在这里手动重试。</p><Button variant="outline" className="min-h-11" disabled={busy} onClick={()=>void rebuild()}>重建检索</Button></div>
   </details>
 
   {collect&&<Dialog open onOpenChange={open=>{if(!open&&!busy)setCollect(null);}}><DialogContent className="max-w-2xl">

@@ -21,7 +21,13 @@ export interface IProspect extends LeadContact {
   snippet?: string;
   excerpt?: string;            // first ~600 chars of the crawled homepage
   sourceUrl: string;
-  source: 'serper';
+  /** serper = 搜索抓取；excel = 业务员导入的线索（没有抓取证据链） */
+  source: 'serper' | 'excel';
+  /** Excel 里的等级 / 优先级 / 备注 / 来源列，转客户时原样带过去 */
+  grade?: string;
+  priority?: string;
+  notes?: string;
+  leadSource?: string;
   score: number;
   aiScore?: number;
   scoreReasons: string[];
@@ -42,7 +48,8 @@ const ProspectSchema = new Schema<IProspect>({
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
   day: { type: String, required: true, index: true },
   domain: { type: String, required: true, trim: true, lowercase: true },
-  website: { type: String, required: true },
+  // Excel 导入的线索可能只有邮箱、没有官网，所以网站允许为空
+  website: { type: String, trim: true, default: '' },
   name: { type: String, trim: true, maxlength: 200 },
   company: { type: String, trim: true, maxlength: 200 },
   country: { type: String, trim: true, maxlength: 80 },
@@ -58,8 +65,12 @@ const ProspectSchema = new Schema<IProspect>({
   linkedin: { type: String, trim: true },
   snippet: { type: String, trim: true, maxlength: 1000 },
   excerpt: { type: String, maxlength: 2000 },
-  sourceUrl: { type: String, required: true },
-  source: { type: String, enum: ['serper'], default: 'serper' },
+  sourceUrl: { type: String, trim: true, default: '' },
+  source: { type: String, enum: ['serper', 'excel'], default: 'serper' },
+  grade: { type: String, trim: true, maxlength: 20 },
+  priority: { type: String, trim: true, maxlength: 20 },
+  notes: { type: String, trim: true, maxlength: 5000 },
+  leadSource: { type: String, trim: true, maxlength: 120 },
   score: { type: Number, default: 0 },
   aiScore: { type: Number },
   scoreReasons: { type: [String], default: [] },

@@ -4,6 +4,7 @@ import { Pop3Client } from './pop3-client';
 import env from '../config/env';
 import { Types } from 'mongoose';
 import { MailAccountAudit, MailQuotaBucket, User, UserMailAccount, type UserMailAccountDocument } from '../models';
+import { MailMessage } from '../models/MailMessage';
 import { ApiError } from '../utils/ApiError';
 import { decryptCredential, encryptCredential } from './credential-crypto';
 import { getProjectMailConfig, type ProjectMailConfig } from './project-mail-config.service';
@@ -37,6 +38,8 @@ export interface MailAccountDto {
   lastImapVerificationError?: string;
   dailyLimit: number;
   usedToday: number;
+  /** 改了发件地址后，旧地址邮件的去向（只在本次保存时返回） */
+  legacyMail?: { moved: number; archived: number; address: string; to?: string };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -217,6 +220,7 @@ export async function upsertMailAccount(
     return toDto(account);
   }
 
+  const previousEmail = account.email;
   account.email = input.email;
   account.displayName = input.displayName;
   account.smtpHost = input.smtpHost;
@@ -251,7 +255,65 @@ export async function upsertMailAccount(
   }
   await account.save();
   await audit({ projectId, accountId: String(account._id), actorId, targetUserId, action: 'updated', detail: { connectionChanged, imapChanged, status: account.status } });
+  // 地址变了：旧地址的邮件交还给还在用它的账号，或者归档，不能留在新信箱里
+  if (previousEmail && previousEmail !== input.email) {
+    const legacyMail = await handOffLegacyMail({ projectId, accountId: account._id as Types.ObjectId, nextEmail: input.email });
+    if (legacyMail.moved || legacyMail.archived) {
+      await audit({
+        projectId, accountId: String(account._id), actorId, targetUserId,
+        action: 'updated', detail: { legacyMail, previousEmail, email: input.email },
+      });
+      return { ...toDto(account), legacyMail };
+    }
+  }
   return toDto(account);
+}
+
+/**
+ * 改发件地址后的收尾：旧地址同步下来的邮件属于旧信箱，不能算新信箱的收件。
+ * 有别的账号还在用旧地址就交还给它，否则软删除（可恢复）。
+ */
+async function handOffLegacyMail(input: {
+  projectId: string;
+  accountId: Types.ObjectId;
+  nextEmail: string;
+}): Promise<{ moved: number; archived: number; address: string; to?: string }> {
+  const stale = await MailMessage.find({
+    mailAccountId: input.accountId,
+    mailboxAddress: { $exists: true, $ne: null, $nin: ['', input.nextEmail] },
+  }).select('_id mailboxAddress messageId').lean();
+  if (!stale.length) return { moved: 0, archived: 0, address: '' };
+  const address = String((stale[0] as { mailboxAddress?: string }).mailboxAddress || '');
+  const target = await UserMailAccount.findOne({
+    projectId: input.projectId,
+    email: address,
+    _id: { $ne: input.accountId },
+  }).select('_id userId email').lean();
+  if (!target) {
+    const ids = stale.map((row) => row._id);
+    await MailMessage.updateMany({ _id: { $in: ids } }, { $set: { deleted: true } });
+    return { moved: 0, archived: ids.length, address };
+  }
+  // 目标邮箱已经存过的同一封信不重复搬，直接归档旧副本
+  const messageIds = stale.map((row) => (row as { messageId?: string }).messageId).filter((v): v is string => Boolean(v));
+  const alreadyThere = messageIds.length
+    ? new Set((await MailMessage.find({ projectId: input.projectId, mailAccountId: target._id, messageId: { $in: messageIds } }).select('messageId').lean())
+      .map((row) => String((row as { messageId?: string }).messageId || '')))
+    : new Set<string>();
+  const move: Types.ObjectId[] = [];
+  const archive: Types.ObjectId[] = [];
+  for (const row of stale) {
+    const messageId = String((row as { messageId?: string }).messageId || '');
+    if (messageId && alreadyThere.has(messageId)) archive.push(row._id as Types.ObjectId);
+    else move.push(row._id as Types.ObjectId);
+  }
+  if (move.length) {
+    await MailMessage.updateMany({ _id: { $in: move } }, {
+      $set: { mailAccountId: target._id, mailboxUserId: target.userId },
+    });
+  }
+  if (archive.length) await MailMessage.updateMany({ _id: { $in: archive } }, { $set: { deleted: true } });
+  return { moved: move.length, archived: archive.length, address, to: String(target.email) };
 }
 
 export async function verifyMailAccount(projectId: string, targetUserId: string, actorId: string): Promise<{

@@ -81,7 +81,7 @@ export function TemplateList({
       {templates.map((template) => (
         <article
           key={template.id}
-          className="group flex flex-col rounded-lg border bg-card p-4 transition-colors hover:border-primary/40"
+          className="group flex flex-col rounded-2xl border border-border/80 bg-card shadow-card p-4 transition-colors hover:border-primary/40"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">

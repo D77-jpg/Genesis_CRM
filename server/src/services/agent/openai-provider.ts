@@ -13,6 +13,8 @@ import {
   type CustomerAnalysisResult,
   type MailThreadAnalysisRequest,
   type MailThreadAnalysisResult,
+  type FollowUpDraftRequest,
+  type FollowUpDraftResult,
 } from './provider';
 
 interface OpenAIResponse {
@@ -48,6 +50,16 @@ function transportErrorCode(error: unknown): string {
   if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) return 'OPENAI_TIMEOUT';
   return 'OPENAI_UNREACHABLE';
 }
+
+const followUpDraftSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['subject', 'bodyText'],
+  properties: {
+    subject: { type: 'string' },
+    bodyText: { type: 'string' },
+  },
+} as const;
 
 const customerExtractionSchema = {
   type: 'object',
@@ -279,6 +291,52 @@ export class OpenAIResponsesProvider implements AgentProvider {
     }
   }
 
+  async draftFollowUp(request: FollowUpDraftRequest): Promise<FollowUpDraftResult> {
+    if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
+    let response: Response;
+    try {
+      response = await guardedModelFetch(`${this.config.baseUrl.replace(/\/$/, '')}/responses`, {
+        method: 'POST',
+        redirect: 'error',
+        headers: { Authorization: `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(this.config.timeoutMs),
+        body: JSON.stringify({
+          model: this.config.model,
+          store: false,
+          instructions: [
+            '你为一家包装制品出口商写开发信跟进邮件（第 2 封或第 3 封）。上一封信客户没有回复。',
+            '写作要求：英文；60–90 词；3 个短段落；不要重复自我介绍、不要重述上一封的完整内容；语气自然、不卑不亢、不催促。',
+            '开头必须承接上一封：用一句 Following up on my email of <上一封日期> about <上一封主题>，日期取 previous.sentAt。',
+            '正文只做三件事：一句承接、一个具体的下一步（寄样品 / 给价格区间 / 按他的尺寸给建议）、一个很容易回答的问题。',
+            '严禁编造或新增事实：不得出现价格、MOQ、交期、认证、客户案例、产能等具体数据，除非出现在 allowedFacts 里；allowedFacts 为空时不要写任何数据，也不写折扣、保证、免费等承诺。',
+            '不写签名、不写落款公司名、不写占位符（如 {{name}}）、不写日期、不写 Dear Sir/Madam。称呼只用名字：Dear <customer.salutation>，名字后面不要再带姓。',
+            '主题直接用 Re: <上一封主题>；若上一封已以 Re: 开头就不要再叠加。',
+          ].join('\n'),
+          input: JSON.stringify(request.input),
+          ...this.structuredOutputOptions(),
+          text: { format: { type: 'json_schema', name: 'follow_up_draft', strict: true, schema: followUpDraftSchema } },
+          max_output_tokens: env.AI_MAX_OUTPUT_TOKENS,
+          safety_identifier: request.safetyIdentifier,
+        }),
+      });
+    } catch (error) {
+      throw new AgentProviderError(transportErrorCode(error));
+    }
+    let body: OpenAIResponse;
+    try { body = await response.json() as OpenAIResponse; } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
+    if (!response.ok || body.status === 'failed') throw new AgentProviderError(`OPENAI_HTTP_${response.status}`);
+    if (body.status === 'incomplete') throw new AgentProviderError('OPENAI_INCOMPLETE_RESPONSE');
+    try {
+      const parsed = JSON.parse(outputText(body)) as { subject: string; bodyText: string };
+      const usage = body.usage ?? {};
+      return {
+        subject: parsed.subject,
+        bodyText: parsed.bodyText,
+        usage: { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0, totalTokens: usage.total_tokens ?? 0 },
+      };
+    } catch { throw new AgentProviderError('OPENAI_INVALID_RESPONSE'); }
+  }
+
   async analyzeCustomer(request: CustomerAnalysisRequest): Promise<CustomerAnalysisResult> {
     if (!this.config.apiKey) throw new AgentProviderError('OPENAI_NOT_CONFIGURED');
     let response: Response;
@@ -302,7 +360,7 @@ export class OpenAIResponsesProvider implements AgentProvider {
             '事实摘要只能陈述来源明确支持的内容；信息缺口必须说明尚缺什么；建议必须与事实分开。',
             '每条事实、信息缺口和建议都必须使用输入中存在的 sourceId。不得虚构来源或业务事实。',
             '若 firstOutreach=true，写第一封英文开发信，不编造此前联系或客户确认；使用 seller 中的真实企业名称、网站和业务员署名。MOQ 只引用适用于当前产品的已发布知识；专属产品知识优先于公司通用默认值。未知价格和交期直接省略。不要留下姓名、公司等已有资料的方括号占位符。',
-            '开发信的信息密度比字数重要：正文 110–170 词、3–4 段，每段 1–3 句。称呼用客户的名字（First Name，如 Dear Diane,），不要连姓一起写。第一段用一句客户侧切入点（官网/档案事实，或客户正在做的产品线；官网读取失败时就用档案里的行业与主营产品，不要编造网站内容）；第二段写 2–3 个与客户产品直接相关、且来自已发布知识的具体能力点（结构、材质、工艺、定制方式、认证等，优先借用知识里的英文表述），不要罗列全部品类、不要形容词堆砌；第三段给一个具体的下一步（例如提 2–3 个适配其产品线的结构方案），并用一个明确的问题收尾。正文里每个具体细节都必须能在 knowledgeContext 原文中找到，不要自行补充内托、隔档、配件、打样、检测、交期、产能等知识里没写的细节。禁止只写"官网描述 + 一句提问"这类一两句的空稿；若相关知识不足，就在缺口里说明，而不是用泛化句子凑数。',
+            '开发信的信息密度比字数重要：正文 110–170 词、3–4 段，每段 1–3 句。称呼用客户的名字（First Name，如 Dear Diane,），不要连姓一起写；没有联系人姓名时写 Dear {客户公司名} team,（例如 Dear ScentSational team,），禁止 Dear there / Dear Sir or Madam / Dear Customer / Dear All 这类空称呼，也不要编造人名。第一段用一句客户侧切入点（官网/档案事实，或客户正在做的产品线；官网读取失败时就用档案里的行业与主营产品，不要编造网站内容）；第二段写 2–3 个与客户产品直接相关、且来自已发布知识的具体能力点（结构、材质、工艺、定制方式、认证等，优先借用知识里的英文表述），不要罗列全部品类、不要形容词堆砌；第三段给一个具体的下一步（例如提 2–3 个适配其产品线的结构方案），并用一个明确的问题收尾。正文里每个具体细节都必须能在 knowledgeContext 原文中找到，不要自行补充内托、隔档、配件、打样、检测、交期、产能等知识里没写的细节。禁止只写"官网描述 + 一句提问"这类一两句的空稿；若相关知识不足，就在缺口里说明，而不是用泛化句子凑数。',
             'knowledgeContext 里若有开发信范本/主题库/三段式结构（如行业解决方案、开发信知识库），参考它的段落结构、信息密度和句式，但不要照抄客户名、数字或未经核实的内容；范本只是表达参考，不是事实来源。',
             'userRequest 是当前业务员的写作要求，请遵循其语言、侧重点与篇幅；客户需求与我方供货条件须区分。若需求与 seller/报价中的已知条件冲突，在信息缺口中明确指出，不把客户要求写成我方承诺。',
             '客户官网 kind=website 是客户自述，不是独立核实结果或我方政策。提及官网事实时写成 Your website shows...，单独一段；不要在该段夹入我方公司、能力或采购推断。正文不要重复 seller 的署名，审核后由系统追加。普通首封信不抄写内部未批准政策的清单。收尾使用简短的 Could you please... 问句，不附加推测。',

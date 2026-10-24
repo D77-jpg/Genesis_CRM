@@ -404,7 +404,7 @@ export function applyMapping(
     if (!name) {
       rowIssues.push({ row, field: 'name', level: 'error', message: '姓名为空，该行已跳过' });
     } else if (name.length > 120) {
-      rowIssues.push({ row, field: 'name', level: 'error', message: '姓名超过 120 个字符' });
+      rowIssues.push({ row, field: 'name', level: 'error', message: '姓名超过 120 个字' });
     }
 
     const rawEmail = pick('email');

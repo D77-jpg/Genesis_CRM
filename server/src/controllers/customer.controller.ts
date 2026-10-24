@@ -34,10 +34,12 @@ import {
   getCustomer,
   importCustomers,
   listCustomers,
+  listCountries,
   listIndustries,
   listOwners,
   listTags,
   updateCustomer,
+  checkCustomerDuplicates,
 } from '../services/customer.service';
 import { buildCustomersWorkbook, buildImportTemplate } from '../services/excel.service';
 import type { CustomerStatus } from '../constants';
@@ -148,6 +150,11 @@ export const bulkSetFollowUpHandler = asyncHandler(async (req: Request, res: Res
   sendSuccess(res, { ...result, requested: ids.length, notFound: ids.length - result.matched });
 });
 
+export const checkDuplicatesHandler = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as { email?: string; website?: string; company?: string; name?: string; phone?: string; excludeId?: string };
+  sendSuccess(res, await checkCustomerDuplicates(req.user, query), 200);
+});
+
 export const importCustomersHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as ImportCustomersInput;
   const result = await importCustomers(input, req.user);
@@ -177,6 +184,11 @@ export const downloadTemplateHandler = asyncHandler(async (_req: Request, res: R
 
 export const listIndustriesHandler = asyncHandler(async (req: Request, res: Response) => {
   const data = await listIndustries(req.user);
+  sendSuccess(res, data);
+});
+
+export const listCountriesHandler = asyncHandler(async (req: Request, res: Response) => {
+  const data = await listCountries(req.user);
   sendSuccess(res, data);
 });
 

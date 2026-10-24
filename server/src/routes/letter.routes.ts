@@ -3,6 +3,9 @@
  */
 import { Router } from 'express';
 import { validate } from '../middleware/validate.middleware';
+import { asyncHandler } from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/pagination';
+import { draftFollowUpLetter } from '../services/follow-up-draft.service';
 import { requireAuth } from '../middleware/auth.middleware';
 import {
   bulkDeleteLettersSchema,
@@ -45,6 +48,10 @@ const previewSchema = z.object({
 /* ---------- 静态路径（必须在 /:id 之前） ---------- */
 router.get('/export', validate({ query: listLettersQuerySchema }), exportLettersHandler);
 router.post('/preview', validate({ body: previewSchema }), previewLetterHandler);
+/** 一键生成第 2 / 3 封跟进草稿：读上一封的实际内容，AI 写；AI 不可用或越界时回退模板 */
+router.post('/follow-up-draft', validate({ body: z.object({ customerId: objectIdSchema }).strict() }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await draftFollowUpLetter(String(req.body.customerId), req.user!));
+}));
 router.post('/bulk/delete', validate({ body: bulkDeleteLettersSchema }), bulkDeleteLettersHandler);
 
 /* ---------- 集合级操作 ---------- */

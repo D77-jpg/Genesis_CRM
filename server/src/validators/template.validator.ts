@@ -9,7 +9,7 @@ import { TEMPLATE_CATEGORY } from '../constants';
 import { idParamsSchema } from './common';
 
 const templateCategorySchema = z.enum(TEMPLATE_CATEGORY, {
-  errorMap: () => ({ message: '模板分类取值非法' }),
+  error: '模板分类取值非法',
 });
 
 /** 去掉 HTML 标签后是否还有可见内容 */

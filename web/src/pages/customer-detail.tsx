@@ -48,6 +48,7 @@ import {
   Trash2,
   TriangleAlert,
   User,
+  UserX,
 } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
@@ -71,6 +72,9 @@ import { useFollowUpStore } from '@/store/followup.store';
 import { useCustomerStore } from '@/store/customer.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { useLetterStore } from '@/store/letter.store';
+import { countryInfo } from '@/lib/country';
+import { CountryFlag } from '@/components/common/country-flag';
+import { isCompanyOnlyCustomer, secondaryCompanyLabel } from '@/lib/customer-display';
 import { formatDate, formatDateTime, formatRelative, getFollowUpState, initials, toInputDate } from '@/lib/format';
 import { parseTagsText } from '@/lib/validators';
 import { readStorage, writeStorage } from '@/lib/utils';
@@ -519,6 +523,10 @@ export function CustomerDetailPage(): React.JSX.Element {
     );
   }
 
+  // 客户名与公司名相同时（潜客转客户、无联系人）不重复展示公司，并提示未填联系人
+  const companyOnly = isCompanyOnlyCustomer(customer);
+  const companyText = secondaryCompanyLabel(customer) || (companyOnly ? '' : '未填写公司');
+
   const letters = lettersQuery.data?.items ?? [];
   const letterTotal = lettersQuery.data?.total ?? 0;
   const letterTotalPages = lettersQuery.data?.totalPages ?? 0;
@@ -541,11 +549,20 @@ export function CustomerDetailPage(): React.JSX.Element {
           </span>
         }
         description={
-          <>
-            {customer.company || '未填写公司'}
-            {customer.title ? ` · ${customer.title}` : ''}
-            {customer.industry ? ` · ${customer.industry}` : ''}
-          </>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            {companyText ? <span>{companyText}{customer.title ? ` · ${customer.title}` : ''}</span> : null}
+            {/* 潜客转来的记录常常只有公司没有联系人，姓名栏等于公司名，这里明确标出来 */}
+            {companyOnly ? (
+              <span className="chip chip-muted"><UserX className="h-3 w-3" aria-hidden />未填联系人</span>
+            ) : null}
+            {/* 行业、国家做成胶囊，顺序与列表一致（先行业再国家），业务员一眼确认客户画像 */}
+            {customer.industry ? (
+              <span className="chip chip-muted"><Building2 className="h-3 w-3" aria-hidden />{customer.industry}</span>
+            ) : null}
+            {customer.country ? (
+              <span className="chip chip-muted"><CountryFlag value={customer.country} />{countryInfo(customer.country)?.name ?? customer.country}</span>
+            ) : null}
+          </span>
         }
         actions={
           <>

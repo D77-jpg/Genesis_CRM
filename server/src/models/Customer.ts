@@ -78,6 +78,16 @@ export interface ICustomer {
   tags: string[];
   /** 已发送开发信数量（反范式计数，随开发信增删同步维护） */
   letterCount: number;
+  /** 开发信跟进：已发到第几封（0=还没发，1..3=第 N 封已发） */
+  outreachStep?: number;
+  /** 本轮开发的起点（第 1 封开发信发出时间） */
+  outreachStartedAt?: Date;
+  /** 最近一封开发信发出时间（用于判定客户是否已回复） */
+  outreachLastAt?: Date;
+  /** 客户最近一次回复开发信的时间（有回复就停止跟进） */
+  outreachRepliedAt?: Date;
+  /** 三次开发无回复、判定弃用的时间 */
+  outreachAbandonedAt?: Date;
   /** Idempotent queue side effects; internal, excluded from customer DTOs. */
   mailEffectIds?: Types.ObjectId[];
   /** Agent 确认创建的幂等键；内部字段，不进入客户 DTO。 */
@@ -184,6 +194,11 @@ const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
       },
     },
     letterCount: { type: Number, default: 0, min: 0 },
+    outreachStep: { type: Number, default: 0, min: 0, max: 3 },
+    outreachStartedAt: { type: Date },
+    outreachLastAt: { type: Date, index: true },
+    outreachRepliedAt: { type: Date },
+    outreachAbandonedAt: { type: Date, index: true },
     mailEffectIds: { type: [Schema.Types.ObjectId], select: false, default: undefined },
     agentCreationKey: { type: String, select: false, maxlength: 160 },
     // 集成外部引用：与 projectId 组成业务唯一键（下方 partial unique 索引）

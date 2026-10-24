@@ -15,7 +15,7 @@ export function KnowledgePage(){
  const item=params.get('knowledge')??params.get('item')??undefined;
  const key=project?.id+':'+user?.id;
  const tab=(id:'sales'|'manage')=>setParams(id==='sales'?(item?{item}:{}):{view:'manage'});
- return <section className="workspace-page"><div className={'workspace-surface rounded-xl border bg-card '+(manage?'':'xl:flex xl:h-[calc(100dvh_-_7rem)] xl:flex-col xl:overflow-hidden')}>
+ return <section className="workspace-page"><div className={'panel '+(manage?'':'xl:flex xl:h-[calc(100dvh_-_7rem)] xl:flex-col xl:overflow-hidden')}>
   {admin&&<nav aria-label="知识库视图" className={'flex flex-wrap items-center gap-1 rounded-t-xl border-b bg-muted/15 px-3 py-2 '+(manage?'':'xl:shrink-0')}>
    {([['sales','资料库'],['manage','资料管理']] as const).map(([id,label])=><button key={id} type="button" aria-current={active===id?'page':undefined} className={'min-h-11 rounded-md px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring '+(active===id?'bg-primary/10 text-primary':'text-muted-foreground hover:bg-muted hover:text-foreground')} onClick={()=>tab(id)}>{label}</button>)}
    <span className="ml-auto hidden pr-1 text-xs leading-5 text-muted-foreground sm:block">{manage?'把文件收成资料，发布后助手才能用':'业务员在这里查已发布的资料'}</span>

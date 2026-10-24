@@ -44,7 +44,7 @@ const DialogContent = React.forwardRef<
       className={cn(
         [
           'fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2',
-          'flex-col gap-4 overflow-hidden rounded-lg border bg-card p-5 shadow-[var(--workspace-panel-shadow)] duration-200 sm:p-6',
+          'flex-col gap-4 overflow-hidden rounded-3xl border border-border/70 bg-card p-5 shadow-[var(--shadow-pop)] duration-200 sm:p-6',
           'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
         ].join(' '),
@@ -55,7 +55,7 @@ const DialogContent = React.forwardRef<
       {children}
       {!hideClose && (
         <DialogPrimitive.Close
-          className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition-opacity hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:right-3 sm:top-3 sm:h-9 sm:w-9"
+          className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground ring-offset-background transition-opacity hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:right-3 sm:top-3 sm:h-9 sm:w-9"
           aria-label="关闭"
         >
           <X className="h-4 w-4" />

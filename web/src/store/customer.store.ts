@@ -53,6 +53,8 @@ interface CustomerQueryState {
   search: string;
   status: CustomerStatus | 'all';
   industry: string;
+  /** 国家筛选（存统一后的中文简称，'' 表示不限） */
+  country: string;
   grade: string;
   /** 业务来源筛选（'' 表示不限） */
   leadSource: string;
@@ -83,6 +85,8 @@ interface CustomerState extends CustomerQueryState {
   selectedIds: string[];
   /** 行业下拉数据 */
   industries: string[];
+  /** 国家下拉数据（已归一） */
+  countries: string[];
   /** 可复用标签词汇表（所有客户标签去重） */
   tags: string[];
   /** 负责人下拉数据（当前用户集合） */
@@ -99,6 +103,7 @@ interface CustomerState extends CustomerQueryState {
   /* 数据 */
   fetchList: () => Promise<void>;
   fetchIndustries: () => Promise<void>;
+  fetchCountries: () => Promise<void>;
   fetchTags: () => Promise<void>;
   fetchOwners: () => Promise<void>;
 
@@ -130,6 +135,7 @@ const initialQuery: CustomerQueryState = {
   search: '',
   status: 'all',
   industry: '',
+  country: '',
   grade: '',
   leadSource: '',
   priority: 'all',
@@ -153,6 +159,7 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
   error: null,
   selectedIds: [],
   industries: [],
+  countries: [],
   tags: [],
   owners: [],
 
@@ -191,6 +198,7 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
     if (state.search.trim()) query.search = state.search.trim();
     if (state.status !== 'all') query.status = state.status;
     if (state.industry) query.industry = state.industry;
+    if (state.country) query.country = state.country;
     if (state.grade) query.grade = state.grade;
     if (state.leadSource) query.leadSource = state.leadSource.trim();
     if (state.priority !== 'all') query.priority = state.priority;
@@ -229,6 +237,16 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
     } catch {
       // 行业下拉是辅助信息，失败时保持为空即可
       set({ industries: [] });
+    }
+  },
+
+  async fetchCountries() {
+    try {
+      const data = await apiGet<string[]>('/customers/countries');
+      set({ countries: Array.isArray(data) ? data : [] });
+    } catch {
+      // 国家下拉是辅助信息，失败时保持为空即可
+      set({ countries: [] });
     }
   },
 
@@ -469,6 +487,7 @@ export function selectHasActiveFilters(state: CustomerState): boolean {
     state.search.trim() !== '' ||
     state.status !== 'all' ||
     state.industry !== '' ||
+    state.country !== '' ||
     state.grade !== '' ||
     state.leadSource !== '' ||
     state.priority !== 'all' ||

@@ -8,7 +8,8 @@ import {AgentMailThreadAnalysis} from '../../models';
 import {observeAgentEvents,assertAutomaticTask} from './automation.service';
 import {executeInquiryTask} from './inquiry-task';
 import {agentMailOrThrow} from './mail-access';
-import {renderLetterContent,signatureName} from '../letter-signature';
+import {renderLetterContent} from '../letter-signature';
+import {resolveSignerName} from '../signer.service';
 import {materializeAgentBatches} from './batch.service';
 import {AgentBatch} from '../../models/AgentBatch';
 import {hasProtectedCustomerMail} from './mail-thread-analysis.service';
@@ -233,7 +234,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
     const analysis=await getCustomerAnalysis(String(task.analysisId),actor);
     actor=await check();
     const saved=await sendLetter({customerId:String(task.customerId),subject:analysis.emailDraft.subject,
-     content:renderLetterContent(analysis.emailDraft.bodyText, signatureName(actor.displayName)),
+     content:renderLetterContent(analysis.emailDraft.bodyText, await resolveSignerName({projectId:task.projectId,ownerId:(await Customer.findById(task.customerId).select('ownerId').lean())?.ownerId,actorId:actor.id})),
      saveAsDraft:true,markAsDeveloped:false,agentTaskId:task.id,agentAnalysisId:task.kind==='first_outreach'?analysis.id:undefined,requestKey:`task-draft-${task.id}${epochSuffix}`},actor);
     if(analysis.knowledgeReview)await DevelopmentLetter.updateOne({_id:saved.letter.id,projectId:task.projectId,knowledgeReview:{$exists:false}},{$set:{knowledgeReview:{...analysis.knowledgeReview,bodyHash:draftHash(saved.letter.contentText)}}});
     draft=await DevelopmentLetter.findById(saved.letter.id);

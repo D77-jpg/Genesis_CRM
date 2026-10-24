@@ -18,6 +18,8 @@ export interface CustomerBrief {
   id: string;
   name: string;
   company?: string;
+  country?: string;
+  industry?: string;
   status: CustomerStatus;
   grade?: string;
   nextFollowUpAt?: Date | null;
@@ -58,13 +60,15 @@ export interface SalesWorkspace {
 }
 
 /** 工作区客户摘要只查这几列，减小投影 */
-const BRIEF_FIELDS = 'name company status grade nextFollowUpAt createdAt';
+const BRIEF_FIELDS = 'name company country industry status grade nextFollowUpAt createdAt';
 
 function toBrief(doc: CustomerDocument): CustomerBrief {
   return {
     id: doc.id,
     name: doc.name,
     company: doc.company,
+    country: doc.country,
+    industry: doc.industry,
     status: doc.status,
     grade: doc.grade,
     nextFollowUpAt: doc.nextFollowUpAt ?? null,

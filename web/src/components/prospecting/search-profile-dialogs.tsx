@@ -17,7 +17,7 @@ function profileError(profiles:SearchProfile[]){
  if(new Set(profiles.map(p=>p.name.trim().toLowerCase())).size!==profiles.length)return '方案名称不能重复';
  for(const p of profiles){
   if(!p.name.trim()||p.name.length>60)return '请填写 1–60 字的方案名称';
-  if(!p.queries.length||p.queries.length>20||p.queries.some(q=>q.length<3||q.length>200))return '方案“'+p.name+'”需要 1–20 条搜索词，每条 3–200 字符';
+  if(!p.queries.length||p.queries.length>20||p.queries.some(q=>q.length<3||q.length>200))return '方案“'+p.name+'”需要 1–20 条搜索词，每条 3–200 个字';
   if(!Number.isInteger(p.enrichLimit)||p.enrichLimit<1||p.enrichLimit>80||!Number.isInteger(p.hunterLimit)||p.hunterLimit<0||p.hunterLimit>50||!Number.isInteger(p.minScore)||p.minScore<0||p.minScore>100)return '请核对方案“'+p.name+'”的数量与入选分数范围';
  }
  return '';
@@ -71,6 +71,6 @@ export function ProspectingRunDialog({open,onOpenChange,onCompleted}:Props){
  {config&&choice&&profile&&<><ProfileSelect id="run-search-profile" label="本次搜索方案" value={choice.id} profiles={config.profiles} disabled={saving} onChange={id=>{const p=config.profiles.find(p=>p.id===id)!;setChoice({id,queries:p.queries.join('\n'),enrichLimit:p.enrichLimit});setError('');}}/>
  <div className="space-y-2"><Label htmlFor="prospect-queries">本次搜索词（每行一条）</Label><Textarea id="prospect-queries" className="min-h-36" value={choice.queries} disabled={saving} onChange={e=>setChoice({...choice,queries:e.target.value})}/></div>
  <div className="space-y-2"><Label htmlFor="prospect-enrich">本次补全数量</Label><Input id="prospect-enrich" type="number" min={1} max={80} value={Number.isNaN(choice.enrichLimit)?'':choice.enrichLimit} disabled={saving} onChange={e=>setChoice({...choice,enrichLimit:e.target.valueAsNumber})}/></div>
- <p className="text-sm leading-6 text-muted-foreground">Hunter 最多 {profile.hunterLimit} 次；入选分数 {profile.minScore}；画像评分{profile.llmScoring?'开启':'关闭'}。每个候选最多读取 3 个官网页面，按实际 API 用量消耗额度。</p></>}
+ <p className="text-sm leading-6 text-muted-foreground">Hunter 最多 {profile.hunterLimit} 次；入选分数 {profile.minScore}；画像评分{profile.llmScoring?'开启':'关闭'}。每个候选最多看 3 个官网页面，按实际查询次数扣额度。</p></>}
  </DialogBody><DialogFooter><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={()=>onOpenChange(false)}>取消</Button><Button type="button" className="min-h-11" disabled={!choice||!config} loading={saving} onClick={()=>void start()}>开始生成</Button></DialogFooter></DialogContent></Dialog>;
 }

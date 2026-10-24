@@ -33,7 +33,7 @@ import type { Customer, DevelopmentLetter, MailChannel } from '@/types';
 const ALL = 'all';
 
 const CHANNEL_OPTIONS: { value: string; label: string }[] = [
-  { value: ALL, label: '全部通道' },
+  { value: ALL, label: '全部方式' },
   ...Object.entries(MAIL_CHANNEL_LABEL).map(([value, label]) => ({ value, label })),
 ];
 
@@ -202,7 +202,7 @@ export function LettersPage(): React.JSX.Element {
       {mailChannel === 'mock' ? (
         <Alert variant="warning">
           <AlertDescription>
-            当前邮件通道为「模拟发送」：开发信会完整记录并计入统计，但不会真实投递到收件人邮箱。
+            当前是「模拟发送」：开发信会完整记录并计入统计，但不会真的发到客户邮箱。
           </AlertDescription>
         </Alert>
       ) : null}
@@ -232,8 +232,8 @@ export function LettersPage(): React.JSX.Element {
         </Select>
 
         <Select value={channel} onValueChange={(value) => setFilters({ channel: value as MailChannel | 'all' })}>
-          <SelectTrigger className="h-8 w-auto min-w-[8rem] max-w-[13rem] text-xs" aria-label="发送通道">
-            <SelectValue placeholder="全部通道" />
+          <SelectTrigger className="h-8 w-auto min-w-[8rem] max-w-[13rem] text-xs" aria-label="发送方式">
+            <SelectValue placeholder="全部方式" />
           </SelectTrigger>
           <SelectContent>
             {CHANNEL_OPTIONS.map((option) => (

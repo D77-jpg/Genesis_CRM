@@ -71,7 +71,8 @@ test('固定结尾：splitSignatureText 能切出正文和姓名', () => {
 test('固定结尾：模板自带的老式落款会被替换，不会出现两套签名', () => {
   const template = '<p>Dear {{firstName}},</p><p>We make custom boxes.</p><p>Best,<br>{{senderName}}<br>{{companyName}}</p>';
   const signed = ensureSignature(template, NAME);
-  assert.equal((signed.match(/<hr>/g) ?? []).length, 1);
+  // 签名里不再画分隔线（早期草稿的 <hr> 由前端渲染层隐藏）
+  assert.equal((signed.match(/<hr>/g) ?? []).length, 0);
   assert.ok(!/Best,?<br>/.test(stripTrailingSignoff(template)));
   // 已经带固定结尾的内容不再追加
   const once = ensureSignature('<p>Body</p>', NAME);

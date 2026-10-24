@@ -34,14 +34,14 @@ const emptyForm: AiSettingsForm = { provider: 'mock', model: '', baseUrl: '', ap
 function validateForm(form: AiSettingsForm, keyConfigured: boolean): Partial<Record<Field, string>> {
   if (form.provider === 'mock') return {};
   const errors: Partial<Record<Field, string>> = {};
-  if (!form.model.trim()) errors.model = '请输入服务商提供的模型 ID。';
+  if (!form.model.trim()) errors.model = '请填写服务商给的模型名称。';
   try {
     const url = new URL(form.baseUrl.trim());
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
-      errors.baseUrl = '请输入不含账号、查询参数的 HTTP(S) API 基址。';
+      errors.baseUrl = '地址里不要带账号密码和 ? 后面的参数。';
     }
-  } catch { errors.baseUrl = '请输入完整的 API 地址，例如 https://example.com/v1。'; }
-  if (!keyConfigured && !form.apiKey.trim()) errors.apiKey = '首次启用真实 AI 时需要 API Key。';
+  } catch { errors.baseUrl = '请填写完整地址，例如 https://api.example.com/v1。'; }
+  if (!keyConfigured && !form.apiKey.trim()) errors.apiKey = '第一次接入真实 AI 要填密钥。';
   return errors;
 }
 
@@ -83,7 +83,7 @@ export function AiSettingsPage(): React.JSX.Element {
     const nextErrors = validateForm(form, Boolean(settings?.keyConfigured));
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
-      setFormError('请先修正标出的字段。');
+      setFormError('请先改好标红的地方。');
       requestAnimationFrame(() => errorRef.current?.focus());
       return;
     }
@@ -115,7 +115,7 @@ export function AiSettingsPage(): React.JSX.Element {
   const insecureHttp = live && form.baseUrl.trim().toLowerCase().startsWith('http://');
   return (
     <div className="workspace-page">
-      <PageHeader title="AI 配置" description="管理员设置全系统 Agent 使用的模型。所有项目共用这一配置，保存后立即生效。" />
+      <PageHeader title="AI 配置" description="这里设置整个系统用的 AI。所有项目共用，保存后立即生效。" />
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(250px,0.7fr)_minmax(0,1.6fr)]">
       <Card>
         <CardHeader className="space-y-2">
@@ -138,7 +138,7 @@ export function AiSettingsPage(): React.JSX.Element {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>切换服务商与模型</CardTitle><CardDescription>填写服务商提供的模型和连接信息。测试不会发送客户资料，可能产生少量调用费用。</CardDescription></CardHeader>
+        <CardHeader><CardTitle>更换 AI 服务</CardTitle><CardDescription>填服务商的模型和连接信息。测试不会发送客户资料，但可能产生少量费用。</CardDescription></CardHeader>
         <CardContent>
           <form className="space-y-5" onSubmit={(event) => { event.preventDefault(); void submit('save'); }} noValidate>
             {formError && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive">{formError}</div>}
@@ -151,19 +151,19 @@ export function AiSettingsPage(): React.JSX.Element {
             </div>
             {live && <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="ai-model">模型 ID</Label>
+                <Label htmlFor="ai-model">模型名称</Label>
                 <Input id="ai-model" value={form.model} onChange={(event) => change('model', event.target.value)} maxLength={120} disabled={Boolean(busy)} invalid={Boolean(errors.model)} aria-describedby={errors.model ? 'ai-model-error' : 'ai-model-hint'} />
-                {errors.model ? <p id="ai-model-error" className="text-xs text-destructive">{errors.model}</p> : <p id="ai-model-hint" className="text-xs text-muted-foreground">填写服务商返回的准确模型 ID。</p>}
+                {errors.model ? <p id="ai-model-error" className="text-xs text-destructive">{errors.model}</p> : <p id="ai-model-hint" className="text-xs text-muted-foreground">照服务商文档填写，拼写要和文档一致。</p>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="ai-url">API 基址</Label>
+                <Label htmlFor="ai-url">接口地址</Label>
                 <Input id="ai-url" type="url" value={form.baseUrl} onChange={(event) => change('baseUrl', event.target.value)} maxLength={500} disabled={Boolean(busy)} invalid={Boolean(errors.baseUrl)} aria-describedby={errors.baseUrl ? 'ai-url-error' : 'ai-url-hint'} className="[overflow-wrap:anywhere]" />
-                {errors.baseUrl ? <p id="ai-url-error" className="text-xs text-destructive">{errors.baseUrl}</p> : <p id="ai-url-hint" className="text-xs text-muted-foreground">填写服务商提供的 API 地址，例如 https://api.example.com/v1。</p>}
+                {errors.baseUrl ? <p id="ai-url-error" className="text-xs text-destructive">{errors.baseUrl}</p> : <p id="ai-url-hint" className="text-xs text-muted-foreground">服务商给的接口地址，一般以 /v1 结尾。</p>}
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="ai-key">API Key（更换时填写）</Label>
+                <Label htmlFor="ai-key">密钥（要更换时才填）</Label>
                 <Input id="ai-key" type="password" autoComplete="new-password" value={form.apiKey} onChange={(event) => change('apiKey', event.target.value)} maxLength={512} disabled={Boolean(busy)} invalid={Boolean(errors.apiKey)} aria-describedby={errors.apiKey ? 'ai-key-error' : 'ai-key-hint'} placeholder={settings?.keyConfigured ? '留空则保持当前密钥' : '请输入服务商密钥'} />
-                {errors.apiKey ? <p id="ai-key-error" className="text-xs text-destructive">{errors.apiKey}</p> : <p id="ai-key-hint" className="text-xs text-muted-foreground">保存后加密存储；此页面不会回显密钥。不要把密钥写进网址。</p>}
+                {errors.apiKey ? <p id="ai-key-error" className="text-xs text-destructive">{errors.apiKey}</p> : <p id="ai-key-hint" className="text-xs text-muted-foreground">保存后会加密，页面上不再显示明文；不要把它填到上面的地址里。</p>}
               </div>
             </div>}
             {insecureHttp && <div role="note" className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">

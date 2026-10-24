@@ -1,25 +1,27 @@
 /**
- * Badge —— 状态标签（待开发=蓝，已开发=绿，失败=红）
+ * Badge —— 柔色标签（无描边、浅底深字，参考稿的薄荷/玫瑰/紫罗兰胶囊）
  */
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground',
-        secondary: 'border-transparent bg-secondary text-secondary-foreground',
-        outline: 'border-border text-foreground',
-        muted: 'border-border bg-muted text-muted-foreground',
-        destructive: 'border-transparent bg-destructive text-destructive-foreground',
-        /** 待开发：蓝色描边底 */
-        pending: 'border-status-pending/30 bg-status-pending/10 text-status-pending',
-        /** 已开发：绿色描边底 */
-        developed: 'border-status-developed/30 bg-status-developed/10 text-status-developed',
-        failed: 'border-status-failed/30 bg-status-failed/10 text-status-failed',
+        default: 'bg-primary text-primary-foreground',
+        secondary: 'chip-muted',
+        outline: 'border border-border/80 bg-card text-muted-foreground',
+        muted: 'chip-muted',
+        destructive: 'chip-rose',
+        /** 待开发：紫罗兰 */
+        pending: 'chip-violet',
+        /** 已开发：薄荷绿 */
+        developed: 'chip-mint',
+        failed: 'chip-rose',
+        /** 琥珀色提醒 */
+        warning: 'chip-amber',
       },
     },
     defaultVariants: { variant: 'default' },

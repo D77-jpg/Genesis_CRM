@@ -20,7 +20,7 @@ export const envSchema = z.object({
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(5000),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  CORS_ALLOW_PRIVATE_NETWORK: booleanish.default('false'),
+  CORS_ALLOW_PRIVATE_NETWORK: booleanish.default(false),
   CORS_LAN_PORTS: z.string().default('5173,4173'),
 
   MONGODB_URI: z.string().min(1).default('mongodb://127.0.0.1:27017/cdlm'),
@@ -41,26 +41,26 @@ export const envSchema = z.object({
   /** 邮件里引用的静态资源（品牌 logo）使用的公网地址；留空则复用 TRACKING_BASE_URL。 */
   PUBLIC_BASE_URL: z.string().url().optional(),
   /** 关闭后开发信结尾只输出文字签名，不引用 logo 图片。 */
-  SIGNATURE_LOGO: booleanish.default('true'),
+  SIGNATURE_LOGO: booleanish.default(true),
   /** 官网被 WAF 拦截时，是否用无头浏览器兜底抓取（需要安装 playwright）。 */
-  WEBSITE_BROWSER_FETCH: booleanish.default('false'),
+  WEBSITE_BROWSER_FETCH: booleanish.default(false),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_SECURE: booleanish.default('false'),
+  SMTP_SECURE: booleanish.default(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_REQUIRE_TLS: booleanish.default('true'),
+  SMTP_REQUIRE_TLS: booleanish.default(true),
   /** 用户邮箱授权码的 AES-GCM 主密钥；未配置时兼容使用 JWT_SECRET 派生密钥。 */
   MAIL_CREDENTIAL_ENCRYPTION_KEY: z.preprocess(
     (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
     z.string().min(32, 'MAIL_CREDENTIAL_ENCRYPTION_KEY 至少需要 32 个字符').optional(),
   ),
-  IMAP_ENABLED: booleanish.default('false'),
+  IMAP_ENABLED: booleanish.default(false),
   IMAP_HOST: z.string().optional(),
   IMAP_PORT: z.coerce.number().int().min(1).max(65535).default(993),
   IMAP_USER: z.string().optional(),
   IMAP_PASSWORD: z.string().optional(),
-  IMAP_SECURE: booleanish.default('true'),
+  IMAP_SECURE: booleanish.default(true),
   IMAP_MAILBOX: z.string().min(1).default('INBOX'),
   IMAP_SYNC_INTERVAL_MS: z.coerce.number().int().min(10000).default(60000),
   IMAP_MAX_MESSAGE_SIZE: z.coerce.number().int().min(1024).max(50 * 1024 * 1024).default(25 * 1024 * 1024),

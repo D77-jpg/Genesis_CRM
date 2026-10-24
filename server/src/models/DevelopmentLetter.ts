@@ -68,6 +68,8 @@ export interface IDevelopmentLetter {
   };
   markAsDeveloped: boolean;
   effectsPending: boolean;
+  /** 这是本轮开发中的第几封（1=首次开发信，2/3=跟进；回复类邮件不记） */
+  outreachStep?: number;
   tracking?: {
     prepared: boolean;
     enabled: boolean;
@@ -174,6 +176,7 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
       contentHash: { type: String, match: /^[a-f0-9]{64}$/ },
     },
     markAsDeveloped: { type: Boolean, default: true },
+    outreachStep: { type: Number, min: 1, max: 3 },
     effectsPending: { type: Boolean, default: false },
     tracking: {
       prepared: { type: Boolean, default: false },

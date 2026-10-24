@@ -22,6 +22,12 @@ export function formatDateTime(value?: string | Date | number | null, fallback =
   return date ? format(date, DATE_TIME_PATTERN) : fallback;
 }
 
+/** 「10-22 18:14」：列表里省宽的日期时间；跨年份时退回完整日期，避免看错年 */
+export function formatShortDateTime(value?: string | Date | number | null, fallback = PLACEHOLDER): string {
+  const date = toDate(value);
+  if (!date) return fallback;
+  return format(date, date.getFullYear() === new Date().getFullYear() ? 'MM-dd HH:mm' : 'yyyy-MM-dd');
+}
 export function formatDate(value?: string | Date | number | null, fallback = PLACEHOLDER): string {
   const date = toDate(value);
   return date ? format(date, DATE_PATTERN) : fallback;

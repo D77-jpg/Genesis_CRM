@@ -7,6 +7,7 @@ import { MailMessage } from '../../models/MailMessage';
 import { Prospect, type ProspectStatus } from '../../models/Prospect';
 import { ProspectingConfig,type SearchProfile } from '../../models/ProspectingConfig';
 import {prospectCustomerInput} from './prospect-customer';
+import { describeDuplicate, findCustomerDuplicates } from '../customer-duplicate';
 import { ProspectingRun } from '../../models/ProspectingRun';
 import { requireProjectId,customerScope } from '../../utils/access';
 import { ApiError } from '../../utils/ApiError';
@@ -14,6 +15,7 @@ import type { AuthUser } from '../../types/express';
 import { createCustomer,getCustomerByIdOrThrow,getCustomer } from '../customer.service';
 import { createAgentSession } from '../agent/agent.service';
 import { createAgentTask } from '../agent/task.service';
+import { normalizeCountry } from '../../utils/country';
 import { dedupeLeads, domainOf, enrichLead, serperSearch, type RawLead } from './lead-source';
 import { hunterDomainSearch } from './hunter';
 import { mergeScores, scoreLeadsWithLlm, type LlmScore } from './llm-scoring';
@@ -52,6 +54,12 @@ export interface ProspectDto {
   score: number;
   aiScore?: number;
   reasons: string[];
+  /** serper = 搜索抓取；excel = 业务员导入 */
+  source: 'serper' | 'excel';
+  grade?: string;
+  priority?: string;
+  notes?: string;
+  leadSource?: string;
   status: ProspectStatus;
   customerId?: string;
   draftTaskId?: string;
@@ -90,6 +98,9 @@ const toProspect = (raw: Record<string, unknown>): ProspectDto => ({
   instagram: raw.instagram ? String(raw.instagram) : undefined, linkedin: raw.linkedin ? String(raw.linkedin) : undefined,
   snippet: raw.snippet ? String(raw.snippet) : undefined, excerpt: raw.excerpt ? String(raw.excerpt) : undefined,
   sourceUrl: String(raw.sourceUrl), score: Number(raw.score ?? 0), aiScore: raw.aiScore ? Number(raw.aiScore) : undefined, reasons: (raw.scoreReasons as string[]) ?? [],
+  source: (raw.source as 'serper' | 'excel') ?? 'serper',
+  grade: raw.grade ? String(raw.grade) : undefined, priority: raw.priority ? String(raw.priority) : undefined,
+  notes: raw.notes ? String(raw.notes) : undefined, leadSource: raw.leadSource ? String(raw.leadSource) : undefined,
   status: raw.status as ProspectStatus, customerId: raw.customerId ? String(raw.customerId) : undefined,
   draftTaskId: raw.draftTaskId ? String(raw.draftTaskId) : undefined,
   createdAt: (raw.createdAt as Date).toISOString(),
@@ -254,7 +265,10 @@ export async function startProspecting(actor: AuthUser, input: { profileId?:stri
   return toRun(run.toObject() as unknown as Record<string, unknown>);
 }
 
-export async function prospectingToday(actor: AuthUser) {
+export async function prospectingToday(
+  actor: AuthUser,
+  options: { status?: string; limit?: number; offset?: number } = {},
+) {
   const projectId = new Types.ObjectId(requireProjectId(actor));
   const config = await getProspectingConfig(actor);
   const day = dayIn(config.timezone);
@@ -264,25 +278,65 @@ export async function prospectingToday(actor: AuthUser) {
     run = await ProspectingRun.findOne({ projectId, day }).sort({ createdAt: -1 }).lean();
   }
   const order: Record<string, number> = { ready: 0, needs_contact: 1, low: 2, rejected: 3, converted: 4 };
+  const OPEN = ['ready', 'needs_contact', 'low'];
+  const status = (options.status ?? 'all').trim() || 'all';
+  const limit = Math.min(500, Math.max(20, Number(options.limit) || 200));
+  const offset = Math.max(0, Number(options.offset) || 0);
+
+  // 计数一律走数据库：线索池上千条时，不能用「这一页的长度」当总数
+  const byStatus = await Prospect.aggregate<{ _id: string; count: number }>([
+    { $match: { projectId, status: { $in: OPEN } } },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ]);
+  const countOf = (key: string) => Number(byStatus.find((item) => item._id === key)?.count ?? 0);
+  const openCounts = {
+    ready: countOf('ready'),
+    needs_contact: countOf('needs_contact'),
+    low: countOf('low'),
+  };
+  const openAll = openCounts.ready + openCounts.needs_contact + openCounts.low;
+  const openTotal = status === 'all' || status === 'converted' ? openAll : countOf(status);
+
   // Unhandled candidates carry over until approved/rejected; only handled states are day-scoped.
-  const carried = await Prospect.find({ projectId, status: { $in: ['ready', 'needs_contact', 'low'] } })
-    .sort({ day: -1, score: -1 }).limit(200).lean();
-  const finished = await Prospect.find({ projectId, day, status: { $in: ['converted', 'rejected'] } }).lean();
+  const openFilter: Record<string, unknown> = { projectId, status: { $in: OPEN } };
+  if (status !== 'all' && status !== 'converted') openFilter.status = status;
+  const carried = status === 'converted'
+    ? []
+    : await Prospect.find(openFilter).sort({ day: -1, score: -1 }).skip(offset).limit(limit).lean();
+  const finished = status === 'all' || status === 'converted'
+    ? await Prospect.find({ projectId, day, status: { $in: ['converted', 'rejected'] } }).lean()
+    : [];
   const unique = new Map<string, (typeof carried)[number]>();
   for (const item of [...carried, ...finished]) unique.set(String(item._id), item);
   const prospects = [...unique.values()]
     .sort((a, b) => (order[a.status] - order[b.status]) || (b.score - a.score) || b.day.localeCompare(a.day));
+  const convertedToday = await Prospect.countDocuments({ projectId, day, status: 'converted' });
+  const carriedFromEarlier = await Prospect.countDocuments({
+    projectId,
+    status: { $in: OPEN },
+    day: { $ne: day },
+  });
   const counts = {
-    total: prospects.length,
-    ready: prospects.filter((p) => p.status === 'ready').length,
-    needsContact: prospects.filter((p) => p.status === 'needs_contact').length,
-    low: prospects.filter((p) => p.status === 'low').length,
-    converted: prospects.filter((p) => p.status === 'converted').length,
-    carriedFromEarlier: prospects.filter((p) => p.day !== day && ['ready', 'needs_contact', 'low'].includes(p.status)).length,
+    total: openAll + convertedToday,
+    ready: openCounts.ready,
+    needsContact: openCounts.needs_contact,
+    low: openCounts.low,
+    converted: convertedToday,
+    carriedFromEarlier,
   };
   const dtos = prospects.map((p) => toProspect(p as unknown as Record<string, unknown>));
   await attachOutcomes(projectId, dtos);
-  return { day, run: run ? toRun(run as unknown as Record<string, unknown>) : null, prospects: dtos, counts };
+  return {
+    day,
+    run: run ? toRun(run as unknown as Record<string, unknown>) : null,
+    prospects: dtos,
+    counts,
+    /** 还有更多没返回（用 offset 翻页） */
+    hasMore: offset + carried.length < openTotal,
+    openTotal,
+    offset,
+    status,
+  };
 }
 
 async function attachOutcomes(projectId: Types.ObjectId, prospects: ProspectDto[]) {
@@ -339,6 +393,27 @@ export async function approveProspect(actor: AuthUser, id: string) {
   if (!prospect) throw ApiError.notFound('候选不存在');
   if (prospect.status === 'converted') throw ApiError.conflict('该候选已经转为客户');
   if (!prospect.emails.length) throw ApiError.badRequest('该候选还没有邮箱，请先人工补联系方式或直接跳过');
+  // 转客户前查重：邮箱或网站撞上已有客户就是重复，直接拦下；同公司名的先提示
+  const duplicateReport = await findCustomerDuplicates(
+    projectId,
+    {
+      email: prospect.emails[0],
+      website: prospect.website,
+      company: prospect.company,
+      name: prospect.name,
+      phone: prospect.phone,
+    },
+    { strictDomain: true },
+  );
+  if (duplicateReport.hard.length > 0) {
+    const hit = duplicateReport.hard[0]!;
+    throw new ApiError(
+      409,
+      `${describeDuplicate(hit)}，这条线索可能重复；确认是另一家客户，请先改线索的网站或邮箱再转`,
+      'CONFLICT',
+      [{ field: 'duplicateCustomerId', message: hit.id }],
+    );
+  }
   const config = await getProspectingConfig(actor);
   try {
     const customer = await createCustomer(prospectCustomerInput(prospect), actor, { source: 'prospecting', ownerId: config.ownerId ? String(config.ownerId) : undefined });
@@ -367,7 +442,14 @@ export async function approveProspect(actor: AuthUser, id: string) {
       draftError = error instanceof Error ? error.message : '草稿任务创建失败';
       logger.warn(`自动草稿任务创建失败：${String(prospect.domain)}`, draftError);
     }
-    return { prospect: toProspect(prospect.toObject() as unknown as Record<string, unknown>), customer, draftTaskId, draftError };
+    return {
+      prospect: toProspect(prospect.toObject() as unknown as Record<string, unknown>),
+      customer,
+      draftTaskId,
+      draftError,
+      // 同公司名 / 同电话的客户：已经建好了，提醒一句让人去核对
+      duplicates: duplicateReport.soft.map((item) => ({ id: item.id, name: item.name, reason: describeDuplicate(item) })),
+    };
   } catch (error) {
     if (error instanceof ApiError && error.statusCode === 409) throw ApiError.conflict('该邮箱或公司已经存在于客户列表');
     throw error;
@@ -403,7 +485,9 @@ export async function syncProspectCustomer(actor:AuthUser,id:string){
  const prospect=await Prospect.findOne({_id:id,projectId:requireProjectId(actor),status:'converted'});
  if(!prospect?.customerId)throw ApiError.notFound('候选尚未转客户或不可访问');
  const customer=await getCustomerByIdOrThrow(String(prospect.customerId),actor);
- const input=prospectCustomerInput(prospect);
+ const input={...prospectCustomerInput(prospect)};
+ // 客户记录里的国家统一成中文简称；候选表保留官网原始写法
+ input.country=normalizeCountry(input.country)??input.country;
  const keys=['company','title','country','phone','address','industry','instagram','linkedin','facebook','whatsapp'] as const;
  const filled:string[]=[];
  for(const key of keys){const value=input[key];if(!value)continue;

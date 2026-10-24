@@ -9,7 +9,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { MailWarning, UserPlus } from 'lucide-react';
+import { MailWarning, ShieldAlert, UserPlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,13 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { COUNTRY_OPTIONS } from '@/lib/country';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label, FieldMessage, RequiredMark } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ApiClientError } from '@/lib/api';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ApiClientError, apiGet } from '@/lib/api';
 import { defaultCustomerFormValues, customerFormSchema, type CustomerFormValues } from '@/lib/validators';
 import { toCustomerPayload } from '@/lib/customer-payload';
 import { toInputDate } from '@/lib/format';
@@ -118,6 +119,16 @@ function Field({
   );
 }
 
+/** 查重预检命中的已有客户 */
+interface DuplicateHit {
+  id: string;
+  name: string;
+  company: string | null;
+  email: string | null;
+  matched: 'email' | 'website' | 'company' | 'phone';
+  reason: string;
+}
+
 export function CustomerFormDialog({
   open,
   onOpenChange,
@@ -134,6 +145,9 @@ export function CustomerFormDialog({
 
   const [submitting, setSubmitting] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  // 查重结果：命中了就先摆出来，让人确认「不是同一位客户」再保存
+  const [duplicates, setDuplicates] = React.useState<DuplicateHit[]>([]);
+  const [duplicateConfirmed, setDuplicateConfirmed] = React.useState(false);
 
   const {
     register,
@@ -154,10 +168,22 @@ export function CustomerFormDialog({
     if (open) {
       reset(toFormValues(customer));
       setServerError(null);
+      setDuplicates([]);
+      setDuplicateConfirmed(false);
     }
   }, [open, customer, reset]);
 
   const emailValue = watch('email');
+  const websiteValue = watch('website');
+  const companyValue = watch('company');
+  const nameValue = watch('name');
+  const phoneValue = watch('phone');
+  // 改了关键字段就重新查一次：别让旧的查重结论挡住/放过新的内容
+  const duplicateKey = [emailValue, websiteValue, companyValue, nameValue, phoneValue].join('|');
+  React.useEffect(() => {
+    setDuplicates([]);
+    setDuplicateConfirmed(false);
+  }, [duplicateKey]);
   const statusValue = watch('status');
   const ownerValue = watch('ownerId');
   const leadSourceValue = watch('leadSource');
@@ -178,6 +204,31 @@ export function CustomerFormDialog({
       setSubmitting(true);
       setServerError(null);
       try {
+        // 新建前先查重：邮箱 / 网站 / 公司名 / 电话，撞上了先摆出来让人确认
+        if (!isEdit && !duplicateConfirmed) {
+          const query = new URLSearchParams();
+          [['email', values.email], ['website', values.website], ['company', values.company], ['name', values.name], ['phone', values.phone]]
+            .forEach(([key, value]) => {
+              const trimmed = (value ?? '').trim();
+              if (trimmed) query.set(key as string, trimmed);
+            });
+          if ([...query.keys()].length > 0) {
+            try {
+              const report = await apiGet<{ hard: DuplicateHit[]; soft: DuplicateHit[] }>(
+                `/customers/duplicates?${query.toString()}`,
+              );
+              const hits = [...report.hard, ...report.soft];
+              if (hits.length > 0) {
+                setDuplicates(hits);
+                setDuplicateConfirmed(true);
+                setSubmitting(false);
+                return;
+              }
+            } catch {
+              // 查重接口失败不挡保存：后端建客户时还会再拦一次
+            }
+          }
+        }
         const payload = toCustomerPayload(values);
         if (isEdit && customer) {
           const saved = await updateCustomer(customer.id, payload);
@@ -209,7 +260,7 @@ export function CustomerFormDialog({
         setSubmitting(false);
       }
     })();
-  }, [handleSubmit, isEdit, customer, createCustomer, updateCustomer, onOpenChange, onSaved, setError]);
+  }, [handleSubmit, isEdit, customer, createCustomer, updateCustomer, onOpenChange, onSaved, setError, duplicateConfirmed]);
 
   useSaveShortcut(() => {
     if (open && !submitting) void submit();
@@ -240,6 +291,35 @@ export function CustomerFormDialog({
           }}
         >
           <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
+            {duplicates.length > 0 && (
+              <Alert variant="warning">
+                <ShieldAlert aria-hidden />
+                <AlertTitle>客户库里已经有相近的记录</AlertTitle>
+                <AlertDescription>
+                  <ul className="mt-1.5 space-y-1">
+                    {duplicates.map((hit) => (
+                      <li key={hit.id} className="break-words">
+                        <a
+                          href={`/customers/${hit.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium underline underline-offset-2"
+                        >
+                          {hit.name || hit.company || hit.id}
+                        </a>
+                        <span className="text-muted-foreground"> · {hit.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5">
+                    {duplicates.some((hit) => hit.matched === 'email')
+                      ? '邮箱已经占用，建议直接在上面那条客户里维护，或换一个邮箱再保存。'
+                      : '如果确实是另一位联系人 / 另一家公司，再点「仍然保存」。'}
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {serverError ? (
               <Alert variant="destructive">
                 <MailWarning aria-hidden />
@@ -295,8 +375,19 @@ export function CustomerFormDialog({
                 </datalist>
               </Field>
 
-              <Field label="国家 / 地区" htmlFor="cf-country" error={fieldError('country')}>
-                <Input id="cf-country" placeholder="例如 New Zealand" autoComplete="off" {...register('country')} />
+              <Field label="国家 / 地区" htmlFor="cf-country" error={fieldError('country')} hint="中英文写法都行，保存时自动统一为规范国家">
+                <Input
+                  id="cf-country"
+                  placeholder="例如 新西兰 / New Zealand"
+                  autoComplete="off"
+                  list="cf-country-options"
+                  {...register('country')}
+                />
+                <datalist id="cf-country-options">
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value} />
+                  ))}
+                </datalist>
               </Field>
 
               <Field label="客户等级" htmlFor="cf-grade" error={fieldError('grade')} hint="例如 A / B / C，便于分层跟进">
@@ -493,8 +584,13 @@ export function CustomerFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               取消
             </Button>
-            <Button type="submit" loading={submitting}>
-              {isEdit ? '保存修改' : '创建客户'}
+            <Button
+              type="submit"
+              loading={submitting}
+              disabled={duplicates.some((hit) => hit.matched === 'email')}
+              title={duplicates.some((hit) => hit.matched === 'email') ? '邮箱已被其他客户占用' : undefined}
+            >
+              {isEdit ? '保存修改' : duplicates.length > 0 ? '仍然保存' : '创建客户'}
             </Button>
           </DialogFooter>
         </form>

@@ -106,14 +106,14 @@ export function ProjectsPage(): React.JSX.Element {
 
   return (
     <div className="workspace-page">
-      <PageHeader title="项目工作空间" description="每个项目拥有独立的客户、邮件、模板、报价、Timeline 与统计数据。"
+      <PageHeader title="项目工作空间" description="每个项目各自一套客户、邮件、模板和报价，互不影响。"
         actions={<Button type="button" onClick={openCreate}><Plus className="h-4 w-4" aria-hidden />新建项目</Button>} />
 
       <div role="note" className="flex gap-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
         <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
         <div>
-          <p className="font-medium">多个项目可以同时处于“可用”状态，不会合并或污染数据。</p>
-          <p className="mt-1 text-muted-foreground">顶部项目切换器决定当前正在使用的工作空间；客户、邮件和统计每次只读取一个当前项目。要归档当前项目，请先切换到另一个项目。</p>
+          <p className="font-medium">多个项目可以同时使用，数据互不混淆。</p>
+          <p className="mt-1 text-muted-foreground">顶部切换器决定你现在在哪个项目里干活；每次只显示一个项目的客户和邮件。要归档当前项目，请先切换到别的项目。</p>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export function ProjectsPage(): React.JSX.Element {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><p className="text-xs text-muted-foreground">公司主体</p><p className="truncate" title={project.companyName}>{project.companyName}</p></div>
-              <div className="flex flex-wrap gap-2"><Badge variant="outline">{project.mailChannel === 'smtp' ? '邮箱发送' : '模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
+              <div className="flex flex-wrap gap-2"><Badge variant="outline">{project.mailChannel === 'smtp' ? '邮箱直发' : '模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
               <div className="flex flex-wrap gap-2">
                 {project.status === 'active' && !isCurrent ? (
                   <Button type="button" size="sm" onClick={() => switchProject(project.id)}>
@@ -160,7 +160,7 @@ export function ProjectsPage(): React.JSX.Element {
               </div>
               {project.isDefault || (isCurrent && project.status === 'active') ? (
                 <p id={`project-archive-help-${project.id}`} className="text-xs text-muted-foreground">
-                  {project.isDefault ? '默认项目为历史数据归属，不能归档。' : '当前正在使用；切换到其他项目后即可归档。'}
+                  {project.isDefault ? '默认项目保留历史数据，不能归档。' : '正在使用中；切换到别的项目后就能归档。'}
                 </p>
               ) : null}
             </CardContent>
@@ -192,9 +192,9 @@ export function ProjectsPage(): React.JSX.Element {
                 <Input id="project-cover" type="file" accept="image/png,image/jpeg,image/webp" className="max-w-[16rem]" onChange={(event) => { void applyCover(event.target.files?.[0]); event.target.value = ''; }} />
                 {form.coverImage ? <Button type="button" variant="ghost" size="sm" onClick={() => setForm((value) => ({ ...value, coverImage: '' }))}>移除封面</Button> : null}
               </div>
-              <p className="text-xs text-muted-foreground">建议 16:9 横图；浏览器压缩到 1280px 宽后随项目保存，不上传到第三方。</p>
+              <p className="text-xs text-muted-foreground">建议 16:9 横图；会自动压缩到 1280px 宽后保存，不会上传到第三方。</p>
             </div>
-            <p className="sm:col-span-2 -mt-2 text-xs text-muted-foreground">项目标识创建后不可修改。邮箱配置标识用于关联项目邮箱，修改前请与管理员确认。</p>
+            <p className="sm:col-span-2 -mt-2 text-xs text-muted-foreground">项目标识创建后不能改。邮箱配置代码用来对应项目邮箱，改之前先和管理员确认。</p>
           </DialogBody>
           <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>取消</Button><Button type="button" loading={saving} disabled={!form.name.trim() || !form.companyName.trim() || (!editingId && !form.code.trim())} onClick={() => void submit()}>{editingId ? '保存修改' : '创建项目'}</Button></DialogFooter>
         </DialogContent>

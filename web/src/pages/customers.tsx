@@ -25,7 +25,7 @@ import {
 import { CustomerFormDialog } from '@/components/customers/customer-form-dialog';
 import { ImportDialog } from '@/components/customers/import-dialog';
 import { SendLetterDialog } from '@/components/letters/send-letter-dialog';
-import { useCustomerList, useIndustries, useOwners, useTags } from '@/hooks/use-queries';
+import { useCountries, useCustomerList, useIndustries, useOwners, useTags } from '@/hooks/use-queries';
 import { usePageTitle } from '@/hooks/use-ui';
 import { selectHasActiveFilters, useCustomerStore } from '@/store/customer.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
@@ -49,12 +49,14 @@ export function CustomersPage(): React.JSX.Element {
   const error = useCustomerStore((state) => state.error);
   const selectedIds = useCustomerStore((state) => state.selectedIds);
   const industries = useCustomerStore((state) => state.industries);
+  const countries = useCustomerStore((state) => state.countries);
   const tags = useCustomerStore((state) => state.tags);
   const owners = useCustomerStore((state) => state.owners);
 
   const search = useCustomerStore((state) => state.search);
   const status = useCustomerStore((state) => state.status);
   const industry = useCustomerStore((state) => state.industry);
+  const country = useCustomerStore((state) => state.country);
   const grade = useCustomerStore((state) => state.grade);
   const leadSource = useCustomerStore((state) => state.leadSource);
   const priority = useCustomerStore((state) => state.priority);
@@ -91,6 +93,7 @@ export function CustomersPage(): React.JSX.Element {
   // 条件变化 → 自动拉数据
   useCustomerList();
   useIndustries();
+  useCountries();
   useTags();
   useOwners();
 
@@ -112,8 +115,8 @@ export function CustomersPage(): React.JSX.Element {
   /* ---------------------------- 派生数据 ---------------------------- */
 
   const filterValues = React.useMemo<CustomerFilterValues>(
-    () => ({ search, status, industry, grade, leadSource, priority, hasEmail, tag, ownerId, followUp }),
-    [search, status, industry, grade, leadSource, priority, hasEmail, tag, ownerId, followUp],
+    () => ({ search, status, industry, country, grade, leadSource, priority, hasEmail, tag, ownerId, followUp }),
+    [search, status, industry, country, grade, leadSource, priority, hasEmail, tag, ownerId, followUp],
   );
 
   // 等级候选来自当前页数据（后端不提供聚合接口，够用且不额外请求）
@@ -276,7 +279,7 @@ export function CustomersPage(): React.JSX.Element {
               {hasActiveFilters ? '（已应用筛选条件）' : ''}
             </>
           ) : (
-            '导入 Excel 或手工新建客户，随后即可批量发送开发信'
+            '导入的名单默认先进「今日开发」审核，通过后再成为客户；已核实过的名单也可以直接建客户'
           )
         }
         actions={
@@ -307,6 +310,7 @@ export function CustomersPage(): React.JSX.Element {
       <CustomerFilters
         values={filterValues}
         industries={industries}
+        countries={countries}
         grades={grades}
         tags={tags}
         owners={owners}

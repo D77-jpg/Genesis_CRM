@@ -10,6 +10,8 @@ const schema = new Schema({
   dedupKey: { type: String, required: true },
   deleted: { type: Boolean, default: false },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer', index: true, default: null },
+  // 还没转客户的来信挂在线索上，业务员能看到「线索 · 公司名」而不是一片未关联
+  prospectId: { type: Schema.Types.ObjectId, ref: 'Prospect', index: true, default: null },
   threadId: { type: String, required: true, index: true },
   messageId: { type: String, index: true },
   inReplyTo: String,

@@ -3,7 +3,8 @@
  * ------------------------------------------------------------------
  * - 桌面端：语义化表格，行点击进详情，Checkbox 与操作按钮阻止冒泡
  * - 移动端（< 768px）：卡片列表，避免横向滚动带来的糟糕体验
- * - 表头支持排序（姓名 / 公司 / 状态 / 开发信数 / 下次跟进 / 最近联系 / 更新时间）
+ * - 姓名单元格同时展示公司/职位与国家/行业，业务员扫一眼即可判断客户画像
+ * - 表头支持排序（姓名 / 状态 / 开发信数 / 下次跟进 / 最近联系 / 更新时间）
  */
 import * as React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -32,7 +33,10 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/popover';
 import { EmptyState, ErrorState, NoResultState } from '@/components/common/empty-state';
 import { CUSTOMER_SOURCE_LABEL, customerDetailPath } from '@/constants';
-import { formatDate, formatDateTime, formatRelative, getFollowUpState, initials } from '@/lib/format';
+import { formatDate, formatDateTime, formatRelative, formatShortDateTime, getFollowUpState, initials } from '@/lib/format';
+import { countryInfo } from '@/lib/country';
+import { isCompanyOnlyCustomer, secondaryCompanyLabel } from '@/lib/customer-display';
+import { CountryFlag } from '@/components/common/country-flag';
 import { cn } from '@/lib/utils';
 import type { CustomerSortField } from '@/store/customer.store';
 import type { Customer, OwnerOption } from '@/types';
@@ -64,22 +68,57 @@ export interface CustomerTableProps {
   onResetFilters: () => void;
 }
 
-/** 姓名 + 公司的组合单元格，公司缺失时显示来源 */
+/**
+ * 客户标识：固定两行，保证每行高度一致、看着整齐。
+ *   第一行：行业 · 国家（弱化的小字，业务员先扫市场和品类）
+ *   第二行：姓名（主信息，放不下才省略）
+ * 公司 / 职位不占版面，鼠标停在名字上能在提示里看到。
+ */
 function CustomerIdentity({ customer }: { customer: Customer }): React.JSX.Element {
+  const country = countryInfo(customer.country);
+  // 潜客转来的记录常常没有联系人（客户名 = 公司名），提示里不再把公司重复一遍
+  const company = secondaryCompanyLabel(customer) || CUSTOMER_SOURCE_LABEL[customer.source] || '';
+  const companyLine = [company || '未填写公司', customer.title, isCompanyOnlyCustomer(customer) ? '未填联系人' : '']
+    .filter(Boolean)
+    .join(' · ');
+  const line = [customer.industry, country?.name, customer.name].filter(Boolean).join(' · ');
+  const hasMarket = Boolean(customer.industry || country);
+
   return (
-    <div className="flex w-[13rem] max-w-full items-center gap-2.5">
+    <div className="flex w-full min-w-0 items-center gap-2.5 md:w-[18rem]">
       <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
         aria-hidden
       >
         {initials(customer.name)}
       </span>
-      <span className="min-w-0">
-        <span className="block truncate font-medium text-foreground" title={customer.name}>{customer.name}</span>
-        <span className="block truncate text-xs text-muted-foreground" title={[customer.company, customer.title].filter(Boolean).join(' · ')}>
-          {customer.company || CUSTOMER_SOURCE_LABEL[customer.source] || '未填写公司'}
-          {customer.title ? ` · ${customer.title}` : ''}
+      {/* 两行固定栅格：高度恒定，扫下来不会一行高一行低 */}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5" title={companyLine ? `${line}\n${companyLine}` : line}>
+        <span className="flex min-w-0 items-center gap-1 text-xs leading-4 text-muted-foreground">
+          {hasMarket ? (
+            <>
+              {customer.industry ? (
+                <span className="min-w-0 truncate" title={customer.industry}>
+                  {customer.industry}
+                </span>
+              ) : null}
+              {customer.industry && country ? (
+                <span className="shrink-0 text-muted-foreground/40" aria-hidden>
+                  ·
+                </span>
+              ) : null}
+              {country ? (
+                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap" title={country.name}>
+                  <CountryFlag value={customer.country} />
+                  {country.name}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="text-muted-foreground/60">未填行业 / 国家</span>
+          )}
         </span>
+        <span className="block truncate text-sm font-medium leading-5 text-foreground">{customer.name}</span>
       </span>
     </div>
   );
@@ -103,7 +142,8 @@ function EmailCell({ email }: { email?: string }): React.JSX.Element {
   return (
     <a
       href={`mailto:${email}`}
-      className="inline-flex max-w-[16rem] items-center gap-1.5 truncate text-xs text-foreground underline-offset-2 hover:text-primary hover:underline"
+      className="flex max-w-full items-center gap-1.5 truncate text-xs text-foreground underline-offset-2 hover:text-primary hover:underline"
+      title={email}
       onClick={(event) => event.stopPropagation()}
     >
       <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -301,7 +341,6 @@ export function CustomerTable({
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <CustomerQuickEdit customer={customer} field="status" disabled={quickEditDisabled} onSave={onQuickEdit} />
                 {customer.grade ? <Badge variant="secondary">{customer.grade} 级</Badge> : null}
-                {customer.industry ? <Badge variant="muted">{customer.industry}</Badge> : null}
                 {showOwner ? (
                   <CustomerQuickEdit customer={customer} field="ownerId" owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
                 ) : null}
@@ -359,14 +398,17 @@ export function CustomerTable({
               <SortableHeader field="name" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)}>
                 客户
               </SortableHeader>
-              <TableHead className="min-w-[12rem]">联系方式</TableHead>
-              <SortableHeader field="industry" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)}>
-                行业 / 地区
-              </SortableHeader>
-              <SortableHeader field="status" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)}>
+              <TableHead className="min-w-[10.5rem]">联系方式</TableHead>
+              <SortableHeader
+                field="status"
+                activeField={sortBy}
+                activeOrder={sortOrder}
+                onSort={(f) => onSort(f as CustomerSortField)}
+                className="w-[7rem]"
+              >
                 状态
               </SortableHeader>
-              {showOwner ? <TableHead className="min-w-[7rem]">负责人</TableHead> : null}
+              {showOwner ? <TableHead className="w-[6.5rem]">负责人</TableHead> : null}
               <SortableHeader
                 field="letterCount"
                 activeField={sortBy}
@@ -439,12 +481,6 @@ export function CustomerTable({
                   </div>
                 </TableCell>
 
-                <TableCell>
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <div className="truncate">{customer.industry || '—'}</div>
-                    <div className="truncate">{customer.country || '—'}</div>
-                  </div>
-                </TableCell>
 
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
@@ -491,8 +527,11 @@ export function CustomerTable({
                   )}
                 </TableCell>
 
-                <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                  {formatDateTime(customer.updatedAt)}
+                <TableCell
+                  className="whitespace-nowrap text-xs text-muted-foreground"
+                  title={formatDateTime(customer.updatedAt)}
+                >
+                  {formatShortDateTime(customer.updatedAt)}
                 </TableCell>
 
                 <TableCell className="pr-3" onClick={(event) => event.stopPropagation()}>

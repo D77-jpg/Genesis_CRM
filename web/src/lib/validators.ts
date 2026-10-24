@@ -38,12 +38,12 @@ const optionalText = (max: number, label: string) =>
   z
     .string()
     .trim()
-    .max(max, `${label}不能超过 ${max} 个字符`)
+    .max(max, `${label}不能超过 ${max} 个字`)
     .optional()
     .or(z.literal(''));
 
 export const customerFormSchema = z.object({
-  name: z.string().trim().min(1, '客户姓名为必填项').max(120, '客户姓名不能超过 120 个字符'),
+  name: z.string().trim().min(1, '客户姓名为必填项').max(120, '客户姓名不能超过 120 个字'),
   company: optionalText(200, '公司名称'),
   email: z
     .string()
@@ -76,12 +76,8 @@ export const customerFormSchema = z.object({
   requirementNotes: optionalText(5000, '需求备注'),
   // 业务来源（Select，但允许保留自定义值）+ 跟进优先级
   leadSource: optionalText(120, '来源'),
-  priority: z.enum(CUSTOMER_PRIORITY_VALUES, {
-    errorMap: () => ({ message: '请选择跟进优先级' }),
-  }),
-  status: z.enum(CUSTOMER_STATUS_VALUES, {
-    errorMap: () => ({ message: '请选择客户状态' }),
-  }),
+  priority: z.enum(CUSTOMER_PRIORITY_VALUES, { error: '请选择跟进优先级' }),
+  status: z.enum(CUSTOMER_STATUS_VALUES, { error: '请选择客户状态' }),
   /** 负责人用户 id（'' 表示未分配） */
   ownerId: z.string().trim().max(24).optional().or(z.literal('')),
   /** 下一次跟进时间（date input 的 yyyy-MM-dd，'' 表示未设置） */
@@ -143,7 +139,7 @@ const hasVisibleText = (html: string): boolean =>
   html.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length > 0;
 
 export const sendLetterSchema = z.object({
-  subject: z.string().trim().min(1, '邮件主题为必填项').max(300, '邮件主题不能超过 300 个字符'),
+  subject: z.string().trim().min(1, '邮件主题为必填项').max(300, '邮件主题不能超过 300 个字'),
   content: z
     .string()
     .min(1, '开发信正文不能为空')
@@ -165,13 +161,13 @@ export type SendLetterFormValues = z.infer<typeof sendLetterSchema>;
  * 时间字段沿用 date input 的 yyyy-MM-dd 字符串，空串表示未设置。
  */
 export const followUpFormSchema = z.object({
-  method: z.enum(FOLLOW_UP_METHOD_VALUES, { errorMap: () => ({ message: '请选择跟进方式' }) }),
+  method: z.enum(FOLLOW_UP_METHOD_VALUES, { error: '请选择跟进方式' }),
   content: z
     .string()
     .trim()
     .min(1, '跟进内容不能为空')
-    .max(5000, '跟进内容不能超过 5000 个字符'),
-  result: z.enum(FOLLOW_UP_RESULT_VALUES, { errorMap: () => ({ message: '请选择跟进结果' }) }),
+    .max(5000, '跟进内容不能超过 5000 个字'),
+  result: z.enum(FOLLOW_UP_RESULT_VALUES, { error: '请选择跟进结果' }),
   followUpAt: z.string().trim().max(40).optional().or(z.literal('')),
   nextFollowUpAt: z.string().trim().max(40).optional().or(z.literal('')),
 });
@@ -201,8 +197,8 @@ export const defaultFollowUpFormValues: FollowUpFormValues = {
  * quantity / unitPrice 用 z.coerce.number 兼容 number 输入框回传的字符串。
  */
 export const quotationItemFormSchema = z.object({
-  productName: z.string().trim().min(1, '产品名称为必填项').max(200, '产品名称不能超过 200 个字符'),
-  model: z.string().trim().max(200, '型号不能超过 200 个字符').optional().or(z.literal('')),
+  productName: z.string().trim().min(1, '产品名称为必填项').max(200, '产品名称不能超过 200 个字'),
+  model: z.string().trim().max(200, '型号不能超过 200 个字').optional().or(z.literal('')),
   quantity: z.coerce.number().positive('数量必须大于 0').max(1_000_000_000, '数量过大'),
   unitPrice: z.coerce.number().min(0, '单价不能为负数').max(1_000_000_000, '单价过大'),
 });
@@ -216,13 +212,13 @@ export const quotationFormSchema = z.object({
   quotationNo: z
     .string()
     .trim()
-    .max(60, '报价单编号不能超过 60 个字符')
+    .max(60, '报价单编号不能超过 60 个字')
     .regex(/^[A-Za-z0-9._-]*$/, '编号只能包含字母、数字、点、下划线和连字符')
     .optional()
     .or(z.literal('')),
-  title: z.string().trim().min(1, '报价标题为必填项').max(200, '报价标题不能超过 200 个字符'),
-  currency: z.enum(QUOTATION_CURRENCY_VALUES, { errorMap: () => ({ message: '请选择币种' }) }),
-  status: z.enum(QUOTATION_STATUS_VALUES, { errorMap: () => ({ message: '请选择状态' }) }),
+  title: z.string().trim().min(1, '报价标题为必填项').max(200, '报价标题不能超过 200 个字'),
+  currency: z.enum(QUOTATION_CURRENCY_VALUES, { error: '请选择币种' }),
+  status: z.enum(QUOTATION_STATUS_VALUES, { error: '请选择状态' }),
   validityDate: z.string().trim().max(40).optional().or(z.literal('')),
   paymentTerms: optionalText(300, '付款方式'),
   leadTime: optionalText(200, '交期'),
@@ -258,14 +254,14 @@ export const defaultQuotationFormValues: QuotationFormValues = {
  * 正文与发送开发信一致：去掉标签后仍需有可见内容。
  */
 export const templateFormSchema = z.object({
-  name: z.string().trim().min(1, '模板名称为必填项').max(120, '模板名称不能超过 120 个字符'),
-  subject: z.string().trim().min(1, '模板主题为必填项').max(300, '模板主题不能超过 300 个字符'),
+  name: z.string().trim().min(1, '模板名称为必填项').max(120, '模板名称不能超过 120 个字'),
+  subject: z.string().trim().min(1, '模板主题为必填项').max(300, '模板主题不能超过 300 个字'),
   content: z
     .string()
     .min(1, '模板正文不能为空')
     .max(100000, '模板正文过长')
     .refine(hasVisibleText, { message: '模板正文不能为空' }),
-  category: z.enum(TEMPLATE_CATEGORY_VALUES, { errorMap: () => ({ message: '请选择模板分类' }) }),
+  category: z.enum(TEMPLATE_CATEGORY_VALUES, { error: '请选择模板分类' }),
 });
 export type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
@@ -299,7 +295,7 @@ export const userFormSchema = z.object({
     .regex(/^[a-zA-Z0-9._-]+$/, '用户名只能包含字母、数字、点、下划线、连字符'),
   password: z.string().min(6, '密码至少 6 位').max(72, '密码最多 72 位'),
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional().or(z.literal('')),
-  role: z.enum(USER_ROLE_VALUES, { errorMap: () => ({ message: '请选择角色' }) }),
+  role: z.enum(USER_ROLE_VALUES, { error: '请选择角色' }),
   projectIds: z.array(z.string()).default([]),
 }).superRefine((value, ctx) => {
   if (value.role === 'user' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '业务员至少需要加入一个项目' });
@@ -322,7 +318,7 @@ export const editUserFormSchema = z.object({
   username: z.string(),
   password: z.string(),
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional().or(z.literal('')),
-  role: z.enum(USER_ROLE_VALUES, { errorMap: () => ({ message: '请选择角色' }) }),
+  role: z.enum(USER_ROLE_VALUES, { error: '请选择角色' }),
   projectIds: z.array(z.string()).default([]),
 });
 

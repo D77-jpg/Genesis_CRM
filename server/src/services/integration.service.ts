@@ -19,6 +19,7 @@ import {
   type CustomerStatus,
 } from '../constants';
 import { ApiError } from '../utils/ApiError';
+import { normalizeCountry } from '../utils/country';
 import {
   Customer,
   CustomerEvent,
@@ -265,6 +266,8 @@ export async function upsertCustomer(input: {
         // 关联已有客户：建立外部引用 + 补齐空字段
         customer.externalSystem = body.sourceSystem;
         customer.externalId = body.externalId;
+        // 外部系统传来的国家写法不统一，补齐空字段前先归一
+        if (!customer.country && body.country) customer.country = normalizeCountry(body.country) ?? undefined;
         fillEmptyFields(customer, body);
         await customer.save();
         result = toUpsertResult('linked', customer, body.externalId);
@@ -278,7 +281,7 @@ export async function upsertCustomer(input: {
             company: body.company,
             email: body.email,
             phone: body.phone,
-            country: body.country,
+            country: normalizeCountry(body.country) ?? undefined,
             interestedProducts: body.interestedProducts,
             leadSource: body.leadSource,
             productModel: body.productModel,

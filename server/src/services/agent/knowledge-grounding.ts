@@ -130,6 +130,43 @@ export function conditionalSentence(term:KnowledgeTerm,source:KnowledgeSource){
  '. Conditions: '+term.conditions+(source.applicability&&normalizeFact(source.applicability)!==normalizeFact(term.conditions)?'; '+source.applicability:'')+(term.scope?'; '+scopeSummary(term.scope):'')+(source.customerId?'; customer-specific agreement':'')+(source.kind!=='knowledge'&&source.validUntil?'; valid until '+source.validUntil:'')+'.';
 }
 export function customerProfileOf(value:{name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}):CustomerFactProfile{return {name:value.name,company:value.company??'',country:value.country??'',industry:value.industry??'',interestedProducts:value.interestedProducts??''};}
+/** 没有联系人时不能写 "Dear there,"：这类空称呼直接决定客户第一印象 */
+const GENERIC_ADDRESS = /^(?:there|sir|madam|sirs|team|all|everyone|friend|customer|sir\/madam|sir or madam)$/i;
+const flatName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+/** 客户名就是公司名时（导入线索常见），不要当成联系人用。
+ *  只按「完全相同」判断：同名的品牌（Niza Huang / Niza Huang Jewellery）仍然按真人称呼。*/
+const recipientIsCompany = (person: string, company: string) => Boolean(person && company && flatName(person) === flatName(company));
+/** 明显不像人名的：带数字、含公司/占位类词、超过三个词（多半是公司名或占位数据） */
+const BUSINESS_WORD = /\b(?:inc|ltd|limited|llc|gmbh|co|corp|corporation|company|group|holdings|trading|studio|store|shop|boutique|brand|brands|design|designs|jewelry|jewellery|candle|candles|fixture|test|demo|sample|batch|customer|client|buyer|team|department)\b/i;
+function looksLikePersonName(person: string): boolean {
+  if (!person) return false;
+  if (/\d/.test(person)) return false;
+  if (!/^[\p{L}\p{M}][\p{L}\p{M}.'\- ]*$/u.test(person)) return false;
+  if (person.split(/\s+/).filter(Boolean).length > 3) return false;
+  return !BUSINESS_WORD.test(person);
+}
+/** 称呼里可用的联系人名字：有真人联系人时返回 First Name，否则空字符串 */
+export function salutationName(recipientName?: string | null, companyName?: string | null): string {
+  const person = (recipientName ?? '').replace(/[\r\n]/g, ' ').trim();
+  const company = (companyName ?? '').replace(/[\r\n]/g, ' ').trim();
+  if (!person || recipientIsCompany(person, company) || !looksLikePersonName(person)) return '';
+  const first = person.split(/\s+/).filter(Boolean)[0] ?? '';
+  return GENERIC_ADDRESS.test(first) ? '' : first;
+}
+/**
+ * 称呼一句话：有联系人 → Dear First,；只有公司 → Dear {Company} team,；都没有 → Hello,
+ * （原来直接拿 customerName 拼，客户名等于公司名时就出现 "Dear ScentSational,"，
+ *   模型自己写 "Dear there," 时更是直接发出去。）
+ */
+export function salutationFor(recipientName?: string | null, companyName?: string | null): string {
+  const personName = salutationName(recipientName, companyName);
+  if (personName) return 'Dear ' + personName + ',';
+  const brand = ((companyName ?? '').replace(/[\r\n]/g, ' ').trim()
+    || (recipientName ?? '').replace(/[\r\n]/g, ' ').trim());
+  // 公司名本身已带 team / group / inc 之类后缀时，不再重复加 team
+  if (brand && !GENERIC_ADDRESS.test(brand)) return 'Dear ' + brand + (/\b(?:team|group|inc|ltd|limited|llc|gmbh|co|corp|corporation|company|holdings|brands)\b\.?$/i.test(brand) ? ',' : ' team,');
+  return 'Hello,';
+}
 export interface GroundedEmailOptions {
   // Paragraphs that already passed claim checking; they replace the generic opening.
   verifiedProse?: string;
@@ -167,9 +204,11 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  const recipient=options.recipientName?.replace(/[\r\n]/g,' ').trim().slice(0,100);
  const outreach=options.taskType==='first_outreach';
  const intro=options.verifiedProse??(options.taskType==='quotation_explanation'?'Here are the quotation details available for review and any points still requiring confirmation.':options.taskType==='sample_reply'?'Here is the available information for your sample request.':options.taskType==='followup_review'?'I wanted to check whether you have any updates on your current requirements.':undefined);
- const sections=[recipient?'Dear '+recipient+',':'Hello,',intro??(outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.'),
+ const asked=/[?？]\s*$/.test((options.verifiedProse??'').trim());
+ const sections=[salutationFor(recipient,options.customerProfile?.company),intro??(outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.'),
  answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'',
- outreach?'Would a brief discussion about your requirements be useful?':options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':'Could you please confirm your final specifications so we can agree on the next step?',
+ // 模型自己已经用提问收尾时（asked），不再补模板问句，否则一封信念出两个问题
+ outreach?(asked?'':'Would it help if I sent a few options that fit your product line?'):options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':'Could you please confirm your final specifications so we can agree on the next step?',
  seller?renderSignatureText(signatureName(seller.senderName,seller.companyName)):''];
  const bodyText=sections.filter(Boolean).join('\n\n');
  const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));
