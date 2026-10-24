@@ -8,7 +8,7 @@
  */
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { formResolver } from '@/lib/form-resolver';
 import { toast } from 'sonner';
 import { TriangleAlert, UserCog, UserPlus } from 'lucide-react';
 import {
@@ -100,7 +100,7 @@ export function UserFormDialog({
     setError,
     formState: { errors },
   } = useForm<UserFormValues>({
-    resolver: zodResolver(isEdit ? editUserFormSchema : userFormSchema),
+    resolver: formResolver<UserFormValues>(isEdit ? editUserFormSchema : userFormSchema),
     defaultValues: initial,
     mode: 'onBlur',
   });

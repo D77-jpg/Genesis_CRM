@@ -8,17 +8,17 @@ import { z } from 'zod';
 export const PARSER_VERSION = 'genesis-parser-s1.1';
 export const parserConfig = { maxBytes: 15 * 1024 ** 2, timeoutMs: 180000, maxOutputBytes: 8 * 1024 ** 2, tokenBudget: 128, contract: 1 };
 export const configHash = createHash('sha256').update(JSON.stringify(parserConfig)).digest('hex');
-const location = z.record(z.unknown());
+const location = z.record(z.string(), z.unknown());
 export const chunkResult = z.object({
   ordinal: z.number().int().nonnegative(), content: z.string().min(1).max(1000000), contentHash: z.string().regex(/^[a-f0-9]{64}$/),
   tokenCount: z.number().int().positive(), indexEligible: z.boolean(), headingPath: z.array(z.string()),
-  language: z.string(), location, table: z.record(z.unknown()).optional(), headers: z.array(z.string()).default([]), footnotes: z.array(z.string()).default([]),
+  language: z.string(), location, table: z.record(z.string(), z.unknown()).optional(), headers: z.array(z.string()).default([]), footnotes: z.array(z.string()).default([]),
   currencies: z.array(z.string()), units: z.array(z.string()), warnings: z.array(z.string()), reviewRequired: z.boolean().default(false),
 });
 export const resultSchema = z.object({
   type: z.literal('result'), state: z.enum(['succeeded', 'partial']), chunks: z.array(chunkResult).min(1).max(1200),
-  warnings: z.array(z.string()), parserVersion: z.literal(PARSER_VERSION), packages: z.record(z.string()),
-  tokenizer: z.string(), ocrWeights: z.record(z.string()), limits: z.record(z.number()), elapsedMs: z.number(),
+  warnings: z.array(z.string()), parserVersion: z.literal(PARSER_VERSION), packages: z.record(z.string(), z.string()),
+  tokenizer: z.string(), ocrWeights: z.record(z.string(), z.string()), limits: z.record(z.string(), z.number()), elapsedMs: z.number(),
 });
 export type ParserResult = z.infer<typeof resultSchema>;
 export class ParserError extends Error {

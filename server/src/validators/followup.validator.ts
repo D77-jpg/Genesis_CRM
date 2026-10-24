@@ -6,11 +6,11 @@ import { FOLLOW_UP_METHOD, FOLLOW_UP_RESULT } from '../constants';
 import { idParamsSchema, isoDateSchema, objectIdSchema } from './common';
 
 const followUpMethodSchema = z.enum(FOLLOW_UP_METHOD, {
-  errorMap: () => ({ message: '跟进方式取值非法' }),
+  error: '跟进方式取值非法',
 });
 
 const followUpResultSchema = z.enum(FOLLOW_UP_RESULT, {
-  errorMap: () => ({ message: '跟进结果取值非法' }),
+  error: '跟进结果取值非法',
 });
 
 /**

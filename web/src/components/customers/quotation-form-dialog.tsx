@@ -9,7 +9,7 @@
  */
 import * as React from 'react';
 import { useForm, useFieldArray, useWatch, type Control } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { formResolver } from '@/lib/form-resolver';
 import { toast } from 'sonner';
 import { Plus, ReceiptText, Trash2, TriangleAlert } from 'lucide-react';
 import {
@@ -153,7 +153,7 @@ export function QuotationFormDialog({
     setError,
     formState: { errors },
   } = useForm<QuotationFormValues>({
-    resolver: zodResolver(quotationFormSchema),
+    resolver: formResolver<QuotationFormValues>(quotationFormSchema),
     defaultValues: { ...defaultQuotationFormValues },
     mode: 'onBlur',
   });
