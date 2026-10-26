@@ -240,6 +240,8 @@ export function KnowledgeReviewPanel({
   const riskyChecks = (value?.factAudit?.checks ?? []).filter(
     (c) => (c.status === 'unsupported' || c.status === 'contradicted' || c.status === 'unverifiable') && !isQuestion(c.text),
   );
+  const highRiskClaim = /\b(?:price|pricing|discount|free|sample|shipping|freight|payment|deposit|stock|exclusive|guarantee(?:d)?|certif(?:ied|icate)|legal|contract)\b|价格|报价|折扣|免费|样品|运费|付款|定金|库存|独家|保证|认证|合同|法律/i;
+  const highRiskUnapproved = Boolean(value && !value.manualApprovedAt && highRiskClaim.test((value.claims ?? []).map((claim) => claim.text).join(' ')));
   const needsRegenerate = freshnessChanged || freshnessFailed || ['no_match', 'index_stale', 'index_not_ready', 'expired', 'conflict'].includes(value?.status ?? '');
 
   // 变化的依据去重：同一份资料反复出现时只留一行
@@ -258,6 +260,13 @@ export function KnowledgeReviewPanel({
 
   /** 待办清单：只列必须由人拍板的事 */
   const todos: Todo[] = [];
+  if (highRiskUnapproved) {
+    todos.push({
+      key: 'high-risk',
+      title: '这封涉及价格、交期或承诺',
+      detail: '高风险内容需要你先点「审核通过」，系统才允许发送。',
+    });
+  }
   if (bodyChanged) {
     todos.push({
       key: 'body',
@@ -306,11 +315,19 @@ export function KnowledgeReviewPanel({
       action: letterId && needsRegenerate ? 'regenerate' : undefined,
     });
   }
-  if (value?.issues.some((i) => i.code === 'draft_unverified')) {
+  if (value?.issues.some((i) => i.code === 'semantic_unverified' || i.code === 'draft_unverified') || value?.factAudit?.mode === 'unavailable') {
     todos.push({
       key: 'unverified',
       title: '这封稿子没做逐项核对',
-      detail: '发送前请对照依据确认数字、条件和承诺。',
+      detail: '系统只保留了有依据的安全内容；发送前请确认，或重新生成。',
+    });
+  }
+  if (value?.issues.some((i) => i.code === 'access_changed')) {
+    todos.push({
+      key: 'access',
+      title: '部分历史依据现在无权查看',
+      detail: '请管理员核对后再重新生成，当前稿不能直接发送。',
+      action: letterId ? 'regenerate' : undefined,
     });
   }
 

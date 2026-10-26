@@ -1,5 +1,6 @@
 import {redactPrivateReview} from './agent/knowledge-visibility';
 import type {KnowledgeReview,KnowledgeFreshness} from './agent/knowledge-types';
+import {knowledgeReviewSendIssue} from './agent/knowledge-send-gate';
 import {knowledgeFreshness,draftHash} from './agent/knowledge-grounding';
 import {AgentTask} from '../models/AgentTask';
 import {hasProtectedCustomerMail} from './agent/mail-thread-analysis.service';
@@ -59,6 +60,11 @@ import type {
 } from '../validators/letter.validator';
 
 const logger = createLogger('letter-service');
+
+function assertKnowledgeReviewCanSend(review?:KnowledgeReview){
+ const issue=knowledgeReviewSendIssue(review);
+ if(issue)throw ApiError.conflict('草稿仍有未核实内容，已阻止发送：'+issue);
+}
 
 /** 开发信列表/详情中附带的客户摘要 */
 export interface LetterCustomerSummary {
@@ -615,6 +621,7 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
  :await AgentCustomerAnalysis.findOne({_id:task.analysisId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id});
  knowledgeReview=linked?.knowledgeReview;}
   if((input.agentTaskId||agentOutreachId)&&await hasProtectedCustomerMail(customer.id,String(customer.projectId)))throw ApiError.conflict('客户已停止营销联系，不能继续发送或准备营销草稿');
+  if(!input.saveAsDraft)assertKnowledgeReviewCanSend(knowledgeReview);
   let templateAttribution: TemplateAttribution | undefined;
   if (input.templateId) {
     if (input.replyToId) throw ApiError.badRequest('回复邮件不能作为模板开发信归因');
@@ -680,8 +687,7 @@ export async function resendLetter(
     const update: Record<string, unknown> = {$set:{
       subject:rendered.subject, content:rendered.html, contentText:rendered.text, template:contentTemplate,
       recipientEmail:rendered.recipientEmail, recipientName:rendered.recipientName,
-    }};
-    if (priorReview) update.$unset = {review: 1};
+    },$unset:{review:1,'knowledgeReview.manualApprovedAt':1,'knowledgeReview.manualApprovedBy':1}};
     const saved = await DevelopmentLetter.findOneAndUpdate({_id: original._id, projectId: customer.projectId, status:'draft'}, update, {new:true});
     if (!saved) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
     return {letter:toLetterDto(saved.toObject() as unknown as Record<string,unknown>),customer:customer.toJSON() as unknown as ICustomer & {id:string},
@@ -696,6 +702,7 @@ export async function resendLetter(
       throw ApiError.conflict('审核后内容已变化，请重新审核后再发送');
     }
   }
+  assertKnowledgeReviewCanSend(original.knowledgeReview);
 
   return persistAndSend({
     customer,
@@ -736,7 +743,7 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
   if (letter.status !== 'draft') throw ApiError.conflict('只有尚未发送的草稿可以审核');
 
   if (input.decision === 'clear') {
-    const cleared = await DevelopmentLetter.findOneAndUpdate({ _id: letter._id, status: 'draft' }, { $unset: { review: 1 } }, { new: true });
+    const cleared = await DevelopmentLetter.findOneAndUpdate({ _id: letter._id, status: 'draft' }, { $unset: { review: 1, 'knowledgeReview.manualApprovedAt': 1, 'knowledgeReview.manualApprovedBy': 1 } }, { new: true });
     if (!cleared) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
     logger.info(`letter review cleared id=${letter.id} by=${actor?.id ?? 'system'}`);
     return toLetterDto(cleared.toObject() as unknown as Record<string, unknown>);
@@ -757,6 +764,11 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
   } else {
     const contentTemplate = input.content ?? letter.template ?? letter.content;
     const rendered = await renderLetter(customer, input.subject ?? letter.subject, contentTemplate, input.recipientEmail ?? letter.recipientEmail, await signerNameFor(customer, actor?.id));
+    // The existing review page is the high-risk approval surface. It only approves
+    // the exact body that was audited; any manual body change must be rechecked.
+    const knowledgeApproval = decision === 'approved' && letter.knowledgeReview && draftHash(rendered.text) === letter.knowledgeReview.bodyHash
+      ? { 'knowledgeReview.manualApprovedAt': base.at.toISOString(), 'knowledgeReview.manualApprovedBy': actor?.id ?? 'system' }
+      : {};
     update = {
       $set: {
         subject: rendered.subject,
@@ -766,6 +778,7 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
         recipientEmail: rendered.recipientEmail,
         recipientName: rendered.recipientName,
         review: { ...base, contentHash: reviewContentHash(rendered.subject, rendered.text) },
+        ...knowledgeApproval,
       },
     };
   }

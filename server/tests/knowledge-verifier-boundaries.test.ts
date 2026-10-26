@@ -2,8 +2,9 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {checkSemanticResults,verifyGroundedEmail,inspectEditedDraft,type SemanticVerifier,type SemanticCheck,type EvidenceQuote} from '../src/services/agent/fact-verifier';
 import {resolveEvidenceQuote} from '../src/services/agent/evidence-quote';
-import {draftHash} from '../src/services/agent/knowledge-grounding';
-import type {KnowledgeBundle} from '../src/services/agent/knowledge-types';
+import {draftHash,safeGeneratedSubject,needsKnowledge} from '../src/services/agent/knowledge-grounding';
+import {mergeKnowledgeBundles,type KnowledgeBundle,type KnowledgeReview} from '../src/services/agent/knowledge-types';
+import {knowledgeReviewSendIssue,knowledgeReviewRequiresApproval} from '../src/services/agent/knowledge-send-gate';
 
 const bundle:KnowledgeBundle={projectId:'fixture',status:'ready',topics:[],sources:[],issues:[]};
 const site={sourceId:'website:buyer:0',url:'https://fixture.example.com',text:'😀 UVARA is based in Dongguan and uses 925 silver.',sha256:'fixture-only',collectedAt:'2026-10-21T00:00:00Z'};
@@ -96,4 +97,44 @@ test('quote location repairs whitespace only and records exact original Unicode 
  const duplicate='uses\n925 silver. uses  925 silver.';
  assert.equal(resolveEvidenceQuote({...input,quote:'uses 925 silver.'},duplicate),undefined);
  assert.equal(resolveEvidenceQuote({...input,quote:''},source),undefined);
+});
+
+
+test('generated subjects cannot smuggle commitments or numbers into the customer channel',()=>{
+ const fallback='A quick question about your packaging needs';
+ for(const value of ['Guaranteed free samples','Best price for your order','MOQ 500 pcs available','ISO certified factory','Exclusive stock reserved'])
+  assert.equal(safeGeneratedSubject(value,fallback),fallback,value);
+ assert.equal(safeGeneratedSubject('A quick question about your packaging',fallback),'A quick question about your packaging');
+});
+
+test('automatic send gate blocks retained drafts and stale knowledge reviews',()=>{
+ const review=(patch:Partial<KnowledgeReview>):KnowledgeReview=>({version:1,projectId:'fixture',taskType:'inquiry_reply',generatedAt:'2026-10-26T00:00:00Z',status:'ready',completeness:'complete',sources:[],claims:[],questions:[],issues:[],context:{},bodyHash:'fixture',...patch});
+ assert.equal(knowledgeReviewSendIssue(undefined),undefined);
+ assert.equal(knowledgeReviewSendIssue(review({factAudit:{contract:'s4.1',mode:'unavailable',attempts:1,checks:[],facts:[]}})),undefined);
+ assert.match(knowledgeReviewSendIssue(review({issues:[{code:'draft_unverified',message:'retained model draft'}]}))??'',/retained model draft/);
+ assert.equal(knowledgeReviewSendIssue(review({issues:[{code:'semantic_unverified',message:'verifier failed'}]})),undefined);
+ assert.match(knowledgeReviewSendIssue(review({status:'index_stale'}))??'',/依据检索状态异常/);
+ assert.match(knowledgeReviewSendIssue(review({issues:[{code:'access_changed',message:'source access changed'}]}))??'',/source access changed/);
+ assert.equal(knowledgeReviewSendIssue(review({completeness:'partial',issues:[{code:'semantic_partial',message:'verified fallback only'}]})),undefined);
+});
+
+test('high-risk commercial claims need a human approval from the existing review page',()=>{
+ const base:KnowledgeReview={version:1,projectId:'fixture',taskType:'inquiry_reply',generatedAt:'2026-10-26T00:00:00Z',status:'ready',completeness:'complete',sources:[],claims:[{text:'Our price is USD 2 per piece.',sourceIds:['knowledge:price']}],questions:[],issues:[],context:{},bodyHash:'fixture',factAudit:{contract:'s4.1',mode:'semantic',attempts:1,checks:[],facts:[]}};
+ assert.equal(knowledgeReviewRequiresApproval(base),true);
+ assert.match(knowledgeReviewSendIssue(base)??'',/人工批准/);
+ assert.equal(knowledgeReviewSendIssue({...base,manualApprovedAt:'2026-10-26T00:10:00Z'}),undefined);
+});
+
+test('merged request evidence keeps initial and tool sources for final verification',()=>{
+ const first:KnowledgeBundle={...bundle,status:'no_match',sources:[{sourceId:'knowledge:first',title:'First',version:1,kind:'knowledge',category:'company',content:'First source',source:'fixture',applicability:'',products:[],validFrom:'2020-01-01',terms:[]}],topics:[]};
+ const second:KnowledgeBundle={...bundle,status:'ready',sources:[{sourceId:'knowledge:second',title:'Second',version:1,kind:'knowledge',category:'product',content:'Second source',source:'fixture',applicability:'',products:[],validFrom:'2020-01-01',terms:[]}],topics:['price'],factContext:{quantity:500,quantityUnit:'pcs'}};
+ const merged=mergeKnowledgeBundles([first,second])!;
+ assert.deepEqual(merged.sources.map(source=>source.sourceId),['knowledge:first','knowledge:second']);
+ assert.equal(merged.status,'ready');assert.equal(merged.factContext?.quantity,500);
+});
+
+
+test('short follow-ups still retrieve knowledge before answering',()=>{
+ for(const text of ['那这个呢？','多少钱','what about this?','can you make this?'])assert.equal(needsKnowledge(text),true,text);
+ assert.equal(needsKnowledge('你好'),false);
 });

@@ -1,7 +1,7 @@
 import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
-import {knowledgeForModel} from './knowledge-types';
+import {knowledgeForModel,knowledgeForAudit} from './knowledge-types';
 import {Customer,Project} from '../../models';
 import {resolveSignerName} from '../signer.service';
 import {getCurrentMailSender} from '../mail-account.service';
@@ -180,6 +180,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     await workflowStage(options?.workflow,'read_context',{thread:context.threadId,messages:context.messages,customer:context.customer},async()=>({projectId:actor.projectId,threadId:context.threadId,messages:context.messages,customer:context.customer}),{tool:'crm'});
     const prepared=await prepareSalesEvidence(actor,{request:options?.userRequest??'回复客户询盘邮件',history:context.messages.filter(m=>m.direction==='inbound').slice(-20).map(m=>m.text).join('\n'),productHint:context.customer?(await getCustomerByIdOrThrow(context.customer.id,actor)).interestedProducts??'':'',kind:options?.taskKind??'inquiry_reply',customerId:context.customer?.id},options?.workflow);
     const knowledgeContext=knowledgeForModel(prepared.bundle);
+    const auditKnowledge=knowledgeForAudit(prepared.bundle);
     const knowledge=knowledgeContext.sources.map(k=>({...k,approved:true}));
     const project=await Project.findById(requireProjectId(actor)).select('companyName website senderName');
     const sender=await getCurrentMailSender(actor.projectId!,actor.id);
@@ -193,7 +194,7 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     const inputChars=JSON.stringify(modelInput).length;if(inputChars>env.AI_MAX_INPUT_CHARS)throw new ApiError(413,'来信及知识超出单次处理范围','PAYLOAD_TOO_LARGE');
     let generatedNow=false;
     const response=await workflowStage(options?.workflow,'generate_email',{input:modelInput,model:activeProvider.model},async()=>{
-      await assertSalesEvidenceCurrent(knowledgeContext,actor,context.customer?.id);
+      await assertSalesEvidenceCurrent(auditKnowledge,actor,context.customer?.id);
       generatedNow=true;reservation=await reserveAgentQuota(actor,inputChars);await chargeTaskBudget(options?.taskId,inputChars,env.AI_MAX_OUTPUT_TOKENS);
       const result=await activeProvider.analyzeMailThread({input:modelInput,safetyIdentifier:agentSafetyIdentifier(actor)});parseMailOutput(result);return result;
     },{cache:true,tool:'model'});
@@ -250,13 +251,13 @@ export async function createMailThreadAnalysis(input: CreateAgentMailAnalysisBod
     const nextFollowUpAt = !marketingBlocked && generated.followUpSuggestion.nextFollowUpAt
       ? new Date(generated.followUpSuggestion.nextFollowUpAt) : undefined;
     const factCustomer=context.customer?await getCustomerByIdOrThrow(context.customer.id,actor):undefined;
-    const grounded=await workflowStage(options?.workflow,'audit_claims',{body:generated.replyDraft.bodyText,bundle:knowledgeContext,model:activeProvider.model},async()=>verifyGroundedEmail(generated.replyDraft.bodyText,knowledgeContext,{
+    const grounded=await workflowStage(options?.workflow,'audit_claims',{body:generated.replyDraft.bodyText,bundle:auditKnowledge,model:activeProvider.model},async()=>verifyGroundedEmail(generated.replyDraft.bodyText,auditKnowledge,{
       taskType:options?.taskKind??'inquiry_reply',knownRequirements:prepared.requirements.known,request:options?.userRequest,customerProfile:factCustomer?customerProfileOf(factCustomer):undefined,recipientName:context.customer?.name,customerId:context.customer?.id,mailId:input.mailId,direction:input.direction,
       customerEvidence:context.messages.filter(m=>m.direction==='inbound').map(m=>m.text).join('\n'),
       questions:generated.extracted.questions.map(q=>q.text),seller,
     },marketingBlocked?undefined:providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});
     await options?.workflow?.check();
-    await assertSalesEvidenceCurrent(knowledgeContext,actor,context.customer?.id);
+    await assertSalesEvidenceCurrent(auditKnowledge,actor,context.customer?.id);
     if(!marketingBlocked){generated.replyDraft.bodyText=grounded.bodyText;generated.replyDraft.subject=salesSubjects[options?.taskKind??'inquiry_reply'];}
     let analysis: AgentMailThreadAnalysisDocument;
     try {

@@ -3,9 +3,10 @@ import {websiteCustomerEvidence} from '../website/research.service';
 import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesMailKind,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
-import {knowledgeForModel,knowledgeSourceForModel} from './knowledge-types';
+import {knowledgeForModel,knowledgeForAudit,knowledgeSourceForModel} from './knowledge-types';
+import type {KnowledgeBundle} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
-import {draftHash,knowledgeFreshness,customerProfileOf} from './knowledge-grounding';
+import {draftHash,knowledgeFreshness,customerProfileOf,safeGeneratedSubject} from './knowledge-grounding';
 import {customerAttachmentEvidence} from './attachment-text.service';
 import {chargeTaskBudget} from './task-budget';
 import { Types } from 'mongoose';
@@ -106,7 +107,7 @@ function clipped(value: unknown, max = 3000): string {
   return String(value ?? '').trim().slice(0, max);
 }
 
-async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledgeIds?:string[], goal='', workflow?:EvidenceWorkflow, taskKind?:SalesMailKind): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[] }> {
+async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledgeIds?:string[], goal='', workflow?:EvidenceWorkflow, taskKind?:SalesMailKind): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[]; knowledgeBundle:KnowledgeBundle }> {
   const customer = await getCustomerByIdOrThrow(customerId, actor);
   const projectId = requireProjectId(actor);
   const oid = new Types.ObjectId(customerId);
@@ -152,7 +153,7 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   // (per-chunk refs, ranking indexes) are not facts and doubled the model input.
   for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},knowledgeSourceForModel(item) as unknown as Record<string,unknown>);
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
-  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext) }, sources };
+  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext) }, sources, knowledgeBundle:knowledgeForAudit(knowledgeContext) };
 }
 
 const outputSchema = z.object({
@@ -211,7 +212,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     const generated = await workflowStage(options?.workflow,'generate_email',{input:context.input,model:activeProvider.model},async()=>{
       const totals={inputTokens:0,outputTokens:0,totalTokens:0};
       for(let attempt=0;attempt<2;attempt++){
-        await options?.workflow?.check();await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
+        await options?.workflow?.check();await assertSalesEvidenceCurrent(context.knowledgeBundle,actor,input.customerId);
         const requestInput=attempt?{...context.input,userRequest:(context.input.userRequest??'')+'\n请完整重整一次输出结构：事实、缺口和建议必须引用已有 sourceId，不能使用空引用；文本非空，跟进时间用未来 ISO8601。保持原业务事实、权限和人工发送要求，不能补造内容。'}:context.input;
         const chars=JSON.stringify(requestInput).length;if(chars>env.AI_MAX_INPUT_CHARS)throw new ApiError(413,'客户资料超过单次分析范围','PAYLOAD_TOO_LARGE');
         generatedNow=true;reservation=await reserveAgentQuota(actor,chars);
@@ -235,7 +236,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       facts: generated.facts, gaps: generated.gaps, recommendations: generated.recommendations,
       emailDraft: generated.emailDraft, followUpPlan: generated.followUpPlan,
     });
-    const grounded=await workflowStage(options?.workflow,'audit_claims',{body:parsed.emailDraft.bodyText,bundle:context.input.knowledgeContext,model:activeProvider.model},async()=>verifyGroundedEmail(parsed.emailDraft.bodyText,context.input.knowledgeContext!,{
+    const grounded=await workflowStage(options?.workflow,'audit_claims',{body:parsed.emailDraft.bodyText,bundle:context.knowledgeBundle,model:activeProvider.model},async()=>verifyGroundedEmail(parsed.emailDraft.bodyText,context.knowledgeBundle,{
       taskType:options?.taskKind??context.input.taskType??(options?.firstOutreach?'first_outreach':'followup'),knownRequirements:context.input.salesRequirements?.known,
       customerProfile:customerProfileOf(context.input.sourceCatalog.find(s=>s.kind==='profile')!.content as {name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}),recipientName:context.input.customerName,customerId:input.customerId,request:options?.userRequest,
       customerWebsites:context.input.sourceCatalog.filter(s=>s.kind==='website').map(s=>{const c=s.content as {url:string;text:string;sha256:string;collectedAt:string};return {sourceId:s.sourceId,url:c.url,text:c.text,sha256:c.sha256,collectedAt:c.collectedAt};}),
@@ -243,14 +244,12 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       seller:context.input.seller,
     },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});
     await options?.workflow?.check();
-    await assertSalesEvidenceCurrent(context.input.knowledgeContext!,actor,input.customerId);
+    await assertSalesEvidenceCurrent(context.knowledgeBundle,actor,input.customerId);
     if(research.state!=='ready'){grounded.review.issues.push({code:'customer_research_gap',message:research.message});grounded.review.completeness='partial';}
     parsed.emailDraft.bodyText=grounded.bodyText;
     // A generated subject is not an unchecked channel for numeric commitments:
     // keep it only when it is short and free of numbers or currencies.
-    const proposedSubject = (parsed.emailDraft.subject ?? '').trim();
-    const subjectSafe = proposedSubject.length >= 8 && proposedSubject.length <= 90 && !/[\d€£$¥%]|USD|EUR|GBP|RMB|CNY/i.test(proposedSubject);
-    parsed.emailDraft.subject = subjectSafe ? proposedSubject : salesSubjects[taskKind];
+    parsed.emailDraft.subject = safeGeneratedSubject(parsed.emailDraft.subject ?? '', salesSubjects[taskKind]);
     const known = new Set(context.sources.map((source) => source.sourceId));
     const facts = verifiedClaims(parsed.facts, known);
     const gaps = verifiedClaims(parsed.gaps, known);

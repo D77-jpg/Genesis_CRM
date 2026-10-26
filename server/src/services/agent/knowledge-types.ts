@@ -32,6 +32,9 @@ export interface KnowledgeReview {
   questions: {question:string;topic?:PolicyTopic;status:'answered'|'unanswered';sourceIds:string[]}[];
   issues: KnowledgeIssue[]; context: {customerWebsites?:CustomerWebsiteSnapshot[];customerProfile?:CustomerFactProfile;factContext?:FactContext;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string};
   bodyHash: string;
+  /** Set only by a human approve action on the existing draft review page. */
+  manualApprovedAt?: string;
+  manualApprovedBy?: string;
 }
 export interface ClaimCheck {id:string;text:string;status:'supported'|'unsupported'|'contradicted'|'unverifiable'|'non_claim';sourceIds:string[];reason:string;quotes?:{sourceId:string;quote:string;start:number;end:number}[];/** 原段落序号：核验按句子做，重建时据此把同段句子合回一段 */block?:number}
 export interface KnowledgeFreshness { checkedAt: string; changed: {sourceId:string;title:string;reason:string}[]; failed?:boolean }
@@ -66,4 +69,45 @@ export function knowledgeForModel(bundle:KnowledgeBundle):KnowledgeBundle {
  // they can be megabytes for long collected documents and are not facts.
  const sources=bundle.sources.map(({index:_diagnostics,publication:_provenance,...source})=>source);
  return {...bundle,sources,retrieval:retrieval?{engine:retrieval.engine,generation:retrieval.generation,identity:retrieval.identity}:undefined};
+}
+
+// The model only needs source text, but human review and the final verifier need
+// exact chunk locations to open the original page/row. Keep locations and compact
+// provenance, drop ranking traces and any other internal diagnostics.
+export function knowledgeForAudit(bundle:KnowledgeBundle):KnowledgeBundle {
+ const sources=bundle.sources.map(source=>({
+  ...source,
+  index:source.index?{...source.index,chunks:(source.index.chunks??[]).map(chunk=>({...chunk,sourceRefs:boundedRefs(chunk.sourceRefs)}))}:undefined,
+  publication:source.publication?{...source.publication,sourceRefs:boundedRefs(source.publication.sourceRefs??[])}:undefined,
+ }));
+ return {...bundle,sources,retrieval:bundle.retrieval?{engine:bundle.retrieval.engine,generation:bundle.retrieval.generation,identity:bundle.retrieval.identity}:undefined};
+}
+
+// A chat turn can retrieve once up front and again through a read-only tool. The final
+// verifier must see both sets of authorized evidence, otherwise a tool-only follow-up
+// (or a follow-up that adds a second source) is checked against stale/empty evidence.
+// Keep the source with the richest provenance/terms, and preserve the first request's
+// fact context so a tool query cannot silently broaden the applicable conditions.
+export function mergeKnowledgeBundles(bundles:(KnowledgeBundle|undefined)[]):KnowledgeBundle|undefined {
+ const present=bundles.filter((bundle):bundle is KnowledgeBundle=>Boolean(bundle));
+ if(!present.length)return undefined;
+ const sources=new Map<string,KnowledgeSource>();
+ for(const bundle of present)for(const source of bundle.sources){
+  const existing=sources.get(source.sourceId);
+  if(!existing){sources.set(source.sourceId,source);continue;}
+  const score=(value:KnowledgeSource)=>(value.terms?.length??0)+(value.index?1:0)+(value.publication?1:0);
+  if(score(source)>score(existing))sources.set(source.sourceId,source);
+ }
+ const issues=new Map<string,KnowledgeIssue>();
+ for(const bundle of present)for(const issue of bundle.issues)issues.set(JSON.stringify([issue.code,issue.message,issue.sourceIds??[],issue.topic??'']),issue);
+ const facts=new Map<string,ConditionalEvidence>();
+ for(const bundle of present)for(const fact of bundle.facts??[])facts.set(fact.id,fact);
+ const status:KnowledgeBundle['status']=present.some(bundle=>bundle.status==='conflict')?'conflict'
+  :present.some(bundle=>bundle.status==='ready')?'ready'
+  :present.some(bundle=>bundle.status==='no_match')?'no_match'
+  :present[0].status;
+ const base=present[0];
+ return {...base,status,sources:[...sources.values()],topics:[...new Set(present.flatMap(bundle=>bundle.topics))],
+  issues:[...issues.values()],facts:[...facts.values()],
+  factContext:present.find(bundle=>bundle.factContext)?.factContext??base.factContext};
 }

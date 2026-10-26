@@ -1,5 +1,5 @@
 import {customerResearchTool} from '../website/customer-research';
-import {knowledgeForModel} from './knowledge-types';
+import {knowledgeForModel,type KnowledgeBundle} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
 import {retrieveKnowledge} from './knowledge.service';
 import {readAgentAttachment} from './attachment-text.service';
@@ -137,8 +137,17 @@ export function agentToolSchemas(): AgentToolSchema[] {
   return tools.map(({ name, description, parameters }) => ({ type: 'function', name, description, parameters, strict: true }));
 }
 
-export async function executeAgentTool(name: string, context: AgentToolContext, input: unknown): Promise<unknown> {
+export async function executeAgentToolWithEvidence(name: string, context: AgentToolContext, input: unknown): Promise<{data: unknown; knowledge?: KnowledgeBundle}> {
   const tool = registry.get(name);
   if (!tool || tool.riskLevel !== 'read') throw ApiError.badRequest('Agent 请求了未注册或非只读工具');
-  return tool.execute(context, input);
+  if (name === 'search_product_knowledge') {
+    const { query } = z.object({ query: z.string().max(500) }).strict().parse(input);
+    const bundle = await retrieveKnowledge(context.actor, query);
+    return { data: knowledgeForModel(bundle), knowledge: bundle };
+  }
+  return { data: await tool.execute(context, input) };
+}
+
+export async function executeAgentTool(name: string, context: AgentToolContext, input: unknown): Promise<unknown> {
+  return (await executeAgentToolWithEvidence(name, context, input)).data;
 }
