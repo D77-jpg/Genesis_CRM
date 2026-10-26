@@ -1,5 +1,6 @@
 """Genesis S2 local-only ONNX + sqlite-vec. JSON stdin/stdout; no CRM credentials."""
 import ctypes
+from collections import Counter
 import socket
 import hashlib
 import importlib.metadata
@@ -15,7 +16,7 @@ VERSION = "genesis-semantic-s3.1"
 # -I excludes the script directory; import only this audited sibling explicitly.
 sys.dont_write_bytecode = True
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from retrieval import segment,retrieve
+from retrieval import segment,retrieve,tokens as lexical_tokens
 
 
 class Failure(Exception):
@@ -25,6 +26,51 @@ class Failure(Exception):
 
 def digest(value):
     return hashlib.sha256(value).hexdigest()
+
+
+def lexical_row(text):
+    """Build the immutable lexical postings once, at index build time.
+
+    FTS5's corpus statistics are global to a virtual table. Sharing one FTS
+    table across projects or access scopes would let private terms affect
+    another user's BM25 scores, so the portable index stores postings and
+    computes BM25 over the current authorized candidate set instead.
+    """
+    terms = lexical_tokens(text)
+    return ' '.join(terms), len(terms), Counter(terms)
+
+
+def copy_lexical(db, project, source, target, item_ids):
+    """Copy already verified local rows in bounded batches (SQLite parameter cap)."""
+    copied = 0
+    for offset in range(0, len(item_ids), 400):
+        chunk = item_ids[offset:offset + 400]
+        marks = ','.join('?' * len(chunk))
+        db.execute(
+            f'INSERT OR IGNORE INTO texts SELECT project,?,item,text,parent FROM texts '
+            f'WHERE project=? AND generation=? AND item IN ({marks})',
+            (target, project, source, *chunk),
+        )
+        db.execute(
+            f'INSERT OR IGNORE INTO vectors SELECT project,?,item,model,hash,vector FROM vectors '
+            f'WHERE project=? AND generation=? AND item IN ({marks})',
+            (target, project, source, *chunk),
+        )
+        db.execute(
+            f'INSERT OR IGNORE INTO lexical SELECT project,?,item,parent,scope,hash,length,text,terms FROM lexical '
+            f'WHERE project=? AND generation=? AND item IN ({marks})',
+            (target, project, source, *chunk),
+        )
+        db.execute(
+            f'INSERT OR IGNORE INTO lexical_terms SELECT project,?,item,term,tf FROM lexical_terms '
+            f'WHERE project=? AND generation=? AND item IN ({marks})',
+            (target, project, source, *chunk),
+        )
+        copied += db.execute(
+            f'SELECT COUNT(*) FROM texts WHERE project=? AND generation=? AND item IN ({marks})',
+            (project, target, *chunk),
+        ).fetchone()[0]
+    return copied
 
 
 def restrict():
@@ -158,6 +204,16 @@ def main(request=None):
     CREATE INDEX IF NOT EXISTS vectors_generation ON vectors(project,generation);
     """)
     db.execute("CREATE TABLE IF NOT EXISTS texts(project TEXT,generation TEXT,item TEXT,text TEXT,parent TEXT,PRIMARY KEY(project,generation,item))")
+    # Persistent lexical postings. They are derived data and can be rebuilt;
+    # source publications remain in Mongo and are never rewritten here.
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS lexical(project TEXT,generation TEXT,item TEXT,parent TEXT,scope TEXT,hash TEXT,
+      length INTEGER,text TEXT,terms TEXT,PRIMARY KEY(project,generation,item));
+    CREATE INDEX IF NOT EXISTS lexical_generation ON lexical(project,generation);
+    CREATE TABLE IF NOT EXISTS lexical_terms(project TEXT,generation TEXT,item TEXT,term TEXT,tf INTEGER,
+      PRIMARY KEY(project,generation,item,term));
+    CREATE INDEX IF NOT EXISTS lexical_terms_lookup ON lexical_terms(project,generation,term);
+    """)
     project, generation = request["projectId"], request.get("generation", "")
     command = request["command"]
     result = {}
@@ -195,7 +251,32 @@ def main(request=None):
                     raise Failure("immutable_collision", "代次内的片段发生变化，请建立新代次")
                 db.execute("INSERT OR IGNORE INTO vectors VALUES(?,?,?,?,?,?)", (project, generation, item["id"], identity, item["hash"], item["vector"]))
                 db.execute("INSERT OR IGNORE INTO texts VALUES(?,?,?,?,?)",(project,generation,item["id"],item["text"],item.get("parent",item["id"])))
+                token_text, token_length, postings = lexical_row(item["text"])
+                existing_lex = db.execute("SELECT hash FROM lexical WHERE project=? AND generation=? AND item=?", (project, generation, item["id"])).fetchone()
+                if existing_lex and existing_lex[0] != item["hash"]:
+                    raise Failure("immutable_collision", "代次内的词项内容发生变化，请建立新代次")
+                db.execute(
+                    "INSERT OR IGNORE INTO lexical(project,generation,item,parent,scope,hash,length,text,terms) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (project, generation, item["id"], item.get("parent", item["id"]), item["scope"], item["hash"], token_length, item["text"], token_text),
+                )
+                # Retried writes replace only this item's postings; no global rebuild.
+                db.execute("DELETE FROM lexical_terms WHERE project=? AND generation=? AND item=?", (project, generation, item["id"]))
+                db.executemany(
+                    "INSERT INTO lexical_terms(project,generation,item,term,tf) VALUES(?,?,?,?,?)",
+                    [(project, generation, item["id"], term, count) for term, count in postings.items()],
+                )
         result = {"count": len(items), "embedded": len(missing), "reused": reused}
+    elif command == "copy":
+        source = str(request["sourceGeneration"])
+        target = str(request["generation"])
+        item_ids = [str(i) for i in request.get("items", [])]
+        if not item_ids or len(item_ids) > 50000:
+            raise Failure("batch_limit", "增量复制批次为空或超过上限")
+        if source == target:
+            raise Failure("copy_invalid", "增量复制源代次与目标代次相同")
+        with db:
+            copied = copy_lexical(db, project, source, target, item_ids)
+        result = {"count": copied}
     elif command == "verify":
         rows = db.execute("SELECT item,model,hash,length(vector) FROM vectors WHERE project=? AND generation=? ORDER BY item", (project, generation)).fetchall()
         if any(r[1] != identity or r[3] != lock["dimension"] * 4 for r in rows):
@@ -207,7 +288,14 @@ def main(request=None):
         texts=db.execute("SELECT item,text FROM texts WHERE project=? AND generation=? ORDER BY item",(project,generation)).fetchall()
         if len(texts)!=len(rows) or any(a[0]!=b[0] or digest(b[1].encode())!=a[2] for a,b in zip(rows,texts)):
             raise Failure("lexical_missing", "词项索引缺失或不完整，请重建资料")
-        result = {"count": len(rows), "checksum": digest(json.dumps([[r[0], r[2]] for r in rows], separators=(",", ":")).encode())}
+        lexical_count=db.execute("SELECT COUNT(*) FROM lexical WHERE project=? AND generation=?",(project,generation)).fetchone()[0]
+        lexical_terms_count=db.execute("SELECT COUNT(DISTINCT item) FROM lexical_terms WHERE project=? AND generation=?",(project,generation)).fetchone()[0]
+        if lexical_count:
+            lexical_rows=db.execute("SELECT item,hash,text FROM lexical WHERE project=? AND generation=? ORDER BY item",(project,generation)).fetchall()
+            if len(lexical_rows)!=len(rows) or any(a[0]!=b[0] or a[1]!=b[2] or digest(a[2].encode())!=a[1] for a,b in zip(lexical_rows,rows)):
+                raise Failure("lexical_missing", "词项索引缺失或不完整，请重建资料")
+        result = {"count": len(rows), "checksum": digest(json.dumps([[r[0], r[2]] for r in rows], separators=(",", ":")).encode()),
+                  "lexical": lexical_count, "lexicalTerms": lexical_terms_count}
     elif command == "query":
         stored = db.execute('SELECT item,hash,model,length(vector) FROM vectors WHERE project=? AND generation=? ORDER BY item', (project,generation)).fetchall()
         signature = digest(json.dumps([[r[0],r[1]] for r in stored], separators=(',',':')).encode())
@@ -225,6 +313,8 @@ def main(request=None):
             for key in request["generations"]:
                 db.execute("DELETE FROM vectors WHERE project=? AND generation=?", (project, key))
                 db.execute("DELETE FROM texts WHERE project=? AND generation=?", (project,key))
+                db.execute("DELETE FROM lexical WHERE project=? AND generation=?", (project,key))
+                db.execute("DELETE FROM lexical_terms WHERE project=? AND generation=?", (project,key))
             # Remove cache artifacts no longer referenced, scoped to this project only.
             db.execute("DELETE FROM embeddings WHERE project=? AND NOT EXISTS (SELECT 1 FROM vectors WHERE vectors.project=embeddings.project AND vectors.model=embeddings.model AND vectors.hash=embeddings.hash)", (project,))
         result = {"removed": len(request["generations"])}

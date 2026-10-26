@@ -40,6 +40,15 @@ def generate(out):
     </w:body></w:document>'''
     parts={'[Content_Types].xml':types,'word/document.xml':doc,'word/footnotes.xml':f'<w:footnotes xmlns:w="{W}"><w:footnote w:id="1"><w:p><w:r><w:t>* Fictional price for 200 pcs only.</w:t></w:r></w:p></w:footnote></w:footnotes>'}
     package('conditions.docx',parts)
+    merged_doc=f'''<w:document xmlns:w="{W}"><w:body>
+    <w:p><w:r><w:t>FICTIONAL merged-cell price policy</w:t></w:r></w:p>
+    <w:tbl>
+    <w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/></w:tcPr><w:p><w:r><w:t>Price USD / pc</w:t></w:r></w:p></w:tc></w:tr>
+    <w:tr><w:tc><w:p><w:r><w:t>Cotton pouch</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>9.99</w:t></w:r></w:p></w:tc></w:tr>
+    <w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Velvet box</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>4.50</w:t></w:r></w:p></w:tc></w:tr>
+    <w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc><w:tc><w:p><w:r><w:t>4.80</w:t></w:r></w:p></w:tc></w:tr>
+    </w:tbl></w:body></w:document>'''
+    package('merged.docx',{'[Content_Types].xml':types,'word/document.xml':merged_doc})
     package('macro.docx',{**parts,'word/vbaProject.bin':b'not a real macro'})
     package('external.docx',{**parts,'word/_rels/document.xml.rels':'<Relationships><Relationship Id="bad" Target="https://example.invalid/private" TargetMode="External"/></Relationships>'})
     package('path.docx',{**parts,'../escape.txt':'bad'})

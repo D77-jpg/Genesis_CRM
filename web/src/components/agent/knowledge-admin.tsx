@@ -10,11 +10,13 @@ import {AgentMessageContent} from './agent-message-content';
 import {KnowledgeEntryForm} from './knowledge-entry-form';
 import {validateKnowledgeFiles} from '@/lib/knowledge-upload';
 import {knowledgeCategories,type KnowledgeCategory,type ProjectKnowledge} from '@/types/knowledge';
+import {sourceLocation} from './knowledge-citation';
 
 type Parsing={id:string;revision:number;state:string;stage:string;done:number;total:number;warnings:string[];error?:{code:string;message:string}};
 type Source={id:string;originalName:string;source:string;bytes:number;category:string;createdAt:string;parsing:Parsing|null;reviewState?:string};
 type Status={ready:boolean;status:string;effectivePublications:number;storageIssue?:string};
 type Preview={title:string;category:KnowledgeCategory;source:string;sourceName:string;notes?:string[];parts:{chars:number;content:string}[]};
+type ChunkLocation={id:string;content?:string;location?:Record<string,unknown>;headingPath?:string[];documentName:string};
 const parsingLabels:Record<string,string>={queued:'排队中',running:'正在读取',succeeded:'读取完成',partial:'读取完成',failed:'读取失败',cancelled:'已取消'};
 const fileSize=(bytes:number)=>bytes<1024?bytes+' B':bytes<1024*1024?Math.round(bytes/1024)+' KB':(bytes/1024/1024).toFixed(1)+' MB';
 // Parser advisories are terse system sentences. Keep only what a reviewer can
@@ -32,7 +34,7 @@ const fileNotes=(warnings?:string[])=>[...new Set((warnings??[]).map(noteText).f
 const seriousNote=(note:string)=>/OCR|扫描|没有识别|忽略指令/.test(note);
 const nativeSelect='min-h-11 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKnowledgeId?:string;initialDocumentId?:string}){
+export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId,initialRevisionId,initialChunkId}:{initialKnowledgeId?:string;initialDocumentId?:string;initialRevisionId?:string;initialChunkId?:string}){
  const [entries,setEntries]=React.useState<ProjectKnowledge[]>([]);
  const [files,setFiles]=React.useState<Source[]>([]);
  const [status,setStatus]=React.useState<Status|null>(null);
@@ -41,7 +43,8 @@ export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKn
  const [openEntry,setOpenEntry]=React.useState(initialKnowledgeId??'');
  const [editing,setEditing]=React.useState<ProjectKnowledge|null|'new'>(null);
  const [collect,setCollect]=React.useState<{file:Source;preview?:Preview;title:string;category:KnowledgeCategory;source:string;expanded:boolean;loading:boolean;readonly:boolean}|null>(null);
- const [pendingDoc,setPendingDoc]=React.useState(initialDocumentId??'');
+ const [pendingDoc,setPendingDoc]=React.useState(initialChunkId?'':(initialDocumentId??''));
+ const [location,setLocation]=React.useState<ChunkLocation|null>(null);
  const [uploading,setUploading]=React.useState<{name:string;status:string}[]>([]);
  const [confirm,setConfirm]=React.useState<{kind:'entry'|'file';id:string;name:string}|null>(null);
  const fileInput=React.useRef<HTMLInputElement>(null);
@@ -69,6 +72,16 @@ export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKn
   if(!file)return;
   if(['succeeded','partial'].includes(file.parsing?.state??'')){setPendingDoc('');void openCollect(file);}
  },[pendingDoc,files]);
+ // A citation link carries an exact parser chunk. Open that window instead of
+ // making the reviewer search a multi-page collection preview by eye.
+ React.useEffect(()=>{
+  if(!initialDocumentId||!initialChunkId)return;
+  let live=true;
+  void apiGet<{document:{originalName:string};chunks:{id:string;content?:string;location?:Record<string,unknown>;headingPath?:string[]}[]}>('/knowledge-documents/'+initialDocumentId+'?chunk='+encodeURIComponent(initialChunkId)+(initialRevisionId?'&revision='+encodeURIComponent(initialRevisionId):''))
+   .then(data=>{if(!live)return;const chunk=data.chunks.find(c=>String(c.id)===initialChunkId)??data.chunks[0];if(chunk)setLocation({...chunk,documentName:data.document.originalName});})
+   .catch(e=>{if(live)setError(toErrorMessage(e,'暂时无法定位引用原文'));});
+  return()=>{live=false;};
+ },[initialDocumentId,initialChunkId,initialRevisionId]);
 
  const pending=entries.filter(entry=>!entry.archived&&entry.approvedVersion===0);
  const published=entries.filter(entry=>!entry.archived&&entry.approvedVersion>0);
@@ -280,5 +293,10 @@ export function KnowledgeAdmin({initialKnowledgeId,initialDocumentId}:{initialKn
    <p className="break-words font-medium text-foreground">{confirm?.name}</p>
    <p className="mt-1 leading-5">{confirm?.kind==='file'?'文件、解析记录，以及从这份文件收录的资料都会删除。':'这篇资料的全部版本都会从资料库和助手中删除。'}</p>
   </ConfirmDialog>
+  {location&&<Dialog open onOpenChange={open=>{if(!open)setLocation(null);}}><DialogContent className="max-w-2xl">
+   <DialogHeader><DialogTitle className="break-words pr-6">引用定位 · {location.documentName}</DialogTitle><DialogDescription>{sourceLocation(location.location??{})}{location.headingPath?.length?' · '+location.headingPath.join(' / '):''}</DialogDescription></DialogHeader>
+   <DialogBody><pre className="max-h-[55vh] overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-muted/40 p-4 font-sans text-sm leading-7">{location.content??'该解析片段没有可显示的正文。'}</pre></DialogBody>
+   <DialogFooter><Button className="min-h-11" onClick={()=>setLocation(null)}>关闭</Button></DialogFooter>
+  </DialogContent></Dialog>}
  </div>;
 }

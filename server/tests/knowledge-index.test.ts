@@ -223,3 +223,22 @@ test('23 legacy editors omitting access scope retain admin-only publication perm
  const record=await AgentKnowledge.findById(id);assert.equal(record?.revisions.at(-1)?.accessScope,'admins');
  await build();assert.ok((await query('private cotton sample',sales)).sources.every(s=>s.knowledgeId!==id));
 });
+
+test('24 persistent lexical postings cover every window and unchanged publications incrementally copy them',async()=>{
+ const first=await build();
+ const identity=await embeddingIdentity();
+ const checked=await localEmbedding.run({command:'verify',projectId:String(a),generation:first},identity);
+ assert.ok(checked.count!==undefined);assert.ok(checked.count>0);assert.equal(checked.lexical,checked.count);assert.equal(checked.lexicalTerms,checked.count);
+ const before=await Item.countDocuments({generation:first});
+ const secondTask=await requestIndex(actor,randomUUID());await processKnowledgeIndex(secondTask.id,real);
+ const second=await Gen.findById(secondTask.id);
+ assert.equal(second?.state,'ready',JSON.stringify(second?.error));
+ assert.equal(second?.embedded,0);assert.ok((second?.reused??0)>=before);
+ assert.equal(await Item.countDocuments({generation:secondTask.id}),before);
+ await appendKnowledge(undefined,policy('Incremental bamboo tray','Fictional bamboo serving tray with a removable insert.'),actor);
+ const thirdTask=await requestIndex(actor,randomUUID());await processKnowledgeIndex(thirdTask.id,real);
+ const third=await Gen.findById(thirdTask.id);
+ assert.equal(third?.state,'ready',JSON.stringify(third?.error));
+ assert.ok((third?.reused??0)>=before);assert.ok((third?.embedded??0)>0);
+ assert.ok((await Item.countDocuments({generation:thirdTask.id}))>before);
+});

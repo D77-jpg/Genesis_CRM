@@ -1,0 +1,3858 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-26T10:13:32.571Z",
+  "evaluationAsOf": "2026-10-17T00:00:00+08:00",
+  "commit": "dd10149809eca9bfe04ed802abf67c820f09adf3",
+  "dirtyTree": true,
+  "engine": "S3 hybrid_rerank production buildKnowledgeBundle + auditGroundedEmail",
+  "scope": "No LLM or live DB. No email generation quality measured. Sales rules loaded separately, excluded from relevance rank. Up to 10 distinct publications. Customer quotations still scoped by production service.",
+  "split": "all",
+  "summary": {
+    "cases": 120,
+    "answerable": 80,
+    "negative": 40,
+    "recallAt10": 1,
+    "mrrAt10": 0.98125,
+    "classificationAccuracy": 1,
+    "negativeStateAccuracy": 1,
+    "forbiddenHits": 0,
+    "latencyMs": {
+      "p50": 172.852,
+      "p95": 210.317,
+      "max": 2448.026
+    },
+    "unexpectedErrors": []
+  },
+  "bySplit": {
+    "dev": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 1,
+      "mrrAt10": 0.975,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 173.559,
+        "p95": 280.34,
+        "max": 2448.026
+      },
+      "unexpectedErrors": []
+    },
+    "holdout": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 1,
+      "mrrAt10": 0.9875,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 171.601,
+        "p95": 196.238,
+        "max": 2286.503
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byLanguage": {
+    "en": {
+      "cases": 73,
+      "answerable": 48,
+      "negative": 25,
+      "recallAt10": 1,
+      "mrrAt10": 0.9895833333333334,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 173.835,
+        "p95": 307.85,
+        "max": 2448.026
+      },
+      "unexpectedErrors": []
+    },
+    "zh": {
+      "cases": 47,
+      "answerable": 32,
+      "negative": 15,
+      "recallAt10": 1,
+      "mrrAt10": 0.96875,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 171.561,
+        "p95": 189.307,
+        "max": 2283.479
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCrossLanguage": {
+    "false": {
+      "cases": 78,
+      "answerable": 38,
+      "negative": 40,
+      "recallAt10": 1,
+      "mrrAt10": 0.9868421052631579,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 171.926,
+        "p95": 210.317,
+        "max": 1221.437
+      },
+      "unexpectedErrors": []
+    },
+    "true": {
+      "cases": 42,
+      "answerable": 42,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.9761904761904762,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 173.559,
+        "p95": 2283.479,
+        "max": 2448.026
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCategory": {
+    "agreement": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.7,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 189.293,
+        "p95": 196.238,
+        "max": 196.238
+      },
+      "unexpectedErrors": []
+    },
+    "box": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 177.957,
+        "p95": 182.954,
+        "max": 182.954
+      },
+      "unexpectedErrors": []
+    },
+    "certificate": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 185.16,
+        "p95": 186.829,
+        "max": 186.829
+      },
+      "unexpectedErrors": []
+    },
+    "company": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 307.85,
+        "p95": 2283.479,
+        "max": 2283.479
+      },
+      "unexpectedErrors": []
+    },
+    "conflict": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 164.526,
+        "p95": 205.819,
+        "max": 205.819
+      },
+      "unexpectedErrors": []
+    },
+    "customer": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.56,
+        "p95": 1.079,
+        "max": 1.079
+      },
+      "unexpectedErrors": []
+    },
+    "disabled": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 168.854,
+        "p95": 168.929,
+        "max": 168.929
+      },
+      "unexpectedErrors": []
+    },
+    "draft": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 176.505,
+        "p95": 188.5,
+        "max": 188.5
+      },
+      "unexpectedErrors": []
+    },
+    "expired": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 180.259,
+        "p95": 182.321,
+        "max": 182.321
+      },
+      "unexpectedErrors": []
+    },
+    "fabric": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 168.708,
+        "p95": 174.258,
+        "max": 174.258
+      },
+      "unexpectedErrors": []
+    },
+    "failure": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 5.885,
+        "p95": 7.321,
+        "max": 7.321
+      },
+      "unexpectedErrors": []
+    },
+    "future": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 181.317,
+        "p95": 210.317,
+        "max": 210.317
+      },
+      "unexpectedErrors": []
+    },
+    "gym-frame": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 107.274,
+        "p95": 2286.503,
+        "max": 2286.503
+      },
+      "unexpectedErrors": []
+    },
+    "gym-moq": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 102.897,
+        "p95": 107.768,
+        "max": 107.768
+      },
+      "unexpectedErrors": []
+    },
+    "gym-warranty": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 102.478,
+        "p95": 106.571,
+        "max": 106.571
+      },
+      "unexpectedErrors": []
+    },
+    "injection": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.241,
+        "p95": 0.803,
+        "max": 0.803
+      },
+      "unexpectedErrors": []
+    },
+    "inspection": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 180.292,
+        "p95": 183.617,
+        "max": 183.617
+      },
+      "unexpectedErrors": []
+    },
+    "lead": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 187.395,
+        "p95": 280.34,
+        "max": 280.34
+      },
+      "unexpectedErrors": []
+    },
+    "logo": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 171.601,
+        "p95": 181.92,
+        "max": 181.92
+      },
+      "unexpectedErrors": []
+    },
+    "mailbox": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 1.445,
+        "p95": 5.02,
+        "max": 5.02
+      },
+      "unexpectedErrors": []
+    },
+    "missing": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 177.822,
+        "p95": 193.681,
+        "max": 193.681
+      },
+      "unexpectedErrors": []
+    },
+    "moq": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 169.62,
+        "p95": 184.721,
+        "max": 184.721
+      },
+      "unexpectedErrors": []
+    },
+    "payment": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 175.136,
+        "p95": 184.437,
+        "max": 184.437
+      },
+      "unexpectedErrors": []
+    },
+    "project": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 184.043,
+        "p95": 193.337,
+        "max": 193.337
+      },
+      "unexpectedErrors": []
+    },
+    "sales": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 171.472,
+        "p95": 184.673,
+        "max": 184.673
+      },
+      "unexpectedErrors": []
+    },
+    "sample": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 173.236,
+        "p95": 2448.026,
+        "max": 2448.026
+      },
+      "unexpectedErrors": []
+    },
+    "shipping": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 168.978,
+        "p95": 181.869,
+        "max": 181.869
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "sideEffects": {
+    "letters": 0,
+    "followups": 0
+  },
+  "gates": {
+    "recall": true,
+    "negativeStates": true,
+    "noLeaks": true,
+    "noUnexpectedErrors": true
+  },
+  "rows": [
+    {
+      "id": "a01-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 1221.437,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a01-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.2"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 185.354,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a01-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1",
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "noise-16.1"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-14.1"
+        ],
+        [
+          "noise-6.1"
+        ],
+        [
+          "noise-12.1"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 307.85,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a02-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-8.1"
+        ],
+        [
+          "noise-4.1"
+        ],
+        [
+          "noise-18.1"
+        ]
+      ],
+      "durationMs": 173.835,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a02-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.2"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 168.708,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a02-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1",
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 163.409,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a03-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 182.954,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a03-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 177.957,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a03-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2",
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 173.559,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a04-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 169.048,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a04-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ]
+      ],
+      "durationMs": 171.926,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a04-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1",
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 181.92,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a05-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 169.62,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a05-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 184.721,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a05-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1",
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ]
+      ],
+      "durationMs": 181.427,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a06-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 178.308,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a06-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 187.395,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a06-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1",
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "noise-6.1"
+        ]
+      ],
+      "durationMs": 280.34,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a07-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 173.236,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a07-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 159.745,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a07-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1",
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 2448.026,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a08-1",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.1"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 172.554,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a08-3",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.2"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 165.296,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a08-5",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.1",
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 175.136,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "missing",
+        "missing",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a09-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 165.478,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a09-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 163.61,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a10-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 185.256,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a10-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1",
+        "certificate.2"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 185.16,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a11-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 183.617,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a11-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1",
+        "inspection.2"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 181.954,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a12-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 184.673,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a12-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 170.617,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a13-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 192.243,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a13-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 189.293,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a14-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 105.321,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a14-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ]
+      ],
+      "durationMs": 107.274,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a15-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 106.571,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a15-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "scope-other.1"
+        ]
+      ],
+      "durationMs": 105.226,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a16-2",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ]
+      ],
+      "durationMs": 102.897,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a16-4",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "noise-13.1"
+        ]
+      ],
+      "durationMs": 103.757,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n01",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 193.681,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "missing",
+        "missing",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n03",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 177.164,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n05",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 176.801,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "issueCodes": [
+        "expired",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n07",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 180.259,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "issueCodes": [
+        "expired",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n09",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "disabled",
+      "expected": "disabled",
+      "observed": "disabled",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 168.929,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "disabled",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n11",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 210.317,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "not_effective",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n13",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 166.296,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "not_effective",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n15",
+      "split": "dev",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "draft",
+      "expected": "draft_only",
+      "observed": "draft_only",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 176.505,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "draft_only",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n17",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ]
+      ],
+      "durationMs": 164.526,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "conflict",
+        "conflict",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n19",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ]
+      ],
+      "durationMs": 180.52,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "conflict",
+        "conflict",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n21",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 193.337,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n23",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 184.043,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n25",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1.079,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n27",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.559,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n29",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 5.02,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n31",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1.702,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n33",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.803,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n35",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.241,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n37",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 7.321,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "claim_rewritten",
+        "retrieval_failed"
+      ]
+    },
+    {
+      "id": "n39",
+      "split": "dev",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 5.885,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "claim_rewritten",
+        "retrieval_failed"
+      ]
+    },
+    {
+      "id": "a01-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.1"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 2283.479,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a01-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "company",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "company.2"
+      ],
+      "rankedEvidence": [
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 175.687,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a02-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.1"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ]
+      ],
+      "durationMs": 168.312,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a02-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "fabric",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "fabric.2"
+      ],
+      "rankedEvidence": [
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 174.258,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a03-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "noise-2.1"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 172.852,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a03-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "box",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "box.2"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "noise-6.1"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "noise-20.1"
+        ]
+      ],
+      "durationMs": 180.815,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a04-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-16.1"
+        ]
+      ],
+      "durationMs": 171.561,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a04-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "logo",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "logo.2"
+      ],
+      "rankedEvidence": [
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "noise-22.1"
+        ],
+        [
+          "noise-20.1"
+        ],
+        [
+          "noise-18.1"
+        ]
+      ],
+      "durationMs": 171.601,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a05-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 168,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a05-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 168.061,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a06-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.1"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 189.126,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a06-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "lead",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "lead.2"
+      ],
+      "rankedEvidence": [
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 168.721,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a07-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "unapproved-edit.1"
+        ],
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "conflict-b.1"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ],
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "noise-18.1"
+        ],
+        [
+          "fabric.1",
+          "fabric.2"
+        ]
+      ],
+      "durationMs": 170.897,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a07-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "sample",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sample.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "company.1",
+          "company.2"
+        ]
+      ],
+      "durationMs": 173.899,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a08-2",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.1"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 184.437,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a08-4",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": true,
+      "category": "payment",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "payment.2"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ]
+      ],
+      "durationMs": 176.333,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a09-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.1"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 168.978,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a09-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.2"
+      ],
+      "rankedEvidence": [
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 170.209,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a09-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "shipping",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "shipping.1",
+        "payment.1"
+      ],
+      "rankedEvidence": [
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ],
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 181.869,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a10-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.1"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 186.829,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a10-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.2"
+      ],
+      "rankedEvidence": [
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 180.258,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a10-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "certificate",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "certificate.2",
+        "box.1"
+      ],
+      "rankedEvidence": [
+        [
+          "box.1",
+          "box.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 182.678,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a11-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ]
+      ],
+      "durationMs": 180.292,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a11-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.2"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ]
+      ],
+      "durationMs": 179.736,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a11-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "inspection",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "inspection.1",
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "inspection.1",
+          "inspection.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ],
+        [
+          "certificate.1",
+          "certificate.2"
+        ]
+      ],
+      "durationMs": 178.901,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a12-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 171.472,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a12-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.2"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "shipping.1",
+          "shipping.2"
+        ]
+      ],
+      "durationMs": 171.057,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a12-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "sales",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "sales.1",
+        "logo.1"
+      ],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ],
+        [
+          "logo.1",
+          "logo.2"
+        ]
+      ],
+      "durationMs": 176.067,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a13-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 179.597,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a13-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.2"
+      ],
+      "rankedEvidence": [
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 187.198,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a13-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "agreement",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "agreement.1",
+        "moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "moq.1",
+          "moq.2"
+        ],
+        [
+          "agreement.1",
+          "agreement.2"
+        ]
+      ],
+      "durationMs": 196.238,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a14-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 102.428,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a14-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 2286.503,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a14-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-frame",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-frame.1",
+        "gym-warranty.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 115.91,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a15-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 102.218,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a15-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 102.457,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a15-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-warranty",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-warranty.2",
+        "gym-moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ]
+      ],
+      "durationMs": 102.478,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a16-1",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.1"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 94.508,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a16-3",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ]
+      ],
+      "durationMs": 95.609,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "a16-5",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": true,
+      "category": "gym-moq",
+      "expected": "answerable",
+      "observed": "answerable",
+      "required": [
+        "gym-moq.1",
+        "gym-frame.2"
+      ],
+      "rankedEvidence": [
+        [
+          "gym-frame.1",
+          "gym-frame.2"
+        ],
+        [
+          "gym-moq.1",
+          "gym-moq.2"
+        ],
+        [
+          "gym-warranty.1",
+          "gym-warranty.2"
+        ]
+      ],
+      "durationMs": 107.768,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n02",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 177.822,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n04",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "missing",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 178.882,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n06",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "expired",
+      "expected": "expired",
+      "observed": "expired",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 182.321,
+      "forbiddenHits": [],
+      "rawStatus": "expired",
+      "issueCodes": [
+        "expired",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n08",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "disabled",
+      "expected": "disabled",
+      "observed": "disabled",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 163.881,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "disabled",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n10",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "disabled",
+      "expected": "disabled",
+      "observed": "disabled",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "sales.1",
+          "sales.2"
+        ]
+      ],
+      "durationMs": 168.854,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "disabled",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n12",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "future",
+      "expected": "not_effective",
+      "observed": "not_effective",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 181.317,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "not_effective",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n14",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "draft",
+      "expected": "draft_only",
+      "observed": "draft_only",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 171.661,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "draft_only",
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n16",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "draft",
+      "expected": "draft_only",
+      "observed": "draft_only",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 188.5,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "draft_only",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n18",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-b.1"
+        ],
+        [
+          "conflict-a.1"
+        ],
+        [
+          "payment.1",
+          "payment.2"
+        ],
+        [
+          "sample.1",
+          "sample.2"
+        ],
+        [
+          "lead.1",
+          "lead.2"
+        ]
+      ],
+      "durationMs": 158.753,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "conflict",
+        "conflict",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n20",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "conflict",
+      "expected": "conflict",
+      "observed": "conflict",
+      "required": [],
+      "rankedEvidence": [
+        [
+          "conflict-a.1"
+        ],
+        [
+          "conflict-b.1"
+        ]
+      ],
+      "durationMs": 205.819,
+      "forbiddenHits": [],
+      "rawStatus": "ready",
+      "issueCodes": [
+        "conflict",
+        "conflict",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n22",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 189.307,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "missing",
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n24",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "project",
+      "expected": "no_match",
+      "observed": "no_match",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 180.603,
+      "forbiddenHits": [],
+      "rawStatus": "no_match",
+      "issueCodes": [
+        "claim_rewritten"
+      ]
+    },
+    {
+      "id": "n26",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.86,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n28",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "customer",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.56,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n30",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1.445,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n32",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "mailbox",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 1.15,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n34",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.301,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n36",
+      "split": "holdout",
+      "language": "en",
+      "crossLanguage": false,
+      "category": "injection",
+      "expected": "forbidden",
+      "observed": "forbidden",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 0.107,
+      "forbiddenHits": [],
+      "rawStatus": null,
+      "issueCodes": null
+    },
+    {
+      "id": "n38",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 6.206,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "claim_rewritten",
+        "retrieval_failed"
+      ]
+    },
+    {
+      "id": "n40",
+      "split": "holdout",
+      "language": "zh",
+      "crossLanguage": false,
+      "category": "failure",
+      "expected": "retrieval_failed",
+      "observed": "retrieval_failed",
+      "required": [],
+      "rankedEvidence": [],
+      "durationMs": 4.814,
+      "forbiddenHits": [],
+      "rawStatus": "retrieval_failed",
+      "issueCodes": [
+        "retrieval_failed",
+        "missing",
+        "claim_rewritten",
+        "retrieval_failed"
+      ]
+    }
+  ]
+}

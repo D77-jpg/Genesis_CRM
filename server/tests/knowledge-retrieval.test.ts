@@ -46,7 +46,7 @@ test('S3 01 Chinese free query finds the S2 missed source among 35 similar recov
 test('S3 02 all four real branches prefilter private/cross-project candidates and expose scores',async()=>{
  for(const mode of ['bm25','vector','hybrid','hybrid_rerank'] as const){
   const b=await retrieveKnowledge(sales,'nylon zipper travel pouch',undefined,mode);assert.equal(b.status,'ready');assert.ok(b.sources.some(s=>s.knowledgeId===target));assert.ok(b.sources.every(s=>s.knowledgeId!==privateId));
-  const trace=b.retrieval?.trace as {candidates:{knowledgeId:string}[];degraded?:unknown};assert.ok(trace.candidates.every(c=>c.knowledgeId!==privateId));if(mode==='hybrid_rerank')assert.equal(trace.degraded,null);
+  const trace=b.retrieval?.trace as {candidates:{knowledgeId:string}[];degraded?:unknown;lexicalMode?:string};assert.ok(trace.candidates.every(c=>c.knowledgeId!==privateId));if(mode==='hybrid_rerank')assert.equal(trace.degraded,null);if(mode!=='vector')assert.equal(trace.lexicalMode,'persistent');
  }
 });
 test('S3 03 lossless tokenizer windows cover every codepoint including a long conditional fact',async()=>{
@@ -91,6 +91,19 @@ test('S3 06 unavailable reranker degrades explicitly using authorized current ca
 test('S3 07 unknown exact model cannot be substituted by another product or project',async()=>{
  const b=await retrieveKnowledge(sales,'What is the ZK-77 minimum quantity?');assert.equal(b.status,'no_match');assert.deepEqual(b.sources,[]);
  assert.ok(productApplies(['nylon zipper travel pouch'],'尼龙拉链旅行袋'));
+});
+test('B3/B4/B7 multi-question coverage, product scope and body-only history discovery',async()=>{
+ const material=await appendKnowledge(undefined,entry('Fictional pouch material','The fictional pouch uses 420D recycled nylon fabric.'),actor);
+ const closure=await appendKnowledge(undefined,entry('Fictional pouch closure','The fictional pouch uses a YKK zipper closure.'),actor);
+ const pouchPolicy=await appendKnowledge(undefined,{...entry('Velvet pouch lead time','Velvet pouch production needs 77 fictional days.'),products:['velvet pouch']},actor);
+ const otherPolicy=await appendKnowledge(undefined,{...entry('Steel frame lead time','Steel frame production needs 3 fictional days.'),products:['steel frame']},actor);
+ const archive=await appendKnowledge(undefined,entry('Archive','legacy copper coating policy'),actor);await archiveKnowledge(archive,1,actor);
+ await build();
+ const multi=await retrieveKnowledge(sales,'What material is the pouch made from and what closure does it use?');
+ assert.equal(multi.status,'ready');assert.ok(multi.sources.some(s=>s.knowledgeId===material));assert.ok(multi.sources.some(s=>s.knowledgeId===closure));
+ const product=await retrieveKnowledge(sales,'What is the velvet pouch lead time?');assert.ok(product.sources.some(s=>s.knowledgeId===pouchPolicy));assert.ok(product.sources.every(s=>s.knowledgeId!==otherPolicy));
+ const generic=await retrieveKnowledge(sales,'What is the production lead time?');assert.ok(generic.sources.every(s=>s.knowledgeId!==otherPolicy)&&generic.sources.every(s=>s.knowledgeId!==pouchPolicy));
+ const history=await retrieveKnowledge(sales,'legacy copper coating');assert.ok(history.issues.some(i=>i.code==='disabled'));assert.equal(history.sources.some(s=>s.knowledgeId===archive),false);
 });
 test('S3 08 lexical diagnostics identify disabled/expired/future without publishing their body',async()=>{
  const disabled=await appendKnowledge(undefined,entry('Retired copper finish','Do not reveal retired copper process canary.'),actor);await archiveKnowledge(disabled,1,actor);

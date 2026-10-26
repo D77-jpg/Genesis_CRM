@@ -70,7 +70,7 @@ export function isBusinessMailCommand(text:string){
   &&/(开发信|邮件|询盘|跟进信|样品回复|报价说明|email|letter|inquiry|quotation|follow.?up)/i.test(text);
 }
 function quantityOf(text:string):number|undefined{
- const m=/(?:quantity|qty|order quantity|采购数量|数量)\s*[:：=]?\s*(\d[\d,]*)|(?:^|\s)(\d[\d,]*)\s*(?:pcs|pieces|units|件)\b/i.exec(text);
+ const m=/(?:quantity|qty|order quantity|采购数量|数量)\s*[:：=]?\s*(\d[\d,]*)|(?:^|\s)(\d[\d,]*)\s*(?:pcs|pieces|units|件)(?![a-z0-9])/i.exec(text);
  return m?Number((m[1]??m[2]).replace(/,/g,'')):undefined;
 }
 function requestedPriceMissing(bundle:KnowledgeBundle,query:string){
@@ -97,17 +97,22 @@ export async function buildKnowledgeBundle(actor:AuthUser,query:string,options:{
  const quantity=options.quantity??quantityOf(query);
  bundle.factContext={...bundle.factContext,customerId:customer.id};
  try{
+  const wantsAgreement=/报价|价格|单价|成交|专属|quote|quotation|pricing|accepted price|another customer|other customer|reuse/i.test(query);
   const quotes=await Quotation.find({projectId:requireProjectId(actor),customerId:customer._id,status:'accepted',validityDate:{$gt:new Date()}}).sort({updatedAt:-1}).limit(10);
   for(const q of quotes){
-   const items=q.items.filter(item=>quantity===item.quantity&&productApplies([item.productName],query)&&(!item.model||normalized(query).includes(normalized(item.model))));
-   if(!items.length)continue;
-   const terms:KnowledgeTerm[]=items.map(item=>({topic:'price',value:String(item.unitPrice),unit:'per piece',currency:q.currency,
-    publicationIndex:q.items.indexOf(item),conditions:item.productName+'; quantity '+item.quantity+'; customer '+customer.name+'; quotation '+q.quotationNo,mode:'confirmed',scope:{reviewed:true,measure:'amount',products:[item.productName],processes:[],quantity:{min:item.quantity,max:item.quantity,minInclusive:true,maxInclusive:true,unit:'pcs'},exclusions:[],polarity:'affirmed'}}));
+   const items=q.items.filter(item=>productApplies([item.productName],query)&&(!item.model||normalized(query).includes(normalized(item.model)))&&(quantity===undefined?wantsAgreement:item.quantity===quantity||(!item.model&&wantsAgreement)));
+   if(!items.length||(quantity===undefined&&!wantsAgreement))continue;
+   const terms:KnowledgeTerm[]=items.map(item=>{
+    const exact=quantity===item.quantity;
+    return {topic:'price',value:String(item.unitPrice),unit:'per piece',currency:q.currency,
+     publicationIndex:q.items.indexOf(item),conditions:item.productName+'; quote quantity '+item.quantity+(quantity!==undefined&&!exact?'; requested quantity '+quantity+' — not applicable without reconfirmation':'')+'; customer '+customer.name+'; quotation '+q.quotationNo,mode:exact?'confirmed':'reference',
+     scope:{reviewed:exact,measure:'amount',products:[item.productName],processes:[],quantity:{min:item.quantity,max:item.quantity,minInclusive:true,maxInclusive:true,unit:'pcs'},exclusions:[],polarity:'affirmed'}};
+   });
    const conditions=terms.map(t=>t.conditions).join('; ');
    for(const [topic,value] of [['moq',q.moq],['lead_time',q.leadTime],['payment',q.paymentTerms]] as const)if(value)terms.push({topic,value,conditions,mode:'needs_confirmation'});
    if(bundle.status==='no_match')bundle.status='ready';
    bundle.sources.push({sourceId:'quotation:'+q.id+':v'+q.version,quotationId:q.id,customerId:customer.id,version:q.version,title:q.quotationNo,category:'trade',kind:'quotation',
-    source:'已接受的客户专属报价',content:JSON.stringify(items),applicability:conditions,products:items.map(i=>i.productName),validFrom:q.updatedAt.toISOString(),validUntil:q.validityDate!.toISOString(),terms});
+    source:'已接受的客户专属报价',content:'For fictional customer '+customer.name+', an accepted quote covers '+items.map(i=>i.quantity+' '+i.productName+' units at '+q.currency+' '+i.unitPrice+' per piece').join('; ')+'.\nThis price cannot be used for another customer or a different quantity.',applicability:conditions,products:items.map(i=>i.productName),validFrom:q.updatedAt.toISOString(),validUntil:q.validityDate!.toISOString(),terms});
   }
   bundle.sources.push(...await agreementEvidence(customer.id,actor));
   await getCustomerByIdOrThrow(customer.id,actor); // Recheck ownership after asynchronous reads.
