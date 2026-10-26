@@ -14,9 +14,9 @@ export async function embeddingIdentity():Promise<IndexIdentity>{
 }
 const output=z.object({identity:z.string(),dimension:z.number().int(),adapter:z.string(),elapsedMs:z.number().finite(),rssMiB:z.number().finite(),
  vectors:z.array(z.array(z.number().finite()).min(1).max(4096)).max(16).optional(),
- count:z.number().int().optional(),checksum:z.string().optional(),embedded:z.number().int().optional(),reused:z.number().int().optional(),
+ count:z.number().int().optional(),checksum:z.string().optional(),embedded:z.number().int().optional(),reused:z.number().int().optional(),lexical:z.number().int().optional(),lexicalTerms:z.number().int().optional(),
  segments:z.array(z.object({key:z.string(),text:z.string(),start:z.number().int(),end:z.number().int(),tokens:z.number().int()})).max(4096).optional(),
- trace:z.object({mode:z.string(),queryParts:z.number(),allowedItems:z.number(),candidates:z.number(),timings:z.record(z.string(),z.number()),reranker:z.object({model:z.string(),revision:z.string(),pairs:z.number()}).nullable(),degraded:z.object({code:z.string(),message:z.string()}).nullable(),warnings:z.array(z.object({code:z.string(),message:z.string()})).optional(),diagnostics:z.array(z.object({code:z.string(),sourceId:z.string(),title:z.string()}))}).optional(),
+ trace:z.object({mode:z.string(),queryParts:z.number(),allowedItems:z.number(),candidates:z.number(),lexicalMode:z.enum(['persistent','fallback']).optional(),timings:z.record(z.string(),z.number()),reranker:z.object({model:z.string(),revision:z.string(),pairs:z.number()}).nullable(),degraded:z.object({code:z.string(),message:z.string()}).nullable(),warnings:z.array(z.object({code:z.string(),message:z.string()})).optional(),diagnostics:z.array(z.object({code:z.string(),sourceId:z.string(),title:z.string()}))}).optional(),
  hits:z.array(z.object({id:z.string(),distance:z.number().finite(),accepted:z.boolean().optional(),scores:z.record(z.string(),z.number()).optional()})).max(50).optional(),queryDimension:z.number().int().optional(),removed:z.number().optional()}).strict();
 export type LocalResult=z.infer<typeof output>;
 export interface EmbeddingAdapter {embed(texts:string[],identity:IndexIdentity,signal?:AbortSignal):Promise<{vectors:number[][];identity:string;dimension:number}>}

@@ -74,14 +74,53 @@ def segment(tokenizer,atoms):
 
 
 def bm25(db,docs,query):
-    # A temporary FTS index contains ONLY the preauthorized candidates, including
-    # its corpus statistics. Private docs cannot influence another user's scores.
+    # Legacy fallback for indexes built before the persistent lexical tables.
+    # The temporary FTS table still contains ONLY preauthorized candidates.
+    db.execute('DROP TABLE IF EXISTS temp.search_lex')
     db.execute('CREATE VIRTUAL TABLE temp.search_lex USING fts5(item UNINDEXED, text, tokenize="unicode61")')
     db.executemany('INSERT INTO search_lex VALUES(?,?)',[(d['id'],' '.join(tokens(d['text']))) for d in docs])
     query_terms=tokens(query)[:160]
     if not query_terms: return []
     expression=' OR '.join('"'+word.replace('"','""')+'"' for word in query_terms)
     return [(r[0],-r[1]) for r in db.execute('SELECT item,bm25(search_lex) score FROM search_lex WHERE search_lex MATCH ? ORDER BY score,item',(expression,))]
+
+
+def bm25_persistent_rows(db,project,generation,docs,query):
+    """BM25 over persistent postings, constrained to the authorized docs.
+
+    We deliberately do not share one FTS5 table across projects/scopes: FTS5
+    document-frequency statistics are corpus-wide and would leak the existence
+    of private terms through ranking. Postings are written once at index build
+    time; each query computes statistics only over `allowed` rows.
+    """
+    query_terms=tokens(query)[:160]
+    if not query_terms or not docs: return []
+    placeholders=','.join('?'*len(query_terms))
+    rows=db.execute(
+        f'''SELECT t.item,t.term,t.tf,l.length
+            FROM lexical_terms t
+            JOIN lexical l ON l.project=t.project AND l.generation=t.generation AND l.item=t.item
+            JOIN allowed a ON a.item=t.item
+            WHERE t.project=? AND t.generation=? AND t.term IN ({placeholders})''',
+        (project,generation,*query_terms),
+    ).fetchall()
+    if not rows: return []
+    lengths={item:length for item,length in db.execute(
+        'SELECT l.item,l.length FROM lexical l JOIN allowed a ON a.item=l.item WHERE l.project=? AND l.generation=?',
+        (project,generation),
+    )}
+    n=len(docs);avgdl=sum(lengths.values())/max(n,1)
+    df={};tf={};seen=set()
+    for item,term,count,_length in rows:
+        key=(item,term)
+        if key not in seen:
+            seen.add(key);df[term]=df.get(term,0)+1;tf[key]=count
+    k1,b=1.2,0.75;scores={}
+    for (item,term),count in tf.items():
+        length=lengths.get(item,0)
+        idf=math.log(1+(n-df[term]+0.5)/(df[term]+0.5))
+        scores[item]=scores.get(item,0)+idf*count*(k1+1)/(count+k1*(1-b+b*length/max(avgdl,1e-9)))
+    return sorted(scores.items(),key=lambda p:(-p[1],p[0]))
 
 
 def rerank(query,docs,options,Failure):
@@ -147,7 +186,17 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
                 rows=db.execute('SELECT v.item,vec_distance_cosine(v.vector,?) distance FROM vectors v JOIN allowed a ON a.item=v.item WHERE v.project=? AND v.generation=? AND v.model=?',(vector.tobytes(),request['projectId'],request['generation'],request['identity'])).fetchall()
                 for item,distance in rows: vector_scores[item]=max(vector_scores.get(item,-1),1-float(distance))
     timings['vectorMs']=round((time.perf_counter()-now)*1000,2);now=time.perf_counter()
-    if mode!='vector': lexical=bm25(db,docs,query)
+    lexical_mode='fallback'
+    if mode!='vector':
+        lexical_count=db.execute('SELECT COUNT(*) FROM lexical l JOIN allowed a ON a.item=l.item WHERE l.project=? AND l.generation=?',(request['projectId'],request['generation'])).fetchone()[0]
+        term_items=db.execute('SELECT COUNT(DISTINCT l.item) FROM lexical l JOIN allowed a ON a.item=l.item WHERE l.project=? AND l.generation=?',(request['projectId'],request['generation'])).fetchone()[0]
+        if len(docs)==lexical_count and lexical_count==term_items:
+            lexical=bm25_persistent_rows(db,request['projectId'],request['generation'],docs,query)
+            lexical_mode='persistent'
+        else:
+            # Old generations remain usable while a new index is built; this
+            # path rebuilds FTS only for the already authorized candidate set.
+            lexical=bm25(db,docs,query)
     timings['bm25Ms']=round((time.perf_counter()-now)*1000,2)
     # Deduplicate each branch by publication BEFORE top-k, avoiding sibling starvation.
     def distinct(pairs):
@@ -165,6 +214,24 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
             best.setdefault(parent,item);details.setdefault(parent,{})[branch]=score
             details[parent][branch+'Rank']=rank+1
     ordered=sorted(fused,key=lambda p:(-fused[p],p))[:30]
+    anchors=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(query)))
+    # Exact alphanumeric model anchors are rare evidence. Do not let a crowd of
+    # generic vector candidates push the one exact model out of the rerank set
+    # through an RRF tie; the anchor check still rejects substituted models.
+    if anchors:
+        anchor_parents=sorted(
+            {d['parent'] for d in docs if all(re.search(r'(?<![a-z0-9])'+re.escape(a)+r'(?![a-z0-9])',normalize(d['text'])) for a in anchors)},
+            key=lambda p:(str(p),),
+        )
+        if len(anchor_parents)>10: anchor_parents=anchor_parents[:10]
+        for parent in anchor_parents:
+            if parent in ordered: continue
+            if parent not in best:
+                first=next(d['id'] for d in docs if d['parent']==parent)
+                best[parent]=first;details[parent]={}
+            fused[parent]=max(fused.get(parent,0),1/61)
+            if len(ordered)>=30: ordered[-1]=parent
+            else: ordered.append(parent)
     degraded=None;rerank_meta=None;now=time.perf_counter();rerank_scores={}
     if mode=='hybrid_rerank' and ordered:
         selected=[byid[best[p]] for p in ordered[:30]]
@@ -176,7 +243,7 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
             degraded={'code':getattr(e,'code','rerank_failed'),'message':'重排暂时不可用，本次使用已授权的混合召回；排序质量可能下降'}
     timings['rerankMs']=round((time.perf_counter()-now)*1000,2)
     diagnostic=[]
-    query_set=set(tokens(query));anchors=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(query)))
+    query_set=set(tokens(query))
     diagnostic_rows=request.get('diagnostics',[])
     diagnostic_warning=None
     # State discovery searches authorized titles only, never unpublished/expired
@@ -214,4 +281,4 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
             if not available or (competing and not anchors<=competing): accepted=False
         hits.append({'id':item,'distance':1-score.get('vector',0),'accepted':accepted,'scores':{**score,'rrf':fused[parent],**({'rerank':rerank_scores[parent]} if parent in rerank_scores else {})}})
     timings['retrievalMs']=round((time.perf_counter()-started)*1000,2)
-    return {'hits':hits,'trace':{'mode':mode,'queryParts':len(query_windows),'allowedItems':len(docs),'candidates':len(ordered),'timings':timings,'reranker':rerank_meta,'degraded':degraded,'warnings':[diagnostic_warning] if diagnostic_warning else [],'diagnostics':diagnostic}}
+    return {'hits':hits,'trace':{'mode':mode,'queryParts':len(query_windows),'allowedItems':len(docs),'candidates':len(ordered),'lexicalMode':lexical_mode,'timings':timings,'reranker':rerank_meta,'degraded':degraded,'warnings':[diagnostic_warning] if diagnostic_warning else [],'diagnostics':diagnostic}}

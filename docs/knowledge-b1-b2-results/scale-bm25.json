@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "scope": "B2 engineering scale probe; synthetic fictional fragments; no quality claim, no live CRM, no customer data",
+  "mode": "bm25",
+  "fragments": 10000,
+  "concurrency": 2,
+  "timedQueriesPerWorker": 20,
+  "warmupPerWorker": 3,
+  "model": {
+    "embedding": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "reranker": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+  },
+  "buildSeconds": 2.94,
+  "indexBytes": 64507904,
+  "sqliteVersion": "3.53.1",
+  "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+  "checksum": "39f1522c9ef9e4dea25c0e60bac08cf53b833ce70238f1e4a387d2b0c0b6179e",
+  "latencyMs": {
+    "p50": 298.99,
+    "p95": 781.94,
+    "p99": 796.05,
+    "max": 797.83
+  },
+  "workers": [
+    {
+      "latenciesMs": [
+        145.64970007631928,
+        568.5123999137431,
+        204.89829999860376,
+        781.3469000393525,
+        402.8473999351263,
+        162.13559999596328,
+        158.87929999735206,
+        633.4531999891624,
+        218.55109999887645,
+        769.332000054419,
+        378.2613999210298,
+        155.4627000587061,
+        152.21590001601726,
+        656.7737999139354,
+        216.35840006638318,
+        797.8341999696568,
+        415.7941999146715,
+        157.7410000609234,
+        154.19759997166693,
+        628.9458000101149
+      ],
+      "errors": 0,
+      "degraded": 0,
+      "elapsedSeconds": 9.024630500003695,
+      "cpuSeconds": 8.421875,
+      "rssMiB": 346.609375
+    },
+    {
+      "latenciesMs": [
+        144.39609996043146,
+        571.5140000684187,
+        206.19219995569438,
+        778.5373999504372,
+        403.37479999288917,
+        163.01220003515482,
+        156.49439999833703,
+        630.9514999156818,
+        219.72010005265474,
+        749.8494000174105,
+        391.0207999870181,
+        151.95669990498573,
+        152.76940003968775,
+        651.702499948442,
+        218.33750000223517,
+        793.2474999688566,
+        420.0599000323564,
+        160.12949997093529,
+        156.5283000236377,
+        633.0449000233784
+      ],
+      "errors": 0,
+      "degraded": 0,
+      "elapsedSeconds": 9.018283799989149,
+      "cpuSeconds": 8.625,
+      "rssMiB": 347.77734375
+    }
+  ],
+  "totalErrors": 0,
+  "totalDegraded": 0,
+  "workerRssMiB": {
+    "max": 347.78
+  },
+  "workerCpuSeconds": {
+    "max": 8.62
+  },
+  "createdAt": "2026-10-26T17:18:25+0800",
+  "pass": true
+}

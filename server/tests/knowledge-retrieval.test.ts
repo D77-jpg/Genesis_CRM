@@ -46,7 +46,7 @@ test('S3 01 Chinese free query finds the S2 missed source among 35 similar recov
 test('S3 02 all four real branches prefilter private/cross-project candidates and expose scores',async()=>{
  for(const mode of ['bm25','vector','hybrid','hybrid_rerank'] as const){
   const b=await retrieveKnowledge(sales,'nylon zipper travel pouch',undefined,mode);assert.equal(b.status,'ready');assert.ok(b.sources.some(s=>s.knowledgeId===target));assert.ok(b.sources.every(s=>s.knowledgeId!==privateId));
-  const trace=b.retrieval?.trace as {candidates:{knowledgeId:string}[];degraded?:unknown};assert.ok(trace.candidates.every(c=>c.knowledgeId!==privateId));if(mode==='hybrid_rerank')assert.equal(trace.degraded,null);
+  const trace=b.retrieval?.trace as {candidates:{knowledgeId:string}[];degraded?:unknown;lexicalMode?:string};assert.ok(trace.candidates.every(c=>c.knowledgeId!==privateId));if(mode==='hybrid_rerank')assert.equal(trace.degraded,null);if(mode!=='vector')assert.equal(trace.lexicalMode,'persistent');
  }
 });
 test('S3 03 lossless tokenizer windows cover every codepoint including a long conditional fact',async()=>{

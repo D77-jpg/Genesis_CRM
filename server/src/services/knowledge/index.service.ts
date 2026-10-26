@@ -71,8 +71,8 @@ export async function requestIndex(actor:AuthUser,requestKey='automatic'){
 export async function knowledgeIndexChanged(actor:AuthUser){
  const enabled=await State.exists({projectId:requireProjectId(actor),enabled:true});if(enabled)await requestIndex(actor);
 }
-async function plan(rows:Published[],generation:string,projectId:string,identity:IndexIdentity,adapter:SemanticAdapter,signal?:AbortSignal,guard?:()=>Promise<void>){
- const atoms=rows.flatMap(row=>{
+async function plan(rows:Published[],generation:string,projectId:string,identity:IndexIdentity,adapter:SemanticAdapter,signal?:AbortSignal,guard?:()=>Promise<void>,skipKeys=new Set<string>()){
+ const atoms=rows.filter(row=>!skipKeys.has(`${row.id}:${row.version}`)).flatMap(row=>{
   const v=row.revision;if(v.category==='sales_rules')return [];
   const context=[v.title,v.applicability??'',...(v.products??[])].filter(Boolean).join('\n');
   return [{row,body:v.content,location:{kind:'published_text',start:0,end:Array.from(v.content).length,offsetUnit:'unicode_codepoints'} as Record<string,unknown>},
@@ -115,16 +115,33 @@ export async function processKnowledgeIndex(id?:string,adapter:SemanticAdapter=l
   const snapshot=await published(String(g.projectId));
   if(snapshot.manifest!==g.manifest)throw new IndexError('publication_changed','已发布资料已变化，请使用最新重建任务');
   const guard=async()=>{requireAdmin(await indexActor(original));if((await embeddingIdentity()).id!==identity.id)throw new IndexError('model_changed','本地模型配置已变化');if(abort.signal.aborted||!await Gen.exists(fence))throw new IndexError('cancelled','权限或租约已变化');if((await published(String(g.projectId))).manifest!==g.manifest)throw new IndexError('publication_changed','已发布资料已变化');};
-  const items=await plan(snapshot.rows,g.id,String(g.projectId),identity,adapter,abort.signal,guard);
+  const state=await State.findOne({projectId:String(g.projectId)});
+  const prior=state?.activeGeneration?await Item.find({projectId:g.projectId,generation:state.activeGeneration,identity:identity.id,dimension:identity.dimension}).sort({ordinal:1}).lean():[];
+  const currentKeys=new Set(snapshot.rows.map(row=>`${row.id}:${row.version}`));
+  const reusable=prior.filter(item=>currentKeys.has(`${String(item.knowledgeId)}:${item.publicationVersion}`));
+  let reusedItems=reusable.map(({_id,generation:_oldGeneration,...item})=>({...item,projectId:g.projectId,generation:g._id}));
+  // Reuse verified windows and local vectors for unchanged publications. Only
+  // added/changed publications are segmented, embedded and lexically indexed.
+  let freshItems=await plan(snapshot.rows,g.id,String(g.projectId),identity,adapter,abort.signal,guard,new Set(reusable.map(item=>`${String(item.knowledgeId)}:${item.publicationVersion}`)));
+  if(reusedItems.length){
+   const copied=await adapter.run({command:'copy',projectId:String(g.projectId),generation:g.id,sourceGeneration:String(state!.activeGeneration),items:reusable.map(item=>item.itemId)},identity,abort.signal,guard);
+   if(copied.count!==reusedItems.length){
+    // Local files can be lost or an older runtime may not have copied lexical
+    // rows. Fall back to a full, explicit rebuild rather than switch a
+    // partially copied generation.
+    reusedItems=[];freshItems=await plan(snapshot.rows,g.id,String(g.projectId),identity,adapter,abort.signal,guard);
+   }
+  }
+  const items=[...reusedItems,...freshItems];
   if(items.length)await Item.bulkWrite(items.map(item=>({updateOne:{filter:{generation:g._id,itemId:item.itemId},update:{$setOnInsert:item},upsert:true}})));
-  if(!(await Gen.updateOne(fence,{$set:{total:items.length}})).matchedCount)throw new IndexError('cancelled','任务已停止');
-  for(let offset=g.done;offset<items.length;offset+=16){
+  if(!(await Gen.updateOne(fence,{$set:{total:items.length,done:reusedItems.length},$inc:{reused:reusedItems.length}})).matchedCount)throw new IndexError('cancelled','任务已停止');
+  for(let offset=0;offset<freshItems.length;offset+=16){
    if(abort.signal.aborted)throw new IndexError('cancelled','索引权限或租约已变化');
-   const batch=items.slice(offset,offset+16);
+   const batch=freshItems.slice(offset,offset+16);
    const result=await adapter.run({command:'upsert',projectId:String(g.projectId),generation:g.id,
     items:batch.map(i=>({id:i.itemId,text:i.content,hash:i.contentHash,scope:i.scope,parent:String(i.knowledgeId)}))},identity,abort.signal,guard);
    if(result.count!==batch.length)throw new IndexError('incomplete_batch','本地索引批次未完整写入');
-   if(!(await Gen.updateOne(fence,{$set:{done:offset+batch.length,metrics:{elapsedMs:result.elapsedMs,rssMiB:result.rssMiB}},$inc:{embedded:result.embedded??0,reused:result.reused??0}})).matchedCount)throw new IndexError('cancelled','索引租约已变化');
+   if(!(await Gen.updateOne(fence,{$set:{done:reusedItems.length+offset+batch.length,metrics:{elapsedMs:result.elapsedMs,rssMiB:result.rssMiB}},$inc:{embedded:result.embedded??0,reused:result.reused??0}})).matchedCount)throw new IndexError('cancelled','索引租约已变化');
   }
   const verified=await adapter.run({command:'verify',projectId:String(g.projectId),generation:g.id},identity,abort.signal,guard);
   if(verified.count!==items.length||verified.checksum!==checksum(items))throw new IndexError('incomplete_generation','索引校验不完整，尚未切换');
