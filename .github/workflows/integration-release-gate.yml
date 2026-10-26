@@ -43,13 +43,15 @@ jobs:
         run: npm ci
       - name: Integration API 契约测试（23 项，mongodb-memory-server 自举）
         run: npm run test:integration
-      - name: 服务端测试（mail / scratchpad / agent）
+      - name: 服务端测试（mail / scratchpad / agent / security / health）
         run: |
           npm run test:mail
           npm run test:scratchpad
           npm run test:agent
           npm run test:prospecting
-          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/prospecting-profiles.test.ts tests/prospecting.test.ts
+          npm run test:security
+          npm run test:health
+          npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/prospecting-profiles.test.ts tests/prospecting.test.ts tests/security-hardening.test.ts tests/health-readiness.test.ts
           npm run test:ai-settings
           npm run test:website-research
           npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/website-research.test.ts tests/website-public-web.test.ts tests/fixtures/website-research/local-retrieval.ts

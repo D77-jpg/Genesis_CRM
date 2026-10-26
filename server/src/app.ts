@@ -76,7 +76,7 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // 健康检查不计入限流
-  skip: (req) => req.path === '/api/health',
+  skip: (req) => req.originalUrl.startsWith('/api/health'),
   handler: (_req, _res, next) => next(ApiError.tooManyRequests()),
 });
 
@@ -116,7 +116,7 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
   /* ---------- 访问日志 ---------- */
-  app.use(morgan((tokens,req,res)=>{safeLog('info','http',{status:Number(tokens.status(req,res)),durationMs:Number(tokens['response-time'](req,res))});return undefined;},{skip:req=>req.path==='/api/health'||req.originalUrl.startsWith('/api/tracking/')}));
+  app.use(morgan((tokens,req,res)=>{safeLog('info','http',{status:Number(tokens.status(req,res)),durationMs:Number(tokens['response-time'](req,res))});return undefined;},{skip:req=>req.originalUrl.startsWith('/api/health')||req.originalUrl.startsWith('/api/tracking/')}));
 
   /* ---------- 路由 ---------- */
   app.use('/api', apiLimiter, apiRoutes);

@@ -25,6 +25,7 @@
     "test:agent": "node --require ./tests/os-user-info.cjs --import tsx --test tests/agent.test.ts",
     "test:ai-settings": "node --require ./tests/os-user-info.cjs --import tsx --test tests/ai-settings.test.ts",
     "test:security": "node --require ./tests/os-user-info.cjs --import tsx --test tests/security-hardening.test.ts",
+    "test:health": "node --require ./tests/os-user-info.cjs --import tsx --test tests/health-readiness.test.ts",
     "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts",
     "integration:credential": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-credential.ts",
     "test:fixture": "node tests/start-fixture.cjs",
