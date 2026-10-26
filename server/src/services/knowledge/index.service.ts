@@ -11,6 +11,7 @@ import {embeddingIdentity,IndexError,localEmbedding,sha,type SemanticAdapter} fr
 import type {IndexIdentity,IndexState} from '../../models/KnowledgeIndex';
 import type {KnowledgeBundle,KnowledgeSource} from '../agent/knowledge-types';
 import {boundedRefs} from '../agent/knowledge-types';
+import {feedbackBoostsForQuery,reorderHitsWithFeedback} from '../agent/knowledge-training';
 
 type Published={id:string;version:number;revision:KnowledgeRevision};
 const valid=(v:KnowledgeRevision,now=new Date())=>v.approved&&v.validFrom&&v.validFrom<=now&&(!v.validUntil||v.validUntil>now);
@@ -269,7 +270,11 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
   const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',productMatched:rows.filter(i=>productMatchedIds.has(String(i.knowledgeId))).map(i=>i.itemId),expectedCount:g.total,expectedChecksum:g.checksum},identity,undefined,async()=>{const now=await indexActor(actor);if((await embeddingIdentity()).id!==identity.id||now.role!==current.role||(await published(projectId)).manifest!==snapshot.manifest||String((await State.findOne({projectId}))?.activeGeneration)!==g.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,now,query,options.topics))))throw new IndexError('authority_changed','排队期间资料或权限已变化，请重新查询');});
   const again=await indexActor(actor),after=await published(projectId),pointer=await State.findOne({projectId}),afterIdentity=await embeddingIdentity();
   if(after.manifest!==snapshot.manifest||String(pointer?.activeGeneration)!==g.id||again.role!==current.role||afterIdentity.id!==identity.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,again,query,options.topics))))return {...base,status:'index_stale',issues:[{code:'index_stale',message:'检索期间知识或权限发生变化，请重新查询'}]};
-  const selectedIds=new Set([...(result.hits??[]).map(h=>h.id),...rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId)]);
+  // Human-review calibration is a bounded re-order of already accepted hits.
+  // If it is disabled, too small, or fails, the original retrieval order stands.
+  const feedback=await feedbackBoostsForQuery(projectId,query).catch(()=>({enabled:false,samples:0,matched:0,boosts:new Map<string,number>()}));
+  const rankedHits=feedback.boosts.size?reorderHitsWithFeedback(result.hits??[],new Map(rows.map(i=>[i.itemId,String(i.knowledgeId)])),feedback.boosts):(result.hits??[]);
+  const selectedIds=new Set([...rankedHits.map(h=>h.id),...rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId)]);
   const parents=rows.filter(i=>selectedIds.has(i.itemId)).map(i=>i.knowledgeId);
   const details=await Item.find({projectId,generation:g._id,knowledgeId:{$in:parents},identity:identity.id}).sort({ordinal:1}).lean();
   const sources:KnowledgeSource[]=[];
@@ -277,12 +282,12 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
   for(const row of rules.slice(0,4))sources.push({...options.sourceOf(row.id,row.revision),content:row.revision.content});
   const seen=new Set<string>();
   const explicit=new Set(rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId));
-  const hits=[...explicit,...(result.hits??[]).map(h=>h.id)];
+  const hits=[...explicit,...rankedHits.map(h=>h.id)];
   // Whole documents can be large; the model only needs the retrieved windows.
   // Keep every accepted window of the entry, not just the first hit.
-  const accepted=new Set([...explicit,...(result.hits??[]).filter(h=>h.accepted).map(h=>h.id)]);
+  const accepted=new Set([...explicit,...rankedHits.filter(h=>h.accepted).map(h=>h.id)]);
   for(const hitId of hits){
-   if(!explicit.has(hitId)&&!(result.hits?.find(h=>h.id===hitId)?.accepted??false))continue;
+   if(!explicit.has(hitId)&&!(rankedHits.find(h=>h.id===hitId)?.accepted??false))continue;
    const item=details.find(i=>i.itemId===hitId),row=item&&after.rows.find(r=>r.id===String(item.knowledgeId)&&r.version===item.publicationVersion&&visible(r,again));
    // Soft product filtering: matching products get priority in the retriever,
    // but a sibling product's policy must never be emitted as this product's answer.
@@ -300,13 +305,13 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
    // repeating the whole document's refs on each chunk (that used to reach MBs).
    const refs=boundedRefs(picked.flatMap(i=>i.sourceRefs??[]));
    const chunks=picked.map((i,position)=>({id:i.itemId,contentHash:i.contentHash,location:i.location,sourceRefs:position===0?refs:[]}));
-   sources.push({...source,content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:result.hits?.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,chunks}});
+   sources.push({...source,content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:rankedHits.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,chunks}});
    if(seen.size>=10)break;
   }
   const activeAnswer=sources.some(s=>s.category!=='sales_rules');
   const diagnosticIssues=(result.trace?.diagnostics??[]).map(d=>({code:d.code,message:({expired:'相关资料已过期：',disabled:'相关资料已停用：',not_effective:'相关资料尚未生效：',draft_only:'相关资料尚未发布：'} as Record<string,string>)[d.code]+d.title,sourceIds:[d.sourceId]}));
   const diagnosticWarnings=(result.trace?.warnings??[]).map(w=>({code:w.code,message:w.message}));
-  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&!activeAnswer?'expired':activeAnswer?'ready':'no_match',sources,issues:[...diagnosticIssues,...diagnosticWarnings,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=details.find(i=>i.itemId===h.id),row=visibleRows.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
+  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&!activeAnswer?'expired':activeAnswer?'ready':'no_match',sources,issues:[...diagnosticIssues,...diagnosticWarnings,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,feedback:{enabled:feedback.enabled,samples:feedback.samples,matched:feedback.matched,boosted:feedback.boosts.size},candidates:rankedHits.map(h=>{const item=details.find(i=>i.itemId===h.id),row=visibleRows.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
  }catch(e){return {...base,status:'retrieval_failed',sources:[],issues:[{code:e instanceof IndexError?e.code:'retrieval_failed',message:e instanceof IndexError?e.message:'语义检索或权限核对失败，请检查后重试；不能据此作出交易承诺'}]};}
 }
 let timer:NodeJS.Timeout|undefined,busy=false,cursor='';

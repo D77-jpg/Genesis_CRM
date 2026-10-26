@@ -95,6 +95,12 @@ export type {
 export { AgentEvalRun } from './AgentEvalRun';
 export type { IAgentEvalRun, AgentEvalRunDocument, AgentEvalCaseResult } from './AgentEvalRun';
 
+export { KnowledgeFeedback, FEEDBACK_ISSUES } from './KnowledgeFeedback';
+export type { IKnowledgeFeedback, KnowledgeFeedbackDocument, FeedbackIssue } from './KnowledgeFeedback';
+
+export { KnowledgeTrainingState } from './KnowledgeTrainingState';
+export type { IKnowledgeTrainingState, KnowledgeTrainingStateDocument } from './KnowledgeTrainingState';
+
 export { IntegrationCredential } from './IntegrationCredential';
 export type {
   IIntegrationCredential,

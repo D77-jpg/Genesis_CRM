@@ -74,6 +74,9 @@ export const reviewLetterSchema = z
       .toLowerCase()
       .regex(/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, { message: '收件人邮箱格式不正确' })
       .optional(),
+    /** 可选标签只用于训练样本统计，不参与发送条件。 */
+    issues: z.array(z.enum(['missing_source', 'wrong_fact', 'outdated', 'wrong_product', 'unsafe_claim', 'tone', 'other'])).max(7).optional(),
+    note: z.string().trim().max(500).optional(),
   })
   .strict();
 

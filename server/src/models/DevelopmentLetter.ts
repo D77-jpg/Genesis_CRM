@@ -11,6 +11,8 @@ import { LETTER_STATUS, MAIL_CHANNEL, type LetterStatus, type MailChannel } from
 export interface IDevelopmentLetter {
   knowledgeReview?: KnowledgeReview;
   knowledgeRechecks?:Record<string,unknown>[];
+  /** 首次生成时保存的 AI 原稿；人工编辑/审核不会覆盖它，用于修正对比和训练样本。 */
+  aiSnapshot?: { subject: string; contentText: string; at: Date };
   projectId: Types.ObjectId;
   /** 所属客户 */
   customerId: Types.ObjectId;
@@ -65,6 +67,9 @@ export interface IDevelopmentLetter {
     byName?: string;
     /** 审核时的主题 + 纯文本正文指纹，内容变化后审核失效。 */
     contentHash: string;
+    /** 可选的审核问题标签；用于训练样本，不作为发送条件。 */
+    issues?: string[];
+    note?: string;
   };
   markAsDeveloped: boolean;
   effectsPending: boolean;
@@ -104,6 +109,7 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
   {
     knowledgeReview: {type: Schema.Types.Mixed},
     knowledgeRechecks:[Schema.Types.Mixed],
+    aiSnapshot: {subject: {type: String, maxlength: 300}, contentText: {type: String, maxlength: 100000}, at: Date},
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     customerId: {
       type: Schema.Types.ObjectId,
@@ -174,6 +180,8 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
       by: { type: Schema.Types.ObjectId, ref: 'User' },
       byName: { type: String, trim: true, maxlength: 120 },
       contentHash: { type: String, match: /^[a-f0-9]{64}$/ },
+      issues: {type: [String], default: undefined},
+      note: {type: String, maxlength: 500},
     },
     markAsDeveloped: { type: Boolean, default: true },
     outreachStep: { type: Number, min: 1, max: 3 },

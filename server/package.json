@@ -38,6 +38,7 @@
     "test:knowledge-facts": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-facts.test.ts tests/knowledge-verifier-boundaries.test.ts",
     "eval:knowledge:facts": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/fact-evaluation.ts",
     "test:knowledge-governance": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-governance.test.ts",
+    "test:knowledge-training": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-training.test.ts",
     "test:knowledge-workflow": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-workflow.test.ts",
     "test:knowledge-operations": "node --require ./tests/os-user-info.cjs --import tsx --test tests/knowledge-operations.test.ts",
     "eval:knowledge:operations": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/operations.ts",

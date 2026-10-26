@@ -71,6 +71,7 @@ import {
 import { getAgentActionDetail } from '../services/agent/action-detail.service';
 
 import {appendKnowledge,listKnowledge,archiveKnowledge,deleteKnowledge,knowledgeInput,previewKnowledgeImport,importKnowledge,importPreviewInput,importCommitInput,getKnowledgeHistory} from '../services/agent/knowledge.service';
+import {setTrainingEnabled,trainingOverview} from '../services/agent/knowledge-training';
 import {getAgentBatch,listAgentBatches,proposeAgentBatch,controlAgentBatch,batchProposalSchema} from '../services/agent/batch.service';
 import {readAgentAttachment} from '../services/agent/attachment-text.service';
 import {automationRuleInput,getAutomationRule,saveAutomationRule,listAutomationInbox} from '../services/agent/automation.service';
@@ -100,6 +101,8 @@ router.post('/customers/:customerId/agreements/:id/revisions',requireRole('admin
 router.post('/customers/:customerId/agreements/:id/disable',requireRole('admin'),validate({params:agreementParams,body:z.object({version:z.number().int().positive()}).strict()}),asyncHandler(async(req,res)=>{await disableCustomerAgreement(req.params.customerId,req.params.id,req.body.version,req.user!);sendSuccess(res,{disabled:true});}));
 router.post('/knowledge-drafts/:id/recheck',messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({requestKey:z.string().uuid(),bodyText:z.string().max(20000).optional(),subject:z.string().max(300).optional()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await recheckKnowledgeDraft(req.params.id,req.body,req.user!))));
 router.get('/knowledge-governance',requireRole('admin'),asyncHandler(async(req,res)=>sendSuccess(res,await governanceOverview(req.user!))));
+router.get('/knowledge-training/overview',requireRole('admin'),asyncHandler(async(req,res)=>sendSuccess(res,await trainingOverview(req.user!))));
+router.post('/knowledge-training/toggle',requireRole('admin'),messageLimiter,validate({body:z.object({enabled:z.boolean()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await setTrainingEnabled(req.user!,req.body.enabled))));
 router.post('/knowledge-governance/disable-preview',requireRole('admin'),messageLimiter,validate({body:bulkInput}),asyncHandler(async(req,res)=>sendSuccess(res,await previewDisable(req.body.ids,req.user!),201)));
 router.post('/knowledge-governance/:id/disable',requireRole('admin'),messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await commitDisable(req.params.id,req.user!))));
 router.get('/knowledge/:id/diff',requireRole('admin'),validate({params:agentSessionParamsSchema,query:z.object({from:z.coerce.number().int().min(1).max(100),to:z.coerce.number().int().min(1).max(100)})}),asyncHandler(async(req,res)=>sendSuccess(res,await versionDiff(req.params.id,Number(req.query.from),Number(req.query.to),req.user!))));
