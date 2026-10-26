@@ -7,6 +7,7 @@
  * 都通过时只显示一句「检查通过」，内部明细全部收进折叠区。
  */
 import { KnowledgeCitation } from './knowledge-citation';
+import { Link } from 'react-router-dom';
 import * as React from 'react';
 import {
   CheckCircle2,
@@ -437,7 +438,7 @@ export function KnowledgeReviewPanel({
                 新稿已经生成，当前窗口打开的还是旧稿。旧稿上的“没找到可引用资料”或旧来源不代表新稿；请打开下面这份新草稿核对。
               </p>
               <Button asChild size="sm" className="w-full">
-                <a href={'/customers/' + next.customerId + '?knowledgeDraft=' + next.letterId}>打开新生成的草稿</a>
+                <Link to={'/customers/' + next.customerId + '?knowledgeDraft=' + next.letterId}>打开新生成的草稿</Link>
               </Button>
             </>
           ) : null}
