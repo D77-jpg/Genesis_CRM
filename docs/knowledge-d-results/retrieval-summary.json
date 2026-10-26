@@ -1,0 +1,588 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-26T11:32:06.150Z",
+  "commit": "6a7ed549a55bc24c107f135d2e0eedf8551ce280",
+  "dirtyTree": true,
+  "engine": "S3 hybrid_rerank production buildKnowledgeBundle + auditGroundedEmail",
+  "scope": "No LLM or live DB. No email generation quality measured. Sales rules loaded separately, excluded from relevance rank. Up to 10 distinct publications. Customer quotations still scoped by production service.",
+  "split": "all",
+  "hashes": {
+    "corpus.json": "3fb85a80aff72be82cd1d357f20d36c18390239846b6a49d709ce82351048b5b",
+    "cases.dev.json": "e53a451943185312ea7ae4cb1e68a130c253eb94a5c769ba64ccc365f61b0ecf",
+    "cases.holdout.json": "c3584e8dfc9f97d7f2c07d6525fc95803c0c86f75a08ede3fba43b449c655750",
+    "probe-set.json": "756fa51b617626463ea365eee9e288899f430e680fdcff3f9080b1ec4f3fa6f1",
+    "retrieval.ts": "dcbd6b223660440095baa7c054bf1cda323df5c4c30d4ca9063f4115f5466ff5",
+    "schema.ts": "607d1e12a84997f819db35f6bb6ad33dab44866718ee87bd3cdecd45dfeb6d61",
+    "metrics.ts": "4a016f03b86d43133510cee959bd8d5b52d05215d29d1af3b9afbe200ac88e64",
+    "runtime-safety.ts": "92cee439f80cb085bd4563205907b6d99b1df7098a51792571a6f9c1e9e5a235"
+  },
+  "machine": {
+    "os": "win32",
+    "release": "10.0.26200",
+    "cpu": "Intel(R) Core(TM) Ultra 7 265F",
+    "logicalCpus": 20,
+    "totalRamBytes": 33984950272,
+    "node": "v24.19.0"
+  },
+  "fixture": {
+    "sources": 50,
+    "cases": 120,
+    "directory": "D:\\Trade\\genesis\\CRM\\Genesis_CRM\\server\\evaluation\\knowledge"
+  },
+  "summary": {
+    "cases": 120,
+    "answerable": 80,
+    "negative": 40,
+    "recallAt10": 1,
+    "mrrAt10": 0.98125,
+    "classificationAccuracy": 1,
+    "negativeStateAccuracy": 1,
+    "forbiddenHits": 0,
+    "latencyMs": {
+      "p50": 204.977,
+      "p95": 251.051,
+      "max": 2480.218
+    },
+    "unexpectedErrors": []
+  },
+  "bySplit": {
+    "dev": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 1,
+      "mrrAt10": 0.975,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 210.082,
+        "p95": 324.983,
+        "max": 2480.218
+      },
+      "unexpectedErrors": []
+    },
+    "holdout": {
+      "cases": 60,
+      "answerable": 40,
+      "negative": 20,
+      "recallAt10": 1,
+      "mrrAt10": 0.9875,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 194.29,
+        "p95": 245.267,
+        "max": 2337.995
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byLanguage": {
+    "en": {
+      "cases": 73,
+      "answerable": 48,
+      "negative": 25,
+      "recallAt10": 1,
+      "mrrAt10": 0.9895833333333334,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 205.955,
+        "p95": 368.432,
+        "max": 2480.218
+      },
+      "unexpectedErrors": []
+    },
+    "zh": {
+      "cases": 47,
+      "answerable": 32,
+      "negative": 15,
+      "recallAt10": 1,
+      "mrrAt10": 0.96875,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 194.65,
+        "p95": 233.456,
+        "max": 2337.995
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCrossLanguage": {
+    "false": {
+      "cases": 78,
+      "answerable": 38,
+      "negative": 40,
+      "recallAt10": 1,
+      "mrrAt10": 0.9868421052631579,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 201.474,
+        "p95": 245.267,
+        "max": 1285.361
+      },
+      "unexpectedErrors": []
+    },
+    "true": {
+      "cases": 42,
+      "answerable": 42,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.9761904761904762,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 213.765,
+        "p95": 2242.765,
+        "max": 2480.218
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "byCategory": {
+    "agreement": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 0.7,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 227.803,
+        "p95": 245.267,
+        "max": 245.267
+      },
+      "unexpectedErrors": []
+    },
+    "box": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 221.954,
+        "p95": 233.173,
+        "max": 233.173
+      },
+      "unexpectedErrors": []
+    },
+    "certificate": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 232.949,
+        "p95": 251.051,
+        "max": 251.051
+      },
+      "unexpectedErrors": []
+    },
+    "company": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 368.432,
+        "p95": 2337.995,
+        "max": 2337.995
+      },
+      "unexpectedErrors": []
+    },
+    "conflict": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 178.294,
+        "p95": 203.573,
+        "max": 203.573
+      },
+      "unexpectedErrors": []
+    },
+    "customer": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.911,
+        "p95": 2.805,
+        "max": 2.805
+      },
+      "unexpectedErrors": []
+    },
+    "disabled": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 167.746,
+        "p95": 208.244,
+        "max": 208.244
+      },
+      "unexpectedErrors": []
+    },
+    "draft": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 202.603,
+        "p95": 215.061,
+        "max": 215.061
+      },
+      "unexpectedErrors": []
+    },
+    "expired": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 212.841,
+        "p95": 220.225,
+        "max": 220.225
+      },
+      "unexpectedErrors": []
+    },
+    "fabric": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 203.228,
+        "p95": 219.63,
+        "max": 219.63
+      },
+      "unexpectedErrors": []
+    },
+    "failure": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 5.955,
+        "p95": 7.234,
+        "max": 7.234
+      },
+      "unexpectedErrors": []
+    },
+    "future": {
+      "cases": 3,
+      "answerable": 0,
+      "negative": 3,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 201.026,
+        "p95": 212.444,
+        "max": 212.444
+      },
+      "unexpectedErrors": []
+    },
+    "gym-frame": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 152.283,
+        "p95": 2242.765,
+        "max": 2242.765
+      },
+      "unexpectedErrors": []
+    },
+    "gym-moq": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 110.721,
+        "p95": 122.76,
+        "max": 122.76
+      },
+      "unexpectedErrors": []
+    },
+    "gym-warranty": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 113.518,
+        "p95": 127.204,
+        "max": 127.204
+      },
+      "unexpectedErrors": []
+    },
+    "injection": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 0.326,
+        "p95": 2.341,
+        "max": 2.341
+      },
+      "unexpectedErrors": []
+    },
+    "inspection": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 219.303,
+        "p95": 245.073,
+        "max": 245.073
+      },
+      "unexpectedErrors": []
+    },
+    "lead": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 222.657,
+        "p95": 324.983,
+        "max": 324.983
+      },
+      "unexpectedErrors": []
+    },
+    "logo": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 227.036,
+        "p95": 233.456,
+        "max": 233.456
+      },
+      "unexpectedErrors": []
+    },
+    "mailbox": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 3.423,
+        "p95": 4.698,
+        "max": 4.698
+      },
+      "unexpectedErrors": []
+    },
+    "missing": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 175.162,
+        "p95": 222.759,
+        "max": 222.759
+      },
+      "unexpectedErrors": []
+    },
+    "moq": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 221.785,
+        "p95": 224.66,
+        "max": 224.66
+      },
+      "unexpectedErrors": []
+    },
+    "payment": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 189.763,
+        "p95": 211.201,
+        "max": 211.201
+      },
+      "unexpectedErrors": []
+    },
+    "project": {
+      "cases": 4,
+      "answerable": 0,
+      "negative": 4,
+      "recallAt10": null,
+      "mrrAt10": null,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": 1,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 186.48,
+        "p95": 219.252,
+        "max": 219.252
+      },
+      "unexpectedErrors": []
+    },
+    "sales": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 212.782,
+        "p95": 230.759,
+        "max": 230.759
+      },
+      "unexpectedErrors": []
+    },
+    "sample": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 214.158,
+        "p95": 2480.218,
+        "max": 2480.218
+      },
+      "unexpectedErrors": []
+    },
+    "shipping": {
+      "cases": 5,
+      "answerable": 5,
+      "negative": 0,
+      "recallAt10": 1,
+      "mrrAt10": 1,
+      "classificationAccuracy": 1,
+      "negativeStateAccuracy": null,
+      "forbiddenHits": 0,
+      "latencyMs": {
+        "p50": 202.625,
+        "p95": 241.243,
+        "max": 241.243
+      },
+      "unexpectedErrors": []
+    }
+  },
+  "sideEffects": {
+    "letters": 0,
+    "followups": 0
+  }
+}

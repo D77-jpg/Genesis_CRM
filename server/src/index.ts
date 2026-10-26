@@ -21,6 +21,7 @@ import { migrateLegacyCustomerStatus } from './services/customer.service';
 import { migrateLegacyQuotationVersion } from './services/quotation.service';
 import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
+import { beginShutdown } from './services/runtime-state';
 import { runMailQueue } from './services/mail-queue.service';
 import { syncInbox } from './services/mail-sync.service';
 import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, Project, Quotation, Scratchpad, User, UserMailAccount } from './models';
@@ -95,6 +96,7 @@ function registerShutdown(server: http.Server): void {
   const shutdown = async (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
+    beginShutdown();
     mailTimers.forEach(clearInterval);
     stopProspectingScheduler();
     stopAgentTaskWorker();stopKnowledgeDocumentWorker();stopKnowledgeIndexWorker();semanticPool.close();

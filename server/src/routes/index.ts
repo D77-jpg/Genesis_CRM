@@ -29,7 +29,7 @@ import {
 } from '../constants';
 import { getActiveChannel } from '../services/mailer.service';
 import { BRAND_LOGO_ROUTE, BRAND_LOGO_PNG_BASE64 } from '../constants/brand-logo';
-import { healthHandler, overviewHandler } from '../controllers/stats.controller';
+import { healthHandler, liveHandler, overviewHandler, readyHandler } from '../controllers/stats.controller';
 import { requireAuth, requireProject } from '../middleware/auth.middleware';
 
 import websiteResearchRoutes from './website-research.routes';
@@ -54,6 +54,8 @@ const router = Router();
 
 /* ---------- 公开接口 ---------- */
 router.get('/health', healthHandler);
+router.get('/health/live', liveHandler);
+router.get('/health/ready', readyHandler);
 
 /**
  * 元数据接口：把枚举与占位符定义下发给前端，

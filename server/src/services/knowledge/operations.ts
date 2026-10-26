@@ -1,5 +1,5 @@
 import { parserRuntimeStatus } from './parser-process';
-import { Schema, model, Types } from 'mongoose';
+import mongoose, { Schema, model, Types } from 'mongoose';
 import { execFileSync } from 'node:child_process';
 import { KnowledgeParsing } from '../../models/KnowledgeDocument';
 import { KnowledgeIndexState, KnowledgeIndexGeneration } from '../../models/KnowledgeIndex';
@@ -34,6 +34,10 @@ export function workingTreeDirty() { try {
 catch {
     return true;
 } }
+function processSnapshot() {
+    const memory = process.memoryUsage();
+    return { uptimeSeconds: Math.round(process.uptime()), rssMiB: Math.round(memory.rss / 1024 / 1024 * 10) / 10, heapUsedMiB: Math.round(memory.heapUsed / 1024 / 1024 * 10) / 10 };
+}
 export async function knowledgeOperations(actor: AuthUser) {
     const current = await indexActor(actor);
     if (current.role !== 'admin')
@@ -60,5 +64,5 @@ export async function knowledgeOperations(actor: AuthUser) {
             }, r: {
                 _id: string;
                 count: number;
-            }) => ({ total: n.total + r.count, conflicts: n.conflicts + (r._id === 'conflict' ? r.count : 0) }), { total: 0, conflicts: 0 }) }, indexes, state: states, tools, model: cost, costBasis: 'Configured estimates, not vendor invoices; failed/unreported calls may have unknown charges', component: { parser: parserRuntimeStatus(), semantic: semanticPool.status(), modelTransport: modelTransportStatus(), logs: logStatus() }, limitations: ['Process health is local to this Node instance', 'Draft review states measure saved drafts, not all model judgments', 'Mongo remains authoritative; no multi-host shared index support'] };
+            }) => ({ total: n.total + r.count, conflicts: n.conflicts + (r._id === 'conflict' ? r.count : 0) }), { total: 0, conflicts: 0 }) }, indexes, state: states, tools, model: cost, costBasis: 'Configured estimates, not vendor invoices; failed/unreported calls may have unknown charges', process: processSnapshot(), mongo: { state: mongoose.connection.readyState === 1 ? 'connected' : 'unavailable' }, component: { parser: parserRuntimeStatus(), semantic: semanticPool.status(), modelTransport: modelTransportStatus(), logs: logStatus() }, limitations: ['Process health is local to this Node instance', 'Draft review states measure saved drafts, not all model judgments', 'Mongo remains authoritative; no multi-host shared index support'] };
 }
