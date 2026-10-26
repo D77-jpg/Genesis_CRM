@@ -184,7 +184,7 @@ export function KnowledgeReviewPanel({
     setBusy(true);
     setError('');
     try {
-      setNext(await apiPost('/agent/knowledge-drafts/' + letterId + '/regenerate', { requestKey: requestKey.current }));
+      setNext(await apiPost('/agent/knowledge-drafts/' + letterId + '/regenerate', { requestKey: requestKey.current }, {timeout:180_000}));
     } catch (e) {
       setError(toErrorMessage(e, '重新生成没成功，原草稿还在'));
     } finally {
@@ -201,6 +201,7 @@ export function KnowledgeReviewPanel({
       const result = await apiPost<{ mode: string; checks: FactCheck[]; bodyHash: string }>(
         '/agent/knowledge-drafts/' + letterId + '/recheck',
         { requestKey: createClientId(), bodyText: currentBody, subject: currentSubject },
+        {timeout:120_000},
       );
       if (latestEditing.current === submittedIdentity) setAudit(result);
     } catch (e) {
