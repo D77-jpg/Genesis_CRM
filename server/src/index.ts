@@ -23,7 +23,7 @@ import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
 import { runMailQueue } from './services/mail-queue.service';
 import { syncInbox } from './services/mail-sync.service';
-import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, LetterTemplate, MailAccountAudit, MailQuotaBucket, Project, Quotation, Scratchpad, User, UserMailAccount } from './models';
+import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, Project, Quotation, Scratchpad, User, UserMailAccount } from './models';
 import { MailMessage, MailSyncState } from './models/MailMessage';
 
 const mailTimers: NodeJS.Timeout[] = [];
@@ -41,6 +41,7 @@ async function bootstrap(): Promise<void> {
     await Promise.all([Project.init(), User.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
       FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),
       AgentSession.init(), AgentMessage.init(), AgentRun.init(), AgentAction.init(), AgentCustomerPreview.init(),
+      KnowledgeFeedback.init(), KnowledgeTrainingState.init(),
       UserMailAccount.init(), MailQuotaBucket.init(), MailAccountAudit.init()]);
     const app = createApp();
     const server = http.createServer(app);

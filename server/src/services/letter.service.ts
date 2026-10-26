@@ -2,6 +2,8 @@ import {redactPrivateReview} from './agent/knowledge-visibility';
 import type {KnowledgeReview,KnowledgeFreshness} from './agent/knowledge-types';
 import {knowledgeReviewSendIssue} from './agent/knowledge-send-gate';
 import {knowledgeFreshness,draftHash} from './agent/knowledge-grounding';
+import {recordLetterReviewFeedback,retractLetterReviewFeedback} from './agent/knowledge-training';
+import type {FeedbackIssue} from '../models/KnowledgeFeedback';
 import {AgentTask} from '../models/AgentTask';
 import {hasProtectedCustomerMail} from './agent/mail-thread-analysis.service';
 import { createHash, randomUUID } from 'node:crypto';
@@ -27,6 +29,7 @@ import {
   AgentMailThreadAnalysis,
   Customer,
   DevelopmentLetter,
+  KnowledgeFeedback,
   LetterTemplate,
   Project,
   type CustomerDocument,
@@ -82,6 +85,8 @@ export interface LetterReviewSummary {
   by?: string;
   byName?: string;
   contentHash: string;
+  issues?: string[];
+  note?: string;
 }
 
 /** 对外输出的开发信 DTO（id 为字符串，customerId 已扁平化） */
@@ -273,6 +278,8 @@ function toReviewSummary(value: unknown): LetterReviewSummary | undefined {
     at: raw.at as Date,
     ...(raw.by ? { by: String(raw.by) } : {}),
     ...(raw.byName ? { byName: raw.byName } : {}),
+    ...(raw.issues?.length ? { issues: raw.issues } : {}),
+    ...(raw.note ? { note: raw.note } : {}),
     contentHash: String(raw.contentHash ?? ''),
   };
 }
@@ -483,6 +490,7 @@ async function persistAndSend(options: {
       ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       ...(knowledgeReview ? {knowledgeReview} : {}),
+      ...(knowledgeReview ? {aiSnapshot:{subject:rendered.subject,contentText:rendered.text,at:new Date()}} : {}),
       projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
@@ -557,6 +565,7 @@ async function persistAndSend(options: {
       ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       ...(knowledgeReview ? {knowledgeReview} : {}),
+      ...(knowledgeReview ? {aiSnapshot:{subject:rendered.subject,contentText:rendered.text,at:new Date()}} : {}),
       projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
       recipientEmail: rendered.recipientEmail, subject: rendered.subject,
       senderAddress: sender.senderAddress,
@@ -745,6 +754,7 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
   if (input.decision === 'clear') {
     const cleared = await DevelopmentLetter.findOneAndUpdate({ _id: letter._id, status: 'draft' }, { $unset: { review: 1, 'knowledgeReview.manualApprovedAt': 1, 'knowledgeReview.manualApprovedBy': 1 } }, { new: true });
     if (!cleared) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
+    await retractLetterReviewFeedback(cleared._id, cleared.projectId).catch(error => logger.warn('撤销审核训练样本失败', error));
     logger.info(`letter review cleared id=${letter.id} by=${actor?.id ?? 'system'}`);
     return toLetterDto(cleared.toObject() as unknown as Record<string, unknown>);
   }
@@ -756,6 +766,8 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
     at: new Date(),
     ...(actor?.id ? { by: new Types.ObjectId(actor.id) } : {}),
     ...(actor?.displayName || actor?.username ? { byName: actor?.displayName || actor?.username } : {}),
+    ...(input.issues?.length ? { issues: input.issues } : {}),
+    ...(input.note ? { note: input.note } : {}),
   };
 
   let update: Record<string, unknown>;
@@ -785,6 +797,12 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
 
   const updated = await DevelopmentLetter.findOneAndUpdate({ _id: letter._id, status: 'draft' }, update, { new: true });
   if (!updated) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
+  // Training data is a derivative of the human conclusion. Never fail an audit
+  // because a secondary sample could not be written.
+  await recordLetterReviewFeedback(updated, decision, actor, {
+    issues: input.issues as FeedbackIssue[] | undefined,
+    note: input.note,
+  }).catch(error => logger.warn('审核训练样本保存失败', error));
   logger.info(`letter ${decision} id=${letter.id} by=${actor?.id ?? 'system'}`);
   return toLetterDto(updated.toObject() as unknown as Record<string, unknown>);
 }
@@ -808,6 +826,7 @@ export async function deleteLetter(id: string, actor?: AuthUser): Promise<{ id: 
 
   if (['queued', 'scheduled', 'sending', 'retrying'].includes(letter.status) || letter.needsReview) throw ApiError.conflict('请先取消任务；发送中或待核实记录不能删除');
   await DevelopmentLetter.deleteOne({ _id: letter._id, ...projectScope(actor), status: { $nin: ['queued', 'scheduled', 'sending', 'retrying'] }, needsReview: { $ne: true } });
+  await KnowledgeFeedback.deleteMany({ letterId: letter._id, projectId: letter.projectId });
 
   if (['sent', 'opened'].includes(letter.status)) {
     // 带 letterCount > 0 条件的原子 $inc，既保证并发安全又不会出现负数
@@ -851,6 +870,7 @@ export async function bulkDeleteLetters(ids: string[], actor?: AuthUser): Promis
 
   const deletableIds = targetList.map((t) => t._id);
   const { deletedCount } = await DevelopmentLetter.deleteMany({ _id: { $in: deletableIds }, ...projectScope(actor) });
+  await KnowledgeFeedback.deleteMany({ letterId: { $in: deletableIds }, ...projectScope(actor) });
 
   const counter = new Map<string, number>();
   targetList.forEach((t) => {
