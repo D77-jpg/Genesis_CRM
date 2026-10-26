@@ -150,13 +150,20 @@ def text_blocks(text, markdown=False):
                 b["text"] += "\n" + "\n".join(attached)
                 b.setdefault("footnotes", []).extend(attached)
         expanded = []
+        table_number = 0
         for b in blocks:
             lines = b["text"].splitlines()
             if len(lines) > 1 and "|" in lines[0] and re.match(r"^[\s|:\-]+$", lines[1]):
+                table_number += 1
+                header_cells = [cell.strip() for cell in lines[0].strip().strip("|").split("|")]
                 rows = [line for line in lines[2:] if "|" in line]
                 notes = [line for line in lines[2:] if "|" not in line]
-                for row in rows:
-                    expanded.append({**b, "text": "\n".join([lines[0], lines[1], row, *notes]), "headers": [lines[0]], "footnotes": notes, "table": {"headerText":lines[0],"rowText":row,"notes":notes}})
+                for row_number, row in enumerate(rows, 1):
+                    expanded.append({**b, "text": "\n".join([lines[0], lines[1], row, *notes]), "headers": [lines[0]], "footnotes": notes,
+                                     "location": {**b["location"], "kind": "table", "table": table_number, "row": row_number, "line": row_number + 2},
+                                     "table": {"headerText": lines[0], "rowText": row, "headers": header_cells,
+                                               "row": [cell.strip() for cell in row.strip().strip("|").split("|")],
+                                               "table": table_number, "rowNumber": row_number, "notes": notes, "mergedCells": []}})
             else:
                 expanded.append(b)
         return expanded
@@ -174,6 +181,8 @@ def word_blocks(raw):
             for note in xml(z.read(part)).findall("w:"+tag, ns):
                 note_map[note.get(w+"id")] = "".join(note.itertext())
     blocks, headings = [], []
+    table_number = 0
+    warnings = []
     def content(e):
         return "".join(n.text or "" for n in e.iter(w+"t"))
     def notes(e):
@@ -191,15 +200,65 @@ def word_blocks(raw):
                 blocks.append({"text": "\n".join([text, *footnotes]), "headingPath": list(headings), "footnotes": footnotes,
                                "location": {"kind": "word", "paragraph": index+1}})
         elif el.tag == w+"tbl":
+            table_number += 1
             rows = el.findall("w:tr", ns)
             if len(rows) > LIMITS["rows"]:
                 fail("row_limit", "表格行数超过限制")
-            grid = [[content(c) for c in row.findall("w:tc", ns)] for row in rows]
+            # Expand Word's visual grid. Merged cells must not collapse the
+            # column count or silently shift a price into the wrong column.
+            grid, merged, vmerge_state, vmerge_start = [], [], {}, {}
+            for row_number, row in enumerate(rows, 1):
+                cells = []
+                for tc in row.findall("w:tc", ns):
+                    text = content(tc)
+                    tc_pr = tc.find("w:tcPr", ns)
+                    span = 1
+                    vmerge = None
+                    if tc_pr is not None:
+                        span_el = tc_pr.find("w:gridSpan", ns)
+                        if span_el is not None:
+                            try: span = max(1, min(80, int(span_el.get(w+"val", "1"))))
+                            except ValueError: span = 1
+                        vm = tc_pr.find("w:vMerge", ns)
+                        if vm is not None:
+                            vmerge = vm.get(w+"val", "continue")
+                    col = len(cells) + 1
+                    if vmerge == "continue":
+                        text = vmerge_state.get(col, text)
+                    elif vmerge == "restart":
+                        vmerge_state[col] = text
+                        vmerge_start[col] = row_number
+                        merged.append({"row":row_number,"col":col,"rowSpan":1,"colSpan":1,"value":text})
+                    for offset in range(span):
+                        cells.append(text)
+                        if span > 1:
+                            merged.append({"row":row_number,"col":col+offset,"rowSpan":1,"colSpan":span,"value":text})
+                    if vmerge == "continue":
+                        start = vmerge_start.get(col, row_number)
+                        for item in merged:
+                            if item["row"] == start and item["col"] == col and item["rowSpan"] == 1:
+                                item["rowSpan"] = row_number - start + 1
+                                break
+                grid.append(cells)
             if any(len(row) > LIMITS["columns"] for row in grid):
                 fail("column_limit", "表格列数超过限制")
             if not grid:
                 continue
-            header = " | ".join(grid[0])
+            header_rows, data_start, prefix = [grid[0]], 1, ""
+            ncols = max(len(row) for row in grid)
+            if len(grid) > 1:
+                first = [cell for cell in grid[0] if cell]
+                second = [cell for cell in grid[1] if cell]
+                # A single merged title row is not the column header. Keep it in
+                # every row's context, then use the following row as headers.
+                full_title = any(m["row"] == 1 and m["colSpan"] >= ncols for m in merged)
+                if first and full_title and len(second) > 1:
+                    prefix = first[0]
+                    header_rows, data_start = [grid[1]], 2
+                elif len(first) < len(second) or (len(first) == len(second) and len(set(first)) < len(first)):
+                    header_rows, data_start = [grid[0], grid[1]], 2
+            header_cells = header_rows[-1]
+            header = "\n".join(([prefix] if prefix else []) + [" | ".join(row) for row in header_rows])
             table_notes = notes(el)
             # Adjacent note paragraphs belong to every row in this table.
             siblings = list(root.find("w:body", ns))
@@ -209,11 +268,14 @@ def word_blocks(raw):
                     table_notes.append(s)
                 else:
                     break
-            for n, row in enumerate(grid[1:] or grid):
+            for n, row in enumerate(grid[data_start:] or grid):
                 blocks.append({"text": "\n".join([header, " | ".join(row), *table_notes]), "headingPath": list(headings),
-                               "headers": grid[0], "footnotes": table_notes, "table": {"headers":grid[0],"rows":[row],"notes":table_notes},
-                               "location": {"kind": "word", "table": index+1, "row": n+2, "rowSpan": 1}})
-    return blocks, []
+                               "headers": header_cells, "footnotes": table_notes,
+                               "table": {"headers":header_cells,"headerRows":header_rows,"rows":[row],"notes":table_notes,"mergedCells":merged},
+                               "location": {"kind": "word", "table": table_number, "row": n+data_start+1, "rowSpan": 1, "mergedCells": merged}})
+            if merged:
+                warnings.append("Word 表格包含合并单元格，已按视觉网格展开；跨行/跨列条件请对照原文核对。")
+    return blocks, warnings
 
 
 def col_number(ref):
@@ -223,25 +285,76 @@ def col_number(ref):
     return value
 
 
+def _cell_coords(ref):
+    m = re.match(r"([A-Z]+)(\d+)", (ref or "").upper())
+    if not m:
+        return None
+    return int(m.group(2)), col_number(m.group(1))
+
+
 def table_blocks(rows, name, merges=None):
     if not rows:
         return []
     header_i = next((i for i, row in enumerate(rows) if row["cells"]), None)
     if header_i is None:
         return []
-    header = rows[header_i]["cells"]
-    notes = [" | ".join(row["cells"]) for row in rows[header_i+1:] if row["cells"] and re.match(r"^(?:[*†‡]|note\b|注|备注|说明)", row["cells"][0], re.I)]
+    # Build a value map for merged ranges. Excel stores the value only in the
+    # top-left cell; without this expansion a merged product/price cell looks
+    # blank in the row that actually belongs to the second column.
+    merge_values, merged_cells = {}, []
+    for ref in merges or []:
+        if ":" not in ref:
+            continue
+        a, b = _cell_coords(ref.split(":", 1)[0]), _cell_coords(ref.split(":", 1)[1])
+        if not a or not b:
+            continue
+        r1, c1 = a; r2, c2 = b
+        value = next((row["cells"][c1-1] for row in rows if _cell_coords(row["range"].split(":", 1)[0]) == (r1, 1) and len(row["cells"]) >= c1), "")
+        merged_cells.append({"range": ref, "row": r1, "col": c1, "rowSpan": r2-r1+1, "colSpan": c2-c1+1, "value": value})
+        for rr in range(r1, r2+1):
+            for cc in range(c1, c2+1):
+                merge_values[(rr, cc)] = value
+    table_rows = []
+    for row in rows:
+        start = _cell_coords(row["range"].split(":", 1)[0]) or ((int(row["line"]) if row.get("line") else 0), 1)
+        cells = list(row["cells"])
+        width = max(len(cells), max((c for (_, c) in merge_values if c <= LIMITS["columns"]), default=0))
+        while len(cells) < width:
+            cells.append("")
+        for idx in range(len(cells)):
+            if not cells[idx] and (start[0], idx+1) in merge_values:
+                cells[idx] = merge_values[(start[0], idx+1)]
+        table_rows.append({**row, "cells": cells, "rowNumber": start[0]})
+    header_i = next((i for i, row in enumerate(table_rows) if row["cells"]), None)
+    if header_i is None:
+        return []
+    ncols = max(len(row["cells"]) for row in table_rows)
+    header_rows, data_start, prefix = [table_rows[header_i]["cells"]], header_i+1, ""
+    if data_start < len(table_rows):
+        full_title = any(m["row"] == table_rows[header_i]["rowNumber"] and m["colSpan"] >= ncols for m in merged_cells)
+        if full_title:
+            prefix = next((cell for cell in header_rows[0] if cell), "")
+            header_i += 1
+            header_rows, data_start = [table_rows[header_i]["cells"]], header_i+1
+        elif any(m["row"] == table_rows[header_i]["rowNumber"] and m["colSpan"] > 1 for m in merged_cells):
+            header_rows.append(table_rows[header_i+1]["cells"])
+            data_start = header_i+2
+    header_cells = header_rows[-1]
+    header_text = "\n".join(([prefix] if prefix else []) + [" | ".join(row) for row in header_rows])
+    notes = [" | ".join(row["cells"]) for row in table_rows[data_start:] if row["cells"] and re.match(r"^(?:[*†‡]|note\b|注|备注|说明)", row["cells"][0], re.I)]
     blocks = []
-    for row in rows[header_i+1:]:
+    for row in table_rows[data_start:]:
         if not row["cells"] or " | ".join(row["cells"]) in notes:
             continue
-        blocks.append({"text": "\n".join([" | ".join(header), " | ".join(row["cells"]), *notes]),
-                       "headingPath": [name], "headers": header, "footnotes": notes, "table": {"headers":header,"rows":[row["cells"]],"notes":notes},
-                       "location": {"kind": "sheet", "sheet": name, "range": row["range"],
-                                    "headerRange": rows[header_i]["range"], "mergedCells": merges or []}})
+        blocks.append({"text": "\n".join([header_text, " | ".join(row["cells"]), *notes]),
+                       "headingPath": [name], "headers": header_cells, "footnotes": notes,
+                       "table": {"headers":header_cells,"headerRows":header_rows,"rows":[row["cells"]],"notes":notes,"mergedCells":merged_cells,"headerRange":table_rows[header_i]["range"],"rowRange":row["range"]},
+                       "location": {"kind": "sheet", "sheet": name, "table": name, "row": row.get("rowNumber"), "range": row["range"],
+                                    "headerRange": table_rows[header_i]["range"], "mergedCells": merges or []}})
     if not blocks:
-        blocks.append({"text": " | ".join(header), "headingPath": [name], "headers": header,
-                       "location": {"kind": "sheet", "sheet": name, "range": rows[header_i]["range"]}})
+        blocks.append({"text": header_text, "headingPath": [name], "headers": header_cells,
+                       "table": {"headers":header_cells,"headerRows":header_rows,"rows":[],"notes":notes,"mergedCells":merged_cells,"headerRange":table_rows[header_i]["range"]},
+                       "location": {"kind": "sheet", "sheet": name, "table": name, "row": table_rows[header_i].get("rowNumber"), "range": table_rows[header_i]["range"], "mergedCells": merges or []}})
     return blocks
 
 

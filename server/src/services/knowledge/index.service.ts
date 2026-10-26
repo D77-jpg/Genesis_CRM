@@ -31,14 +31,19 @@ async function published(projectId:string){
  return {rows,manifest};
 }
 async function diagnosticMetadata(projectId:string,actor:AuthUser,query='',topics:KnowledgeBundle['topics']=[]){
- const inactive=await AgentKnowledge.find({projectId,$or:[{archived:true},{approvedVersion:0},{'revisions.validUntil':{$lte:new Date()}},{'revisions.validFrom':{$gt:new Date()}}]}).select('approvedVersion version archived revisions.version revisions.title revisions.validFrom revisions.validUntil revisions.accessScope revisions.category').sort({_id:1}).limit(10001).lean();
+ const inactive=await AgentKnowledge.find({projectId,$or:[{archived:true},{approvedVersion:0},{'revisions.validUntil':{$lte:new Date()}},{'revisions.validFrom':{$gt:new Date()}}]}).select('approvedVersion version archived revisions.version revisions.title revisions.content revisions.validFrom revisions.validUntil revisions.accessScope revisions.category').sort({_id:1}).limit(10001).lean();
  return inactive.flatMap(k=>{
    const v=k.revisions.find(v=>v.version===(k.approvedVersion||k.version));
    if(!v||(!k.approvedVersion&&actor.role!=='admin')||(v.accessScope==='admins'&&actor.role!=='admin'))return [];
    const specificNonCompliance=!topics.includes('certification')&&(topics.length>0||/材料|材质|工艺|涂层|结构|material|coating|finish|construction/i.test(query));
    if(v.category==='compliance'&&specificNonCompliance)return [];
    const code=k.archived?'disabled':!k.approvedVersion?'draft_only':v.validFrom&&v.validFrom>new Date()?'not_effective':v.validUntil&&v.validUntil<=new Date()?'expired':null;
-   return code?[{code,sourceId:'knowledge:'+String(k._id)+':v'+v.version,title:v.title}]:[];
+   // Legacy records often carry a generic title ("Archive", "Old policy").
+   // A bounded, server-derived body excerpt lets state discovery find policies
+   // whose distinguishing words exist only in the published body. The excerpt
+   // is never returned to the model as a current source.
+   const searchText=(v.title+'\n'+(v.content??'')).slice(0,800);
+   return code?[{code,sourceId:'knowledge:'+String(k._id)+':v'+v.version,title:v.title,searchText}]:[];
   });
 }
 function visible(row:Published,actor:AuthUser){return row.revision.accessScope!=='admins'||actor.role==='admin';}
@@ -244,18 +249,31 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
   if(!g||g.manifest!==snapshot.manifest||g.identity.id!==identity.id||g.identity.dimension!==identity.dimension){
    return {...base,status:g?'index_stale':'index_not_ready',issues:[{code:g?'index_stale':'index_not_ready',message:'当前有效知识的语义索引尚未就绪，请管理员在知识库更新检索资料；未使用旧索引'}]};
   }
-  const allowed=snapshot.rows.filter(r=>visible(r,current)&&options.productApplies(r.revision.products,query));
-  const rows=await Item.find({projectId,generation:g._id,knowledgeId:{$in:allowed.map(r=>objectId(r.id))},identity:identity.id,dimension:identity.dimension}).sort({ordinal:1}).select('itemId knowledgeId publicationVersion ordinal').lean();
+  const visibleRows=snapshot.rows.filter(r=>visible(r,current));
+  // Product tags are a relevance hint, not an authorization filter. Filtering
+  // them in Mongo makes a missing product word turn a valid generic policy into
+  // no_match (and hides a second, differently-tagged requirement). Keep the
+  // full visible set, rank matching products first, and apply the final
+  // product-scope guard below where a product-specific answer is emitted.
+  const productMatchedRows=visibleRows.filter(r=>options.productApplies(r.revision.products,query));
+  // A row without product tags is project-wide. A tagged row is eligible only
+  // when its product is named; otherwise a generic question could silently pick
+  // up a sibling product's price or lead time.
+  const productEligibleRows=visibleRows.filter(r=>!r.revision.products?.length||options.productApplies(r.revision.products??[],query));
+  const productMatchedIds=new Set(productMatchedRows.map(r=>r.id));
+  const productEligibleIds=new Set(productEligibleRows.map(r=>r.id));
+  const hasProductTags=visibleRows.some(r=>Boolean(r.revision.products?.length));
+  const rows=await Item.find({projectId,generation:g._id,knowledgeId:{$in:visibleRows.map(r=>objectId(r.id))},identity:identity.id,dimension:identity.dimension}).sort({ordinal:1}).select('itemId knowledgeId publicationVersion ordinal').lean();
   // No query-vector cache in S2. Embedding reuse key is (project, visibility, model identity, full content hash).
   const diagnostics=await diagnosticMetadata(projectId,current,query,options.topics);
-  const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',expectedCount:g.total,expectedChecksum:g.checksum},identity,undefined,async()=>{const now=await indexActor(actor);if((await embeddingIdentity()).id!==identity.id||now.role!==current.role||(await published(projectId)).manifest!==snapshot.manifest||String((await State.findOne({projectId}))?.activeGeneration)!==g.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,now,query,options.topics))))throw new IndexError('authority_changed','排队期间资料或权限已变化，请重新查询');});
+  const result=await adapter.run({command:'query',projectId,generation:g.id,diagnostics,allowed:rows.map(r=>r.itemId),query,mode:options.mode??'hybrid_rerank',productMatched:rows.filter(i=>productMatchedIds.has(String(i.knowledgeId))).map(i=>i.itemId),expectedCount:g.total,expectedChecksum:g.checksum},identity,undefined,async()=>{const now=await indexActor(actor);if((await embeddingIdentity()).id!==identity.id||now.role!==current.role||(await published(projectId)).manifest!==snapshot.manifest||String((await State.findOne({projectId}))?.activeGeneration)!==g.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,now,query,options.topics))))throw new IndexError('authority_changed','排队期间资料或权限已变化，请重新查询');});
   const again=await indexActor(actor),after=await published(projectId),pointer=await State.findOne({projectId}),afterIdentity=await embeddingIdentity();
   if(after.manifest!==snapshot.manifest||String(pointer?.activeGeneration)!==g.id||again.role!==current.role||afterIdentity.id!==identity.id||sha(JSON.stringify(diagnostics))!==sha(JSON.stringify(await diagnosticMetadata(projectId,again,query,options.topics))))return {...base,status:'index_stale',issues:[{code:'index_stale',message:'检索期间知识或权限发生变化，请重新查询'}]};
   const selectedIds=new Set([...(result.hits??[]).map(h=>h.id),...rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId)]);
   const parents=rows.filter(i=>selectedIds.has(i.itemId)).map(i=>i.knowledgeId);
   const details=await Item.find({projectId,generation:g._id,knowledgeId:{$in:parents},identity:identity.id}).sort({ordinal:1}).lean();
   const sources:KnowledgeSource[]=[];
-  const rules=allowed.filter(r=>r.revision.category==='sales_rules');
+  const rules=visibleRows.filter(r=>r.revision.category==='sales_rules');
   for(const row of rules.slice(0,4))sources.push({...options.sourceOf(row.id,row.revision),content:row.revision.content});
   const seen=new Set<string>();
   const explicit=new Set(rows.filter(i=>options.ids?.includes(String(i.knowledgeId))).map(i=>i.itemId));
@@ -266,21 +284,29 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
   for(const hitId of hits){
    if(!explicit.has(hitId)&&!(result.hits?.find(h=>h.id===hitId)?.accepted??false))continue;
    const item=details.find(i=>i.itemId===hitId),row=item&&after.rows.find(r=>r.id===String(item.knowledgeId)&&r.version===item.publicationVersion&&visible(r,again));
-   if(!item||!row||seen.has(row.id))continue;seen.add(row.id);
+   // Soft product filtering: matching products get priority in the retriever,
+   // but a sibling product's policy must never be emitted as this product's answer.
+   if(!item||!row||seen.has(row.id)||(!explicit.has(hitId)&&hasProductTags&&!productEligibleIds.has(row.id)))continue;seen.add(row.id);
    const source=options.sourceOf(row.id,row.revision);
    const acceptedForRow=details.filter(i=>String(i.knowledgeId)===row.id&&accepted.has(i.itemId));
    const picked=expandEvidenceWindows(acceptedForRow,details.filter(i=>String(i.knowledgeId)===row.id));
    const windows=picked.map(i=>i.content).filter(Boolean);
+   // Conditional fact windows contain only the tiny JSON term, not the policy
+   // sentence/table that established it. Cite the immutable revision text so a
+   // multi-evidence answer can still show the original source clause.
+   const hasFactWindow=picked.some(i=>i.location?.kind==='conditional_fact');
+   const content=hasFactWindow?row.revision.content:(windows.length?windows.join('\n\n…\n\n'):row.revision.content);
    // Provenance refs are identical on every window; keep them once instead of
    // repeating the whole document's refs on each chunk (that used to reach MBs).
    const refs=boundedRefs(picked.flatMap(i=>i.sourceRefs??[]));
    const chunks=picked.map((i,position)=>({id:i.itemId,contentHash:i.contentHash,location:i.location,sourceRefs:position===0?refs:[]}));
-   sources.push({...source,content:windows.length?windows.join('\n\n…\n\n'):row.revision.content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:result.hits?.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,chunks}});
+   sources.push({...source,content,terms:source.terms.filter(t=>options.topics.includes(t.topic)),index:{scores:result.hits?.find(h=>h.id===hitId)?.scores,selection:explicit.has(hitId)?'explicit':'semantic',generation:g.id,model:identity.id,modelName:identity.model,revision:identity.revision,dimension:identity.dimension,manifest:g.manifest,chunks}});
    if(seen.size>=10)break;
   }
+  const activeAnswer=sources.some(s=>s.category!=='sales_rules');
   const diagnosticIssues=(result.trace?.diagnostics??[]).map(d=>({code:d.code,message:({expired:'相关资料已过期：',disabled:'相关资料已停用：',not_effective:'相关资料尚未生效：',draft_only:'相关资料尚未发布：'} as Record<string,string>)[d.code]+d.title,sourceIds:[d.sourceId]}));
   const diagnosticWarnings=(result.trace?.warnings??[]).map(w=>({code:w.code,message:w.message}));
-  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&(!sources.some(s=>s.category!=='sales_rules')||/expired|过期|失效/i.test(query))?'expired':sources.some(s=>s.category!=='sales_rules')?'ready':'no_match',sources,issues:[...diagnosticIssues,...diagnosticWarnings,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=details.find(i=>i.itemId===h.id),row=allowed.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
+  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&!activeAnswer?'expired':activeAnswer?'ready':'no_match',sources,issues:[...diagnosticIssues,...diagnosticWarnings,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=details.find(i=>i.itemId===h.id),row=visibleRows.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
  }catch(e){return {...base,status:'retrieval_failed',sources:[],issues:[{code:e instanceof IndexError?e.code:'retrieval_failed',message:e instanceof IndexError?e.message:'语义检索或权限核对失败，请检查后重试；不能据此作出交易承诺'}]};}
 }
 let timer:NodeJS.Timeout|undefined,busy=false,cursor='';

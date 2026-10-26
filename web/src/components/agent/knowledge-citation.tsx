@@ -5,8 +5,10 @@ import {apiGet,toErrorMessage} from '@/lib/api';
 import type {KnowledgeSource} from '@/types/knowledge';
 export function sourceLocation(loc:Record<string,unknown>){
  if(loc.kind==='pdf')return '第 '+loc.page+' 页'+(loc.ocr?' · 图片识别':'');
- if(loc.sheet)return String(loc.sheet)+' · '+String(loc.range??loc.headerRange??'');
- if(loc.kind==='word')return loc.table?'表格 '+loc.table+' · 第 '+loc.row+' 行':'第 '+loc.paragraph+' 段';
+ if(loc.kind==='table')return '表格 '+(loc.table??'')+' · 第 '+(loc.row??'')+' 行'+(loc.line?'（源文件第 '+loc.line+' 行）':'');
+ if(loc.sheet)return String(loc.sheet)+' · '+(loc.range??loc.headerRange??'')+(loc.row?' · 第 '+loc.row+' 行':'');
+ if(loc.kind==='word')return loc.table?'表格 '+loc.table+' · 第 '+loc.row+' 行'+(loc.rowSpan&&Number(loc.rowSpan)>1?'（跨 '+loc.rowSpan+' 行）':''):'第 '+loc.paragraph+' 段';
+ if(loc.kind==='conditional_fact')return '发布条款'+(loc.termIndex!==undefined?' #'+(Number(loc.termIndex)+1):'');
  if(loc.kind==='image')return '图片识别片段';
  if(loc.start!==undefined)return '正文第 '+loc.start+'–'+loc.end+' 个字';
  return '发布正文';

@@ -66,6 +66,7 @@ test('UTF-8, Markdown headings, exact codepoint positions and complete condition
   const md = await parsed('bilingual.md');
   assert.ok(md.chunks.some(c => c.content?.includes('73') && c.content.includes('19')));
   const row = md.chunks.find(c => c.content?.includes('2.35')); assert.ok(row?.headers?.[0].includes('USD'));
+  assert.equal(row?.location?.kind, 'table'); assert.equal(row?.location?.row, 1); assert.equal(row?.table?.table, 1);
   assert.match(row!.content!, /excludes freight/); assert.ok(row!.headingPath?.includes('Prices'));
   const oversize = await parsed('oversized.txt'); assert.equal(oversize.chunks.length, 1); assert.equal(oversize.chunks[0].indexEligible, false);
   assert.equal(oversize.chunks[0].content, (await readFile(join(directory, 'oversized.txt'))).toString('utf8').trim());
@@ -74,10 +75,20 @@ test('DOCX, XLSX and CSV retain repeated headers, table conditions, notes, range
   for (const name of ['conditions.docx', 'conditions.xlsx', 'table.csv']) {
     const d = await parsed(name); assert.ok(['succeeded', 'partial'].includes(d.revisions[0].state), JSON.stringify(d.revisions[0].error));
     const prices = d.chunks.filter(c => c.content?.includes('2.35') || c.content?.includes('3.90'));
-    assert.ok(prices.length >= 2, name); for (const c of prices) { assert.match(c.content!, /USD/); assert.match(c.content!, /freight/); assert.ok(c.headers?.length); assert.ok(c.location); assert.ok(c.table); }
-    if (name.endsWith('docx')) assert.ok(prices.some(c => c.footnotes?.some(n => n.includes('200 pcs'))));
-    if (name.endsWith('xlsx')) { assert.ok(d.chunks.some(c => c.content?.includes('未计算公式: 2+2'))); assert.ok(prices.some(c => c.location?.mergedCells)); }
+    assert.ok(prices.length >= 2, name); for (const c of prices) { assert.match(c.content!, /USD/); assert.match(c.content!, /freight/); assert.ok(c.headers?.length); assert.ok(c.location); assert.ok(c.table); assert.notEqual(c.location?.row, undefined, name); }
+    if (name.endsWith('docx')) { assert.ok(prices.every(c => c.location?.kind === 'word' && c.location?.table === 1)); assert.ok(prices.some(c => c.footnotes?.some(n => n.includes('200 pcs')))); }
+    if (name.endsWith('xlsx')) { assert.ok(d.chunks.some(c => c.content?.includes('未计算公式: 2+2'))); assert.ok(prices.some(c => c.location?.mergedCells)); assert.ok(prices.every(c => c.location?.kind === 'sheet' && typeof c.location?.row === 'number')); }
   }
+});
+test('B5 Word merged cells keep visual columns and every price row',async()=>{
+  const d=await parsed('merged.docx');
+  const all=d.chunks.map(c=>c.content??'').join('\n');
+  for(const value of ['9.99','4.50','4.80'])assert.match(all,new RegExp(value.replace('.','\\.')));
+  const prices=d.chunks.filter(c=>['9.99','4.50','4.80'].some(v=>c.content?.includes(v)));
+  assert.ok(prices.length>=1,JSON.stringify(d.chunks.map(c=>c.content)));
+  for(const c of prices){assert.equal(c.location?.kind,'word');assert.equal(c.location?.table,1);assert.ok(typeof c.location?.row==='number');assert.match(c.content!,/Price USD \/ pc/i);}
+  assert.ok(prices.some(c=>c.table?.mergedCells?.some((m:Record<string,unknown>)=>m.colSpan===2)));
+  assert.ok(prices.some(c=>c.table?.mergedCells?.some((m:Record<string,unknown>)=>m.rowSpan===2)));
 });
 test('static PDF, scanned PDF, PNG/JPEG use real local OCR with page geometry; blank image never succeeds', async () => {
   const pdf = await parsed('text.pdf'); assert.match(pdf.chunks[0].content!, /73 pcs/); assert.equal(pdf.chunks[0].location?.page, 1);

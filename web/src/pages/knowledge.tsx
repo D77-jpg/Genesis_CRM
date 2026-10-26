@@ -20,6 +20,6 @@ export function KnowledgePage(){
    {([['sales','资料库'],['manage','资料管理']] as const).map(([id,label])=><button key={id} type="button" aria-current={active===id?'page':undefined} className={'min-h-11 rounded-md px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring '+(active===id?'bg-primary/10 text-primary':'text-muted-foreground hover:bg-muted hover:text-foreground')} onClick={()=>tab(id)}>{label}</button>)}
    <span className="ml-auto hidden pr-1 text-xs leading-5 text-muted-foreground sm:block">{manage?'把文件收成资料，发布后助手才能用':'业务员在这里查已发布的资料'}</span>
   </nav>}
-  {manage?<KnowledgeAdmin key={key} initialKnowledgeId={requested==='manage'?item:undefined} initialDocumentId={params.get('document')??undefined}/>:<KnowledgeSalesLibrary key={key} admin={admin} initialId={item} onManage={id=>setParams(id?{view:'manage',knowledge:id}:{view:'manage'})} onImport={()=>setParams({view:'manage'})}/>}
+  {manage?<KnowledgeAdmin key={key} initialKnowledgeId={requested==='manage'?item:undefined} initialDocumentId={params.get('document')??undefined} initialRevisionId={params.get('revision')??undefined} initialChunkId={params.get('chunk')??undefined}/>:<KnowledgeSalesLibrary key={key} admin={admin} initialId={item} onManage={id=>setParams(id?{view:'manage',knowledge:id}:{view:'manage'})} onImport={()=>setParams({view:'manage'})}/>}
  </div></section>;
 }

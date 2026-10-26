@@ -177,26 +177,32 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     if not query or len(query)>16000: raise Failure('query_budget','问题为空或过长，请拆分后查询')
     try: query_windows=query_parts(tokenizer,query,128)
     except ValueError: raise Failure('query_budget','问题超出单次处理预算，请拆分后查询；未截断')
-    timings={};vector_scores={};lexical=[];query_vectors=[]
+    timings={};vector_scores={};lexical=[];query_vectors=[];part_vectors=[];part_lexical=[]
     now=time.perf_counter()
     if mode!='bm25':
         for offset in range(0,len(query_windows),8):
             for vector in embed([q['text'] for q in query_windows[offset:offset+8]]):
-                query_vectors.append(vector)
+                query_vectors.append(vector);part_scores={}
                 rows=db.execute('SELECT v.item,vec_distance_cosine(v.vector,?) distance FROM vectors v JOIN allowed a ON a.item=v.item WHERE v.project=? AND v.generation=? AND v.model=?',(vector.tobytes(),request['projectId'],request['generation'],request['identity'])).fetchall()
-                for item,distance in rows: vector_scores[item]=max(vector_scores.get(item,-1),1-float(distance))
+                for item,distance in rows:
+                    score=1-float(distance);part_scores[item]=max(part_scores.get(item,-1),score)
+                    vector_scores[item]=max(vector_scores.get(item,-1),score)
+                part_vectors.append(part_scores)
     timings['vectorMs']=round((time.perf_counter()-now)*1000,2);now=time.perf_counter()
     lexical_mode='fallback'
     if mode!='vector':
         lexical_count=db.execute('SELECT COUNT(*) FROM lexical l JOIN allowed a ON a.item=l.item WHERE l.project=? AND l.generation=?',(request['projectId'],request['generation'])).fetchone()[0]
         term_items=db.execute('SELECT COUNT(DISTINCT l.item) FROM lexical l JOIN allowed a ON a.item=l.item WHERE l.project=? AND l.generation=?',(request['projectId'],request['generation'])).fetchone()[0]
-        if len(docs)==lexical_count and lexical_count==term_items:
-            lexical=bm25_persistent_rows(db,request['projectId'],request['generation'],docs,query)
-            lexical_mode='persistent'
-        else:
-            # Old generations remain usable while a new index is built; this
-            # path rebuilds FTS only for the already authorized candidate set.
-            lexical=bm25(db,docs,query)
+        persistent=len(docs)==lexical_count and lexical_count==term_items
+        if persistent: lexical_mode='persistent'
+        # Rank each sub-question independently. A single merged BM25 query loses
+        # the second requirement when its terms are rarer than the first one.
+        for part in query_windows:
+            lexical_for_part=(bm25_persistent_rows(db,request['projectId'],request['generation'],docs,part['text'])
+                               if persistent else bm25(db,docs,part['text']))
+            part_lexical.append(lexical_for_part)
+            if len(query_windows)==1: lexical=lexical_for_part
+            else: lexical.extend(lexical_for_part)
     timings['bm25Ms']=round((time.perf_counter()-now)*1000,2)
     # Deduplicate each branch by publication BEFORE top-k, avoiding sibling starvation.
     def distinct(pairs):
@@ -208,12 +214,30 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
         return out
     vectors=distinct(sorted(vector_scores.items(),key=lambda p:(-p[1],p[0])))
     lexical=distinct(lexical);fused={};best={};details={}
-    for branch,pairs in [('vector',vectors),('bm25',lexical)]:
+    branches=[('vector',distinct(sorted(scores.items(),key=lambda p:(-p[1],p[0])))) for scores in part_vectors]
+    branches.extend(('bm25',distinct(pairs)) for pairs in part_lexical)
+    if not branches:
+        branches=[('vector',vectors),('bm25',lexical)]
+    for branch,pairs in branches:
         for rank,(item,score) in enumerate(pairs):
             parent=byid[item]['parent'];fused[parent]=fused.get(parent,0)+1/(60+rank+1)
-            best.setdefault(parent,item);details.setdefault(parent,{})[branch]=score
-            details[parent][branch+'Rank']=rank+1
-    ordered=sorted(fused,key=lambda p:(-fused[p],p))[:30]
+            best.setdefault(parent,item)
+            detail=details.setdefault(parent,{})
+            if branch not in detail or score>detail[branch]: detail[branch]=score
+            detail[branch+'Rank']=min(detail.get(branch+'Rank',999),rank+1)
+
+    # A multi-question request must reserve rank for every sub-question. Global
+    # RRF can otherwise let three paraphrases of question A evict the single
+    # publication that answers question B. Leaders are only used in multi-part
+    # queries; single-question ranking and the exact-anchor guard stay strict.
+    part_leaders={item for pairs in [p for _,p in branches] for item,_ in pairs[:3]}
+    matched_items=set(request.get('productMatched') or [])
+    all_ordered=sorted(fused,key=lambda p:(-fused[p],p))
+    if matched_items:
+        matched=[p for p in all_ordered if best[p] in matched_items]
+        ordered=(matched+[p for p in all_ordered if p not in matched])[:30]
+    else:
+        ordered=all_ordered[:30]
     anchors=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(query)))
     # Exact alphanumeric model anchors are rare evidence. Do not let a crowd of
     # generic vector candidates push the one exact model out of the rerank set
@@ -259,26 +283,40 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     semantic_titles={}
     if query_vectors and diagnostic_rows:
         for row in diagnostic_rows:
-            title_parts=windows(tokenizer,row['title'],128,4)
+            search_text=row.get('searchText') or row['title']
+            title_parts=windows(tokenizer,search_text,128,4)
             vectors_for_title=embed([part['text'] for part in title_parts])
             semantic_titles[row['sourceId']]=max(float(v@q) for v in vectors_for_title for q in query_vectors)
     best_active=max(vector_scores.values(),default=0)
+    draft_intent=bool(re.search(r'未发布|未公開|草稿|草拟|加急生产|unpublished|draft|unapproved|not approved',normalize(query)))
     for row in diagnostic_rows:
-        title_set=set(tokens(row['title']));common=query_set&title_set
-        exact=any(a in normalize(row['title']) for a in anchors)
+        search_text=row.get('searchText') or row['title']
+        title_set=set(tokens(search_text));common=query_set&title_set
+        exact=any(a in normalize(search_text) for a in anchors)
         lexical=len(common)>=2 and len(common)/max(len(title_set),1)>=0.65
         similarity=semantic_titles.get(row['sourceId'],-1)
         semantic=similarity>=0.5 and similarity>=best_active+0.04
-        if exact or lexical or semantic: diagnostic.append({'code':row['code'],'sourceId':row['sourceId'],'title':row['title']})
+        if exact or lexical or semantic or (draft_intent and row['code']=='draft_only'):
+            diagnostic.append({'code':row['code'],'sourceId':row['sourceId'],'title':row['title']})
     hits=[]
     for parent in ordered:
         item=best[parent];score=details[parent]
         # Similarity/logits are ranking signals, never calibrated fact confidence.
         accepted=rerank_scores[parent]>=-4.3 if parent in rerank_scores else score.get('vector',-1)>=0.35 or score.get('bm25',0)>0
+        # Preserve one strong leader per sub-question. This is a coverage floor,
+        # not a licence to answer: the server still applies product/ACL filters.
+        if not accepted and len(query_windows)>1 and item in part_leaders:
+            accepted=True
         if anchors:
             available=any(all(a in normalize(d['text']) for a in anchors) for d in docs)
-            competing=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(byid[item]['text'])))
-            if not available or (competing and not anchors<=competing): accepted=False
+            text=normalize(byid[item]['text'])
+            competing=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',text))
+            query_prefixes={re.match(r'[a-z]+',a).group(0) for a in anchors if re.match(r'[a-z]+',a)}
+            competing_prefixes={re.match(r'[a-z]+',a).group(0) for a in competing if re.match(r'[a-z]+',a)}
+            # A sibling model in the same family (SX-411 vs SX-4110) must not
+            # substitute for the requested model. An unrelated certificate or
+            # accessory code elsewhere in the document is not a substitute.
+            if not available or (competing and not anchors<=competing and query_prefixes&competing_prefixes): accepted=False
         hits.append({'id':item,'distance':1-score.get('vector',0),'accepted':accepted,'scores':{**score,'rrf':fused[parent],**({'rerank':rerank_scores[parent]} if parent in rerank_scores else {})}})
     timings['retrievalMs']=round((time.perf_counter()-started)*1000,2)
     return {'hits':hits,'trace':{'mode':mode,'queryParts':len(query_windows),'allowedItems':len(docs),'candidates':len(ordered),'lexicalMode':lexical_mode,'timings':timings,'reranker':rerank_meta,'degraded':degraded,'warnings':[diagnostic_warning] if diagnostic_warning else [],'diagnostics':diagnostic}}
