@@ -5,7 +5,7 @@
   "description": "Customer Dev Letter Manager - REST API (Express + MongoDB)",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "node --require ./scripts/os-user-info.cjs --import tsx --watch src/index.ts",
+    "dev": "node --watch-path=src --require ./scripts/os-user-info.cjs --import tsx src/index.ts",
     "build": "rimraf dist && tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",

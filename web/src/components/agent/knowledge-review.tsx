@@ -7,6 +7,7 @@
  * 都通过时只显示一句「检查通过」，内部明细全部收进折叠区。
  */
 import { KnowledgeCitation } from './knowledge-citation';
+import { Link } from 'react-router-dom';
 import * as React from 'react';
 import {
   CheckCircle2,
@@ -184,7 +185,7 @@ export function KnowledgeReviewPanel({
     setBusy(true);
     setError('');
     try {
-      setNext(await apiPost('/agent/knowledge-drafts/' + letterId + '/regenerate', { requestKey: requestKey.current }));
+      setNext(await apiPost('/agent/knowledge-drafts/' + letterId + '/regenerate', { requestKey: requestKey.current }, {timeout:180_000}));
     } catch (e) {
       setError(toErrorMessage(e, '重新生成没成功，原草稿还在'));
     } finally {
@@ -201,6 +202,7 @@ export function KnowledgeReviewPanel({
       const result = await apiPost<{ mode: string; checks: FactCheck[]; bodyHash: string }>(
         '/agent/knowledge-drafts/' + letterId + '/recheck',
         { requestKey: createClientId(), bodyText: currentBody, subject: currentSubject },
+        {timeout:120_000},
       );
       if (latestEditing.current === submittedIdentity) setAudit(result);
     } catch (e) {
@@ -431,9 +433,14 @@ export function KnowledgeReviewPanel({
           </p>
 
           {next ? (
-            <Button asChild size="sm" className="w-full">
-              <a href={'/customers/' + next.customerId + '?knowledgeDraft=' + next.letterId}>打开新生成的草稿</a>
-            </Button>
+            <>
+              <p role="status" className="rounded-md border border-primary/30 bg-primary/5 p-2 text-2xs leading-5 text-foreground">
+                新稿已经生成，当前窗口打开的还是旧稿。旧稿上的“没找到可引用资料”或旧来源不代表新稿；请打开下面这份新草稿核对。
+              </p>
+              <Button asChild size="sm" className="w-full">
+                <Link to={'/customers/' + next.customerId + '?knowledgeDraft=' + next.letterId}>打开新生成的草稿</Link>
+              </Button>
+            </>
           ) : null}
 
           <details className="group rounded-lg border bg-muted/20">
