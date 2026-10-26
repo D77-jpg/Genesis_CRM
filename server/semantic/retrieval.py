@@ -284,7 +284,12 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     if query_vectors and diagnostic_rows:
         for row in diagnostic_rows:
             search_text=row.get('searchText') or row['title']
-            title_parts=windows(tokenizer,search_text,128,4)
+            # Historical diagnostics are best-effort state hints. A corrupt or
+            # unusually long legacy excerpt must not turn a normal query into a
+            # runtime failure; skip only that diagnostic's semantic hint and
+            # keep the lexical/status path below.
+            try: title_parts=windows(tokenizer,search_text,128,4)
+            except ValueError: continue
             vectors_for_title=embed([part['text'] for part in title_parts])
             semantic_titles[row['sourceId']]=max(float(v@q) for v in vectors_for_title for q in query_vectors)
     best_active=max(vector_scores.values(),default=0)

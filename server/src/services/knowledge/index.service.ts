@@ -43,7 +43,13 @@ async function diagnosticMetadata(projectId:string,actor:AuthUser,query='',topic
    // A bounded, server-derived body excerpt lets state discovery find policies
    // whose distinguishing words exist only in the published body. The excerpt
    // is never returned to the model as a current source.
-   const searchText=(v.title+'\n'+(v.content??'')).slice(0,800);
+   const rawText=v.title+'\n'+(v.content??'');
+   // A legacy GBK document decoded as mojibake can contain dense U+FFFD
+   // replacement characters. Embedding that text can terminate the local
+   // tokenizer process, so such a diagnostic is skipped rather than allowed to
+   // open the semantic circuit for every normal query.
+   if(rawText.includes('\uFFFD'))return [];
+   const searchText=rawText.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,' ').replace(/\s+/g,' ').trim().slice(0,800);
    return code?[{code,sourceId:'knowledge:'+String(k._id)+':v'+v.version,title:v.title,searchText}]:[];
   });
 }

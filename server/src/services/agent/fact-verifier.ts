@@ -68,15 +68,19 @@ const courtesy=(s:string)=>{
 // Only closed, data-seeking forms are exempt. Open-ended questions can hide
 // arbitrary promises ("Could you please reply, we can hold stock for you?").
 // 承诺型词汇：出现这些词就不算「纯询问」，必须走逐段核验。
-const COMMITMENT_WORDS=/\b(?:moq|minimum|price|pricing|payment|cost|discount|freight|shipping|lead[ -]?time|deliver\w*|certif\w*|fsc|iso|bsci|free|capacity|guarantee|warrant|exclusive|stock|inventory|refund|replace|reserve|hold|sample\w*|offer|deal)\b|价格|报价|交期|运费|认证|免费|库存|现货|备货|样品|折扣|退款|保证|优惠|承诺/i;
+const COMMITMENT_WORDS=/\b(?:moq|minimum|price|pricing|payment|cost|discount|freight|shipping|lead[ -]?time|deliver\w*|certif\w*|fsc|iso|bsci|free|capacity|guarantee|warrant|exclusive|stock|inventory|refund|replace|reserve|hold|offer|deal)\b|价格|报价|交期|运费|认证|免费|库存|现货|备货|样品|折扣|退款|保证|优惠|承诺/i;
 // 纯信息询问：客户侧的提问不会替我方做承诺，但如果句子里带数字、承诺词或我方口吻，
 // 就可能是「Could you please reply, we can hold stock for you?」这类夹带承诺的问句，一律不豁免。
 const askOnly=(s:string)=>{
  const value=s.trim();
  if(!/[?？]\s*$/.test(value))return false;
  if(/\d/.test(value.normalize('NFKC')))return false;
- if(COMMITMENT_WORDS.test(value))return false;
  if(/\b(?:we|our|us|i)\b|我们|我方|我司/i.test(value))return false;
+ // "shipping protection" describes what the customer's packaging is for,
+ // not a promise that Genesis provides free shipping. Keep real commercial
+ // words such as "our free shipping" blocked above.
+ const customerUse=value.normalize('NFKC').replace(/\bshipping\s+(?:protection|packaging)\b/gi,' ');
+ if(COMMITMENT_WORDS.test(customerUse))return false;
  return /^(?:could|can|would|will|do|does|did|is|are|may|might|shall|should|what|when|where|which|who|how|any|have|has|please|kindly|let me know|would you mind)\b/i.test(value);
 };
 const request=(s:string)=>/^(?:(?:could you please|please|would you please) (?:confirm|share|provide) (?:your |the )?(?:delivery address|shipping address|address|destination|requirements|packaging requirements|specifications|final specifications|contact details|artwork|design preferences)|would a brief discussion about your requirements be useful|would it help if i sent a few options that fit your product line)[?？.]?$/i.test(s)||/^请(?:确认|提供|告知)(?:您的|贵司的)?(?:收货地址|地址|目的地|需求|包装需求|规格|最终规格|联系方式|设计稿)[?？。]?$/u.test(s)||askOnly(s);
