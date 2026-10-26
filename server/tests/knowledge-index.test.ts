@@ -228,7 +228,7 @@ test('24 persistent lexical postings cover every window and unchanged publicatio
  const first=await build();
  const identity=await embeddingIdentity();
  const checked=await localEmbedding.run({command:'verify',projectId:String(a),generation:first},identity);
- assert.ok(checked.count>0);assert.equal(checked.lexical,checked.count);assert.equal(checked.lexicalTerms,checked.count);
+ assert.ok(checked.count!==undefined);assert.ok(checked.count>0);assert.equal(checked.lexical,checked.count);assert.equal(checked.lexicalTerms,checked.count);
  const before=await Item.countDocuments({generation:first});
  const secondTask=await requestIndex(actor,randomUUID());await processKnowledgeIndex(secondTask.id,real);
  const second=await Gen.findById(secondTask.id);
