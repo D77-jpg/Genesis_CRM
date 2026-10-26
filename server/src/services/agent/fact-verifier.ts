@@ -102,12 +102,7 @@ export function checkSemanticResults(body:string,bundle:KnowledgeBundle,result:S
   const quotes=check.quotes.filter(q=>{const text=evidence.get(q.sourceId);return text!==undefined&&Array.from(text).slice(q.start,q.end).join('')===q.quote;});
   // 一条引用都对不上 = 引用的来源不在本次授权证据里（或偏移乱写），仍然 fail closed。
   if(!quotes.length)return fail('引用里没有能对上本次授权证据的片段');
-  if(quotes.length!==check.quotes.length){
-   // 核验模型判定「有依据」，只是部分引用片段没精确落到原文：普通叙述不再因此删整段，
-   // 保留核验结论并注明；关键承诺仍必须全部精确引用。
-   if(critical(part.text))return fail('关键承诺的引用必须是本次授权证据的精确区间');
-   return {...part,status:'supported',sourceIds:[...new Set(quotes.map(q=>q.sourceId))],quotes,reason:'核验模型判定有依据；部分引用片段未能精确匹配原文'};
-  }
+  if(quotes.length!==check.quotes.length)return fail('引用片段未能全部精确匹配本次授权证据');
   if(customer&&quotes.some(q=>q.sourceId==='profile:'+customer.id)&&(/\b(?:we|our|us)\b|我们|我方/i.test(part.text)||!(/\b(?:you|your)\b|贵司|贵公司|您/i.test(part.text))))return fail('客户档案只支持客户事实，不能成为我方能力或政策');
   if(quotes.some(q=>q.sourceId.startsWith('website:'))&&(!/\b(?:website|site)\b|贵司官网|贵公司网站|您的网站/i.test(part.text)||/\b(?:we|our|us)\b|我们|我方/i.test(part.text)))return fail('官网仅支持明确归属客户网站的陈述，不能支持我方能力、政策或混合承诺');
   if(critical(part.text)&&!customerDescription(part.text,quotes,customer)){
@@ -190,34 +185,11 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
   return baseline;
  };
  if(['retrieval_failed','index_stale','index_not_ready'].includes(bundle.status))return fallback('检索未就绪或失败，已保留安全的不完整答复');
- // A transport failure is not a factual verdict. Keep the generated draft, but
- // only when every number in it already appears in the evidence: an invented
- // price or MOQ still drops back to the deterministic, condition-only letter.
- const evidenceText = () => [...bundle.sources.map(source => source.content),
-  ...bundle.sources.flatMap(source => source.terms.map(term => term.value + ' ' + term.conditions + ' ' + (term.unit ?? ''))),
-  options.customerEvidence ?? ''].join('\n');
- // 结尾统一由服务端追加：模型自己写的署名先剥掉，避免一封两套签名。
+ // A transport failure is not a factual verdict. The model draft is never a
+ // sendable fallback: only deterministic verified facts/conditions may remain.
  const seller = options.seller;
  const signature = seller ? renderSignatureText(signatureName(seller.senderName, seller.companyName)) : '';
- const unverified = async (reason: string) => {
-  const kept = stripSignatureText(body,[options.seller?.senderName,options.seller?.companyName,options.seller?.senderEmail,options.seller?.website]);
-  if (!kept) return fallback(reason);
-  const haystack = evidenceText();
-  const invented = [...new Set(kept.match(/(?:[$€£¥]\s?)?\d[\d.,]*/g) ?? [])]
-   .filter(token => !haystack.includes(token) && !haystack.includes(token.replace(/^[$€£¥]\s?/, '')));
-  if (invented.length) return fallback(reason + '；正文含依据中没有的数字（' + invented.slice(0, 3).join('、') + '），已改用条件答复');
-  // 礼貌语和纯提问不需要核验：和正文一样标成待确认会让审核页把称呼也当成风险项
-  const keptChecks: ClaimCheck[] = segments(kept).map(part => (courtesy(part.text) || request(part.text)
-    ? { ...part, status: 'non_claim' as const, sourceIds: [], reason: '礼貌语或不含交易承诺的询问' }
-    : { ...part, status: 'unverifiable' as const, sourceIds: [], reason }));
-  const bodyText = [kept, signature].filter(Boolean).join('\n\n');
-  const review: KnowledgeReview = { ...baseline.review, bodyHash: draftHash(bodyText), claims: [], completeness: 'partial',
-   issues: [...baseline.review.issues.filter(issue => issue.code !== 'claim_rewritten'),
-    { code: 'semantic_unverified', message: reason },
-    { code: 'draft_unverified', message: '正文是模型原稿，逐项核验没有完成：发送前请对照依据核对数字、条件和承诺。' }],
-   factAudit: { contract: 's4.1', mode: 'unavailable', attempts, checks: keptChecks, facts: collectConditionalEvidence(bundle) } };
-  return { bodyText, review };
- };
+ const unverified = async (reason: string) => fallback(reason + '；模型原稿已隔离，未进入可发送正文');
  if(!verifier)return fallback('语义核验服务未启用；本稿仅使用结构化已确认事实，普通事实待人工审核');
  const evidence=evidenceForCheck(bundle,customer);if(!evidence.length)return fallback('没有足够的有效依据，不能核实生成稿');
   let candidate=stripSignatureText(body,[options.seller?.senderName,options.seller?.companyName,options.seller?.senderEmail,options.seller?.website]);
@@ -245,7 +217,7 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
  }catch{
   // A rewrite/second-check outage must never resurrect claims already rejected.
   if(checks.length)return fallback('后续核验或重写失败，已保留核验通过的段落，其余待人工核对');
-  return unverified('语义核验暂时失败；正文保留模型原稿并标注未核验，发送前请逐项核对依据');
+  return unverified('语义核验暂时失败，已改用有依据的完整答复');
  }
 }
 // Rechecking an edited draft never overwrites its body or original evidence snapshot.

@@ -35,7 +35,15 @@ export function languageOnly(text:string){
 }
 export function needsKnowledge(text:string){
  if(languageOnly(text))return false;
+ if(/^(?:那|这|还有|那么|这个|那个|它|他们|还有呢|那这个呢|这个能做吗|能做吗|可以做吗|what about|how about|and (?:this|that)|can you (?:do|make) (?:this|that))/i.test(text.trim()))return true;
  return policyTopics(text).length>0||/开发信|询盘|邮件|写信|回复|产品|公司|工厂|write.*(?:email|letter)|reply|outreach|product|company/i.test(text);
+}
+// Subjects are a separate customer-facing channel. They must not smuggle a
+// commitment that the verified body never made, even when they contain no digits.
+export function safeGeneratedSubject(subject:string,fallback:string){
+ const value=subject.normalize('NFKC').trim();
+ const risky=/\b(?:guarantee(?:d)?|free|best|lowest|cheapest|exclusive|risk[- ]?free|reserve(?:d)?|stock|discount|certified|certificate|approved|iso|fsc|moq|lead time|delivery|price|quote|offer)\b|保证|免费|最低|独家|留货|现货|库存|折扣|认证|报价|价格|交期/i;
+ return value.length>=8&&value.length<=90&&!/[\d€£$¥%]|USD|EUR|GBP|RMB|CNY/i.test(value)&&!risky.test(value)?value:fallback;
 }
 export function transformNumbersMatch(text:string,original:string){
  const numbers=(s:string)=>[...(s.match(/\d+(?:[.,]\d+)*/g)??[])].sort().join('|');

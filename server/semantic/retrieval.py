@@ -178,9 +178,17 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
     diagnostic=[]
     query_set=set(tokens(query));anchors=set(re.findall(r'\b[a-z]+(?:-[a-z]+)*-\d+[a-z0-9-]*\b',normalize(query)))
     diagnostic_rows=request.get('diagnostics',[])
+    diagnostic_warning=None
     # State discovery searches authorized titles only, never unpublished/expired
     # policy bodies. No hidden policies are used as current business evidence.
-    if len(diagnostic_rows)>128: raise Failure('diagnostic_budget','历史资料状态检查超过单次预算，请管理员整理历史资料或调整受控容量；本次已中止，未使用旧政策')
+    # A large historical archive is a maintenance warning, not a reason to fail a
+    # normal query: old records can never become current evidence through this path.
+    if len(diagnostic_rows)>128:
+        diagnostic_warning={'code':'diagnostic_budget','message':f'历史资料状态检查共 {len(diagnostic_rows)} 条，超过建议的 128 条；本次继续使用受控匹配，旧政策不会作为当前依据'}
+    if len(diagnostic_rows)>500:
+        omitted=len(diagnostic_rows)-500
+        diagnostic_rows=diagnostic_rows[:500]
+        diagnostic_warning={'code':'diagnostic_budget','message':f'历史资料状态检查共 {len(diagnostic_rows)+omitted} 条；为控制单次开销，本次检查前 500 条（另有 {omitted} 条未检查），旧政策不会作为当前依据'}
     semantic_titles={}
     if query_vectors and diagnostic_rows:
         for row in diagnostic_rows:
@@ -206,4 +214,4 @@ def retrieve(db,request,tokenizer,embed,options,Failure):
             if not available or (competing and not anchors<=competing): accepted=False
         hits.append({'id':item,'distance':1-score.get('vector',0),'accepted':accepted,'scores':{**score,'rrf':fused[parent],**({'rerank':rerank_scores[parent]} if parent in rerank_scores else {})}})
     timings['retrievalMs']=round((time.perf_counter()-started)*1000,2)
-    return {'hits':hits,'trace':{'mode':mode,'queryParts':len(query_windows),'allowedItems':len(docs),'candidates':len(ordered),'timings':timings,'reranker':rerank_meta,'degraded':degraded,'diagnostics':diagnostic}}
+    return {'hits':hits,'trace':{'mode':mode,'queryParts':len(query_windows),'allowedItems':len(docs),'candidates':len(ordered),'timings':timings,'reranker':rerank_meta,'degraded':degraded,'warnings':[diagnostic_warning] if diagnostic_warning else [],'diagnostics':diagnostic}}

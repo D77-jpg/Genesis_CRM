@@ -92,7 +92,7 @@ export async function deleteKnowledge(id:string,actor:AuthUser){
 const topicPatterns:Record<PolicyTopic,RegExp>={
  moq:/\bmoq\b|minimum\s+(?:order|quantity)|起订|最低订|最小订单/i,
  lead_time:/lead.?time|delivery|turnaround|dispatch|ship in|\b\d+(?:-\d+)?\s*(?:working\s+|business\s+)?days?\b|生产周期|交期|交货|到货/i,
- sample:/sample|prototype|样品|打样/i,price:/\bprice|pricing|cost|quotation|quote|discount|(?:[$€£¥]\s*\d)|(?:USD|EUR|GBP|CNY|RMB)\s*\d|报价|价格|单价|费用|折扣/i,
+ sample:/sample|prototype|样品|打样/i,price:/\bprice|pricing|cost|quotation|quote|discount|how\s+much|(?:[$€£¥]\s*\d)|(?:USD|EUR|GBP|CNY|RMB)\s*\d|报价|价格|单价|费用|折扣|多少钱|怎么卖/i,
  shipping:/shipping|ship |freight|logistic|运费|运输|物流/i,payment:/payment|deposit|\bt\/t\b|付款|定金|支付/i,
  certification:/certif|\bfsc\b|\biso\b|\bbsci\b|合规|证书|认证/i,
  trade_terms:/incoterm|\bfob\b|\bexw\b|\bcif\b|贸易条款/i,capacity:/capacity|产能|工厂面积|factory size/i,other:/$a/,

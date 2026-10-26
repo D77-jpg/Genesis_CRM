@@ -190,6 +190,30 @@ export async function cleanupIndexes(actor:AuthUser,adapter:SemanticAdapter=loca
  await Item.deleteMany({projectId,generation:{$in:ids}});await Gen.updateMany({projectId,_id:{$in:ids},state:'deleting'},{$set:{state:'deleted'}});
  return {removed:ids.length};
 }
+export function expandEvidenceWindows<T extends {itemId:string;knowledgeId:unknown;publicationVersion:number;ordinal:number;content:string;location?:Record<string,unknown>}>(picked:T[],all:T[]):T[]{
+ const selected=new Set(picked.map(item=>item.itemId));
+ const groups=new Map<string,T[]>();
+ for(const item of all){
+  const key=String(item.knowledgeId)+':'+String(item.location?.parentContentHash??'');
+  const group=groups.get(key);if(group)group.push(item);else groups.set(key,[item]);
+ }
+ const footnote=/(?:footnote|notes?|备注|注[:：]|价格|运费|freight|price|payment|lead time|交期|付款)/i;
+ for(const item of picked){
+  const group=groups.get(String(item.knowledgeId)+':'+String(item.location?.parentContentHash??''));
+  if(!group?.length)continue;
+  const at=group.findIndex(candidate=>candidate.itemId===item.itemId);if(at<0)continue;
+  // A short section is cheaper and safer to read as a whole. For a long section,
+  // keep the hit plus immediate neighbours and the final note/condition window.
+  if(group.length<=4)group.forEach(candidate=>selected.add(candidate.itemId));
+  else {
+   if(at>0)selected.add(group[at-1].itemId);
+   if(at+1<group.length)selected.add(group[at+1].itemId);
+   const last=group[group.length-1];
+   if(footnote.test(last.content.trim()))selected.add(last.itemId);
+  }
+ }
+ return all.filter(item=>selected.has(item.itemId));
+}
 async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics:KnowledgeBundle['topics'];productApplies:(products:string[]|undefined,text:string)=>boolean;sourceOf:(id:string,v:KnowledgeRevision)=>KnowledgeSource;ids?:string[];mode?:'bm25'|'vector'|'hybrid'|'hybrid_rerank'},adapter:SemanticAdapter=localEmbedding):Promise<KnowledgeBundle>{
  const projectId=String(requireProjectId(actor));const base:KnowledgeBundle={projectId,status:'index_not_ready',sources:[],issues:[],topics:options.topics};
  try{
@@ -227,7 +251,8 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
    const item=details.find(i=>i.itemId===hitId),row=item&&after.rows.find(r=>r.id===String(item.knowledgeId)&&r.version===item.publicationVersion&&visible(r,again));
    if(!item||!row||seen.has(row.id))continue;seen.add(row.id);
    const source=options.sourceOf(row.id,row.revision);
-   const picked=details.filter(i=>String(i.knowledgeId)===row.id&&accepted.has(i.itemId));
+   const acceptedForRow=details.filter(i=>String(i.knowledgeId)===row.id&&accepted.has(i.itemId));
+   const picked=expandEvidenceWindows(acceptedForRow,details.filter(i=>String(i.knowledgeId)===row.id));
    const windows=picked.map(i=>i.content).filter(Boolean);
    // Provenance refs are identical on every window; keep them once instead of
    // repeating the whole document's refs on each chunk (that used to reach MBs).
@@ -237,7 +262,8 @@ async function semanticKnowledgeImpl(actor:AuthUser,query:string,options:{topics
    if(seen.size>=10)break;
   }
   const diagnosticIssues=(result.trace?.diagnostics??[]).map(d=>({code:d.code,message:({expired:'相关资料已过期：',disabled:'相关资料已停用：',not_effective:'相关资料尚未生效：',draft_only:'相关资料尚未发布：'} as Record<string,string>)[d.code]+d.title,sourceIds:[d.sourceId]}));
-  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&(!sources.some(s=>s.category!=='sales_rules')||/expired|过期|失效/i.test(query))?'expired':sources.some(s=>s.category!=='sales_rules')?'ready':'no_match',sources,issues:[...diagnosticIssues,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=details.find(i=>i.itemId===h.id),row=allowed.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
+  const diagnosticWarnings=(result.trace?.warnings??[]).map(w=>({code:w.code,message:w.message}));
+  return {...base,status:diagnosticIssues.some(d=>d.code==='expired')&&(!sources.some(s=>s.category!=='sales_rules')||/expired|过期|失效/i.test(query))?'expired':sources.some(s=>s.category!=='sales_rules')?'ready':'no_match',sources,issues:[...diagnosticIssues,...diagnosticWarnings,...(rules.length>4?[{code:'rules_limit',message:'基础销售规则超过加载上限，请管理员合并整理'}]:[]),...(result.trace?.degraded?[result.trace.degraded]:[])],retrieval:{engine:'local_semantic',generation:g.id,identity:identity.id,trace:{...result.trace,candidates:(result.hits??[]).map(h=>{const item=details.find(i=>i.itemId===h.id),row=allowed.find(r=>r.id===String(item?.knowledgeId));return {id:h.id,knowledgeId:row?.id,title:row?.revision.title,version:row?.version,accepted:h.accepted,scores:h.scores,excerpt:item?.content,location:item?.location};})}}};
  }catch(e){return {...base,status:'retrieval_failed',sources:[],issues:[{code:e instanceof IndexError?e.code:'retrieval_failed',message:e instanceof IndexError?e.message:'语义检索或权限核对失败，请检查后重试；不能据此作出交易承诺'}]};}
 }
 let timer:NodeJS.Timeout|undefined,busy=false,cursor='';

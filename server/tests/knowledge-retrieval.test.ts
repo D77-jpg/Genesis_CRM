@@ -63,6 +63,21 @@ test('S3 04 recovered parent retains complete price, currency, quantity and fina
  assert.ok(source);assert.match(source.content,/Footnote: price USD 7\.31 per piece only for 2000 pcs after artwork approval\. Freight excluded\.$/);
  assert.ok(source.index!.chunks.length>=1);
 });
+test('S3 04b a middle hit expands to its neighbours and keeps a final condition footnote',async()=>{
+ const {expandEvidenceWindows}=await import('../src/services/knowledge/index.service');
+ const window=(itemId:string,content:string,ordinal:number)=>({itemId,knowledgeId:'k',publicationVersion:1,ordinal,content,location:{parentContentHash:'parent'}});
+ const all=[window('a','Intro',0),window('b','Middle',1),window('c','More detail',2),window('d','Footnote: price USD 7.31; freight excluded',3),window('e','Other section',4)];
+ const expanded=expandEvidenceWindows([all[2]],all);
+ assert.deepEqual(expanded.map(item=>item.itemId),['b','c','d']);
+ const short=all.slice(0,3);assert.deepEqual(expandEvidenceWindows([short[1]],short).map(item=>item.itemId),['a','b','c']);
+});
+test('S3 04c audit snapshot keeps exact window locations while model snapshot stays slim',async()=>{
+ const {knowledgeForAudit,knowledgeForModel}=await import('../src/services/agent/knowledge-types');const {auditGroundedEmail}=await import('../src/services/agent/knowledge-grounding');
+ const bundle=await retrieveKnowledge(sales,'nylon zipper pouch');const audit=knowledgeForAudit(bundle);const review=auditGroundedEmail('',audit,{taskType:'inquiry_reply'}).review;
+ assert.ok(review.sources.some(source=>source.index?.chunks.some(chunk=>Boolean(chunk.location?.retrievalWindow))));
+ assert.ok(review.sources.every((source,index)=>source.content===bundle.sources[index].content));
+ assert.equal(knowledgeForModel(bundle).sources[0]?.index,undefined);
+});
 test('S3 05 long multi-question input is handled without silent 128-token truncation',async()=>{
  const q='Please explain nylon zipper travel pouch construction. '.repeat(16)+'What material is used and which closure is available?';
  const b=await retrieveKnowledge(sales,q);assert.equal(b.status,'ready');assert.ok(Number(b.retrieval?.trace?.queryParts)>1);
@@ -131,7 +146,9 @@ test('S7 state discovery distinguishes a process/price question from same-produc
  const certificate=await retrieveKnowledge(actor,'Is the ZP-29 certificate still valid?');assert.ok(certificate.issues.some(i=>i.code==='expired'));
 });
 
-test('S3 13 exceeded historical-state capacity is an explicit failure, never a no-answer or old-policy fallback',async()=>{
+test('S3 13 historical-state backlog warns without blocking current evidence',async()=>{
  await AgentKnowledge.insertMany(Array.from({length:129},(_,n)=>({projectId:project,version:1,approvedVersion:1,revisions:[{...entry('Historical metadata '+n,'EXPIRED CANARY '+n),version:1,validUntil:new Date('2021-01-01'),createdBy:adminId,createdAt:new Date()}]})));
- const b=await retrieveKnowledge(sales,'nylon zipper travel pouch');assert.equal(b.status,'retrieval_failed');assert.ok(b.issues.some(i=>i.code==='diagnostic_budget'));assert.deepEqual(b.sources,[]);
+ const b=await retrieveKnowledge(sales,'nylon zipper travel pouch');assert.equal(b.status,'ready');assert.ok(b.sources.some(s=>s.knowledgeId===target));assert.ok(b.issues.some(i=>i.code==='diagnostic_budget'));assert.ok(!JSON.stringify(b.sources).includes('CANARY'));
+ await AgentKnowledge.insertMany(Array.from({length:371},(_,n)=>({projectId:project,version:1,approvedVersion:1,revisions:[{...entry('Historical archive '+n,'EXPIRED CANARY '+n),version:1,validUntil:new Date('2021-01-01'),createdBy:adminId,createdAt:new Date()}]})));
+ const bulk=await retrieveKnowledge(sales,'nylon zipper travel pouch');assert.equal(bulk.status,'ready');assert.ok(bulk.sources.some(s=>s.knowledgeId===target));assert.ok(bulk.issues.some(i=>i.code==='diagnostic_budget'));
 });

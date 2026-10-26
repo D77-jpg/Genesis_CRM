@@ -100,6 +100,14 @@ test('ordinary paraphrases require whole-claim semantic support plus exact evide
  assert.equal(rows[0].status,'supported');assert.equal(rows[0].quotes?.[0].start,0);
  assert.equal(checkSemanticResults(text,b,[{id:'s0',status:'supported',quotes:[{sourceId:prose.sourceId,quote:'invented',start:0,end:8}],reason:'fake quote'}])[0].status,'unsupported');
 });
+test('one invalid quote cannot be laundered by another valid quote',()=>{
+ const b=bundle([prose],[]);const text='We make velvet pouches.';
+ const valid=proof('We manufacture velvet pouches.',prose.content,prose.sourceId);
+ const invalid={sourceId:prose.sourceId,quote:'invented supporting sentence',start:0,end:26};
+ const rows=checkSemanticResults(text,b,[{id:'s0',status:'supported',quotes:[valid,invalid],reason:'permissive checker'}]);
+ assert.equal(rows[0].status,'unsupported');
+ assert.match(rows[0].reason,/未能全部精确匹配/);
+});
 test('real IDs cannot launder changed numbers, units or omitted start/quantity conditions',()=>{
  const b=bundle();const card=conditionalSentence(term,source);const quote=proof(card,card,source.sourceId+':term:0');
  for(const text of ['We deliver in 19 days.',card.replace('working days','weeks'),card.replace('19','91'),card.replace('after artwork and deposit approval','immediately')]){
@@ -142,13 +150,14 @@ test('one whole-message rewrite is followed by another audit, with a hard two-ch
  const result=await verifyGroundedEmail('We guarantee USD 888.',bundle(),{taskType:'inquiry_reply'},verifier);
  assert.equal(count,2);assert.equal(rewrites,1);assert.equal(result.review.completeness,'partial');assert.doesNotMatch(result.bodyText,/888|999/);assert.match(result.bodyText,/19 working days/);
 });
-test('a transport failure keeps the generated draft as unverified, and invented numbers still drop to the condition letter',async()=>{
+test('a transport failure never keeps the generated draft as a sendable body',async()=>{
  const verifier={model:'fixture',async check(){throw Error('isolated transport failure');}};
  const kept=await verifyGroundedEmail('Hi, we make velvet pouches and gift boxes.\n\nBest regards,\nFixture Seller',bundle(),{taskType:'inquiry_reply'},verifier);
  assert.equal(kept.review.factAudit?.mode,'unavailable');
  assert.ok(kept.review.issues.some(i=>i.code==='semantic_unverified'));
- assert.ok(kept.review.issues.some(i=>i.code==='draft_unverified'));
- assert.match(kept.bodyText,/velvet pouches/);
+ assert.ok(!kept.review.issues.some(i=>i.code==='draft_unverified'));
+ assert.doesNotMatch(kept.bodyText,/velvet pouches|gift boxes/);
+ assert.match(kept.bodyText,/19 working days/);
  const invented=await verifyGroundedEmail('Our price is USD 888 per piece.',bundle(),{taskType:'inquiry_reply'},verifier);
  assert.doesNotMatch(invented.bodyText,/888/);
  assert.match(invented.bodyText,/19 working days/);

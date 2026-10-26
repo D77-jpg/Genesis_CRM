@@ -194,7 +194,7 @@ test('14 Markdown preview preserves parent product/industry headings in child en
 });
 
 test('15 rejected candidate diagnostics never enter generation context; complete selected evidence is preserved',async()=>{
- const {knowledgeForModel}=await import('../src/services/agent/knowledge-types');
+ const {knowledgeForModel,knowledgeForAudit}=await import('../src/services/agent/knowledge-types');
  const {retrieveKnowledge}=await import('../src/services/agent/knowledge.service');
  const original=await retrieveKnowledge(actor,'velvet pouch MOQ');
  original.retrieval={engine:'local_semantic',generation:'fixture',trace:{candidates:[{excerpt:'REJECTED CANARY'}]}};
@@ -209,4 +209,7 @@ test('15 rejected candidate diagnostics never enter generation context; complete
   assert.equal(source.index,undefined);
   assert.equal(source.publication,undefined);
  }
+ const audit=knowledgeForAudit(original);
+ assert.equal(audit.retrieval?.trace,undefined);
+ assert.deepEqual(audit.sources.map(source=>source.index?.chunks.map(chunk=>chunk.location)),original.sources.map(source=>source.index?.chunks.map(chunk=>chunk.location)));
 });
