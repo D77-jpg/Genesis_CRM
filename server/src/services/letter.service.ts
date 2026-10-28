@@ -1,6 +1,6 @@
 import {redactPrivateReview} from './agent/knowledge-visibility';
 import type {KnowledgeReview,KnowledgeFreshness} from './agent/knowledge-types';
-import {knowledgeReviewSendIssue} from './agent/knowledge-send-gate';
+import {knowledgeReviewHardBlocker,knowledgeReviewSendIssue} from './agent/knowledge-send-gate';
 import {knowledgeFreshness,draftHash} from './agent/knowledge-grounding';
 import {recordLetterReviewFeedback,retractLetterReviewFeedback} from './agent/knowledge-training';
 import type {FeedbackIssue} from '../models/KnowledgeFeedback';
@@ -51,6 +51,7 @@ import {
 import { OUTREACH_MAX_STEPS } from '../constants';
 import { getCustomerByIdOrThrow } from './customer.service';
 import { ensureSignature } from './letter-signature';
+import { resolveProjectSalesProfile } from './project-profile';
 import { resolveSignerName } from './signer.service';
 import { getActiveChannel, getProjectActiveChannel } from './mailer.service';
 import { assertCustomerAccess, customerRefScope, projectScope, requireProjectId } from '../utils/access';
@@ -95,6 +96,8 @@ export interface LetterDto {
   knowledgeRechecks?:Record<string,unknown>[];
   knowledgeFreshness?:KnowledgeFreshness;
   reviewBodyChanged?:boolean;
+  /** 人工批准也解决不了的硬拦截原因（模型原稿/依据异常等）；有值时不能审核通过，只能重新生成 */
+  sendBlocker?:string;
   id: string;
   customerId: string;
   customer?: LetterCustomerSummary;
@@ -144,7 +147,7 @@ async function buildValues(customer: Partial<ICustomer>, signerName?: string): P
 }
 
 /**
- * 签名第一行取「实际发信的业务员」：客户负责人 → 当前账号 → 项目署名。
+ * 签名第一行取「实际发信的业务员」：当前登录账号 → 客户负责人 → 项目署名。
  * 具体顺序见 services/signer.service.ts；开发信结尾因此跟着人走，
  * 而不是所有账号共用一个名字（也不会退回成 Sales Team 这种泛称）。
  */
@@ -180,7 +183,11 @@ export async function renderLetter(
     ]);
   }
 
-  const withSignature = ensureSignature(content, values.senderName);
+  const project = customer.projectId
+    ? await Project.findById(customer.projectId).select('code slug name companyName industry website mailFrom senderName').lean()
+    : null;
+  const signature = resolveProjectSalesProfile(project).signature;
+  const withSignature = ensureSignature(content, values.senderName, signature, true);
 
   return {
     // 主题走纯文本渲染（不转义），正文走 HTML 渲染（转义，防存储型 XSS）
@@ -294,6 +301,8 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
   const customerId = summary?.id ?? String(rawCustomerId ?? '');
   const tracking = trackingSummary(doc.tracking);
   const review = toReviewSummary(doc.review);
+  const knowledgeReview = doc.knowledgeReview as KnowledgeReview | undefined;
+  const sendBlocker = doc.status === 'draft' ? knowledgeReviewHardBlocker(knowledgeReview) : undefined;
 
   return {
     id: String((doc._id ?? doc.id ?? '').toString()),
@@ -301,7 +310,8 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     ...(summary ? { customer: summary } : {}),
     recipientName: String(doc.recipientName ?? ''),
     recipientEmail: String(doc.recipientEmail ?? ''),
-    knowledgeReview:doc.knowledgeReview as KnowledgeReview|undefined,
+    knowledgeReview,
+    ...(sendBlocker ? { sendBlocker } : {}),
     knowledgeRechecks:doc.knowledgeRechecks as Record<string,unknown>[]|undefined,
     subject: String(doc.subject ?? ''),
     content: String(doc.content ?? ''),
@@ -759,6 +769,13 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
     return toLetterDto(cleared.toObject() as unknown as Record<string, unknown>);
   }
 
+  // 硬拦截（模型原稿未核验、依据过期/冲突等）人工批准也解决不了：
+  // 直接拒绝记录「通过」，避免出现「已通过但永远发不出去」的死状态。
+  if (input.decision === 'approve') {
+    const blocker = knowledgeReviewHardBlocker(letter.knowledgeReview);
+    if (blocker) throw ApiError.conflict(`这封草稿不能通过审核：${blocker} 请按最新依据重新生成后再审核。`);
+  }
+
   const customer = await getCustomerByIdOrThrow(String(letter.customerId), actor);
   const decision = input.decision === 'approve' ? ('approved' as const) : ('rejected' as const);
   const base = {
@@ -776,10 +793,23 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
   } else {
     const contentTemplate = input.content ?? letter.template ?? letter.content;
     const rendered = await renderLetter(customer, input.subject ?? letter.subject, contentTemplate, input.recipientEmail ?? letter.recipientEmail, await signerNameFor(customer, actor?.id));
-    // The existing review page is the high-risk approval surface. It only approves
-    // the exact body that was audited; any manual body change must be rechecked.
-    const knowledgeApproval = decision === 'approved' && letter.knowledgeReview && draftHash(rendered.text) === letter.knowledgeReview.bodyHash
-      ? { 'knowledgeReview.manualApprovedAt': base.at.toISOString(), 'knowledgeReview.manualApprovedBy': actor?.id ?? 'system' }
+    // 审核页是高风险内容的人工批准入口：人看的就是这份渲染后的正文，点「通过」
+    // 即代表对这份正文负责，所以批准必须落在本次要落库的正文上。
+    // 旧实现要求 rendered.text 与生成时的 bodyHash 完全一致才记录批准，只要草稿
+    // 在生成后被编辑过（换行/签名重排都算），批准就永远写不进去，发送闸门随后
+    // 以「高风险内容还没有人工批准」永久拦死——审核通过却发不出去。
+    // 这里改为：批准时把 knowledgeReview.bodyHash 重新基线到本次正文，避免
+    // 渲染差异让批准失效；防止「审核后换正文」仍由 review.contentHash 负责。
+    const approvedBodyHash = draftHash(rendered.text);
+    if (decision === 'approved' && letter.knowledgeReview && letter.knowledgeReview.bodyHash !== approvedBodyHash) {
+      logger.info(`letter approval rebaselines knowledge bodyHash id=${letter.id} from=${letter.knowledgeReview.bodyHash} to=${approvedBodyHash}`);
+    }
+    const knowledgeApproval = decision === 'approved' && letter.knowledgeReview
+      ? {
+          'knowledgeReview.manualApprovedAt': base.at.toISOString(),
+          'knowledgeReview.manualApprovedBy': actor?.id ?? 'system',
+          'knowledgeReview.bodyHash': approvedBodyHash,
+        }
       : {};
     update = {
       $set: {

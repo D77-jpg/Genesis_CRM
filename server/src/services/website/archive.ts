@@ -59,17 +59,18 @@ export async function archivedSnapshot(raw: string): Promise<WebResponse | undef
   }
 }
 
-/** 先抓实时页面；被拦/超时/没正文时依次尝试归档快照、无头浏览器 */
+/** 先抓实时页面；被拦/超时/没正文时先试真实浏览器（WAF 最认浏览器），再退归档快照 */
 export async function fetchWithArchiveFallback(raw: string, kind: 'html' | 'robots' | 'json' = 'html'): Promise<WebResponse> {
   try {
     return await fetchWebsite(raw, kind);
   } catch (error) {
     if (kind !== 'html' || !(error instanceof WebsiteError)) throw error;
     if (!['http_error', 'timeout', 'no_text', 'dns_failed'].includes(error.code)) throw error;
-    const snapshot = await archivedSnapshot(raw);
-    if (snapshot) return snapshot;
+    // 浏览器兜底在前：archive.org 在当前网络常超时，别让它先吃掉 12 秒。
     const rendered = await browserFetch(raw);
     if (rendered) return rendered;
+    const snapshot = await archivedSnapshot(raw);
+    if (snapshot) return snapshot;
     throw error;
   }
 }

@@ -36,7 +36,9 @@ function mergeSource(a:KnowledgeSource,b:KnowledgeSource){
  if(a.version!==b.version||a.publication?.contentHash!==b.publication?.contentHash)throw ApiError.conflict('检索期间资料版本变化，请重新准备');
  const terms=[...a.terms];for(const term of b.terms)if(!terms.some(t=>t.publicationIndex===term.publicationIndex&&t.topic===term.topic))terms.push(term);return {...a,terms};
 }
-const EVIDENCE_SOURCE_LIMIT=16,EVIDENCE_CHAR_LIMIT=48000;
+// 模型输入还包含客户官网、档案和事实上下文；证据本身必须给这些内容留出空间，
+// 否则大项目会因 knowledge + website 合计超过 AI_MAX_INPUT_CHARS 而整单失败。
+const EVIDENCE_SOURCE_LIMIT=16,EVIDENCE_CHAR_LIMIT=30000;
 export function evidenceWithinBudget(bundle:KnowledgeBundle){return bundle.sources.length<=EVIDENCE_SOURCE_LIMIT&&JSON.stringify(knowledgeForModel(bundle)).length<=EVIDENCE_CHAR_LIMIT;}
 function evidenceRank(source:KnowledgeSource){return Math.max(0,...Object.values(source.index?.scores??{}).filter((value):value is number=>typeof value==='number'));}
 // A project can publish more knowledge than one draft can carry. Keep the rules,

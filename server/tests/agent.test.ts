@@ -1033,7 +1033,7 @@ test('first outreach command persists a durable task and draft analysis without 
   assert.equal(task.status,'awaiting_review');
   const analysis = await AgentCustomerAnalysis.findById(task.analysisId);
   assert.equal(analysis?.firstOutreach, true); assert.ok(analysis?.emailDraft.subject); assert.ok(analysis?.emailDraft.bodyText);
-  assert.match(analysis!.emailDraft.bodyText, /Mailbox Sender/); assert.match(analysis!.emailDraft.bodyText, /Gold Supplier on Alibaba\.com since 2014/);
+  assert.match(analysis!.emailDraft.bodyText, /Mailbox Sender/); assert.match(analysis!.emailDraft.bodyText, /Sales Manager, Fixture Seller/);
   assert.equal(await DevelopmentLetter.countDocuments({ customerId: customer._id, status:'draft' }), 1);
   assert.equal(await FollowUp.countDocuments({ customerId: customer._id }), 0);
   const repeated = await service.sendAgentMessage(session.id, '帮我给这个客户写第一封开发信，不要发送', actorA, 'first-outreach-test-command');

@@ -45,5 +45,5 @@ export async function customerResearchTool(customerId:string,actor:AuthUser){
  if(!result.reportId)return result;
  await getCustomerByIdOrThrow(customerId,actor);
  const row=await WebsiteResearch.findOne({_id:result.reportId,projectId:requireProjectId(actor),customerId});
- return {...result,researchPerspective:row?.report?.profileLabel,notice:'研究口径仅用于选择开发方向，我方具体产品能力仍需当前项目已发布知识。客户所售产品不是我方产品。欢迎批发询盘是客户销售渠道，不证明客户正在采购。每件产品配包装不证明稳定采购量或复购。创始人公开不证明团队规模、采购职责或决策链。网站自述与规则建议未经独立核实。',facts:row?.report?.facts.slice(0,8).map(f=>({...f,quote:f.quote.slice(0,600)})),angles:row?.report?.angles,score:row?.report?.score};
+ return {...result,researchPerspective:row?.report?.profileLabel,notice:'研究口径仅用于选择开发方向，我方具体产品能力仍需当前项目已发布知识。客户所售产品不是我方产品。欢迎批发询盘是客户销售渠道，不证明客户正在采购。客户现有产品或配套服务不证明稳定采购量或复购。创始人公开不证明团队规模、采购职责或决策链。网站自述与规则建议未经独立核实。',facts:row?.report?.facts.slice(0,8).map(f=>({...f,quote:f.quote.slice(0,600)})),angles:row?.report?.angles,score:row?.report?.score};
 }

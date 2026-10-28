@@ -164,10 +164,10 @@ export class MockAgentProvider implements AgentProvider {
       recommendations: [{ text: '发送一封简短英文邮件，确认当前采购优先级、规格和目标时间。', rationale: '先补齐关键需求，再决定是否准备正式报价。', sourceIds: evidence.length ? evidence : profile ? [profile.sourceId] : [] }],
       emailDraft: {
         ...(request.input.firstOutreach ? {
-          subject: `Packaging ideas for ${String(profileData.company || request.input.customerName)}`,
+          subject: `${request.input.projectProfile?.subjectFocus || 'Product'} ideas for ${String(profileData.company || request.input.customerName)}`,
           bodyText: `Dear ${request.input.customerName},
 
-I am ${request.input.seller?.senderName || 'the sales team'} from ${request.input.seller?.companyName || 'our company'}. Would it be useful to compare packaging options for your current range?
+I am ${request.input.seller?.senderName || 'the sales team'} from ${request.input.seller?.companyName || 'our company'}. Would it be useful to compare ${request.input.projectProfile?.outreachFocus || 'our product options'} for your current range?
 
 Best regards,
 ${request.input.seller?.senderName || 'Sales team'}

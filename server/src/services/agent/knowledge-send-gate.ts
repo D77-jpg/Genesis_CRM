@@ -20,11 +20,18 @@ export function knowledgeReviewRequiresApproval(review?:KnowledgeReview):boolean
 // A generated draft may only be sent after its knowledge audit is complete enough.
 // A deterministic fallback is safe to send, but a retained model draft, stale evidence
 // or an unapproved high-risk commitment must not slip through the normal send route.
-export function knowledgeReviewSendIssue(review?:KnowledgeReview):string|undefined{
+// `manualApproved` is only for asking "would this still be blocked after the human
+// approves it?" — it bypasses the high-risk gate alone, never the structural blocks.
+export function knowledgeReviewSendIssue(review?:KnowledgeReview,options?:{manualApproved?:boolean}):string|undefined{
  if(!review)return undefined;
  if(['retrieval_failed','index_stale','index_not_ready','conflict'].includes(review.status))return '依据检索状态异常';
  const issue=(review.issues??[]).find(issue=>BLOCKING_REVIEW_CODES.has(issue.code));
  if(issue)return issue.message;
- if(knowledgeReviewRequiresApproval(review)&&!review.manualApprovedAt)return '高风险内容还没有人工批准';
+ if(knowledgeReviewRequiresApproval(review)&&!review.manualApprovedAt&&!options?.manualApproved)return '高风险内容还没有人工批准';
  return undefined;
+}
+
+/** 人工批准也解决不了的硬拦截（模型原稿、依据异常、冲突等）；高风险待批准不算。 */
+export function knowledgeReviewHardBlocker(review?:KnowledgeReview):string|undefined{
+ return knowledgeReviewSendIssue(review,{manualApproved:true});
 }

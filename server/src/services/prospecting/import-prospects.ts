@@ -227,6 +227,8 @@ export async function importProspects(actor: AuthUser, input: ImportProspectsInp
     toInsert.push({
       projectId,
       day,
+      // 业务员自己导入的 Excel 直接进个人库；管理员导入的留在公共池
+      ...(actor.role !== 'admin' ? { ownerId: new Types.ObjectId(actor.id) } : {}),
       domain,
       website,
       sourceUrl: website,

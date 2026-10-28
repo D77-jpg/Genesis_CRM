@@ -287,16 +287,17 @@ test('live evaluation and production share exactly the authorized semantic evide
 test('bounded address questions and standard closings are non-claims; disguised commitments stay blocked',()=>{
  const text='Could you please share your delivery address?\nWe look forward to hearing from you.';
  assert.ok(checkSemanticResults(text,bundle([],[]),[]).every(c=>c.status==='non_claim'));
+ for(const safe of ['Could you please tell us whether your earrings ship as individual pairs or as boxed sets?','Could you please let us know your current packaging format?','Could you please share the dimensions of one earring pair and whether they currently ship on a card or in a box, so I can suggest two or three suitable structures?'])assert.ok(checkSemanticResults(safe,bundle([],[]),[]).every(c=>c.status==='non_claim'));
  for(const unsafe of ['Could you please confirm our free shipping?','Could you please confirm our delivery in 7 days?','We look forward to guaranteeing free samples.'])assert.ok(checkSemanticResults(unsafe,bundle([],[]),[]).every(c=>c.status!=='non_claim'));
 });
 
 
-test('a partial email retains whole verified product paragraphs without rescuing unsupported clauses',async()=>{
+test('a partial email retains verified sentences without rescuing unsupported clauses',async()=>{
  const valid='We manufacture velvet pouches.';const invalid='Your inquiry confirmed a signed purchase contract.';
  const b=bundle([prose],[]);const verifier:SemanticVerifier={model:'independent-partial',async check({segments}){return segments.map(p=>({id:p.id,status:p.text===valid?'supported' as const:'unsupported' as const,quotes:p.text===valid?[proof(valid,prose.content,prose.sourceId)]:[],reason:p.text===valid?'whole paragraph entailed':'unconfirmed customer assertion'}));}};
  const kept=await verifyGroundedEmail(valid+'\n'+invalid,b,{taskType:'first_outreach'},verifier);
  assert.match(kept.bodyText,/We manufacture velvet pouches/);assert.doesNotMatch(kept.bodyText,/signed purchase/);assert.equal(kept.review.factAudit?.mode,'semantic');assert.equal(kept.review.completeness,'partial');assert.ok(kept.review.issues.some(i=>i.code==='semantic_partial'));assert.equal(kept.review.bodyHash,draftHash(kept.bodyText));assert.ok(kept.review.claims.some(c=>c.text===valid));
- const rejected=await verifyGroundedEmail(valid+' '+invalid,b,{taskType:'first_outreach'},verifier);assert.doesNotMatch(rejected.bodyText,/manufacture velvet|signed purchase/);assert.equal(rejected.review.factAudit?.mode,'unavailable');
+ const rejected=await verifyGroundedEmail(valid+' '+invalid,b,{taskType:'first_outreach'},verifier);assert.match(rejected.bodyText,/We manufacture velvet pouches/);assert.doesNotMatch(rejected.bodyText,/signed purchase/);assert.equal(rejected.review.factAudit?.mode,'semantic');assert.equal(rejected.review.completeness,'partial');
 });
 
 

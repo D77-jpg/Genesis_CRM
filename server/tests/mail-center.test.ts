@@ -969,6 +969,69 @@ test('开发信跟进节奏：3/7/14 排期、回信停表、三次无回复弃�
   assert.ok((doc?.tags ?? []).includes('三次无回复'));
   assert.ok(doc?.outreachAbandonedAt);
 });
+test('88 审核时正文被改过，也必须把人工批准记在通过的那份正文上', async () => {
+  // 回归：旧实现要求 rendered.text 与生成时的 bodyHash 完全一致才写 manualApprovedAt，
+  // 于是「改过正文再点通过」永远拿不到人工批准，发送被闸门永久拦住。
+  const { draftHash } = await import('../src/services/agent/knowledge-grounding');
+  const draft = await request('POST', '/letters', salesToken, {
+    customerId, subject: 'Approval hash fixture', content: '<p>Original generated body</p>', saveAsDraft: true, requestKey: `approval-hash-draft-${suffix}`,
+  }, 201);
+  await models.DevelopmentLetter.updateOne({ _id: draft.letter.id }, {
+    $set: {
+      knowledgeReview: {
+        version: 1, projectId, taskType: 'first_outreach', generatedAt: new Date().toISOString(),
+        status: 'ready', completeness: 'complete', sources: [],
+        claims: [{ text: 'Our price is USD 2 per piece.', sourceIds: [] }],
+        questions: [], issues: [], context: {},
+        bodyHash: draftHash('Original generated body'),
+        factAudit: { contract: 's4.1', mode: 'semantic', attempts: 1, checks: [], facts: [] },
+      },
+    },
+  });
+
+  // 人审时正文已被改过（换行/措辞变化都算），批准必须落在当前这份正文上
+  const approved = await request('POST', `/letters/${draft.letter.id}/review`, salesToken, {
+    decision: 'approve', subject: 'Approval hash fixture', content: '<p>Edited before approval</p>',
+  }, 200);
+  assert.equal(approved.review.decision, 'approved');
+  assert.ok(approved.knowledgeReview.manualApprovedAt, '审核通过必须写入人工批准');
+  assert.equal(approved.knowledgeReview.bodyHash, draftHash(approved.contentText));
+
+  // 通过后直接发送：不应再被「高风险内容还没有人工批准」拦住（测试环境为 mock 通道）
+  const sent = await request('POST', `/letters/${draft.letter.id}/resend`, salesToken, { requestKey: `approval-hash-send-${suffix}` }, 201);
+  assert.notEqual(sent.letter.id, draft.letter.id);
+});
+
+test('89 未完成逐项核验的模型原稿不能被审核通过，只能重新生成', async () => {
+  const { draftHash } = await import('../src/services/agent/knowledge-grounding');
+  const draft = await request('POST', '/letters', salesToken, {
+    customerId, subject: 'Unverified model draft fixture', content: '<p>Raw model body</p>', saveAsDraft: true, requestKey: `unverified-draft-${suffix}`,
+  }, 201);
+  await models.DevelopmentLetter.updateOne({ _id: draft.letter.id }, {
+    $set: {
+      knowledgeReview: {
+        version: 1, projectId, taskType: 'first_outreach', generatedAt: new Date().toISOString(),
+        status: 'ready', completeness: 'partial', sources: [], claims: [], questions: [], context: {},
+        bodyHash: draftHash('Raw model body'),
+        issues: [{ code: 'draft_unverified', message: '正文是模型原稿，逐项核验没有完成' }],
+        factAudit: { contract: 's4.1', mode: 'unavailable', attempts: 1, checks: [], facts: [] },
+      },
+    },
+  });
+
+  // 列表/详情要把硬拦截原因给前端，界面据此禁用「审核通过」
+  const detail = await request('GET', `/letters/${draft.letter.id}`, salesToken, undefined, 200);
+  assert.match(String(detail.sendBlocker), /模型原稿/);
+
+  // 人工通过也解决不了：直接拒绝记「通过」，避免出现「已通过但永远发不出去」
+  await request('POST', `/letters/${draft.letter.id}/review`, salesToken, { decision: 'approve' }, 409);
+  const stillDraft = await models.DevelopmentLetter.findById(draft.letter.id).lean();
+  assert.equal(stillDraft?.review?.decision, undefined);
+
+  // 不通过仍然允许，草稿可以留在待处理清单外
+  await request('POST', `/letters/${draft.letter.id}/review`, salesToken, { decision: 'reject' }, 200);
+});
+
 test('跟进草稿：按上一封生成第 2 封，不带签名；没发过信的客户报错', async () => {
   const draft = await request('POST', '/letters/follow-up-draft', salesToken, { customerId }, 200, '');
   assert.match(String(draft.subject), /^re:\s/i);

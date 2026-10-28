@@ -318,10 +318,14 @@ export function KnowledgeReviewPanel({
     });
   }
   if (value?.issues.some((i) => i.code === 'semantic_unverified' || i.code === 'draft_unverified') || value?.factAudit?.mode === 'unavailable') {
+    const rawModelDraft = Boolean(value?.issues.some((i) => i.code === 'draft_unverified'));
     todos.push({
       key: 'unverified',
       title: '这封稿子没做逐项核对',
-      detail: '系统只保留了有依据的安全内容；发送前请确认，或重新生成。',
+      detail: rawModelDraft
+        ? '这封是未完成逐项核验的模型原稿，系统不允许发送；请按最新依据重新生成后再审核。'
+        : '系统只保留了有依据的安全内容；发送前请确认，或重新生成。',
+      action: letterId ? 'regenerate' : undefined,
     });
   }
   if (value?.issues.some((i) => i.code === 'access_changed')) {

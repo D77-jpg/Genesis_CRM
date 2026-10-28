@@ -69,6 +69,7 @@ import {
 } from '../validators/agent.validator';
 
 import { getAgentActionDetail } from '../services/agent/action-detail.service';
+import { createQuickFirstOutreachTask } from '../services/agent/quick-outreach.service';
 
 import {appendKnowledge,listKnowledge,archiveKnowledge,deleteKnowledge,knowledgeInput,previewKnowledgeImport,importKnowledge,importPreviewInput,importCommitInput,getKnowledgeHistory} from '../services/agent/knowledge.service';
 import {setTrainingEnabled,trainingOverview} from '../services/agent/knowledge-training';
@@ -99,6 +100,10 @@ router.get('/customers/:customerId/agreements',validate({params:agreementParams}
 router.post('/customers/:customerId/agreements',requireRole('admin'),validate({params:agreementParams,body:agreementInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await saveCustomerAgreement(req.params.customerId,undefined,req.body,req.user!)},201)));
 router.post('/customers/:customerId/agreements/:id/revisions',requireRole('admin'),validate({params:agreementParams,body:agreementInput}),asyncHandler(async(req,res)=>sendSuccess(res,{id:await saveCustomerAgreement(req.params.customerId,req.params.id,req.body,req.user!)})));
 router.post('/customers/:customerId/agreements/:id/disable',requireRole('admin'),validate({params:agreementParams,body:z.object({version:z.number().int().positive()}).strict()}),asyncHandler(async(req,res)=>{await disableCustomerAgreement(req.params.customerId,req.params.id,req.body.version,req.user!);sendSuccess(res,{disabled:true});}));
+router.post('/customers/:customerId/outreach-task',messageLimiter,validate({
+  params:z.object({customerId:z.string().regex(/^[a-f\d]{24}$/i)}).strict(),
+  body:z.object({requestKey:z.string().trim().min(8).max(128)}).strict(),
+}),asyncHandler(async(req,res)=>sendSuccess(res,await createQuickFirstOutreachTask(req.params.customerId,req.body.requestKey,req.user!),201)));
 router.post('/knowledge-drafts/:id/recheck',messageLimiter,validate({params:agentSessionParamsSchema,body:z.object({requestKey:z.string().uuid(),bodyText:z.string().max(20000).optional(),subject:z.string().max(300).optional()}).strict()}),asyncHandler(async(req,res)=>sendSuccess(res,await recheckKnowledgeDraft(req.params.id,req.body,req.user!))));
 router.get('/knowledge-governance',requireRole('admin'),asyncHandler(async(req,res)=>sendSuccess(res,await governanceOverview(req.user!))));
 router.get('/knowledge-training/overview',requireRole('admin'),asyncHandler(async(req,res)=>sendSuccess(res,await trainingOverview(req.user!))));

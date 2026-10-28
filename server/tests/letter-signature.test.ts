@@ -37,6 +37,14 @@ test('固定结尾：第一行是账号姓名，其余是固定公司信息', ()
   assert.ok(text.includes(SIGNATURE_MARKER));
 });
 
+test('固定结尾：发送前旧草稿的姓名跟随当前操作账号', () => {
+  const old = renderSignatureHtml('Andrew Wang');
+  const updated = ensureSignature(old, 'Carlos', LETTER_SIGNATURE, true);
+  const text = htmlToPlainText(updated);
+  assert.match(text, /Carlos/);
+  assert.ok(!text.includes('Andrew Wang'));
+});
+
 test('固定结尾：HTML 版和纯文本版逐字一致（审核哈希依赖这条）', () => {
   assert.equal(htmlToPlainText(renderSignatureHtml(NAME)), renderSignatureText(NAME));
   // 过一遍发送前的 HTML 清洗后仍然一致

@@ -4,6 +4,7 @@ import { createLogger } from '../config/logger';
 import { DevelopmentLetter, Project } from '../models';
 import { getCustomerByIdOrThrow } from './customer.service';
 import { resolveAgentProvider } from './agent/ai-settings.service';
+import { projectPromptContext, resolveProjectSalesProfile, type ProjectSalesProfile } from './project-profile';
 import { OUTREACH_MAX_STEPS } from '../constants';
 
 const EXCERPT_LENGTH = 700;
@@ -85,7 +86,7 @@ function introducesNewClaims(text: string): string | null {
 
 function templateDraft(input: {
   step: number; customerName: string; previousSubject: string; previousSentAt: string;
-  senderName: string; companyName: string; previousText: string;
+  senderName: string; companyName: string; previousText: string; profile: ProjectSalesProfile;
 }): { subject: string; paragraphs: string[] } {
   const date = new Date(input.previousSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const subject = /^re:/i.test(input.previousSubject) ? input.previousSubject : `Re: ${input.previousSubject}`;
@@ -97,8 +98,8 @@ function templateDraft(input: {
       ? `My point was simple: ${hook.replace(/\s+/g, ' ')}`
       : '',
     input.step >= 3
-      ? 'If packaging is not a priority this quarter, just reply "not now" and I will stop following up — no hard feelings.'
-      : 'Would it help if I sent a small sample set, or a quick price range for the sizes you normally use?',
+      ? `If ${input.profile.outreachFocus} is not a priority this quarter, just reply "not now" and I will stop following up — no hard feelings.`
+      : `Would it help if I sent a few options for ${input.profile.outreachFocus}?`,
   ].filter(Boolean);
   return { subject, paragraphs };
 }
@@ -121,15 +122,16 @@ export async function draftFollowUpLetter(customerId: string, actor: AuthUser): 
   const previousText = plainText(String(previous.content || ''));
   const excerpt = previousText.slice(0, EXCERPT_LENGTH);
 
-  const project = await Project.findById(customer.projectId).select('companyName').lean();
-  const companyName = String(project?.companyName || 'Genesis Bags');
+  const project = await Project.findById(customer.projectId).select('code slug name companyName industry website mailFrom senderName').lean();
+  const salesProfile = resolveProjectSalesProfile(project);
+  const companyName = String(project?.companyName || 'Company name pending confirmation');
   const senderName = String(actor.displayName || actor.username || 'Sales');
   const seller = { companyName, senderName };
 
   const fallback = () => {
     const { subject, paragraphs } = templateDraft({
       step, customerName: firstName(String(customer.name || '')), previousSubject, previousSentAt: previousSentAt.toISOString(),
-      senderName, companyName, previousText,
+      senderName, companyName, previousText, profile: salesProfile,
     });
     const text = paragraphs.join('\n\n');
     return {
@@ -161,6 +163,7 @@ export async function draftFollowUpLetter(customerId: string, actor: AuthUser): 
         },
         previous: { subject: previousSubject, sentAt: previousSentAt.toISOString(), excerpt },
         seller,
+        projectProfile: projectPromptContext(salesProfile),
         allowedFacts: [],
       },
     });

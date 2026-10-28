@@ -66,6 +66,7 @@
     "nodemailer": "^10.0.1",
     "pdf-parse": "2.4.5",
     "pdfkit": "^0.20.2",
+    "playwright": "1.62.0",
     "sanitize-html": "^2.17.7",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.6.7"
@@ -90,7 +91,9 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "overrides": { "body-parser": "^1.20.9", "qs": "^6.16.0",
+  "overrides": {
+    "body-parser": "^1.20.9",
+    "qs": "^6.16.0",
     "mammoth": {
       "argparse": "2.0.1"
     }

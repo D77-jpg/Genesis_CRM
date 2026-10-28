@@ -2,6 +2,7 @@
 // the deterministic prefilter, in small batches, and never overrides "needs contact".
 import { resolveAgentProvider } from '../agent/ai-settings.service';
 import type { AgentProvider } from '../agent/provider';
+import type { ProjectPromptContext } from '../project-profile';
 import type { ScoreResult } from './scoring';
 
 export interface LlmScoreInput {
@@ -22,12 +23,21 @@ export interface LlmScore {
   excludeReason?: string;
 }
 
-const RUBRIC = `你是箱包/礼品包装工厂（Genesis Bags，厦门）的外贸业务助理。根据《01-客户画像》给每个候选品牌打分：
-- 目标：美国/欧洲/澳洲的独立珠宝、香薰蜡烛、护肤美妆、设计师服饰/配饰、礼品品牌，通常 20–200 人，重视设计与包装，有定制袋/盒需求。
-- 加分：自有品牌与独立站、手作/小批量、设计师故事、可持续、礼品属性、明确的目标市场。
-- 排除（exclude=true）：目录站/商城/零售商/批发商/经销商/包装供应商/制造商/行业协会/展会展商/代运营/贸易公司；与我方是同行或明显不需要定制包装的公司。
+function buildRubric(profile?: ProjectPromptContext): string {
+  const p = profile ?? {
+    identity: '本项目的供应商',
+    offerSummary: '本项目的产品与服务。',
+    outreachFocus: '与本项目产品/服务相关的采购需求',
+    avoidTopics: '其他项目、其他行业，以及知识库未确认的品类和承诺',
+    subjectFocus: '本项目产品/服务',
+  };
+  return `你是${p.identity}的外贸业务助理。根据本项目《客户画像》给每个候选品牌打分：
+- 目标：美国/欧洲/澳洲的、与「${p.subjectFocus}」相关的品牌、采购商或渠道商；${p.offerSummary}他们可能有${p.outreachFocus}。
+- 加分：自有品牌与独立站、相关产品线、明确的目标市场、有采购/定制/分销信号。
+- 排除（exclude=true）：目录站/商城/纯零售商/与我方无关的经销商/${p.subjectFocus}同类产品供应商/制造商/行业协会/展会展商/代运营/贸易公司；明显不需要${p.subjectFocus}的公司，或只涉及${p.avoidTopics}的公司。
 - 联系方式不作为评分依据（邮箱由系统另行补全）。
 只输出 JSON，不要解释。每个候选给出 0–100 的匹配分、最多 3 条简短理由；不匹配时给 exclude=true 和一句原因。`;
+}
 
 const OUTPUT_SCHEMA = {
   type: 'object', additionalProperties: false, required: ['items'],
@@ -90,13 +100,14 @@ export function mergeScores(rule: ScoreResult, ai: LlmScore | undefined, minScor
   return { score, reasons, status: score >= minScore ? 'ready' : 'low' };
 }
 
-export async function scoreLeadsWithLlm(items: LlmScoreInput[], provider?: AgentProvider, profileText?: string | null): Promise<Map<string, LlmScore>> {
+export async function scoreLeadsWithLlm(items: LlmScoreInput[], provider?: AgentProvider, profileText?: string | null, profile?: ProjectPromptContext): Promise<Map<string, LlmScore>> {
   const scores = new Map<string, LlmScore>();
   const active = provider ?? await resolveAgentProvider();
   if (!active.isAvailable()) throw new Error('AI 未配置，暂时只用规则评分');
+  const rubric = buildRubric(profile);
   const instructions = profileText
-    ? `${RUBRIC}\n\n以下是本项目资料库中的《客户画像》原文，评分时优先遵循：\n${profileText}`
-    : RUBRIC;
+    ? `${rubric}\n\n以下是本项目资料库中的《客户画像》原文，评分时优先遵循：\n${profileText}`
+    : rubric;
   for (let offset = 0; offset < items.length; offset += 8) {
     const batch = items.slice(offset, offset + 8);
     const turn = await active.createTurn({

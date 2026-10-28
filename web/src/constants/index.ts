@@ -738,7 +738,25 @@ export const DEFAULT_LETTER_TEMPLATE = `<p>Hi {{firstName}},</p>
  * 服务端渲染时只做幂等兜底（已有标记就不再追加）。
  * logo 用同源相对路径方便预览，发送前服务端会换成公网绝对地址。
  */
-export const LETTER_SIGNATURE = {
+export interface LetterSignatureProfile {
+  marker: string;
+  title: string;
+  lines: readonly string[];
+  logoPath?: string | null;
+  logoAlt?: string;
+}
+
+interface ProjectSignatureSource {
+  code?: string;
+  slug?: string;
+  name?: string;
+  companyName?: string;
+  industry?: string;
+  website?: string;
+  mailFrom?: string;
+}
+
+const GENESIS_LETTER_SIGNATURE: LetterSignatureProfile = {
   marker: 'Gold Supplier on Alibaba.com since 2014',
   title: 'Sales Manager, Genesis (Xiamen) Bags Co., Ltd.',
   lines: [
@@ -747,7 +765,47 @@ export const LETTER_SIGNATURE = {
     'genesisbags.com · genesisgroup.en.alibaba.com',
     'Gold Supplier on Alibaba.com since 2014 · ISO 9001 / FSC® / BSCI Certified',
   ],
-} as const;
+  logoPath: '/api/brand/genesis-logo.png',
+  logoAlt: 'Genesis Packaging',
+};
+
+const IRONHUE_LETTER_SIGNATURE: LetterSignatureProfile = {
+  marker: 'Wholesale · OEM · ODM · Private Label',
+  title: 'Sales Manager, IRONHUE',
+  lines: [
+    'Free Weight & Strength Training Equipment',
+    'Wholesale · OEM · ODM · Private Label',
+    'E: sales@ironhue.com',
+    'T / WhatsApp: +86 138 6042 3022',
+    'W: ironhue.com',
+  ],
+  logoPath: '/api/brand/ironhue-logo.png',
+  logoAlt: 'IRONHUE',
+};
+
+/** 保留 Genesis 默认导出，兼容旧测试和未传项目上下文的调用。 */
+export const LETTER_SIGNATURE = GENESIS_LETTER_SIGNATURE;
+
+/** 只按项目标识匹配，不能按行业猜测，避免未来项目继承 Genesis/IronHue 结尾。 */
+export function letterSignatureForProject(project?: ProjectSignatureSource | null): LetterSignatureProfile {
+  const identity = `${project?.code ?? ''} ${project?.slug ?? ''} ${project?.name ?? ''}`.toLowerCase();
+  if (identity.includes('ironhue')) return IRONHUE_LETTER_SIGNATURE;
+  if (identity.includes('genesis')) return GENESIS_LETTER_SIGNATURE;
+  const companyName = String(project?.companyName || project?.name || 'Our team').trim();
+  const industry = String(project?.industry || '').trim();
+  const lines = [
+    `${companyName}${industry ? ` · ${industry}` : ''}`,
+    ...(project?.website ? [`Website ${project.website}`] : []),
+    ...(project?.mailFrom ? [`Email ${project.mailFrom}`] : []),
+  ];
+  return {
+    marker: `Sales Manager, ${companyName}`,
+    title: `Sales Manager, ${companyName}`,
+    lines: lines.length ? lines : [companyName],
+    logoPath: null,
+    logoAlt: companyName,
+  };
+}
 
 function escapeSignatureText(value: string): string {
   return value
@@ -763,10 +821,10 @@ function escapeSignatureText(value: string): string {
  * 富文本编辑器（Quill）会把 `<img>`/`<hr>` 这类块级内容在回写时丢掉，
  * 所以编辑器里只放文字结尾；服务端落库/发送前会补上 logo 与分隔线（文字不变）。
  */
-export function letterSignatureHtml(name: string): string {
+export function letterSignatureHtml(name: string, signature: LetterSignatureProfile = LETTER_SIGNATURE): string {
   const who = escapeSignatureText((name || '').trim() || 'Sales Team');
-  const lines = LETTER_SIGNATURE.lines.map(escapeSignatureText).join('<br>');
-  return `<p><strong>${who}</strong><br>${escapeSignatureText(LETTER_SIGNATURE.title)}<br>${lines}</p>`;
+  const lines = signature.lines.map(escapeSignatureText).join('<br>');
+  return `<p><strong>${who}</strong><br>${escapeSignatureText(signature.title)}<br>${lines}</p>`;
 }
 
 /** 结尾里的落款词 / 联系方式 / 姓名行（与 server 端 stripTrailingSignoff 的口径一致） */
@@ -775,7 +833,7 @@ function isSignoffLine(text: string): boolean {
 }
 function isContactLine(text: string): boolean {
   if (text.length > 120) return false;
-  return /^(?:\{\{\s*(?:senderName|companyName|companyWebsite|senderEmail)\s*\}\}|genesis|www\.|https?:\/\/|[^@\s]+@[^@\s]+\.[a-z]{2,})/i.test(text);
+  return /^(?:\{\{\s*(?:senderName|companyName|companyWebsite|senderEmail)\s*\}\}|genesis|ironhue|www\.|https?:\/\/|[^@\s]+@[^@\s]+\.[a-z]{2,})/i.test(text);
 }
 function isNameLine(text: string): boolean {
   return text.length <= 60 && text.split(/\s+/).length <= 4 && !/\d/.test(text) && !isContactLine(text);
@@ -814,27 +872,58 @@ export function stripLegacySignoff(html: string): string {
   return root.innerHTML;
 }
 
-/** 正文还没有固定结尾时补在最后；已有则原样返回 */
-export function appendSignatureHtml(html: string, name: string): string {
-  // 已经有固定结尾：只清理可能残留的旧落款，不重复追加
-  if (html.includes(LETTER_SIGNATURE.marker)) return stripLegacySignoff(html);
+/** 已有固定结尾时只替换结尾，保留业务员当前姓名；找不到结尾块则返回原 HTML。 */
+function replaceSignatureHtml(
+  html: string,
+  name: string,
+  signature: LetterSignatureProfile,
+): string {
+  if (typeof DOMParser === 'undefined') return html;
+  const doc = new DOMParser().parseFromString(`<div id="signature-replace-root">${html}</div>`, 'text/html');
+  const root = doc.getElementById('signature-replace-root');
+  if (!root) return html;
+  const target = [...root.querySelectorAll('p,div')].find((element) => {
+    const text = (element.textContent ?? '').replace(/\s+/g, ' ');
+    return text.includes(signature.title) && text.includes(signature.marker);
+  });
+  if (!target) return html;
+  const holder = doc.createElement('div');
+  holder.innerHTML = letterSignatureHtml(name, signature);
+  const replacement = holder.firstElementChild;
+  if (!replacement) return html;
+  target.replaceWith(replacement);
+  return root.innerHTML;
+}
+
+/** 正文还没有固定结尾时补在最后；已有则更新为当前业务员的姓名。 */
+export function appendSignatureHtml(
+  html: string,
+  name: string,
+  signature: LetterSignatureProfile = LETTER_SIGNATURE,
+): string {
+  if (html.includes(signature.marker)) return replaceSignatureHtml(html, name, signature);
   const cleaned = stripLegacySignoff(html);
-  return `${cleaned}${cleaned ? '<p></p>' : ''}${letterSignatureHtml(name)}`;
+  return `${cleaned}${cleaned ? '<p></p>' : ''}${letterSignatureHtml(name, signature)}`;
 }
 
 /**
  * 仅用于「预览」页签：把编辑器里的文字结尾补上品牌 logo 再展示。
  * 落库/发送时服务端会做同样的事（ensureSignature），这里只是让预览所见即所得。
  */
-export function withSignatureLogo(html: string): string {
-  if (!html.includes(LETTER_SIGNATURE.marker) || /genesis-logo/.test(html)) return html;
+export function withSignatureLogo(
+  html: string,
+  signature: LetterSignatureProfile = LETTER_SIGNATURE,
+): string {
+  if (!signature.logoPath || !html.includes(signature.marker)) return html;
+  const logoName = signature.logoPath.split('/').pop() ?? '';
+  if (logoName && html.includes(logoName)) return html;
   if (typeof DOMParser === 'undefined') return html;
   const doc = new DOMParser().parseFromString(`<div id="signature-preview-root">${html}</div>`, 'text/html');
   const root = doc.getElementById('signature-preview-root');
   if (!root) return html;
-  const title = LETTER_SIGNATURE.title;
-  const logoSrc = '/api/brand/genesis-logo.png';
-  const logoTag = `<img src="${logoSrc}" alt="Genesis Packaging" width="150" style="display:block;width:150px;height:auto;margin:4px 0">`;
+  const title = signature.title;
+  const logoSrc = signature.logoPath;
+  const logoTag = `<img src="${logoSrc}" alt="${escapeSignatureText(signature.logoAlt ?? '')}" width="150" style="display:block;width:150px;height:auto;margin:4px 0">`;
   const dropEmptyBlocks = (start: Element): void => {
     let next = start.nextElementSibling;
     while (next && !(next.textContent ?? '').trim()) {
@@ -863,6 +952,29 @@ export function withSignatureLogo(html: string): string {
 }
 
 export const DEFAULT_LETTER_SUBJECT = '{{company}} packaging — samples from {{moq}}';
+
+/** 新写开发信时的项目默认模板，避免 IronHue/未知项目落进 Genesis 包装话术。 */
+export function defaultLetterTemplateForProject(project?: ProjectSignatureSource | null): { subject: string; content: string } {
+  const identity = `${project?.code ?? ''} ${project?.slug ?? ''} ${project?.name ?? ''}`.toLowerCase();
+  if (identity.includes('ironhue')) {
+    return {
+      subject: '{{company}} — free weights and strength equipment',
+      content: `<p>Hi {{firstName}},</p>
+<p>I came across {{company}} and noticed your focus on {{industry}}.</p>
+<p>At IRONHUE, we manufacture free weights and strength training equipment, including dumbbells, weight plates, kettlebells, barbells and accessories, with private-label, OEM and ODM support.</p>
+<p>Would it be useful if I sent over a few options that could fit your current range?</p>`,
+    };
+  }
+  if (identity.includes('genesis')) return { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE };
+  const companyName = String(project?.companyName || project?.name || 'our team').trim();
+  return {
+    subject: '{{company}} — {{industry}} introduction',
+    content: `<p>Hi {{firstName}},</p>
+<p>I came across {{company}} and noticed your focus on {{industry}}.</p>
+<p>At ${escapeSignatureText(companyName)}, we support customers with products and services related to your market.</p>
+<p>Would it be useful if I sent over a few options that could fit your current range?</p>`,
+  };
+}
 
 /* ---------------------------- 其它 ---------------------------- */
 

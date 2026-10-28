@@ -68,15 +68,16 @@ import { createClientId, readStorage, writeStorage } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/use-debounce';
 import { useSaveShortcut } from '@/hooks/use-ui';
 import { useLetterStore } from '@/store/letter.store';
+import { useProjectStore } from '@/store/project.store';
 import { useTemplateStore } from '@/store/template.store';
 import { selectCompany, selectPlaceholderDefs, useMetaStore } from '@/store/meta.store';
 import {
-  DEFAULT_LETTER_SUBJECT,
-  DEFAULT_LETTER_TEMPLATE,
   MAIL_CHANNEL_LABEL,
   STORAGE_KEYS,
   TEMPLATE_CATEGORY_LABEL,
   appendSignatureHtml,
+  defaultLetterTemplateForProject,
+  letterSignatureForProject,
   withSignatureLogo,
 } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
@@ -103,10 +104,13 @@ interface SavedTemplate {
   content: string;
 }
 
-function loadSavedTemplate(): SavedTemplate | null {
+function loadSavedTemplate(signature: ReturnType<typeof letterSignatureForProject>): SavedTemplate | null {
   const saved = readStorage<SavedTemplate | null>(STORAGE_KEYS.lastTemplate, null);
-  if (saved && typeof saved.subject === 'string' && typeof saved.content === 'string') return saved;
-  return null;
+  if (!saved || typeof saved.subject !== 'string' || typeof saved.content !== 'string') return null;
+  // 本地“上次模板”是跨项目保存的；不要把它带入另一个项目，尤其不能带 Genesis 包装正文。
+  const foreignMarkers = ['Gold Supplier on Alibaba.com since 2014', 'Wholesale · OEM · ODM · Private Label'];
+  if (foreignMarkers.some((marker) => saved.content.includes(marker)) && !saved.content.includes(signature.marker)) return null;
+  return saved;
 }
 
 /** 模板选择器的占位值（Radix Select 不接受空字符串；选中即回填表单，不持久化选中态） */
@@ -268,6 +272,9 @@ export function SendLetterDialog({
   const reviewLock = React.useRef(false);
   /** 当前登录账号：固定结尾第一行取它的姓名（有个人发件邮箱时优先用邮箱显示名） */
   const authUser = useAuthStore((state) => state.user);
+  const project = useProjectStore((state) => state.activeProject);
+  const signature = React.useMemo(() => letterSignatureForProject(project), [project]);
+  const defaultTemplate = React.useMemo(() => defaultLetterTemplateForProject(project), [project]);
 
   const {
     register,
@@ -306,13 +313,13 @@ export function SendLetterDialog({
     // 优先级：重发的原信 > 上次使用的模板 > 内置默认模板
     const source = letter
       ? { subject: letter.subject, content: letter.template || letter.content }
-      : initialDraft ?? (loadSavedTemplate() ?? { subject: DEFAULT_LETTER_SUBJECT, content: DEFAULT_LETTER_TEMPLATE });
+      : initialDraft ?? (loadSavedTemplate(signature) ?? defaultTemplate);
 
     // 固定结尾直接写进正文，审核时看到的就是客户会收到的完整内容（回复不预填，避免光标落在签名后）
-    const signerName = senderStatus?.account?.displayName || authUser?.displayName || '';
+    const signerName = authUser?.displayName || senderStatus?.account?.displayName || '';
     const values: SendLetterFormValues = {
       subject: reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : source.subject ?? '',
-      content: reply ? '' : appendSignatureHtml(source.content ?? '', signerName),
+      content: reply ? '' : appendSignatureHtml(source.content ?? '', signerName, signature),
       recipientEmail: reply?.from ?? letter?.recipientEmail ?? customer?.email ?? '',
       // 只有「待开发」客户才需要推进状态，已联系及之后的客户默认关掉更贴合直觉
       markAsDeveloped: customer?.status === 'pending',
@@ -324,7 +331,7 @@ export function SendLetterDialog({
     setReview(letter?.review ?? null);
     setReviewBaseline(letter ? { subject: values.subject, content: values.content, recipientEmail: values.recipientEmail } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在「打开 / 客户 / 原信」变化时重建表单
-  }, [open, customerId, letterId, initialDraft?.analysisId, reply?.id, reset]);
+  }, [open, customerId, letterId, initialDraft?.analysisId, reply?.id, reset, signature, defaultTemplate]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -370,9 +377,9 @@ export function SendLetterDialog({
     () => ({
       subject: renderTemplate(debouncedSubject, placeholderValues, { escape: false }),
       // 预览里把结尾的 logo 补上（服务端落库/发送时会做同样的事）
-      html: withSignatureLogo(renderTemplate(debouncedContent, placeholderValues, { escape: true })),
+      html: withSignatureLogo(renderTemplate(debouncedContent, placeholderValues, { escape: true }), signature),
     }),
-    [debouncedSubject, debouncedContent, placeholderValues],
+    [debouncedSubject, debouncedContent, placeholderValues, signature],
   );
 
   const englishBody = React.useMemo(() => htmlToPlainText(preview.html), [preview.html]);
@@ -591,19 +598,24 @@ export function SendLetterDialog({
   /** 已通过且内容没再改动：主按钮就是发送；其余情况主按钮负责「给出通过结论（并发送）」 */
   const reviewApprovedClean = review?.decision === 'approved' && !reviewDirty;
   const needsApprove = isDraftReview && !reviewApprovedClean;
+  /** 人工批准也解决不了的硬拦截：直接显示不可发送，避免「已通过但永远发不出去」 */
+  const sendBlocker = isDraftReview ? letter?.sendBlocker : undefined;
 
   /** 主按钮：草稿先审核再发送，其他场景直接发送 */
   const primaryAction = React.useCallback(() => {
+    if (sendBlocker) return;
     if (needsApprove) return decide('approve');
     return submit(false);
-  }, [decide, needsApprove, submit]);
+  }, [decide, needsApprove, sendBlocker, submit]);
 
   const primaryLabel = isDraftReview
-    ? needsApprove
-      ? (!canSend ? '审核通过' : '审核通过并发送')
-      : scheduledAt
-        ? '发送定时任务'
-        : '发送开发信'
+    ? sendBlocker
+      ? '不可发送'
+      : needsApprove
+        ? (!canSend ? '审核通过' : '审核通过并发送')
+        : scheduledAt
+          ? '发送定时任务'
+          : '发送开发信'
     : scheduledAt
       ? '保存定时任务'
       : reply
@@ -612,14 +624,18 @@ export function SendLetterDialog({
           ? '重新发送'
           : '发送开发信';
 
-  const primaryDisabled = sending || reviewBusy || senderLoading || !customer || (!canSend && !needsApprove);
-  const primaryTitle = !canSend
-    ? needsApprove
-      ? senderStatus?.reason || senderError || '发件邮箱未就绪，本次只记录审核结论'
-      : `${senderStatus?.reason || senderError || '发件邮箱未就绪'}；配好邮箱后回到这封草稿点发送即可`
-    : undefined;
+  const primaryDisabled = Boolean(sendBlocker) || sending || reviewBusy || senderLoading || !customer || (!canSend && !needsApprove);
+  const primaryTitle = sendBlocker
+    ? sendBlocker
+    : !canSend
+      ? needsApprove
+        ? senderStatus?.reason || senderError || '发件邮箱未就绪，本次只记录审核结论'
+        : `${senderStatus?.reason || senderError || '发件邮箱未就绪'}；配好邮箱后回到这封草稿点发送即可`
+      : undefined;
 
-  const statusView = reviewStatusView(review, reviewDirty);
+  const statusView = sendBlocker
+    ? { label: '不可发送', variant: 'failed' as const, description: `这封草稿不能发送：${sendBlocker}请按最新依据重新生成后再审核。` }
+    : reviewStatusView(review, reviewDirty);
 
   // Ctrl/Cmd + S = 存草稿；Ctrl/Cmd + Enter = 发送
   useSaveShortcut(() => {
@@ -661,12 +677,12 @@ export function SendLetterDialog({
       const template = templateItems.find((item) => item.id === id);
       if (!template) return;
       setValue('subject', reply ? (/^re:/i.test(reply.subject) ? reply.subject : 'Re: ' + reply.subject) : template.subject ?? '', { shouldValidate: true, shouldDirty: true });
-      setValue('content', reply ? (template.content ?? '') : appendSignatureHtml(template.content ?? '', senderStatus?.account?.displayName || authUser?.displayName || ''), { shouldValidate: true, shouldDirty: true });
+      setValue('content', reply ? (template.content ?? '') : appendSignatureHtml(template.content ?? '', authUser?.displayName || senderStatus?.account?.displayName || '', signature), { shouldValidate: true, shouldDirty: true });
       setAppliedTemplateId(reply || letter ? null : template.id);
       setActiveTab('edit');
       toast.success('已导入模板', { description: template.name });
     },
-    [templateItems, setValue, reply, letter, senderStatus?.account?.displayName, authUser?.displayName],
+    [templateItems, setValue, reply, letter, senderStatus?.account?.displayName, authUser?.displayName, signature],
   );
 
   const contentLength = (content ?? '').replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length;

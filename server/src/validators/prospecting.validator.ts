@@ -68,6 +68,8 @@ export const startEnrichSchema = z.object({
 /** 线索池列表：按状态筛 + 分页（线索多的时候不可能一次全返回） */
 export const todayQuerySchema = z.object({
   status: z.enum(['all', 'ready', 'needs_contact', 'low', 'converted']).optional(),
+  /** mine = 我的；shared = 公共池；team = 团队（管理员）；all = 全部（管理员） */
+  scope: z.enum(['mine', 'shared', 'team', 'all']).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
   offset: z.union([z.string(), z.number()]).optional(),
 });

@@ -431,6 +431,8 @@ export interface DevelopmentLetter {
   knowledgeReview?:KnowledgeReview;
   knowledgeFreshness?:KnowledgeFreshness;
   reviewBodyChanged?:boolean;
+  /** 人工批准也解决不了的硬拦截原因；有值时不能审核通过，只能重新生成 */
+  sendBlocker?:string;
   review?: LetterReview;
   id: string;
   customerId: string;
@@ -1097,6 +1099,9 @@ export interface Prospect {
   notes?: string;
   leadSource?: string;
   status: ProspectStatus;
+  /** 负责人；空表示还在公共池 */
+  ownerId?: string;
+  ownerName?: string;
   customerId?: string;
   draftTaskId?: string;
   outcome?: { sent: number; replied: number; bounced: number };
@@ -1126,6 +1131,10 @@ export interface ProspectingToday {
   run: ProspectingRun | null;
   prospects: Prospect[];
   counts: { total: number; ready: number; needsContact: number; low: number; converted: number; carriedFromEarlier: number };
+  /** 当前查看范围：我的 / 公共池 / 团队（管理员）/ 全部（管理员） */
+  scope?: 'mine' | 'shared' | 'team' | 'all';
+  /** 三个互斥范围的未处理线索数 */
+  scopeTotals?: { mine: number; shared: number; team: number };
   /** 池子里还有没返回的（用 offset 翻页） */
   hasMore?: boolean;
   openTotal?: number;
