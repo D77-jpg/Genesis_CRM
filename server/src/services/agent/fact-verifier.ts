@@ -77,11 +77,13 @@ const askOnly=(s:string)=>{
  if(!/[?？]\s*$/.test(value))return false;
  if(/\d/.test(value.normalize('NFKC')))return false;
  // "you would like us to review" is still a recipient-side request; only
- // first-person supplier claims ("we can...", "our price...") are commitments.
- if(/\b(?:we|our|i)\b|我们|我方|我司/i.test(value))return false;
+ // first-person supplier claims ("we can...", "our price...") are commitments;
+ // "so I can suggest..." is a recipient-side service action, not a promise.
+ if(/\b(?:we|our)\b|我们|我方|我司/i.test(value))return false;
  // "shipping protection" describes what the customer's packaging is for,
  // not a promise that Genesis provides free shipping. Keep real commercial
  // words such as "our free shipping" blocked above.
+ if(/\bi\b/i.test(value)&&!/\bso\s+i\s+can\s+(?:suggest|recommend|prepare|share)\b/i.test(value))return false;
  const customerUse=value.normalize('NFKC').replace(/\bshipping\s+(?:protection|packaging)\b/gi,' ');
  if(COMMITMENT_WORDS.test(customerUse))return false;
  return /^(?:could|can|would|will|do|does|did|is|are|may|might|shall|should|what|when|where|which|who|how|any|have|has|please|kindly|let me know|would you mind)\b/i.test(value);
@@ -92,6 +94,10 @@ const request=(s:string)=>/^(?:(?:could you please|please|would you please) (?:c
 // 段落里不被支持的分句单独放行，见 knowledge-facts 的「不救回不支持的分句」用例。）
 function segments(body:string){
  return body.split(/\n+/).map(x=>x.trim()).filter(Boolean).map((text,i)=>({id:'s'+i,text,block:i}));
+}
+/** 段落内回退：只用于把核查器明确判过、且引用可校验的独立句保留下来。 */
+function sentenceSegments(text:string){
+ return text.split(/(?<=[.!?。！？])\s+/u).map(x=>x.trim()).filter(Boolean);
 }
 export function checkSemanticResults(body:string,bundle:KnowledgeBundle,result:SemanticCheck[],customer?:CustomerCheckContext):ClaimCheck[]{
  const parts=segments(body);const facts=collectConditionalEvidence(bundle).filter(f=>f.status==='applicable');
@@ -215,6 +221,27 @@ export async function verifyGroundedEmail(body:string,bundle:KnowledgeBundle,opt
    const parts=segments(candidate);if(!parts.length||parts.length>64||candidate.length>20000)return fallback('草稿超出逐项核验范围，请拆分审核');
    attempts++;const transcript=await verifier.check({segments:parts,evidence}).catch(()=>verifier.check({segments:parts,evidence}));
    checks=checkSemanticResults(candidate,bundle,transcript,customer);
+    // A paragraph can mix a verified sentence with an unsupported one. Recheck
+    // its sentences only after the whole paragraph failed; a sentence is kept
+    // only when the verifier marks it supported and its quotes still validate.
+    if(checks.some(c=>c.status!=='supported'&&c.status!=='non_claim')){
+     const refined:ClaimCheck[]=[];
+     for(const item of checks){
+      if(item.status==='supported'||item.status==='non_claim'){refined.push(item);continue;}
+      const pieces=sentenceSegments(item.text);
+      if(pieces.length<2){refined.push(item);continue;}
+      const retryParts=pieces.map((text,index)=>({id:`${item.id}retry${index}`,text,block:item.block}));
+      let retryTranscript:Awaited<ReturnType<SemanticVerifier['check']>>;
+      try{retryTranscript=await verifier.check({segments:retryParts,evidence});}catch{refined.push(item);continue;}
+      const local=retryParts.map(part=>{
+       const verdict=retryTranscript.find(x=>x.id===part.id);
+       if(!verdict)return {...part,status:'unverifiable' as const,sourceIds:[],reason:'句级核验未覆盖该句'};
+       return checkSemanticResults(part.text,bundle,[{...verdict,id:'s0'}],customer)[0];
+      });
+      if(local.some(c=>c.status==='supported'||c.status==='non_claim'))refined.push(...local);else refined.push(item);
+     }
+     checks=refined;
+    }
    // Unsupported facts stay unsupported, regardless of vocabulary or numbers.
    // Greetings and closed information requests are the only non-claim exemptions.
    checks=checks.map(c=>{const asking=/(?:could you|please (?:confirm|provide|share)|what|how many|请(?:确认|提供)|多少)[^\n]{0,240}[?？.]?/i.test(c.text);const known=options.knownRequirements;return asking&&((known?.quantity!==undefined&&/quantity|how many|数量/i.test(c.text))||(known?.destination&&/destination|ship to|目的地|收货地/i.test(c.text)))?{...c,status:'unsupported' as const,reason:'客户已提供该项需求，请勿重复询问；只集中询问仍缺失的信息'}:c;});
