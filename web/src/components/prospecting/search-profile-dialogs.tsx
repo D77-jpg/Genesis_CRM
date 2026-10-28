@@ -29,7 +29,7 @@ function useConfig(open:boolean){
  return()=>{active=false;};},[open,attempt]);
  return {config,setConfig,error,setError,retry};
 }
-interface Props {open:boolean;onOpenChange:(open:boolean)=>void;onCompleted:()=>void}
+interface Props {open:boolean;onOpenChange:(open:boolean)=>void;onCompleted:()=>void;personal?:boolean}
 export function ProspectingSettingsDialog({open,onOpenChange,onCompleted}:Props){
  const {config,setConfig,error,setError,retry}=useConfig(open),[selected,setSelected]=React.useState(''),[saving,setSaving]=React.useState(false);
  const profile=config?.profiles.find(p=>p.id===selected)??config?.profiles.find(p=>p.id===config.activeProfileId)??config?.profiles[0];
@@ -59,13 +59,13 @@ export function ProspectingSettingsDialog({open,onOpenChange,onCompleted}:Props)
  </DialogBody><DialogFooter><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={()=>onOpenChange(false)}>取消</Button><Button type="button" className="min-h-11" disabled={!config} loading={saving} onClick={()=>void save()}>保存全部方案</Button></DialogFooter></DialogContent></Dialog>;
 }
 
-export function ProspectingRunDialog({open,onOpenChange,onCompleted}:Props){
+export function ProspectingRunDialog({open,onOpenChange,onCompleted,personal=false}:Props){
  const {config,error,setError,retry}=useConfig(open),[choice,setChoice]=React.useState<{id:string;queries:string;enrichLimit:number}|null>(null),[saving,setSaving]=React.useState(false);
  React.useEffect(()=>{if(config){const p=config.profiles.find(p=>p.id===config.activeProfileId)??config.profiles[0];setChoice({id:p.id,queries:p.queries.join('\n'),enrichLimit:p.enrichLimit});}else setChoice(null);},[config]);
  const profile=config?.profiles.find(p=>p.id===choice?.id);
  async function start(){if(!choice||!profile)return;const queries=choice.queries.split('\n').map(q=>q.trim()).filter(Boolean);const invalid=profileError([{...profile,queries,enrichLimit:choice.enrichLimit}]);if(invalid){setError(invalid);return;}setSaving(true);setError('');
  try{await apiPost('/prospecting/run',{profileId:choice.id,queries,enrichLimit:choice.enrichLimit});onCompleted();onOpenChange(false);}catch(reason){setError(toErrorMessage(reason,'启动失败'));}finally{setSaving(false);}}
- return <Dialog open={open} onOpenChange={next=>!saving&&onOpenChange(next)}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>生成今日候选</DialogTitle><DialogDescription>选择已保存的方案；本次临时修改不会覆盖自动生成的默认设置。</DialogDescription></DialogHeader><DialogBody className="space-y-4">
+ return <Dialog open={open} onOpenChange={next=>!saving&&onOpenChange(next)}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>生成今日候选</DialogTitle><DialogDescription>选择已保存的方案；本次临时修改不会覆盖自动生成的默认设置。{personal?'生成结果会直接进入你的「我的今日开发」，每天限一轮。':''}</DialogDescription></DialogHeader><DialogBody className="space-y-4">
  {error&&<div role="alert" className="space-y-2 text-sm text-destructive"><p>{error}</p>{!config&&<Button type="button" variant="outline" onClick={retry}>重新读取方案</Button>}</div>}
  {!config&&!error&&<p role="status">正在读取搜索方案…</p>}
  {config&&choice&&profile&&<><ProfileSelect id="run-search-profile" label="本次搜索方案" value={choice.id} profiles={config.profiles} disabled={saving} onChange={id=>{const p=config.profiles.find(p=>p.id===id)!;setChoice({id,queries:p.queries.join('\n'),enrichLimit:p.enrichLimit});setError('');}}/>

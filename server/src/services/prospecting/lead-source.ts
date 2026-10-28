@@ -96,8 +96,8 @@ export async function firecrawlScrape(
     const data = await request('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key('LEAD_FIRECRAWL_API_KEY')}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, formats, onlyMainContent: false, timeout: options.html ? 60000 : 30000 }),
-    }, 3, options.html ? 120000 : 60000) as { success?: boolean; data?: { markdown?: string;rawHtml?:string; metadata?: { title?: string;ogSiteName?:string } } };
+      body: JSON.stringify({ url, formats, onlyMainContent: false, timeout: options.html ? 30000 : 15000 }),
+    }, 2, options.html ? 45000 : 20000) as { success?: boolean; data?: { markdown?: string;rawHtml?:string; metadata?: { title?: string;ogSiteName?:string } } };
     if (!data.success || (!data.data?.markdown&&!data.data?.rawHtml)) return null;
     return { markdown: (data.data!.markdown??'').slice(0,40000), title: data.data.metadata?.title,company:data.data.metadata?.ogSiteName,rawHtml:data.data.rawHtml?.slice(0,500000) };
   } catch {

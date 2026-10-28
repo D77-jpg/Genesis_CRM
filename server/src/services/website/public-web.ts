@@ -4,7 +4,7 @@ import {request as httpRequest} from 'node:http';
 import {request as httpsRequest} from 'node:https';
 
 export class WebsiteError extends Error {
- constructor(readonly code:string,message:string){super(message);this.name='WebsiteError';}
+ constructor(readonly code:string,message:string,readonly status?:number,readonly retryAfter?:string){super(message);this.name='WebsiteError';}
 }
 export function websiteUrl(raw:string):URL {
  let url:URL;try{url=new URL(/^https?:\/\//i.test(raw.trim())?raw.trim():'https://'+raw.trim());}catch{throw new WebsiteError('invalid_url','请填写完整的客户官网地址');}
@@ -25,8 +25,25 @@ export async function publicTarget(raw:string,resolver:(hostname:string,options:
 }
 export interface WebResponse {url:string;text:string;status:number;/** 归档快照时间（ISO）；实时抓取为空 */archivedAt?:string}
 export type WebsiteFetcher=(url:string,kind?:'html'|'robots'|'json')=>Promise<WebResponse>;
+// Cloudflare/WAF 常把脚本 UA 直接判成 bot（403/429），用浏览器 UA 才能读到公开页面；
+// 自定义爬虫标识不再放在 UA 里（仍遵守 robots.txt，且不执行页面脚本）。
+const BROWSER_UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+function requestHeaders(kind:'html'|'robots'|'json'):Record<string,string>{
+ const accept=kind==='robots'?'text/plain':kind==='json'?'application/json':'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8';
+ const base:{[key:string]:string}={ 'User-Agent':BROWSER_UA,Accept:accept,'Accept-Language':'en-US,en;q=0.9','Accept-Encoding':'identity' };
+ if(kind==='html')Object.assign(base,{'Upgrade-Insecure-Requests':'1','Sec-Fetch-Dest':'document','Sec-Fetch-Mode':'navigate','Sec-Fetch-Site':'none','Sec-Fetch-User':'?1'});
+ return base;
+}
+const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
+function retryDelay(error:WebsiteError,attempt:number){
+ const raw=error.retryAfter?.trim();let ms=0;
+ if(raw){if(/^\d+$/.test(raw))ms=Number(raw)*1000;else{const at=Date.parse(raw);if(Number.isFinite(at))ms=at-Date.now();}}
+ if(!Number.isFinite(ms)||ms<=0)ms=attempt===0?900:2200;
+ return Math.min(Math.max(ms,500),8000)+Math.floor(Math.random()*250);
+}
 // Resolve and pin every connection, including redirects. No cookies, auth, proxy environment or script execution.
 export const fetchWebsite:WebsiteFetcher=async(raw,kind='html')=>{
+ const fetchOnce=async()=>{
  const initial=websiteUrl(raw);let current=initial;
  const deadline=Date.now()+12000;
  for(let redirects=0;redirects<=3;redirects++){
@@ -35,12 +52,12 @@ export const fetchWebsite:WebsiteFetcher=async(raw,kind='html')=>{
   const result=await new Promise<{status:number;location?:string;text:string}>((resolve,reject)=>{
    const request=(current.protocol==='https:'?httpsRequest:httpRequest)(current,{
     family:4,agent:false,lookup:(_hostname,_options,done)=>done(null,dns.address,4),
-    headers:{'User-Agent':'GenesisCRM-Research/1.0','Accept':kind==='robots'?'text/plain':kind==='json'?'application/json':'text/html, application/xhtml+xml','Accept-Encoding':'identity'},
+    headers:requestHeaders(kind),
    },response=>{
     const status=response.statusCode??0;
     if([301,302,303,307,308].includes(status)){response.destroy();resolve({status,location:response.headers.location,text:''});return;}
     if(kind==='robots'&&status===404){response.destroy();resolve({status,text:''});return;}
-    if(status<200||status>=300){response.destroy();reject(new WebsiteError('http_error',status===403||status===429?'网站限制访问，请人工核对或稍后重试':'官网返回访问错误（'+status+'）'));return;}
+    if(status<200||status>=300){response.destroy();reject(new WebsiteError('http_error',status===403||status===429?'网站限制访问，请人工核对或稍后重试':'官网返回访问错误（'+status+'）',status,typeof response.headers['retry-after']==='string'?response.headers['retry-after']:undefined));return;}
     const mime=response.headers['content-type']??'';
     const mimeOk=kind==='robots'?/^text\/plain/i.test(mime):kind==='json'?/^(?:application\/json|text\/plain)/i.test(mime):/^(?:text\/html|application\/xhtml\+xml)/i.test(mime);
     if(!mimeOk||response.headers['content-encoding']&&!/^identity$/i.test(response.headers['content-encoding'])){response.destroy();reject(new WebsiteError('unsupported_content','网页格式或压缩方式不支持，请人工核对'));return;}
@@ -59,6 +76,16 @@ export const fetchWebsite:WebsiteFetcher=async(raw,kind='html')=>{
   current=next;
  }
  throw new WebsiteError('redirect_limit','官网跳转次数过多，请填写最终官网地址');
+ };
+ // 403/429 是 WAF/限流，不是永久失败：退避重试 2 次（robots/json 不重试，避免拖慢）。
+ for(let attempt=0;;attempt++){
+  try{return await fetchOnce();}
+  catch(error){
+   const retryable=kind==='html'&&error instanceof WebsiteError&&(error.status===403||error.status===429);
+   if(!retryable||attempt>=2)throw error;
+   await sleep(retryDelay(error as WebsiteError,attempt));
+  }
+ }
 };
 
 export function robotsAllows(path:string,text:string):boolean {

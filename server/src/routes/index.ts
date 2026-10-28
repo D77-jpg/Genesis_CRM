@@ -29,6 +29,7 @@ import {
 } from '../constants';
 import { getActiveChannel } from '../services/mailer.service';
 import { BRAND_LOGO_ROUTE, BRAND_LOGO_PNG_BASE64 } from '../constants/brand-logo';
+import { IRONHUE_LOGO_ROUTE, IRONHUE_LOGO_PNG_BASE64 } from '../constants/ironhue-logo';
 import { healthHandler, liveHandler, overviewHandler, readyHandler } from '../controllers/stats.controller';
 import { requireAuth, requireProject } from '../middleware/auth.middleware';
 
@@ -95,6 +96,11 @@ router.get(BRAND_LOGO_ROUTE, (_req, res) => {
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
   res.send(Buffer.from(BRAND_LOGO_PNG_BASE64, 'base64'));
+});
+router.get(IRONHUE_LOGO_ROUTE, (_req, res) => {
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+  res.send(Buffer.from(IRONHUE_LOGO_PNG_BASE64, 'base64'));
 });
 
 /* ---------- 需要登录的接口 ---------- */

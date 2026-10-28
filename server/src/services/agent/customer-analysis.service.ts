@@ -31,7 +31,8 @@ import { MailMessage } from '../../models/MailMessage';
 import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
 import { requireProjectId } from '../../utils/access';
-import { renderLetterContent } from '../letter-signature';
+import { renderLetterContent, type LetterSignature } from '../letter-signature';
+import { projectPromptContext, resolveProjectSalesProfile } from '../project-profile';
 import { resolveSignerName } from '../signer.service';
 import { getCustomerByIdOrThrow, updateCustomer } from '../customer.service';
 import { sendLetter } from '../letter.service';
@@ -107,9 +108,11 @@ function clipped(value: unknown, max = 3000): string {
   return String(value ?? '').trim().slice(0, max);
 }
 
-async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledgeIds?:string[], goal='', workflow?:EvidenceWorkflow, taskKind?:SalesMailKind): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[]; knowledgeBundle:KnowledgeBundle }> {
+async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledgeIds?:string[], goal='', workflow?:EvidenceWorkflow, taskKind?:SalesMailKind): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[]; knowledgeBundle:KnowledgeBundle; signature: LetterSignature }> {
   const customer = await getCustomerByIdOrThrow(customerId, actor);
   const projectId = requireProjectId(actor);
+  const project = await Project.findById(projectId).select('code slug name industry companyName website mailFrom senderName').lean();
+  const salesProfile = resolveProjectSalesProfile(project);
   const oid = new Types.ObjectId(customerId);
   const [timeline, inbound, outbound, followups] = await Promise.all([
     getCustomerTimeline(customerId, 30, actor),
@@ -146,14 +149,22 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
   const websiteSources=await websiteCustomerEvidence(customerId,actor);
   for(const item of websiteSources)add({sourceId:item.sourceId,kind:'website',recordId:item.recordId,label:item.label,occurredAt:item.occurredAt},item.content);
   await workflowStage(workflow,'read_context',{customerId,sourceCatalog},async()=>({projectId:actor.projectId,customerId,sourceCatalog}),{tool:'crm'});
-  const prepared=await prepareSalesEvidence(actor,{request:goal,history:inbound.slice().reverse().map(m=>m.text).join('\n'),productHint:[customer.interestedProducts,customer.productCategory,customer.industry,...new Set(websiteSources.map(item=>item.content.productHint))].filter(Boolean).join(' '),kind:taskKind??salesMailKind(goal),customerId,ids:knowledgeIds},workflow);
+  const websiteHint=[...new Set(websiteSources.map(item=>item.content.productHint).filter(Boolean))].join(' ');
+  const productHint=([customer.interestedProducts,customer.productCategory,customer.industry,websiteHint].filter(Boolean).join(' ').trim().slice(0,600)
+    || [project?.industry,project?.companyName,salesProfile.offerSummary].filter(Boolean).join(' ').slice(0,300));
+  const prepared=await prepareSalesEvidence(actor,{request:goal,history:inbound.slice().reverse().map(m=>m.text).join('\n'),productHint,kind:taskKind??salesMailKind(goal),customerId,ids:knowledgeIds},workflow);
   const knowledgeContext=prepared.bundle;
   const knowledge=knowledgeContext.sources;
   // The catalog repeats every source for citation lookup; provenance diagnostics
   // (per-chunk refs, ranking indexes) are not facts and doubled the model input.
-  for(const item of knowledge)add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},knowledgeSourceForModel(item) as unknown as Record<string,unknown>);
+  for(const item of knowledge){
+    // sourceCatalog is a citation index; sending the full publication twice
+    // (once in knowledgeContext, once here) can push large projects over the model input limit.
+    const modelKnowledge=knowledgeSourceForModel(item) as unknown as Record<string,unknown>;
+    add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...modelKnowledge,content:clipped(modelKnowledge.content,300)});
+  }
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
-  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext) }, sources, knowledgeBundle:knowledgeForAudit(knowledgeContext) };
+  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext),projectProfile:projectPromptContext(salesProfile) }, sources, knowledgeBundle:knowledgeForAudit(knowledgeContext), signature:salesProfile.signature };
 }
 
 const outputSchema = z.object({
@@ -242,7 +253,8 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       customerWebsites:context.input.sourceCatalog.filter(s=>s.kind==='website').map(s=>{const c=s.content as {url:string;text:string;sha256:string;collectedAt:string};return {sourceId:s.sourceId,url:c.url,text:c.text,sha256:c.sha256,collectedAt:c.collectedAt};}),
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
       seller:context.input.seller,
-    },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check),actor),{cache:true,tool:'model'});
+      signature:context.signature,
+    },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check,context.input.projectProfile),actor),{cache:true,tool:'model'});
     await options?.workflow?.check();
     await assertSalesEvidenceCurrent(context.knowledgeBundle,actor,input.customerId);
     if(research.state!=='ready'){grounded.review.issues.push({code:'customer_research_gap',message:research.message});grounded.review.completeness='partial';}
@@ -359,7 +371,9 @@ export async function saveAnalysisEmailDraft(id: string, input: ConfirmAgentAnal
   try {
     const owner = await Customer.findById(locked.customerId).select('ownerId').lean();
     const signer = await resolveSignerName({ projectId: requireProjectId(actor), ownerId: owner?.ownerId, actorId: actor.id });
-    const content = renderLetterContent(locked.emailDraft.bodyText, signer);
+    const project = await Project.findById(requireProjectId(actor)).select('code slug name companyName industry website mailFrom senderName').lean();
+    const signature = resolveProjectSalesProfile(project).signature;
+    const content = renderLetterContent(locked.emailDraft.bodyText, signer, signature, true);
     const result = await sendLetter({
       customerId: String(locked.customerId), subject: locked.emailDraft.subject, content, markAsDeveloped: false,
       saveAsDraft: true, requestKey: `agent-analysis-email:${locked.id}`,

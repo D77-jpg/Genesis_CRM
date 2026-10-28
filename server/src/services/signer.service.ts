@@ -5,8 +5,8 @@
  * 也不能出现「Genesis Admin / Sales Team」这种对客户无意义的落款。
  *
  * 解析顺序（逐个尝试，命中即返回）：
- *   1. 客户负责人（ownerId）的个人发件邮箱显示名 → 登录账号姓名 → 登录名
- *   2. 当前操作账号（actorId）的个人发件邮箱显示名 → 登录账号姓名 → 登录名
+ *   1. 当前操作账号（actorId）的个人发件邮箱显示名 → 登录账号姓名 → 登录名
+ *   2. 客户负责人（ownerId）的个人发件邮箱显示名 → 登录账号姓名 → 登录名
  *   3. 项目「发件人署名」→ 环境变量 SENDER_NAME
  *
  * 说明：邮箱显示名优先，因为它就是客户在收件箱里看到的名字；账号姓名其次；
@@ -19,9 +19,9 @@ import { signatureName } from './letter-signature';
 
 export interface SignerQuery {
   projectId?: Types.ObjectId | string | null;
-  /** 客户负责人：这封信「应该由谁发」 */
+  /** 客户负责人：当前操作账号无法解析时的兜底 */
   ownerId?: Types.ObjectId | string | null;
-  /** 当前操作账号：没有负责人时的兜底（也是实际点发送的人） */
+  /** 当前操作账号：实际登录并点发送的人，署名优先取他 */
   actorId?: string | null;
 }
 
@@ -48,7 +48,8 @@ async function nameForUser(userId: string, projectId?: Types.ObjectId | string |
 
 /** 解析开发信/邮件结尾第一行的署名 */
 export async function resolveSignerName(query: SignerQuery): Promise<string> {
-  const candidates = [query.ownerId, query.actorId]
+  // 以当前登录并实际点发送的人为准；负责人只作为无人值守/后台任务的兜底。
+  const candidates = [query.actorId, query.ownerId]
     .map((value) => (value ? String(value) : ''))
     .filter(Boolean);
 

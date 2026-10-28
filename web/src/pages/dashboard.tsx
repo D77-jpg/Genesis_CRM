@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { ChevronDown, RefreshCw, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, RefreshCw, Target, Users } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
 import { ErrorState, InlineLoader } from '@/components/common/empty-state';
 import { SalesFunnel } from '@/components/dashboard/sales-funnel';
@@ -11,7 +12,7 @@ import { useOverviewStats } from '@/hooks/use-queries';
 import { usePageTitle } from '@/hooks/use-ui';
 import { useMetaStore } from '@/store/meta.store';
 import { useProjectStore } from '@/store/project.store';
-import { MAIL_CHANNEL_LABEL } from '@/constants';
+import { MAIL_CHANNEL_LABEL, ROUTES } from '@/constants';
 import { cn } from '@/lib/utils';
 import '@/components/dashboard/dashboard.css';
 
@@ -128,6 +129,9 @@ export function DashboardPage(): React.JSX.Element {
         actions={<>
           <Button variant="ghost" size="sm" onClick={() => void run()} loading={loading}>
             {!loading ? <RefreshCw className="h-3.5 w-3.5" aria-hidden /> : null}刷新
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={ROUTES.prospecting}><Target className="h-4 w-4" aria-hidden />今日开发</Link>
           </Button>
           <Button size="sm" onClick={() => openCustomers()}><Users className="h-4 w-4" aria-hidden />客户管理</Button>
         </>}

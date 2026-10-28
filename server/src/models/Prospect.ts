@@ -32,6 +32,8 @@ export interface IProspect extends LeadContact {
   aiScore?: number;
   scoreReasons: string[];
   status: ProspectStatus;
+  /** 领取/负责这条线索的业务员；空 = 公共池 */
+  ownerId?: Types.ObjectId;
   customerId?: Types.ObjectId;
   convertedBy?: Types.ObjectId;
   draftTaskId?: Types.ObjectId;
@@ -75,6 +77,7 @@ const ProspectSchema = new Schema<IProspect>({
   aiScore: { type: Number },
   scoreReasons: { type: [String], default: [] },
   status: { type: String, enum: ['ready', 'low', 'needs_contact', 'rejected', 'converted'], default: 'ready', index: true },
+  ownerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer' },
   convertedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   draftTaskId: { type: Schema.Types.ObjectId, ref: 'AgentTask' },
@@ -84,5 +87,6 @@ const ProspectSchema = new Schema<IProspect>({
 
 ProspectSchema.index({ projectId: 1, domain: 1 }, { unique: true });
 ProspectSchema.index({ projectId: 1, day: 1, status: 1, score: -1 });
+ProspectSchema.index({ projectId: 1, ownerId: 1, status: 1, score: -1 });
 
 export const Prospect = model<IProspect, ProspectModel>('Prospect', ProspectSchema);

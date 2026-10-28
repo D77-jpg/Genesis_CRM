@@ -1,5 +1,6 @@
 import type {SalesRequirements,SalesMailKind} from './sales-evidence';
 import type {KnowledgeBundle} from './knowledge-types';
+import type {ProjectPromptContext} from '../project-profile';
 import type {
   AgentContextType,
   AgentCustomerPreviewFields,
@@ -50,6 +51,7 @@ export interface CustomerAnalysisInput {
   taskType?:SalesMailKind;userRequest?:string;salesRequirements?:SalesRequirements;
   knowledgeContext?: KnowledgeBundle;
   firstOutreach?: boolean;
+  projectProfile?: ProjectPromptContext;
   seller?: { companyName: string; website?: string; moq?: string; senderName: string; senderEmail?: string };
   customerName: string;
   customerEmail?: string;
@@ -113,6 +115,7 @@ export interface FollowUpDraftInput {
   /** 上一封开发信 */
   previous: { subject: string; sentAt: string; excerpt: string };
   seller: { companyName: string; senderName: string };
+  projectProfile?: ProjectPromptContext;
   /** 允许在跟进信里提到的事实（为空时只能做不含新事实的礼貌跟进） */
   allowedFacts: string[];
 }

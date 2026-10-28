@@ -11,9 +11,10 @@ import { customerTextPatch } from '@/lib/customer-payload';
 import * as React from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { apiGet, toErrorMessage } from '@/lib/api';
+import { apiGet, apiPost, toErrorMessage } from '@/lib/api';
 import { outreachComposerDraft } from '@/lib/outreach-composer';
 import type { AgentCustomerAnalysis } from '@/types';
+import type { AgentTask } from '@/components/agent/agent-tasks';
 import {
   Activity,
   BadgeDollarSign,
@@ -42,6 +43,7 @@ import {
   Pencil,
   Phone,
   Send,
+  Sparkles,
   Star,
   Tag,
   Tags,
@@ -277,6 +279,7 @@ export function CustomerDetailPage(): React.JSX.Element {
   /* ---------------------------- 弹窗状态 ---------------------------- */
 
   const [sendOpen, setSendOpen] = React.useState(false);
+  const [quickGenerating, setQuickGenerating] = React.useState(false);
   const [composeDraft, setComposeDraft] = React.useState<{ analysisId: string; subject: string; content: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const composeAnalysisId = searchParams.get('composeAnalysis');
@@ -342,6 +345,46 @@ export function CustomerDetailPage(): React.JSX.Element {
     refreshDrafts();
     await Promise.all([reloadCustomer(), reloadLetters()]);
   }, [reloadCustomer, reloadLetters, refreshDrafts]);
+
+  /** 客户详情页的一键首封：后台准备草稿，完成后直接打开审核 */
+  const quickGenerate = React.useCallback(async () => {
+    if (!customer || quickGenerating) return;
+    setQuickGenerating(true);
+    const requestKey = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    try {
+      const task = await apiPost<AgentTask>(`/agent/customers/${customer.id}/outreach-task`, { requestKey });
+      toast.info('已开始生成首封开发信', { description: '完成后会自动打开草稿供你审核' });
+      let current = task;
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 2000));
+        current = await apiGet<AgentTask>(`/agent/tasks/${task.id}`);
+        const draftId = current.draftId ?? current.staleDraftId;
+        if (current.status === 'awaiting_review' && draftId) {
+          if (!current.draftId && current.staleDraftId) {
+            toast.warning('草稿基于较早资料生成', { description: '发送前请重新核对依据' });
+          }
+          const letter = await apiGet<DevelopmentLetter>(`/letters/${draftId}`);
+          setViewTarget(letter);
+          setViewOpen(true);
+          refreshDrafts();
+          await reloadLetters();
+          toast.success('首封开发信草稿已生成', { description: '已保存为草稿，尚未发送' });
+          return;
+        }
+        if (current.status === 'failed' || current.status === 'cancelled') {
+          throw new Error(current.error?.message || '任务没有完成，请稍后重试');
+        }
+        if (current.status === 'waiting_input') {
+          throw new Error(current.error?.message || '任务需要补充资料，请到销售助手中查看');
+        }
+      }
+      throw new Error('生成时间较长，请到销售助手的任务中查看');
+    } catch (cause) {
+      toast.error('首封开发信生成失败', { description: toErrorMessage(cause, '请稍后重试') });
+    } finally {
+      setQuickGenerating(false);
+    }
+  }, [customer, quickGenerating, refreshDrafts, reloadLetters]);
 
   // 发信结果里带了最新的 customer，可先局部更新列表缓存，返回时不闪烁
   const handleSent = React.useCallback(
@@ -566,6 +609,16 @@ export function CustomerDetailPage(): React.JSX.Element {
         }
         actions={
           <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={quickGenerating}
+              onClick={() => void quickGenerate()}
+            >
+              {quickGenerating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+              {quickGenerating ? '生成中…' : '快捷生成首封'}
+            </Button>
             <Button
               type="button"
               variant="outline"

@@ -34,6 +34,6 @@ export async function customerBrief(customerId:string,actor:AuthUser){
  lines.push('','**可考虑的开发方向（建议，需向客户确认）**');
  const angles=report?.report?.angles??[];for(const angle of angles.slice(0,2))lines.push(`- ${literal(angle.title)}：${literal(angle.advice,600)}`);
  if(!angles.length)lines.push('- 先核对经营范围与具体需求，再选择本项目有依据的产品介绍；不猜测客户痛点。');
- lines.push('- 只选择一个相关切入点和一个简短下一步；已经有包装，不等于需要更换。','', '**还不知道什么**',`- ${[!customer.expectedQuantity?'采购数量':null,!customer.targetPrice?'预算':null,'采购时间','实际负责人','复购频次','供应商情况'].filter(Boolean).join('、')}尚未在本次简报核实；档案已有的需求见上方，不重复当成缺失。`,'- 批发或经销页面是销售线索，不代表客户正在采购我方产品；公开创始人身份不代表采购职责或团队规模。','- 我方具体产品、价格、MOQ、交期和认证应在准备邮件时，另按当前项目有效已发布资料核对。','','本次仅整理分析，没有新增客户、草稿、跟进或发送邮件。');
+ lines.push('- 只选择一个相关切入点和一个简短下一步；客户现有的产品/服务不等于已有采购需求，不要虚构痛点。','', '**还不知道什么**',`- ${[!customer.expectedQuantity?'采购数量':null,!customer.targetPrice?'预算':null,'采购时间','实际负责人','复购频次','供应商情况'].filter(Boolean).join('、')}尚未在本次简报核实；档案已有的需求见上方，不重复当成缺失。`,'- 批发或经销页面是销售线索，不代表客户正在采购我方产品；公开创始人身份不代表采购职责或团队规模。','- 我方具体产品、价格、MOQ、交期和认证应在准备邮件时，另按当前项目有效已发布资料核对。','','本次仅整理分析，没有新增客户、草稿、跟进或发送邮件。');
  return lines.join('\n');
 }

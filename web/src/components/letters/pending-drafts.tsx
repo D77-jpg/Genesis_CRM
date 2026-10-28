@@ -4,19 +4,21 @@ import { Badge } from '@/components/ui/badge';
 import { formatRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { PendingDraftFeed } from '@/hooks/use-pending-drafts';
-import type { DevelopmentLetter, LetterReview } from '@/types';
+import type { DevelopmentLetter } from '@/types';
 
-/** 列表里的审核状态：未审核 / 已通过 / 不通过，与弹窗内口径一致 */
-function reviewView(review?: LetterReview): { label: string; variant: 'pending' | 'developed' | 'failed' } {
-  if (review?.decision === 'approved') return { label: '审核已通过', variant: 'developed' };
-  if (review?.decision === 'rejected') return { label: '不通过', variant: 'failed' };
+/** 列表里的审核状态：未审核 / 已通过 / 不通过，与弹窗内口径一致；硬拦截优先于审核结论 */
+function reviewView(letter: DevelopmentLetter): { label: string; variant: 'pending' | 'developed' | 'failed' } {
+  if (letter.sendBlocker) return { label: '不可发送', variant: 'failed' };
+  if (letter.review?.decision === 'approved') return { label: '审核已通过', variant: 'developed' };
+  if (letter.review?.decision === 'rejected') return { label: '不通过', variant: 'failed' };
   return { label: '待审核', variant: 'pending' };
 }
 
 /** 行内按钮：已通过只需查看，不通过给一次重新审核的机会 */
-function actionLabel(review?: LetterReview): string {
-  if (review?.decision === 'approved') return '查看草稿';
-  if (review?.decision === 'rejected') return '重新审核';
+function actionLabel(letter: DevelopmentLetter): string {
+  if (letter.sendBlocker) return '查看原因';
+  if (letter.review?.decision === 'approved') return '查看草稿';
+  if (letter.review?.decision === 'rejected') return '重新审核';
   return '审核草稿';
 }
 
@@ -100,8 +102,8 @@ export function PendingDrafts({
 
       <ul className="mt-3 divide-y">
         {feed.items.map((letter) => {
-          const status = reviewView(letter.review);
-          const label = actionLabel(letter.review);
+          const status = reviewView(letter);
+          const label = actionLabel(letter);
           return (
             <li key={letter.id} className="flex min-w-0 flex-col gap-3 py-4 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">

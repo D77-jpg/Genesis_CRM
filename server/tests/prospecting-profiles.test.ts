@@ -6,7 +6,7 @@ import {extractSiteContact} from '../src/services/prospecting/lead-contact';
 import {enrichLead,type RawLead} from '../src/services/prospecting/lead-source';
 import {mapHunterResponse} from '../src/services/prospecting/hunter';
 import {prospectCustomerInput} from '../src/services/prospecting/prospect-customer';
-import {getProspectingConfig,updateProspectingConfig,startProspecting,approveProspect,prospectingToday,syncProspectCustomer,refreshProspectContact} from '../src/services/prospecting/prospecting.service';
+import {getProspectingConfig,updateProspectingConfig,startProspecting,approveProspect,claimProspect,releaseProspect,prospectingToday,syncProspectCustomer,refreshProspectContact} from '../src/services/prospecting/prospecting.service';
 import {ProspectingConfig} from '../src/models/ProspectingConfig';
 import {ProspectingRun} from '../src/models/ProspectingRun';
 import {Prospect} from '../src/models/Prospect';
@@ -99,6 +99,77 @@ test('a chosen run snapshots settings and does not overwrite defaults even if co
  }finally{release();globalThis.fetch=actualFetch;delete process.env.LEAD_SERPER_API_KEY;delete process.env.LEAD_FIRECRAWL_API_KEY;}
 });
 
+
+test('a salesperson can start a search once a day and generated leads go to their personal pool',async()=>{
+ const {User}=await import('../src/models');
+ const sales=await User.create({username:'search-owner-fixture',displayName:'Search Owner',passwordHash:'not-a-login-password',role:'user',projectIds:[actor.projectId],defaultProjectId:actor.projectId});
+ const salesActor:AuthUser={id:sales.id,username:sales.username,displayName:sales.displayName,role:'user',projectId:actor.projectId};
+ const salesLead={...lead,domain:'sales-run.test',website:'https://sales-run.test/'};
+ const actualFetch=globalThis.fetch;
+ process.env.LEAD_SERPER_API_KEY='fictional-key';process.env.LEAD_FIRECRAWL_API_KEY='fictional-key';
+ globalThis.fetch=async(input,init)=>{
+  const url=String(input);
+  if(url==='https://google.serper.dev/search')return new Response(JSON.stringify({organic:[{title:'Fictional Search Lead',link:salesLead.website,snippet:'Fictional handmade jewelry shop'}]}));
+  if(url==='https://api.firecrawl.dev/v1/scrape'){
+   const payload=JSON.parse(String(init?.body));
+   return new Response(JSON.stringify({success:true,data:{markdown:payload.url===salesLead.website?'hello@sales-run.test [Contact](/contact) [About](/about)':'Explicit contact details.',rawHtml:structured.replaceAll('buyer.test','sales-run.test')}}));
+  }
+  throw Error('Unexpected network request '+url);
+ };
+ try{
+  const run=await startProspecting(salesActor,{profileId:'a',queries:['sales-run fictional query'],enrichLimit:1});
+  let complete=await ProspectingRun.findById(run.id);const until=Date.now()+10000;
+  while(complete?.status==='running'&&Date.now()<until){await new Promise(resolve=>setTimeout(resolve,20));complete=await ProspectingRun.findById(run.id);}
+  assert.equal(complete?.status,'completed');
+  const stored=await Prospect.findOne({projectId:actor.projectId,domain:salesLead.domain}).lean();
+  assert.equal(String(stored?.ownerId),String(sales._id));
+  const mine=await prospectingToday(salesActor,{scope:'mine'});
+  assert.ok(mine.prospects.some(p=>p.id===String(stored?._id)));
+  await assert.rejects(()=>startProspecting(salesActor,{profileId:'a',queries:['second run'],enrichLimit:1}),/今天已经生成过一轮/);
+ }finally{globalThis.fetch=actualFetch;delete process.env.LEAD_SERPER_API_KEY;delete process.env.LEAD_FIRECRAWL_API_KEY;}
+});
+
+test('salesperson scopes are disjoint and claiming/converting assigns the salesperson as owner',async()=>{
+ const {User,Customer}=await import('../src/models');
+ const sales=await User.create({username:'prospect-sales-a',displayName:'Sales A',passwordHash:'not-a-login-password',role:'user',projectIds:[actor.projectId],defaultProjectId:actor.projectId});
+ const other=await User.create({username:'prospect-sales-b',displayName:'Sales B',passwordHash:'not-a-login-password',role:'user',projectIds:[actor.projectId],defaultProjectId:actor.projectId});
+ const salesActor:AuthUser={id:sales.id,username:sales.username,displayName:sales.displayName,role:'user',projectId:actor.projectId};
+ const day='2026-10-28';
+ const shared=await Prospect.create({projectId:actor.projectId,day,domain:'shared-owner.test',website:'https://shared-owner.test',emails:['a@shared-owner.test'],status:'ready',score:80});
+ const mine=await Prospect.create({projectId:actor.projectId,day,domain:'mine-owner.test',website:'https://mine-owner.test',emails:['b@mine-owner.test'],status:'ready',score:80,ownerId:sales._id});
+ const foreign=await Prospect.create({projectId:actor.projectId,day,domain:'foreign-owner.test',website:'https://foreign-owner.test',emails:['c@foreign-owner.test'],status:'ready',score:80,ownerId:other._id});
+
+ const sharedView=await prospectingToday(salesActor,{scope:'shared'});
+ assert.ok(sharedView.prospects.some(p=>p.id===String(shared._id)));
+ assert.ok(!sharedView.prospects.some(p=>p.id===String(mine._id)));
+ assert.ok(!sharedView.prospects.some(p=>p.id===String(foreign._id)));
+ const mineView=await prospectingToday(salesActor,{scope:'mine'});
+ assert.ok(mineView.prospects.some(p=>p.id===String(mine._id)));
+ assert.ok(!mineView.prospects.some(p=>p.id===String(shared._id)));
+ assert.equal(sharedView.scopeTotals?.shared,1);assert.equal(mineView.scopeTotals?.mine,1);
+
+ await assert.rejects(()=>claimProspect(salesActor,foreign.id),/其他业务员领取/);
+ const claimed=await claimProspect(salesActor,shared.id);
+ assert.equal(claimed.ownerId,String(sales._id));
+ const afterClaim=await prospectingToday(salesActor,{scope:'shared'});
+ assert.ok(!afterClaim.prospects.some(p=>p.id===String(shared._id)));
+ const released=await releaseProspect(salesActor,shared.id);
+ assert.equal(released.ownerId,undefined);
+ assert.ok((await prospectingToday(salesActor,{scope:'shared'})).prospects.some(p=>p.id===String(shared._id)));
+ await claimProspect(salesActor,shared.id);
+ const converted=await approveProspect(salesActor,shared.id);
+ const customer=await Customer.findById(converted.customer.id).lean();
+ assert.equal(String(customer?.ownerId),String(sales._id));
+ const stored=await Prospect.findById(shared._id).lean();
+ assert.equal(String(stored?.ownerId),String(sales._id));
+ assert.equal(String(stored?.convertedBy),String(sales._id));
+
+ // 管理员从团队视图代转：客户负责人保持原业务员，不会被改成管理员
+ const teamLead=await Prospect.create({projectId:actor.projectId,day,domain:'team-convert.test',website:'https://team-convert.test',emails:['d@team-convert.test'],status:'ready',score:80,ownerId:other._id});
+ const teamConverted=await approveProspect(actor,teamLead.id);
+ const teamCustomer=await Customer.findById(teamConverted.customer.id).lean();
+ assert.equal(String(teamCustomer?.ownerId),String(other._id));
+});
 
 test('legacy website re-acquisition is explicit, capped, permission-scoped and fills only missing customer data',async()=>{
  const actualFetch=globalThis.fetch,stored=await Prospect.findOne({projectId:actor.projectId,domain:lead.domain});assert.ok(stored?.customerId);

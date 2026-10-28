@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {ProspectingSettingsDialog,ProspectingRunDialog} from '@/components/prospecting/search-profile-dialogs';
 import {
-  AtSign, Check, ExternalLink, FileSpreadsheet, Instagram, Linkedin, Loader2, Play, RefreshCw, Settings2, Sparkles, Target, Wand2, X,
+  AtSign, Check, ExternalLink, FileSpreadsheet, Instagram, Linkedin, Loader2, Play, RefreshCw, Settings2, Sparkles, Target, UserMinus, UserPlus, Wand2, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/page-header';
@@ -37,13 +37,16 @@ function scoreClass(score: number) {
   return 'bg-muted text-muted-foreground';
 }
 
-function ProspectCard({ prospect, today, busy, onApprove, onReject,onSync,onRefresh,selectable,selected,onToggle }: {
+function ProspectCard({ prospect, today, busy, onApprove, onReject, onClaim, onRelease, onSync,onRefresh,selectable,selected,onToggle }: {
   prospect: Prospect; today: string; busy: boolean;
-  onApprove: (id: string) => void; onReject: (id: string) => void;onSync?:(id:string)=>void;onRefresh?:(id:string)=>void;
+  onApprove: (id: string) => void; onReject: (id: string) => void; onClaim?: (id: string) => void; onRelease?: (id: string) => void;
+  onSync?:(id:string)=>void;onRefresh?:(id:string)=>void;
   /** 可批量转换的候选才显示勾选框 */
   selectable?: boolean; selected?: boolean; onToggle?: (id: string) => void;
 }) {
+  const currentUser = useAuthStore((state) => state.user);
   const converted = prospect.status === 'converted';
+  const mine = Boolean(prospect.ownerId && prospect.ownerId === currentUser?.id);
   return (
     <div className={cn('rounded-2xl border border-border/80 bg-card shadow-card p-4', selected && 'border-primary/50 ring-1 ring-primary/20')}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -71,6 +74,12 @@ function ProspectCard({ prospect, today, busy, onApprove, onReject,onSync,onRefr
               )}
               {prospect.source === 'excel' ? <Badge variant="muted" title="从 Excel 导入，没有抓取到的网站资料">Excel 导入</Badge> : null}
               <Badge variant={converted ? 'developed' : prospect.status === 'ready' ? 'default' : 'outline'}>{STATUS_LABEL[prospect.status]}</Badge>
+              <Badge
+                variant={mine ? 'outline' : 'muted'}
+                title={prospect.ownerName ? `负责人：${prospect.ownerName}` : prospect.ownerId ? '已被其他业务员领取' : '公共池线索，可领取或直接转化'}
+              >
+                {mine ? '我的' : prospect.ownerId ? (prospect.ownerName || '同事跟进') : '公共池'}
+              </Badge>
               {prospect.aiScore !== undefined ? <Badge variant="outline" title="AI 按客户画像评分">AI {prospect.aiScore}</Badge> : null}
               {prospect.outcome && prospect.outcome.replied > 0 ? <Badge variant="developed">已回复</Badge> : null}
               {prospect.day !== today ? <Badge variant="muted" title="之前没处理完的候选">{prospect.day.slice(5)}</Badge> : null}
@@ -101,7 +110,22 @@ function ProspectCard({ prospect, today, busy, onApprove, onReject,onSync,onRefr
             </>
           ) : (
             <>
-              <Button size="sm" disabled={busy || !prospect.emails.length} title={prospect.emails.length ? '' : '没有邮箱，先补联系方式'} onClick={() => onApprove(prospect.id)}>
+              {onClaim && !prospect.ownerId ? (
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => onClaim(prospect.id)}>
+                  <UserPlus className="h-4 w-4" aria-hidden />领取
+                </Button>
+              ) : null}
+              {onRelease && prospect.ownerId ? (
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => onRelease(prospect.id)} title="放回公共池，其他业务员可领取">
+                  <UserMinus className="h-4 w-4" aria-hidden />放回
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                disabled={busy || !prospect.emails.length}
+                title={!prospect.emails.length ? '没有邮箱，先补联系方式' : !prospect.ownerId ? '领取到我的今日开发并转为客户，负责人会是你' : ''}
+                onClick={() => onApprove(prospect.id)}
+              >
                 <Check className="h-4 w-4" aria-hidden />转为客户
               </Button>
               <Button size="sm" variant="outline" disabled={busy} onClick={() => onReject(prospect.id)}>
@@ -156,28 +180,37 @@ export function ProspectingPage(): React.JSX.Element {
   const [enrichOpen, setEnrichOpen] = React.useState(false);
   /** 线索池筛选：池子上千条时不可能一次全渲染 */
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'ready' | 'needs_contact' | 'low'>('all');
+  /** 我的 / 公共池 / 团队（管理员）；三个范围互斥，不会同一条重复出现 */
+  const [scope, setScope] = React.useState<'mine' | 'shared' | 'team'>(isAdmin ? 'shared' : 'mine');
+  /** 业务员第一次进来如果个人库是空的，自动带他去公共池，避免只看到 0 不知道从哪开始 */
+  const openedSharedForEmptyMine = React.useRef(false);
   const load = React.useCallback(
     async (options: { offset?: number; append?: boolean } = {}) => {
       try {
         const offset = options.offset ?? 0;
-        const query = `/prospecting/today?status=${statusFilter}${offset > 0 ? `&offset=${offset}` : ''}`;
+        const query = `/prospecting/today?scope=${scope}&status=${statusFilter}${offset > 0 ? `&offset=${offset}` : ''}`;
         const [today, summary] = await Promise.all([
           apiGet<ProspectingToday>(query),
-          apiGet<ProspectingReport>('/prospecting/report?days=14').catch(() => null),
+          isAdmin ? apiGet<ProspectingReport>('/prospecting/report?days=14').catch(() => null) : Promise.resolve(null),
         ]);
         setData((previous) =>
           options.append && previous
             ? { ...today, prospects: [...previous.prospects, ...today.prospects] }
             : today,
         );
-        if (summary) setReport(summary);
+        if (!isAdmin && !options.append && !openedSharedForEmptyMine.current
+          && today.scope === 'mine' && (today.scopeTotals?.mine ?? 0) === 0 && (today.scopeTotals?.shared ?? 0) > 0) {
+          openedSharedForEmptyMine.current = true;
+          setScope('shared');
+        }
+        setReport(summary);
       } catch (error) {
         toast.error('加载失败', { description: toErrorMessage(error, '请稍后重试') });
       } finally {
         setLoading(false);
       }
     },
-    [statusFilter],
+    [scope, statusFilter, isAdmin],
   );
 
   React.useEffect(() => { void load(); }, [load]);
@@ -193,11 +226,14 @@ export function ProspectingPage(): React.JSX.Element {
   const approve = async (id: string) => {
     setBusy(id);
     try {
-      const result = await apiPost<{ customer: { id: string; name: string }; draftTaskId?: string; draftError?: string; duplicates?: { id: string; name: string; reason: string }[] }>(`/prospecting/${id}/approve`, {});
+      const result = await apiPost<{ customer: { id: string; name: string; owner?: { name?: string } }; draftTaskId?: string; draftError?: string; duplicates?: { id: string; name: string; reason: string }[] }>(`/prospecting/${id}/approve`, {});
       toast.success('已转为正式客户', {
-        description: result.draftError
-          ? `草稿任务未创建：${result.draftError}`
-          : result.draftTaskId ? '首封草稿正在后台生成，完成后在“查看草稿”里审核' : (result.customer?.name ?? '可在客户管理里继续写开发信'),
+        description: [
+          `负责人：${result.customer?.owner?.name || (scope === 'team' ? '原业务员' : '你')}`,
+          result.draftError
+            ? `草稿任务未创建：${result.draftError}`
+            : result.draftTaskId ? '首封草稿正在后台生成，完成后在“查看草稿”里审核' : (result.customer?.name ?? '可在客户管理里继续写开发信'),
+        ].join('；'),
       });
       // 库里已有同公司名 / 同电话的客户：提醒核对，避免一条线索变两条记录
       if (result.duplicates?.length) {
@@ -209,6 +245,31 @@ export function ProspectingPage(): React.JSX.Element {
       await load();
     } catch (error) {
       toast.error('转换失败', { description: toErrorMessage(error, '请稍后重试') });
+    } finally { setBusy(null); }
+  };
+
+  const claim = async (id: string) => {
+    setBusy(id);
+    try {
+      await apiPost(`/prospecting/${id}/claim`, {});
+      toast.success('已领取到「我的今日开发」', { description: '这条线索已归你负责，其他业务员不会在公共池再看到。' });
+      setSelected((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      if (scope === 'mine') await load(); else setScope('mine');
+    } catch (error) {
+      toast.error('领取失败', { description: toErrorMessage(error, '可能已被其他业务员领取，请刷新') });
+      await load();
+    } finally { setBusy(null); }
+  };
+
+  const release = async (id: string) => {
+    setBusy(id);
+    try {
+      await apiPost(`/prospecting/${id}/release`, {});
+      toast.success('已放回公共池', { description: '其他业务员现在可以领取这条线索。' });
+      setSelected((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      await load();
+    } catch (error) {
+      toast.error('放回失败', { description: toErrorMessage(error, '请刷新后重试') });
     } finally { setBusy(null); }
   };
 
@@ -230,6 +291,8 @@ export function ProspectingPage(): React.JSX.Element {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   /** 本次确认框要转换的候选 */
   const [pendingTargets, setPendingTargets] = React.useState<Prospect[]>([]);
+
+  React.useEffect(() => { setSelected(new Set()); }, [scope, statusFilter]);
 
   const isConvertible = React.useCallback(
     (item: Prospect) => item.status !== 'converted' && item.emails.length > 0,
@@ -304,18 +367,22 @@ export function ProspectingPage(): React.JSX.Element {
     <div className="workspace-page">
       <PageHeader
         title="今日开发"
-        description="按客户画像搜索候选品牌，也可以导入自己的 Excel 名单；补全联系方式、审核后转为正式客户，再写开发信。"
-        actions={isAdmin ? (
+        description="自己的线索和公共池分开管理：可以自己搜索候选或导入 Excel；领取或转化后归你负责，公共池不会再重复出现。"
+        actions={
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => setImportOpen(true)}><FileSpreadsheet className="h-4 w-4" aria-hidden />导入线索</Button>
-            <Button type="button" variant="outline" onClick={() => setEnrichOpen(true)}><Wand2 className="h-4 w-4" aria-hidden />批量补全</Button>
-            <Button type="button" variant="outline" onClick={() => void openConfig()}><Settings2 className="h-4 w-4" aria-hidden />搜索设置</Button>
+            {isAdmin ? (
+              <>
+                <Button type="button" variant="outline" onClick={() => setEnrichOpen(true)}><Wand2 className="h-4 w-4" aria-hidden />批量补全</Button>
+                <Button type="button" variant="outline" onClick={() => void openConfig()}><Settings2 className="h-4 w-4" aria-hidden />搜索设置</Button>
+              </>
+            ) : null}
             <Button type="button" onClick={() => void openRun()} disabled={run?.status === 'running'}>
               {run?.status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
               {run?.status === 'running' ? '生成中…' : '立即生成今日候选'}
             </Button>
           </div>
-        ) : undefined}
+        }
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -343,9 +410,42 @@ export function ProspectingPage(): React.JSX.Element {
           <span>本轮{run.profileName?'（'+run.profileName+'）':''}：搜索到 {run.imported} 个域名，去重后 {run.deduped} 个，补全 {run.enriched} 个，Hunter 补到 {run.hunterFound} 个邮箱，入选 {run.selected} 个</span>
           {run.failed.length ? <span className="text-xs text-muted-foreground">{run.failed.length} 条失败</span> : null}
           {run.error ? <span>{run.error}</span> : null}
-          <Button type="button" size="sm" variant="ghost" className="ml-auto" onClick={() => void load()}><RefreshCw className="h-3.5 w-3.5" aria-hidden />刷新</Button>
+          {run.status === 'failed' ? <span className="text-xs">本轮没有保存候选，请重新生成。</span> : null}
+          <div className="ml-auto flex items-center gap-1">
+            <Button type="button" size="sm" variant="ghost" onClick={() => void load()}><RefreshCw className="h-3.5 w-3.5" aria-hidden />刷新</Button>
+            {run.status === 'failed' ? (
+              <Button type="button" size="sm" variant="outline" onClick={openRun}><Play className="h-3.5 w-3.5" aria-hidden />重新生成</Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {([
+          { key: 'mine' as const, label: '我的今日开发', count: data?.scopeTotals?.mine ?? 0 },
+          { key: 'shared' as const, label: '公共池', count: data?.scopeTotals?.shared ?? 0 },
+          ...(isAdmin ? [{ key: 'team' as const, label: '团队', count: data?.scopeTotals?.team ?? 0 }] : []),
+        ]).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            aria-pressed={scope === tab.key}
+            onClick={() => { setScope(tab.key); setStatusFilter('all'); }}
+            className={cn(
+              'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+              scope === tab.key
+                ? 'border-primary/60 bg-primary text-primary-foreground'
+                : 'border-border bg-card text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {tab.label}
+            <span className="ml-1 tabular-nums">{tab.count}</span>
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-muted-foreground">
+          {scope === 'mine' ? '只显示你搜索生成、领取或导入的线索；不会和公共池重复。' : scope === 'shared' ? '未领取的共用线索；领取或转化后归你负责。' : '其他业务员名下的线索；由管理员查看。'}
+        </span>
+      </div>
 
       {(() => {
         const totalOpen = (data?.counts.ready ?? 0) + (data?.counts.needsContact ?? 0) + (data?.counts.low ?? 0);
@@ -387,8 +487,29 @@ export function ProspectingPage(): React.JSX.Element {
       {!loading && !data?.prospects.length ? (
         <div className="rounded-2xl border border-border/80 bg-card shadow-card p-8 text-center">
           <Target className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
-          <p className="mt-2 font-medium">今天还没有候选</p>
-          <p className="mt-1 text-sm text-muted-foreground">{isAdmin ? '点右上角「立即生成今日候选」按客户画像跑一轮，或者「导入线索」把手里已有的名单导进来。' : '管理员生成或导入了新线索后，候选会出现在这里等待审核。'}</p>
+          <p className="mt-2 font-medium">
+            {scope === 'mine' ? '我的今日开发还没有线索' : scope === 'shared' ? '公共池暂时没有待领取线索' : '团队暂时没有待处理线索'}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {scope === 'mine'
+              ? '去「公共池」领取，或点「立即生成今日候选」搜索新客户；也可以导入自己的 Excel，生成、领取和导入的线索都只出现在你的列表里。'
+              : scope === 'shared'
+                ? (isAdmin ? '点右上角「立即生成今日候选」跑一轮，或者「导入线索」把名单放进公共池。' : '管理员生成或导入新线索后，会出现在公共池。')
+                : '其他业务员领取的线索会出现在这里，方便管理员掌握进度。'}
+          </p>
+          {scope === 'mine' ? (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {(data?.scopeTotals?.shared ?? 0) > 0 ? (
+                <Button size="sm" onClick={() => setScope('shared')}>
+                  去公共池领取（{data?.scopeTotals?.shared ?? 0}）
+                </Button>
+              ) : null}
+              <Button size="sm" variant="outline" onClick={() => void openRun()} disabled={run?.status === 'running'}>
+                {run?.status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
+                {run?.status === 'running' ? '生成中…' : '立即生成今日候选'}
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -398,11 +519,21 @@ export function ProspectingPage(): React.JSX.Element {
         const convertible = supportsBulk ? group.items.filter(isConvertible) : [];
         const chosen = convertible.filter((item) => selected.has(item.id));
         const allChosen = convertible.length > 0 && chosen.length === convertible.length;
+        // 「全部待处理」只加载第一页（200 条），分组标题必须写「已加载 / 全库」，
+        // 否则会出现「可以发送 2」但顶部卡片是 401 的错觉。
+        const totalForGroup = group.key === 'ready' ? counts?.ready : group.key === 'needs_contact' ? counts?.needsContact : group.key === 'low' ? counts?.low : undefined;
+        const truncated = statusFilter === 'all' && totalForGroup !== undefined && totalForGroup > group.items.length;
+        const filterKey = group.key === 'ready' || group.key === 'needs_contact' || group.key === 'low' ? group.key : undefined;
         return (
         <section key={group.key} className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-medium">{group.title}</h2>
-            <Badge variant="muted">{group.items.length}</Badge>
+            <Badge variant="muted">{truncated ? `${group.items.length} / ${totalForGroup}` : group.items.length}</Badge>
+            {truncated && filterKey ? (
+              <Button type="button" size="sm" variant="ghost" onClick={() => setStatusFilter(filterKey)}>
+                查看全部 {totalForGroup}
+              </Button>
+            ) : null}
             {convertible.length ? (
               <div className="ml-auto flex flex-wrap items-center gap-2">
                 <Button
@@ -440,6 +571,8 @@ export function ProspectingPage(): React.JSX.Element {
             {group.items.map((prospect) => (
               <ProspectCard key={prospect.id} prospect={prospect} today={data?.day ?? ''} busy={busy === prospect.id || Boolean(batch)}
                 selectable={supportsBulk && isConvertible(prospect)} selected={selected.has(prospect.id)} onToggle={toggleSelected}
+                onClaim={scope === 'shared' ? (id) => void claim(id) : undefined}
+                onRelease={scope === 'mine' ? (id) => void release(id) : undefined}
                 onRefresh={isAdmin?id=>void refreshContact(id):undefined} onApprove={(id) => void approve(id)} onReject={(id) => void reject(id)} />
             ))}
           </div>
@@ -473,7 +606,7 @@ export function ProspectingPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      {report && report.runs.length ? (
+      {isAdmin && report && report.runs.length ? (
         <section className="space-y-3 border-t pt-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -530,7 +663,7 @@ export function ProspectingPage(): React.JSX.Element {
 
       <EnrichDialog open={enrichOpen} onOpenChange={setEnrichOpen} onCompleted={() => void load()} />
 
-      <ProspectingRunDialog open={runOpen} onOpenChange={setRunOpen} onCompleted={()=>void load()}/>
+      <ProspectingRunDialog open={runOpen} onOpenChange={setRunOpen} personal={!isAdmin} onCompleted={()=>{ if(!isAdmin) setScope('mine'); void load(); }}/>
       <ProspectingSettingsDialog open={configOpen} onOpenChange={setConfigOpen} onCompleted={()=>{toast.success('搜索方案已保存');void load();}}/>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

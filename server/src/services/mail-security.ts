@@ -2,21 +2,30 @@ import sanitizeHtml from 'sanitize-html';
 import path from 'node:path';
 import env from '../config/env';
 import { BRAND_LOGO_PATH } from '../constants/brand-logo';
+import { IRONHUE_LOGO_PATH } from '../constants/ironhue-logo';
 
-/** 唯一允许出现在邮件正文里的图片：本站的品牌 logo */
+/** 允许出现在邮件正文里的本站品牌 logo */
 export function brandLogoUrl(): string {
   return `${env.publicBaseUrl}${BRAND_LOGO_PATH}`;
 }
+export function ironhueLogoUrl(): string {
+  return `${env.publicBaseUrl}${IRONHUE_LOGO_PATH}`;
+}
 
-/** 只允许品牌 logo 一张远程图片，其余 img 一律丢弃（防追踪像素 / 钓鱼图） */
+/** 只允许项目品牌 logo，其余 img 一律丢弃（防追踪像素 / 钓鱼图） */
 function stripUnexpectedImages(html: string): string {
-  const allowed = brandLogoUrl();
+  const allowed = new Map([
+    [BRAND_LOGO_PATH, brandLogoUrl()],
+    [IRONHUE_LOGO_PATH, ironhueLogoUrl()],
+  ]);
   return html.replace(/<img\b[^>]*>/gi, (tag) => {
     const src = /src\s*=\s*"([^"]*)"/i.exec(tag)?.[1] ?? /src\s*=\s*'([^']*)'/i.exec(tag)?.[1] ?? '';
     // 前端编辑器里用同源相对路径（/api/brand/...）方便预览，发送前统一换成公网绝对地址；
-    // 除这张 logo 之外的图片一律删除。
-    if (src === allowed) return tag;
-    if (src === BRAND_LOGO_PATH) return tag.replace(/src\s*=\s*("[^"]*"|'[^']*')/i, `src="${allowed}"`);
+    // 除项目 logo 之外的图片一律删除。
+    for (const [relative, absolute] of allowed) {
+      if (src === absolute) return tag;
+      if (src === relative) return tag.replace(/src\s*=\s*("[^"]*"|'[^']*')/i, `src="${absolute}"`);
+    }
     return '';
   });
 }

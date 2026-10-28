@@ -5,16 +5,17 @@ import { requireProjectId } from '../utils/access';
 import { sendSuccess } from '../utils/pagination';
 import { loadProfile } from '../services/prospecting/profile';
 import {
-  approveProspect, getProspectingConfig, prospectingReport, prospectingToday, rejectProspect,
+  approveProspect, claimProspect, releaseProspect, getProspectingConfig, prospectingReport, prospectingToday, rejectProspect,
   startProspecting, updateProspectingConfig,syncProspectCustomer,refreshProspectContact,
 } from '../services/prospecting/prospecting.service';
 import { importProspects } from '../services/prospecting/import-prospects';
 import { cancelEnrichRun, getEnrichRun, previewEnrich, startEnrichRun } from '../services/prospecting/enrich.service';
 
 export const todayHandler = asyncHandler(async (req: Request, res: Response) => {
-  const query = req.query as { status?: string; limit?: string; offset?: string };
+  const query = req.query as { status?: string; limit?: string; offset?: string; scope?: 'mine'|'shared'|'team'|'all' };
   const options = {
     status: query.status,
+    scope: query.scope,
     limit: query.limit === undefined ? undefined : Number(query.limit),
     offset: query.offset === undefined ? undefined : Number(query.offset),
   };
@@ -23,6 +24,14 @@ export const todayHandler = asyncHandler(async (req: Request, res: Response) => 
 
 export const runHandler = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, await startProspecting(req.user!, req.body as { profileId?:string;queries?: string[]; enrichLimit?: number }), 202);
+});
+
+export const claimHandler = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await claimProspect(req.user!, req.params.id));
+});
+
+export const releaseHandler = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await releaseProspect(req.user!, req.params.id));
 });
 
 export const approveHandler = asyncHandler(async (req: Request, res: Response) => {

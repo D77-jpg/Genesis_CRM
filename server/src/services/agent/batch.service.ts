@@ -69,6 +69,6 @@ export async function controlAgentBatch(id:string,action:'confirm'|'pause'|'resu
 export function isBatchOutreachCommand(text:string){return !/(不要|不用|(?<!分)别)(?!发送)[^，。；\n]{0,8}(写|准备|生成)/.test(text)&&/(开发信|开发邮件)/.test(text)&&/(批量|分别|这些|这\s*\d+\s*家|[2-9一二三四五六七八九十]+\s*家)/.test(text)&&/(写|准备|生成|起草)/.test(text);}
 export async function proposeBatchFromCommand(sessionId:string,goal:string,key:string,actor:AuthUser){
  const match=goal.match(/(\d+|[一二三四五六七八九十])\s*家/);const number=match?({'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10}[match[1]]??Number(match[1])):5;
- const query=goal.match(/珠宝|首饰|jewelry|jewellery|香氛|蜡烛|candle/i)?.[0];
+ const query=goal.match(/珠宝|首饰|jewelry|jewellery|香氛|蜡烛|candle|哑铃|杠铃|壶铃|健身器材|fitness|dumbbell|barbell|kettlebell/i)?.[0];
  return proposeAgentBatch({sessionId,goal,requestKey:key,limit:Math.min(20,Math.max(1,number)),priority:/高优先级|high priority/i.test(goal)?'high':undefined,query,status:'pending'},actor);
 }

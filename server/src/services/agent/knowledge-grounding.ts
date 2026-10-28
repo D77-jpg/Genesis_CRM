@@ -9,7 +9,7 @@ import {AgentKnowledge} from '../../models/AgentKnowledge';
 import type {AuthUser} from '../../types/express';
 import {requireProjectId} from '../../utils/access';
 import {getCustomerByIdOrThrow} from '../customer.service';
-import {renderSignatureText,signatureName} from '../letter-signature';
+import {renderSignatureText,signatureName,type LetterSignature} from '../letter-signature';
 import {policyTopics,productApplies,retrieveKnowledge,revisionActive} from './knowledge.service';
 import type {KnowledgeBundle,KnowledgeReview,KnowledgeSource,KnowledgeTerm,KnowledgeFreshness,PolicyTopic,CustomerFactProfile} from './knowledge-types';
 
@@ -188,6 +188,8 @@ export interface GroundedEmailOptions {
  customerProfile?:CustomerFactProfile;
  taskType:string;recipientName?:string;customerId?:string;mailId?:string;direction?:'inbound'|'outbound';request?:string;
  customerEvidence?:string;questions?:string[];seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
+ /** 当前项目的签名；不传时保持 Genesis 默认（仅用于旧测试/旧调用） */
+ signature?:LetterSignature;
 }
 // Conservative whole-message rendering is the bounded fallback, not a chain of regex deletions.
 // The original model message is retained only by the independent semantic verifier below.
@@ -221,8 +223,8 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  const sections=[salutationFor(recipient,options.customerProfile?.company),intro??(outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.'),
  answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'',
  // 模型自己已经用提问收尾时（asked），不再补模板问句，否则一封信念出两个问题
- outreach?(asked?'':'Would it help if I sent a few options that fit your product line?'):options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':'Could you please confirm your final specifications so we can agree on the next step?',
- seller?renderSignatureText(signatureName(seller.senderName,seller.companyName)):''];
+ outreach?(asked?'':'Would it help if I sent a few options that fit your product line?'):options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':asked?'':'Could you please confirm your final specifications so we can agree on the next step?',
+ seller?renderSignatureText(signatureName(seller.senderName,seller.companyName),options.signature):''];
  const bodyText=sections.filter(Boolean).join('\n\n');
  const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));
  return {bodyText,review:{version:1,projectId:bundle.projectId,taskType:options.taskType,generatedAt:new Date().toISOString(),
