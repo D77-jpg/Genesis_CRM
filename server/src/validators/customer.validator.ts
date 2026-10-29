@@ -227,6 +227,11 @@ export const bulkOutreachSequenceSchema = z.object({
   ids: bulkIdsSchema,
 });
 
+/** 整理老客户草稿：删除重复/已发送步骤的草稿，并补齐第几封标记 */
+export const bulkDraftCleanupSchema = z.object({
+  ids: bulkIdsSchema,
+});
+
 /** 批量标签操作的标签数组：至少 1 个，去重后再交给服务层 */
 const bulkTagsSchema = z
   .array(z.string().trim().min(1, '标签不能为空').max(40, '单个标签不能超过 40 个字符'))

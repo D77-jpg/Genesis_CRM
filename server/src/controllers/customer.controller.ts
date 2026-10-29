@@ -43,6 +43,7 @@ import {
 } from '../services/customer.service';
 import { buildCustomersWorkbook, buildImportTemplate } from '../services/excel.service';
 import { previewOutreachSequence, queueOutreachSequence } from '../services/agent/outreach-sequence.service';
+import { applyDraftCleanup, previewDraftCleanup } from '../services/agent/draft-cleanup.service';
 import type { CustomerStatus } from '../constants';
 import type {
   CreateCustomerInput,
@@ -159,6 +160,16 @@ export const previewOutreachSequenceHandler = asyncHandler(async (req: Request, 
 export const bulkOutreachSequenceHandler = asyncHandler(async (req: Request, res: Response) => {
   const { ids } = req.body as { ids: string[] };
   sendSuccess(res, await queueOutreachSequence(req.user!, ids), 202);
+});
+
+export const previewDraftCleanupHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: string[] };
+  sendSuccess(res, await previewDraftCleanup(req.user!, ids));
+});
+
+export const bulkDraftCleanupHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: string[] };
+  sendSuccess(res, await applyDraftCleanup(req.user!, ids));
 });
 
 export const checkDuplicatesHandler = asyncHandler(async (req: Request, res: Response) => {

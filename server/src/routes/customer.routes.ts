@@ -14,6 +14,7 @@ import {
   bulkAssignOwnerSchema,
   bulkSetFollowUpSchema,
   bulkOutreachSequenceSchema,
+  bulkDraftCleanupSchema,
   createCustomerSchema,
   idParamsSchema,
   duplicateCheckQuerySchema,
@@ -37,6 +38,8 @@ import {
   bulkSetFollowUpHandler,
   previewOutreachSequenceHandler,
   bulkOutreachSequenceHandler,
+  previewDraftCleanupHandler,
+  bulkDraftCleanupHandler,
   createCustomerHandler,
   deleteCustomerHandler,
   downloadTemplateHandler,
@@ -117,6 +120,8 @@ router.post('/bulk/owner', requireRole('admin'), validate({ body: bulkAssignOwne
 router.post('/bulk/follow-up', validate({ body: bulkSetFollowUpSchema }), bulkSetFollowUpHandler);
 router.post('/bulk/outreach-sequence/preview', validate({ body: bulkOutreachSequenceSchema }), previewOutreachSequenceHandler);
 router.post('/bulk/outreach-sequence', validate({ body: bulkOutreachSequenceSchema }), bulkOutreachSequenceHandler);
+router.post('/bulk/draft-cleanup/preview', validate({ body: bulkDraftCleanupSchema }), previewDraftCleanupHandler);
+router.post('/bulk/draft-cleanup', validate({ body: bulkDraftCleanupSchema }), bulkDraftCleanupHandler);
 
 /* ---------- 单条操作 ---------- */
 router.get('/:id', validate({ params: idParamsSchema }), getCustomerHandler);
