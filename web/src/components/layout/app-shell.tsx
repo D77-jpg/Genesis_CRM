@@ -49,7 +49,7 @@ export function AppShell(): React.JSX.Element {
   const sidebarWidth = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH;
 
   return (
-    <div className="workspace-shell h-dvh overflow-hidden">
+    <div className="workspace-shell overflow-hidden">
       <a href="#workspace-main" className="workspace-skip-link">跳转到主要内容</a>
 
       {/* 主面板：铺满窗口、直角贴合（不再有外框留白和圆角） */}
