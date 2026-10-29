@@ -53,7 +53,7 @@ export function AppShell(): React.JSX.Element {
       <a href="#workspace-main" className="workspace-skip-link">跳转到主要内容</a>
 
       {/* 主面板：铺满窗口、直角贴合（不再有外框留白和圆角） */}
-      <div className="flex h-full w-full overflow-hidden bg-card">
+      <div className="workspace-shell-body flex h-full w-full overflow-hidden bg-card">
         {/* 桌面端侧栏 */}
         <aside
           className="hidden shrink-0 border-r border-border/60 transition-[width] duration-200 ease-out lg:block"

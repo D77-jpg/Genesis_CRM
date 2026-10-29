@@ -219,6 +219,19 @@
    业务页保留自己的数据与操作，只统一定义容器、工具条、表格等外壳样式。
    ========================================================================== */
 @layer components {
+  /* 视口兜底：部分内嵌浏览器/缩放环境里 100dvh 会小于实际可视高度，
+     导致应用外壳只铺到内容底部，下面露出 body 的淡紫空白。 */
+  .workspace-shell,
+  .workspace-shell-body {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  @media (min-width: 1024px) {
+    .workspace-shell,
+    .workspace-shell-body {
+      min-height: max(100vh, 100dvh);
+    }
+  }
   .workspace-page { @apply min-w-0 space-y-5; }
   .workspace-surface { box-shadow: var(--workspace-shadow); }
 
