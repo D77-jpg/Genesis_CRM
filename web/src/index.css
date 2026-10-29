@@ -229,7 +229,8 @@
   @media (min-width: 1024px) {
     .workspace-shell,
     .workspace-shell-body {
-      min-height: max(100vh, 100dvh);
+      /* 桌面端用最稳定的 vh；max(100vh, 100dvh) 在部分内嵌浏览器里不生效。 */
+      min-height: 100vh;
     }
   }
   .workspace-page { @apply min-w-0 space-y-5; }
