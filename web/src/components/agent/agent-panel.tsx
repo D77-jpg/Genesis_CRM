@@ -7,7 +7,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive,
   ArrowLeft,
-  ArrowRight,
   BookOpen,
   BriefcaseBusiness,
   Inbox,
@@ -22,6 +21,7 @@ import {
   CircleOff,
   Clock3,
   FileClock,
+  FilePenLine,
   Loader2,
   MailSearch,
   MoreHorizontal,
@@ -56,7 +56,7 @@ import { CUSTOMER_STATUS_LABEL } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 import { useUiStore } from '@/store/ui.store';
-import type { AgentAction, AgentRecordedWorkflow, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage, Customer } from '@/types';
+import type { AgentAction, AgentRecordedWorkflow, AgentContext, AgentMessage, AgentSession, AgentStatus, AgentUsage, Customer, DevelopmentLetter } from '@/types';
 import {AgentEventInbox} from './agent-event-inbox';
 import {AgentBatches} from './agent-batches';
 import {AgentKnowledge} from './agent-knowledge';
@@ -210,6 +210,15 @@ export function AgentPanel(): React.JSX.Element | null {
     ? task.customerId === activeContext.resourceId
     : activeContext.type === 'mail' ? task.sourceMailId === activeContext.resourceId : true);
   const contextCounts = taskCounts(contextualTasks);
+  const taskTodoCount = contextCounts.review + contextCounts.attention;
+  const hasPendingWork = pendingDrafts.total > 0 || taskTodoCount > 0 || contextCounts.active > 0;
+  const workSummary = [
+    pendingDrafts.total > 0 ? `草稿待审核 ${pendingDrafts.total} 封` : contextCounts.review > 0 ? `任务待审核 ${contextCounts.review} 项` : '',
+    contextCounts.attention > 0 ? `任务需处理 ${contextCounts.attention} 项` : '',
+    contextCounts.active > 0 ? `任务准备中 ${contextCounts.active} 项` : '',
+  ].filter(Boolean).join(' · ');
+  const summaryMetricCount = Number(pendingDrafts.total > 0) + Number(taskTodoCount > 0) + Number(contextCounts.active > 0);
+  const summaryGridClass = summaryMetricCount >= 3 ? 'grid-cols-3' : summaryMetricCount === 2 ? 'grid-cols-2' : 'grid-cols-1';
   const secondaryLabels: Record<string, string> = {
     inbox: '来信与提醒', batches: '批量写信', knowledge: '项目知识库', records: '操作记录',
     'customer-preview': '客户预览', 'customer-analysis': '客户分析', 'mail-analysis': '邮件助理',
@@ -409,6 +418,10 @@ export function AgentPanel(): React.JSX.Element | null {
     navigate(`/customers/${task.customerId}?outreachTask=${task.id}`);
     setOpen(false);
   }
+  function openPendingDraft(letter: DevelopmentLetter) {
+    navigate(`/customers/${letter.customerId}?knowledgeDraft=${letter.id}`);
+    setOpen(false);
+  }
   function openOutreachComposer(action: NonNullable<AgentMessage['uiAction']>) {
     if (action.kind !== 'compose-first-outreach') return;
     navigate(`/customers/${action.customerId}?composeAnalysis=${action.analysisId}`);
@@ -531,7 +544,30 @@ export function AgentPanel(): React.JSX.Element | null {
             <TabsTrigger value={secondaryLabels[tab] ? tab : 'tools'} onClick={() => setTab('tools')}><BriefcaseBusiness className="h-4 w-4" aria-hidden />工具</TabsTrigger>
           </TabsList>
         </div>
-        {tab!=='tasks'&&(pendingDrafts.total>0||pendingDrafts.error)&&<button type="button" className="mx-3 mt-3 flex min-h-12 shrink-0 items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={()=>{setTab('tasks');if(pendingDrafts.error)pendingDrafts.refresh();}}><span>{pendingDrafts.error?'待审核草稿暂未更新，点击重试':(context.type==='customer'?'当前客户有 ':'有 ')+pendingDrafts.total+' 封草稿待审核'}</span><span className="shrink-0 font-medium text-primary">查看草稿</span></button>}
+        {tab !== 'tasks' && (tab !== 'chat' || messages.length > 0 || pendingDrafts.error) && (hasPendingWork || pendingDrafts.error) && <div className="mx-3 mt-3 shrink-0 rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><ListChecks className="h-4 w-4" aria-hidden /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">{activeContext.type === 'customer' ? '当前客户' : activeContext.type === 'mail' ? '当前邮件' : '本项目'} · 待处理</p>
+                <p className="mt-0.5 text-sm font-medium leading-5">{workSummary || '待审核草稿暂未更新'}</p>
+                {pendingDrafts.error ? <p role="alert" className="mt-1 text-xs leading-5 text-destructive">{pendingDrafts.error} <button type="button" className="font-medium underline underline-offset-2" onClick={pendingDrafts.refresh}>重试</button></p> : null}
+              </div>
+            </div>
+            <Button type="button" variant="outline" size="sm" className="min-h-10 shrink-0 gap-1" onClick={() => { setTab('tasks'); if (pendingDrafts.error) pendingDrafts.refresh(); }}>去待办<ChevronRight className="h-3.5 w-3.5" aria-hidden /></Button>
+          </div>
+          {pendingDrafts.items.length > 0 && <div className="mt-2.5 space-y-1">
+            {pendingDrafts.items.slice(0, 2).map((letter) => <button key={letter.id} type="button" onClick={() => openPendingDraft(letter)} className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{letter.subject || '（无主题）'}</span>
+                <span className="mt-0.5 block truncate text-xs text-muted-foreground">{letter.outreachStep ? `第 ${letter.outreachStep} 封 · ` : ''}{letter.customer?.name || letter.recipientName || letter.recipientEmail} · {formatRelative(letter.updatedAt)}</span>
+              </span>
+              <span className="shrink-0 text-xs font-medium text-primary">审核</span>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+            </button>)}
+            {pendingDrafts.total > 2 ? <button type="button" onClick={() => setTab('tasks')} className="flex w-full items-center justify-between rounded-lg px-1.5 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">还有 {pendingDrafts.total - 2} 封，去待办查看<ChevronRight className="h-3.5 w-3.5" aria-hidden /></button> : null}
+          </div>}
+        </div>}
         {secondaryLabels[tab] && <div className="flex shrink-0 items-center gap-2 border-b px-4 py-1.5">
           <Button variant="ghost" className="min-h-11 px-2 text-muted-foreground" onClick={() => setTab(['customer-preview','customer-analysis','mail-analysis'].includes(tab) ? 'chat' : 'tools')}><ArrowLeft className="h-4 w-4" aria-hidden />返回{['customer-preview','customer-analysis','mail-analysis'].includes(tab) ? '对话' : '工具'}</Button>
           <span className="text-sm font-medium">{secondaryLabels[tab]}</span>
@@ -555,7 +591,7 @@ export function AgentPanel(): React.JSX.Element | null {
         </TabsContent>
 
         <TabsContent value="chat" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0">
-          <div className="flex shrink-0 items-center gap-2 border-b px-4 py-2">
+          {(activeSession || activeSessionId || sessions.length > 0) && <div className="flex shrink-0 items-center gap-2 border-b px-4 py-2">
             <DropdownMenu open={sessionListOpen} onOpenChange={setSessionListOpen}>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" className="h-10 min-w-0 flex-1 justify-between gap-3 px-2 text-left" aria-label="选择会话">
@@ -608,7 +644,7 @@ export function AgentPanel(): React.JSX.Element | null {
             <Button type="button" variant="ghost" size="icon" className="h-11 w-11" onClick={startNewSession} aria-label="开始新会话">
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
+          </div>}
 
           {activeContext.type === 'customer' && <div aria-label="当前会话客户" className="shrink-0 px-3 pt-3">
             <div className="flex items-center gap-3 rounded-xl border bg-gradient-to-br from-muted/40 to-transparent px-3 py-2">
@@ -621,28 +657,64 @@ export function AgentPanel(): React.JSX.Element | null {
               </div>
             </div>
           </div>}
-          {(contextCounts.review > 0 || contextCounts.attention > 0 || contextCounts.active > 0) && <button type="button" onClick={() => { setFocusTaskId(contextualTasks.find(task => task.status === 'awaiting_review')?.id ?? contextualTasks[0]?.id ?? null); setAutoOpenTaskId(null); setTab('tasks'); }} className="mx-3 mb-1 mt-3 flex min-h-12 shrink-0 items-center gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
-            <ListChecks className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-            <span className="min-w-0 flex-1 leading-5"><span className="mr-1 text-xs text-muted-foreground">{activeContext.type === 'customer' ? '该客户 ·' : activeContext.type === 'mail' ? '该邮件 ·' : '本项目 ·'}</span>{contextCounts.review > 0 ? contextCounts.review + ' 封草稿待你审核' : contextCounts.attention > 0 ? contextCounts.attention + ' 项任务需要你处理' : contextCounts.active + ' 项任务正在准备'}{contextCounts.review > 0 && contextCounts.attention > 0 && <span className="ml-2 text-xs text-muted-foreground">另有 {contextCounts.attention} 项需处理</span>}</span>
-            <span className="shrink-0 text-xs text-primary">{contextCounts.review ? '去审核' : '查看'}</span><ChevronRight className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-          </button>}
-
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4" aria-live="polite" aria-busy={loading || sending}>
             {loading && messages.length === 0 && <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />正在加载会话…</div>}
             {!loading && messages.length === 0 && (
               <div className="space-y-4 py-1">
-                <div className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Sparkles className="h-4 w-4" aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-lg font-semibold leading-6 tracking-tight">{activeContext.type === 'customer' ? '这位客户，下一步怎么推进？' : activeContext.type === 'mail' ? '一起处理这封客户来信' : '今天想先推进哪项工作？'}</p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{activeContext.type === 'customer' ? '结合客户资料写信、梳理跟进，或直接告诉我你的需求。' : activeContext.type === 'mail' ? '整理往来内容与客户需求，再准备合适的回复。' : '找客户、看跟进、准备开发信，用一句话交给助手。'}</p>
+                <section className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.07] via-card to-card p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-4 w-4" aria-hidden /></span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground">{project.name} · {activeContext.type === 'global' ? '当前工作区' : contextLabel(activeContext)}</p>
+                      <p className="mt-1 text-lg font-semibold leading-6 tracking-tight">{activeContext.type === 'customer' ? '这位客户，下一步怎么推进？' : activeContext.type === 'mail' ? '一起处理这封客户来信' : hasPendingWork ? '先把眼前的工作处理掉' : '今天想先推进哪项工作？'}</p>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{activeContext.type === 'customer' ? '结合客户资料写信、梳理跟进，或直接告诉我你的需求。' : activeContext.type === 'mail' ? '整理往来内容与客户需求，再准备合适的回复。' : hasPendingWork ? '审核草稿、处理待办，或直接告诉助手要做什么。' : '找客户、看跟进、准备开发信，用一句话交给助手。'}</p>
+                    </div>
                   </div>
-                </div>
-                {activeContext.type === 'customer' && <Button type="button" className="h-auto min-h-11 w-full justify-between whitespace-normal rounded-xl bg-gradient-to-r from-primary to-primary/90 px-4 py-2.5 text-left shadow-sm hover:from-primary/95" onClick={() => void sendMessage('请分析这个客户，结合官网与历史往来准备合适的邮件，不要发送')} disabled={sending}><span className="flex items-center gap-2"><Send className="h-4 w-4" aria-hidden />分析客户并准备邮件</span><ArrowRight className="h-4 w-4" aria-hidden /></Button>}
-                {activeContext.type === 'mail' && <Button type="button" className="h-auto min-h-11 w-full justify-between whitespace-normal rounded-xl bg-gradient-to-r from-primary to-primary/90 px-4 py-2.5 text-left shadow-sm hover:from-primary/95" onClick={() => void startMailAnalysis()} disabled={analyzing}><span className="flex items-center gap-2">{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}整理来信并准备回复</span><ArrowRight className="h-4 w-4" aria-hidden /></Button>}
+                  {hasPendingWork && <div className={`mt-4 grid gap-2 ${summaryGridClass}`}>
+                    {pendingDrafts.total > 0 && <button type="button" onClick={() => setTab('tasks')} className="rounded-xl border bg-background/70 px-2.5 py-2 text-left transition-colors hover:border-primary/30 hover:bg-background">
+                      <span className="block text-xl font-semibold tabular-nums text-foreground">{pendingDrafts.total}</span>
+                      <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">草稿待审核</span>
+                    </button>}
+                    {taskTodoCount > 0 && <button type="button" onClick={() => { setFocusTaskId(contextualTasks.find(task => task.status === 'awaiting_review' || task.status === 'waiting_input' || task.status === 'paused' || task.status === 'failed')?.id ?? null); setTab('tasks'); }} className="rounded-xl border bg-background/70 px-2.5 py-2 text-left transition-colors hover:border-primary/30 hover:bg-background">
+                      <span className="block text-xl font-semibold tabular-nums text-foreground">{taskTodoCount}</span>
+                      <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">任务待处理</span>
+                    </button>}
+                    {contextCounts.active > 0 && <button type="button" onClick={() => setTab('tasks')} className="rounded-xl border bg-background/70 px-2.5 py-2 text-left transition-colors hover:border-primary/30 hover:bg-background">
+                      <span className="block text-xl font-semibold tabular-nums text-foreground">{contextCounts.active}</span>
+                      <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">任务准备中</span>
+                    </button>}
+                  </div>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {activeContext.type === 'customer' && <Button type="button" className="min-h-11 gap-2" onClick={() => void sendMessage('请分析这个客户，结合官网与历史往来准备合适的邮件，不要发送')} disabled={sending}><Send className="h-4 w-4" aria-hidden />分析客户并准备邮件</Button>}
+                    {activeContext.type === 'mail' && <Button type="button" className="min-h-11 gap-2" onClick={() => void startMailAnalysis()} disabled={analyzing}>{analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailSearch className="h-4 w-4" />}整理来信并准备回复</Button>}
+                    {activeContext.type === 'global' && <Button type="button" className="min-h-11 gap-2" onClick={() => void sendMessage('请帮我梳理今天最值得优先处理的客户和下一步动作，不要发送邮件')} disabled={sending}><Sparkles className="h-4 w-4" aria-hidden />梳理今天的工作</Button>}
+                    <Button type="button" variant="outline" className="min-h-11 gap-2" onClick={() => setTab('inbox')}><Inbox className="h-4 w-4" aria-hidden />看来信与提醒</Button>
+                  </div>
+                </section>
+
+                {pendingDrafts.items.length > 0 && <section className="rounded-2xl border bg-card p-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-sm font-semibold"><FilePenLine className="h-4 w-4 text-primary" aria-hidden />待审核草稿 <span className="text-xs font-normal tabular-nums text-muted-foreground">{pendingDrafts.total} 封</span></p>
+                    <button type="button" className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline" onClick={() => setTab('tasks')}>查看全部<ChevronRight className="h-3.5 w-3.5" aria-hidden /></button>
+                  </div>
+                  <div className="mt-2 divide-y">
+                    {pendingDrafts.items.slice(0, 3).map((letter) => <button key={letter.id} type="button" onClick={() => openPendingDraft(letter)} className="flex w-full items-center gap-2 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{letter.subject || '（无主题）'}</span>
+                        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+                          {letter.outreachStep ? <Badge variant="outline" className="shrink-0">第 {letter.outreachStep} 封</Badge> : null}
+                          <span className="min-w-0 truncate">{letter.customer?.name || letter.recipientName || letter.recipientEmail}</span>
+                          <span aria-hidden>·</span><span className="shrink-0">{formatRelative(letter.updatedAt)}</span>
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-primary">审核<ChevronRight className="h-3.5 w-3.5" aria-hidden /></span>
+                    </button>)}
+                  </div>
+                  {pendingDrafts.total > 3 ? <button type="button" className="mt-1 w-full rounded-lg py-1.5 text-xs font-medium text-primary hover:bg-muted/40" onClick={() => setTab('tasks')}>还有 {pendingDrafts.total - 3} 封，打开待办查看</button> : null}
+                </section>}
+
                 <div className="space-y-2">
+                  <p className="px-1 text-xs font-medium text-muted-foreground">也可以直接问我</p>
                   {suggestions(activeContext).filter(item => activeContext.type !== 'customer' || !item.includes('第一封')).map(item => <Button key={item} type="button" variant="outline" className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal rounded-xl px-3.5 py-2.5 text-left font-normal leading-6 shadow-none transition-colors hover:border-primary/30 hover:bg-primary/[0.04]" disabled={sending} onClick={() => void sendMessage(item)}><span>{item}</span><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /></Button>)}
                 </div>
                 <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
@@ -699,7 +771,7 @@ export function AgentPanel(): React.JSX.Element | null {
         <TabsContent value="inbox" className="m-0 flex min-h-0 flex-1 flex-col"><AgentEventInbox key={`${project.id}:${user.id}`} onTask={showTask}/></TabsContent>
         <TabsContent value="batches" className="m-0 flex min-h-0 flex-1 flex-col"><AgentBatches key={`${project.id}:${user.id}`} selectedIds={selectedBatchIds} onClearSelection={clearBatchSelection} onTask={showTask} onDraft={openTaskDraft}/></TabsContent>
         <TabsContent value="knowledge" className="m-0 flex min-h-0 flex-1 flex-col"><AgentKnowledge key={`${project.id}:${user.id}`} admin={user.role==='admin'} customerId={context.type==='customer'?context.resourceId:undefined}/></TabsContent>
-        <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks drafts={<PendingDrafts feed={pendingDrafts} onOpenDraft={letter=>{navigate('/customers/'+letter.customerId+'?knowledgeDraft='+letter.id);setOpen(false);}}/>} key={`${project.id}:${user.id}`} tasks={workflowTasks} loaded={tasksLoaded} loadError={tasksError} onTaskUpdated={updated => setWorkflowTasks(rows => rows.map(task => task.id === updated.id ? updated : task))} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft} onMailAnalysis={showTaskMail} focusTaskId={focusTaskId}/></TabsContent>
+        <TabsContent value="tasks" className="m-0 flex min-h-0 flex-1 flex-col focus-visible:ring-0"><AgentTasks drafts={<PendingDrafts feed={pendingDrafts} onOpenDraft={openPendingDraft}/>} key={`${project.id}:${user.id}`} tasks={workflowTasks} loaded={tasksLoaded} loadError={tasksError} onTaskUpdated={updated => setWorkflowTasks(rows => rows.map(task => task.id === updated.id ? updated : task))} autoOpenTaskId={autoOpenTaskId} onOpenDraft={openTaskDraft} onMailAnalysis={showTaskMail} focusTaskId={focusTaskId}/></TabsContent>
 
         <TabsContent value="records" className="m-0 min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-0">
           <div className="grid grid-cols-2 gap-3">
