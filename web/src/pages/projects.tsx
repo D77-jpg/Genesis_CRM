@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Archive, ArrowRight, Building2, CircleHelp, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Archive, ArrowRight, Building2, CircleHelp, Mail, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
@@ -7,14 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePageTitle } from '@/hooks/use-ui';
 import { useProjectStore } from '@/store/project.store';
+import { useMetaStore } from '@/store/meta.store';
 import type { Project } from '@/types';
 
 const slugify = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-type ProjectForm = Record<'name' | 'code' | 'slug' | 'industry' | 'companyName' | 'website' | 'moq' | 'senderName' | 'mailFrom' | 'mailProfileKey', string> & { coverImage: string };
-const EMPTY_FORM: ProjectForm = { name: '', code: '', slug: '', industry: '', companyName: '', website: '', moq: '', senderName: '', mailFrom: '', mailProfileKey: '', coverImage: '' };
+type ProjectForm = Record<'name' | 'code' | 'slug' | 'industry' | 'companyName' | 'website' | 'moq' | 'senderName' | 'mailFrom' | 'mailProfileKey', string> & { coverImage: string; mailTransport: 'mock' | 'smtp' };
+const EMPTY_FORM: ProjectForm = { name: '', code: '', slug: '', industry: '', companyName: '', website: '', moq: '', senderName: '', mailFrom: '', mailProfileKey: '', coverImage: '', mailTransport: 'mock' };
 
 export function ProjectsPage(): React.JSX.Element {
   usePageTitle('项目工作空间');
@@ -37,7 +39,8 @@ export function ProjectsPage(): React.JSX.Element {
     setEditingId(project.id);
     setForm({ name: project.name, code: project.code, slug: project.slug, industry: project.industry ?? '',
       companyName: project.companyName, website: project.website ?? '', moq: project.moq ?? '',
-      senderName: project.senderName ?? '', mailFrom: project.mailFrom ?? '', mailProfileKey: project.mailProfileKey, coverImage: project.coverImage ?? '' });
+      senderName: project.senderName ?? '', mailFrom: project.mailFrom ?? '', mailProfileKey: project.mailProfileKey,
+      coverImage: project.coverImage ?? '', mailTransport: project.mailChannel === 'smtp' ? 'smtp' : 'mock' });
     setOpen(true);
   };
 
@@ -66,12 +69,14 @@ export function ProjectsPage(): React.JSX.Element {
       if (editingId) {
         await updateProject(editingId, { name: form.name.trim(), industry: form.industry.trim(), companyName: form.companyName.trim(),
           website: form.website.trim(), moq: form.moq.trim(), senderName: form.senderName.trim(), mailFrom: form.mailFrom.trim(),
-          mailProfileKey: slugify(form.mailProfileKey || form.slug), coverImage: form.coverImage });
+          mailProfileKey: slugify(form.mailProfileKey || form.slug), mailTransport: form.mailTransport, coverImage: form.coverImage });
+        if (editingId === activeProject?.id) useMetaStore.getState().setMailChannel(form.mailTransport);
         toast.success('项目资料已更新');
       } else {
         await createProject({ name: form.name.trim(), code: form.code.trim().toUpperCase(), slug,
           industry: form.industry.trim(), companyName: form.companyName.trim(), website: form.website.trim(), moq: form.moq.trim(),
-          senderName: form.senderName.trim(), mailFrom: form.mailFrom.trim(), mailProfileKey: slugify(form.mailProfileKey || slug), coverImage: form.coverImage });
+          senderName: form.senderName.trim(), mailFrom: form.mailFrom.trim(), mailProfileKey: slugify(form.mailProfileKey || slug),
+          mailTransport: form.mailTransport, coverImage: form.coverImage });
         toast.success('项目工作空间已创建', { description: `${form.name} 已与其他项目严格隔离` });
       }
       setForm(EMPTY_FORM);
@@ -171,7 +176,7 @@ export function ProjectsPage(): React.JSX.Element {
 
       <Dialog open={open} onOpenChange={(next) => !saving && setOpen(next)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" aria-hidden />{editingId ? '编辑项目资料' : '新建项目工作空间'}</DialogTitle><DialogDescription>公司资料用于邮件署名和项目展示。邮箱账号请由管理员单独配置。</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" aria-hidden />{editingId ? '编辑项目资料' : '新建项目工作空间'}</DialogTitle><DialogDescription>公司资料用于邮件署名和项目展示。发件通道在这里切换，业务员个人邮箱仍需在用户管理中配置。</DialogDescription></DialogHeader>
           <DialogBody className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><Label htmlFor="project-name">项目名称</Label><Input id="project-name" className="mt-1.5" value={form.name} onChange={(e) => { const name = e.target.value; setForm((v) => ({ ...v, name, companyName: v.companyName === v.name ? name : v.companyName })); }} placeholder="例如 Outdoor Gear" /></div>
             <div><Label htmlFor="project-code">项目代码</Label><Input id="project-code" className="mt-1.5" value={form.code} disabled={Boolean(editingId)} onChange={(e) => setForm((v) => ({ ...v, code: e.target.value }))} placeholder="OUTDOOR" /></div>
@@ -183,6 +188,22 @@ export function ProjectsPage(): React.JSX.Element {
             <div><Label htmlFor="project-mail-from">发件地址显示</Label><Input id="project-mail-from" className="mt-1.5" value={form.mailFrom} onChange={(e) => setForm((v) => ({ ...v, mailFrom: e.target.value }))} placeholder="Sales <sales@example.com>" /></div>
             <div><Label htmlFor="project-slug">项目标识</Label><Input id="project-slug" className="mt-1.5" value={form.slug} disabled={Boolean(editingId)} onChange={(e) => setForm((v) => ({ ...v, slug: slugify(e.target.value) }))} placeholder={slugify(form.name) || 'outdoor-gear'} /></div>
             <div><Label htmlFor="project-profile">邮箱配置标识</Label><Input id="project-profile" className="mt-1.5" value={form.mailProfileKey} onChange={(e) => setForm((v) => ({ ...v, mailProfileKey: slugify(e.target.value) }))} placeholder={slugify(form.slug || form.name) || 'outdoor-gear'} /></div>
+            <div className="sm:col-span-2 rounded-lg border bg-muted/20 p-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <Label htmlFor="project-mail-transport" className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" aria-hidden />真实发送（SMTP）</Label>
+                  <p className="mt-1 text-xs text-muted-foreground">开启后开发信通过业务员的个人发件邮箱真实投递；关闭时只模拟发送，不会发出邮件。</p>
+                </div>
+                <Switch id="project-mail-transport" checked={form.mailTransport === 'smtp'} disabled={saving}
+                  onCheckedChange={(checked) => setForm((value) => ({ ...value, mailTransport: checked ? 'smtp' : 'mock' }))}
+                  aria-label="启用真实发送" />
+              </div>
+              <p className={`mt-2 text-xs ${form.mailTransport === 'smtp' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                {form.mailTransport === 'smtp'
+                  ? '请确认该项目下需要发信的业务员都已在「用户管理」配置并验证个人发件邮箱。'
+                  : '当前为模拟发送，草稿和统计照常记录，但不会真实投递。'}
+              </p>
+            </div>
             <div className="sm:col-span-2 space-y-2">
               <Label htmlFor="project-cover">封面图（可选）</Label>
               <div className="flex flex-wrap items-center gap-3">
