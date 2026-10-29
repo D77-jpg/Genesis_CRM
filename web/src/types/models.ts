@@ -1063,6 +1063,8 @@ export interface Project {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  /** 项目级真实发送开关；未设置时沿用服务端配置 */
+  mailTransport?: MailChannel;
   coverImage?: string;
   mailChannel?: MailChannel;
   status: ProjectStatus;

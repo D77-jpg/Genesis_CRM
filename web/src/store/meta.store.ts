@@ -42,6 +42,7 @@ interface MetaState {
    */
   placeholderDefs: PlaceholderDef[];
   fetchMeta: (options?: { force?: boolean }) => Promise<void>;
+  setMailChannel: (channel: MailChannel) => void;
 }
 
 export const useMetaStore = create<MetaState>()((set, get) => ({
@@ -53,6 +54,7 @@ export const useMetaStore = create<MetaState>()((set, get) => ({
   mailChannel: 'mock',
   // 先用本地静态定义兜底，/api/meta 回来后再覆盖
   placeholderDefs: PLACEHOLDER_DEFS,
+  setMailChannel(channel) { set({ mailChannel: channel }); },
 
   async fetchMeta({ force = false } = {}) {
     const state = get();

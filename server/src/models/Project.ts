@@ -13,6 +13,8 @@ export interface IProject {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  /** 项目级发送通道开关；未设置时按环境变量 / mailProfileKey 的旧逻辑推断 */
+  mailTransport?: 'mock' | 'smtp';
   coverImage?: string;
   status: ProjectStatus;
   isDefault: boolean;
@@ -44,6 +46,8 @@ const ProjectSchema = new Schema<IProject>(
     mailFrom: { type: String, trim: true, maxlength: 300 },
     // 凭据不入库；通过服务端 PROJECT_MAIL_CONFIGS_JSON 用此键查找。
     mailProfileKey: { type: String, required: true, trim: true, lowercase: true, maxlength: 80 },
+    // 项目级真实发送开关；undefined 保持旧配置兼容，显式 mock/smtp 优先于环境变量
+    mailTransport: { type: String, enum: ['mock', 'smtp'] },
     // Compressed data URL (browser downscales to <=1280px) or an absolute https URL.
     coverImage: { type: String, maxlength: 600000 },
     status: { type: String, enum: ['active', 'archived'], default: 'active', index: true },
