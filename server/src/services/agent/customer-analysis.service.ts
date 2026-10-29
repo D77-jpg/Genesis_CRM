@@ -79,6 +79,7 @@ function dto(doc: AgentCustomerAnalysisDocument) {
     gaps: doc.gaps.map((item) => ({ text: item.text, sourceIds: item.sourceIds })),
     recommendations: doc.recommendations.map((item) => ({ text: item.text, rationale: item.rationale ?? '', sourceIds: item.sourceIds })),
     firstOutreach: Boolean(doc.firstOutreach),
+    outreachStep: doc.outreachStep,
     emailDraft: { subject: doc.emailDraft.subject, bodyText: doc.emailDraft.bodyText },
     followUpPlan: {
       method: doc.followUpPlan.method, content: doc.followUpPlan.content, dueAt: doc.followUpPlan.dueAt,
@@ -108,7 +109,7 @@ function clipped(value: unknown, max = 3000): string {
   return String(value ?? '').trim().slice(0, max);
 }
 
-async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledgeIds?:string[], goal='', workflow?:EvidenceWorkflow, taskKind?:SalesMailKind): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[]; knowledgeBundle:KnowledgeBundle; signature: LetterSignature }> {
+async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledgeIds?:string[], goal='', workflow?:EvidenceWorkflow, taskKind?:SalesMailKind, outreachStep?:number, previousOutreach?:CustomerAnalysisInput['previousOutreach']): Promise<{ input: CustomerAnalysisInput; sources: AgentAnalysisSource[]; knowledgeBundle:KnowledgeBundle; signature: LetterSignature }> {
   const customer = await getCustomerByIdOrThrow(customerId, actor);
   const projectId = requireProjectId(actor);
   const project = await Project.findById(projectId).select('code slug name industry companyName website mailFrom senderName').lean();
@@ -164,7 +165,9 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
     add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...modelKnowledge,content:clipped(modelKnowledge.content,300)});
   }
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
-  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext),projectProfile:projectPromptContext(salesProfile) }, sources, knowledgeBundle:knowledgeForAudit(knowledgeContext), signature:salesProfile.signature };
+  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext),projectProfile:projectPromptContext(salesProfile),
+    ...(outreachStep ? { outreachStep: (Math.min(3, Math.max(1, outreachStep)) as 1|2|3) } : {}),
+    ...(previousOutreach?.length ? { previousOutreach } : {}) }, sources, knowledgeBundle:knowledgeForAudit(knowledgeContext), signature:salesProfile.signature };
 }
 
 const outputSchema = z.object({
@@ -186,7 +189,7 @@ function recommendationEvidence(recommendations: AgentAnalysisClaim[]): { reason
   return { reason: recommendation.rationale!.trim(), sourceIds: recommendation.sourceIds };
 }
 
-export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider; knowledgeIds?:string[]; taskId?:string;workflow?:EvidenceWorkflow;taskKind?:SalesMailKind;customerResearch?:CustomerResearchStatus }) {
+export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisBody, actor: AuthUser, options?: { firstOutreach?: boolean; userRequest?: string; provider?: AgentProvider; knowledgeIds?:string[]; taskId?:string;workflow?:EvidenceWorkflow;taskKind?:SalesMailKind;customerResearch?:CustomerResearchStatus;outreachStep?:number;previousOutreach?:CustomerAnalysisInput['previousOutreach'] }) {
   const identifiers = scope(actor);
   await getCustomerByIdOrThrow(input.customerId, actor);
   const existing = await AgentCustomerAnalysis.findOne({ ...identifiers, requestKey: input.idempotencyKey });
@@ -203,7 +206,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
     if (!activeProvider.isAvailable()) throw new AgentProviderError('AGENT_NOT_CONFIGURED');
     const taskKind=options?.taskKind??(options?.firstOutreach?'first_outreach':options?.userRequest?salesMailKind(options.userRequest):'followup_review');
     const research=options?.customerResearch??await ensureCustomerResearch(input.customerId,actor,{requestKey:input.idempotencyKey});
-    const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest,options?.workflow,taskKind);
+    const context = await buildAnalysisInput(input.customerId, actor,options?.knowledgeIds,options?.userRequest,options?.workflow,taskKind,options?.outreachStep,options?.previousOutreach);
     context.input.userRequest=options?.userRequest;context.input.customerResearch=research;
     {
       const project = await Project.findById(requireProjectId(actor)).select('companyName website moq senderName');
@@ -254,7 +257,9 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
       seller:context.input.seller,
       signature:context.signature,
-    },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check,context.input.projectProfile),actor),{cache:true,tool:'model'});
+      outreachStep:options?.outreachStep,
+      previousOutreach:options?.previousOutreach,
+    },providerFactVerifier(activeProvider,actor,options?.taskId,options?.workflow?.check,context.input.projectProfile,{outreachStep:options?.outreachStep,previousOutreach:options?.previousOutreach}),actor),{cache:true,tool:'model'});
     await options?.workflow?.check();
     await assertSalesEvidenceCurrent(context.knowledgeBundle,actor,input.customerId);
     if(research.state!=='ready'){grounded.review.issues.push({code:'customer_research_gap',message:research.message});grounded.review.completeness='partial';}
@@ -277,6 +282,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       analysis = await AgentCustomerAnalysis.create({
         ...identifiers, customerId: new Types.ObjectId(input.customerId), requestKey: input.idempotencyKey,
         firstOutreach: Boolean(options?.firstOutreach),
+        ...(options?.outreachStep ? { outreachStep: Math.min(3, Math.max(1, options.outreachStep)) } : {}),
         knowledgeReview:grounded.review,sources: context.sources, facts, gaps, recommendations, emailDraft: parsed.emailDraft,
         followUpPlan: {
           ...parsed.followUpPlan,

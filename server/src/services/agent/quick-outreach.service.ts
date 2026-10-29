@@ -25,6 +25,7 @@ export async function createQuickFirstOutreachTask(
     userId: new Types.ObjectId(actor.id),
     customerId: new Types.ObjectId(customerId),
     kind: 'first_outreach',
+    $or: [{ outreachStep: 1 }, { outreachStep: { $exists: false } }],
     status: { $in: ['queued', 'running', 'awaiting_review'] },
   }).sort({ createdAt: -1 });
   if (active) return getAgentTask(active.id, actor);
@@ -42,5 +43,6 @@ export async function createQuickFirstOutreachTask(
     customerId,
     requestKey: `quick-first-outreach:${customerId}:${requestKey}`,
     goal: firstOutreachGoal(salesProfile),
+    outreachStep: 1,
   }, actor);
 }

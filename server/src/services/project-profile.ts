@@ -81,7 +81,7 @@ const GENESIS_PROFILE: ProjectSalesProfile = {
   avoidTopics: '客户的首饰设计、款式、产品线扩展、设计团队等非包装事项',
   insightLabel: '包装场景洞察',
   insightExamples: '礼盒是收礼人第一眼看到的东西、首饰袋影响开箱体验',
-  proofExamples: '袋盒同厂同色、标准款 100 件起、先确认实物样再下单、按签样+书面规格复购',
+  proofExamples: '袋盒同厂同色、标准款 100 件起、先确认实物样再下单、按签样+书面规格复购、白标合作、一盒多内托',
   ctaExamples: '当前包装形式、尺寸、数量、内衬/托盘、印刷或样品',
   subjectFocus: '包装',
   signature: GENESIS_SIGNATURE,
@@ -96,7 +96,7 @@ const IRONHUE_PROFILE: ProjectSalesProfile = {
   avoidTopics: '客户的其他非健身器材产品线（如首饰、蜡烛、服装）、品牌设计、门店装修等无关事项',
   insightLabel: '采购/产品线洞察',
   insightExamples: '客户当前销售的哑铃、杠铃片、壶铃或杠铃产品线，以及自有品牌/私标需求',
-  proofExamples: '江苏自有工厂的杠铃片生产与私标定制能力',
+  proofExamples: '江苏自有工厂的杠铃片生产与私标定制能力、工厂直供、可混柜、透明报价（每只价/净重/箱规/模具费分列）、Logo 模内/印刷/雕刻、先验样、整线供应',
   ctaExamples: '客户当前采购的产品线、定制 Logo/颜色需求或样品需求',
   subjectFocus: '自由重量/力量训练器材',
   signature: IRONHUE_SIGNATURE,
@@ -146,5 +146,24 @@ export function projectPromptContext(profile: ProjectSalesProfile): ProjectPromp
 
 /** 自动创建首封开发信任务时使用的目标文本（项目级，不含其他项目话术） */
 export function firstOutreachGoal(profile: ProjectSalesProfile, extra = ''): string {
-  return `为首封开发信准备英文草稿，收件人是刚通过审核的新客户。${profile.identity}；${profile.offerSummary} 开发信和结尾问题只围绕${profile.outreachFocus}，不要询问${profile.avoidTopics}。${extra}按三段式写：正文 50–90 词（最多 110 词），一个证明点，一个低负担 CTA；收尾沿用现有签名和 Could you please... 风格。只保存待审核草稿，不发送邮件。`;
+  return `为首封开发信准备英文草稿，收件人是刚通过审核的新客户。${profile.identity}；${profile.offerSummary} 开发信和结尾问题只围绕${profile.outreachFocus}，不要询问${profile.avoidTopics}。${extra}严格三段式：第一段用一个可核实的客户产品/系列细节，加该品类在采购上的一个普遍关键点，1–2 句，不猜客户现状、不暗示对方缺少什么；第二段一句说明我们是谁，加一个对客户有意义的结果，再加一个真实证明点，只讲一个方向；第三段给一个几乎零成本的具体下一步，用一个明确问题收尾。正文 50–90 词（最多 110 词），每段 1–3 句，具体、口语化，避免 considered、restrained、coherent、deliberate、elevate、worth considering 这类 AI 高频词。只保存待审核草稿，不发送邮件。`;
+}
+
+export type OutreachStep = 1 | 2 | 3;
+
+/**
+ * 三封开发信序列的任务目标。
+ * 规则来自 Lead Scout V1.6 / 开发信知识库 V2.2：
+ * 第 1 封用一个可核实事实建立联系，第 2 封带一个新东西，第 3 封低压力结束本轮。
+ * 项目事实仍只允许来自当前项目知识库，签名由 CRM 统一追加。
+ */
+export function outreachStepGoal(profile: ProjectSalesProfile, step: OutreachStep): string {
+  const common = `${profile.identity}；${profile.offerSummary} 三封都只围绕${profile.outreachFocus}，不要转向${profile.avoidTopics}。签名由系统追加，正文不要写签名、公司落款、日期、占位符或伪造 Re:/Fwd:。每封只允许一个证明点；商务条款和数字只能引用当前项目已发布知识，首封主动省略未经确认的商务承诺。`;
+  if (step === 1) {
+    return `请为首封开发信准备英文草稿，收件人是刚通过审核的新客户。${common} 严格三段式：第一段用一个可核实的客户产品/系列细节，加该品类在采购上的一个普遍关键点，1–2 句，不猜客户现状、不暗示对方缺少什么；第二段一句说明我们是谁，加一个对客户有意义的结果，再加一个真实证明点，只讲一个方向；第三段给一个几乎零成本的具体下一步，用一个明确问题收尾。正文 50–90 词（最多 110 词），每段 1–3 句，使用具体、口语化的英文，避免 considered、restrained、coherent、deliberate、elevate、worth considering 这类 AI 高频词。主题 3–7 个词并包含真实产品/系列名。只保存待审核草稿，不发送邮件。`;
+  }
+  if (step === 2) {
+    return `请为同一客户的开发信序列准备第 2 封英文草稿（跟进 1，同一线程回复）。${common} 不要重新自我介绍，不要重复首封的完整内容或同一证明点；第一段用一句自然承接上一封，第二段带一个新东西——一个具体想法、可交付的资料，或证明点库中尚未使用的下一条；第三段用类似 Worth a look? 的低压力问题收尾。正文 35–75 词（最多 90 词），三段，语气像真人跟进，不催促、不制造虚假紧迫感。只保存待审核草稿，不发送邮件。`;
+  }
+  return `请为同一客户的开发信序列准备第 3 封英文草稿（结束信，同一线程回复）。${common} 不要重新自我介绍，不要重复前两封；第一段用一句说明不想继续占用对方收件箱，这是本轮最后一次跟进；第二段只留一个未来回访口子，或礼貌询问谁负责相关采购；第三段用一句感谢收尾。正文 30–60 词（最多 80 词），低压力、不催促、不新增任何事实或承诺。只保存待审核草稿，不发送邮件。`;
 }

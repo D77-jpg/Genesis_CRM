@@ -7,7 +7,7 @@ import { MailMessage } from '../../models/MailMessage';
 import { Prospect, type ProspectStatus } from '../../models/Prospect';
 import { ProspectingConfig,type SearchProfile } from '../../models/ProspectingConfig';
 import { Project } from '../../models/Project';
-import { firstOutreachGoal, projectPromptContext, resolveProjectSalesProfile } from '../project-profile';
+import { outreachStepGoal, projectPromptContext, resolveProjectSalesProfile } from '../project-profile';
 import {prospectCustomerInput} from './prospect-customer';
 import { describeDuplicate, findCustomerDuplicates } from '../customer-duplicate';
 import { ProspectingRun } from '../../models/ProspectingRun';
@@ -570,36 +570,48 @@ export async function approveProspect(actor: AuthUser, id: string) {
     claimed.customerId = new Types.ObjectId(customer.id);
     claimed.convertedBy = new Types.ObjectId(actor.id);
     await claimed.save();
-    // Queue the first-outreach draft immediately; the agent worker picks it up.
+    // Queue the full three-email outreach sequence immediately; the agent
+    // worker picks the tasks up in creation order. Drafts only — sends remain manual.
     // 目标必须从当前项目的销售画像生成，不能复用其他项目的行业话术。
     const project = await Project.findById(projectId)
       .select('code slug name companyName industry website mailFrom senderName')
       .lean();
     const salesProfile = resolveProjectSalesProfile(project);
-    let draftTaskId: string | undefined;
+    const draftTaskIds: string[] = [];
     let draftError: string | undefined;
     try {
       const session = await createAgentSession({
         context: { type: 'customer', resourceId: customer.id },
-        title: `自动开发 · ${customer.name}`,
+        title: `自动开发 · ${customer.name} · 三封`,
       }, actor);
-      const task = await createAgentTask({
-        sessionId: session.id,
-        goal: firstOutreachGoal(salesProfile),
-        requestKey: `prospect:${String(claimed._id)}`,
-        customerId: customer.id,
-      }, actor);
-      draftTaskId = task.id;
-      claimed.draftTaskId = new Types.ObjectId(task.id);
-      await claimed.save();
+      for (const step of [1, 2, 3] as const) {
+        try {
+          const task = await createAgentTask({
+            sessionId: session.id,
+            goal: outreachStepGoal(salesProfile, step),
+            requestKey: `prospect:${String(claimed._id)}:step${step}`,
+            customerId: customer.id,
+            outreachStep: step,
+          }, actor);
+          draftTaskIds.push(task.id);
+        } catch (error) {
+          draftError = `第 ${step} 封任务创建失败：${error instanceof Error ? error.message : '未知错误'}`;
+          logger.warn(`自动开发信序列第 ${step} 封任务创建失败：${String(claimed.domain)}`, draftError);
+        }
+      }
+      if (draftTaskIds[0]) {
+        claimed.draftTaskId = new Types.ObjectId(draftTaskIds[0]);
+        await claimed.save();
+      }
     } catch (error) {
       draftError = error instanceof Error ? error.message : '草稿任务创建失败';
-      logger.warn(`自动草稿任务创建失败：${String(claimed.domain)}`, draftError);
+      logger.warn(`自动开发信序列任务创建失败：${String(claimed.domain)}`, draftError);
     }
     return {
       prospect: toProspect(claimed.toObject() as unknown as Record<string, unknown>),
       customer,
-      draftTaskId,
+      draftTaskId: draftTaskIds[0],
+      draftTaskIds,
       draftError,
       // 同公司名 / 同电话的客户：已经建好了，提醒一句让人去核对
       duplicates: duplicateReport.soft.map((item) => ({ id: item.id, name: item.name, reason: describeDuplicate(item) })),

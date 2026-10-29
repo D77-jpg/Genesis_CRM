@@ -8,7 +8,7 @@ import { formatDateTime } from '@/lib/format';
 import { taskCounts, visibleTasks, type TaskFilter } from '@/lib/agent-workflow';
 import { TaskProcessPanel, type TaskWorkflowStep } from './task-process-panel';
 export interface AgentTask {
- kind?:'first_outreach'|'inquiry_reply'|'followup_review'|'quotation_explanation'|'sample_reply';sourceMailId?:string;mailAnalysisId?:string;automatic?:boolean;
+ kind?:'first_outreach'|'inquiry_reply'|'followup_review'|'quotation_explanation'|'sample_reply';outreachStep?:number;sourceMailId?:string;mailAnalysisId?:string;automatic?:boolean;
  needsRefresh?:boolean;workflowEpoch?:number;workflowCalls?:number;workflowActiveMs?:number;workflow?:TaskWorkflowStep[];previousArtifacts?:{draftId?:string;at:string}[];
  id:string; sessionId:string; goal:string; version:number;
  status:'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
@@ -98,7 +98,7 @@ export function AgentTasks({ drafts, tasks, loaded, loadError, onTaskUpdated, au
     <div className="divide-y">{rows.map(task => <section key={task.id} ref={task.id === pinnedId ? focusRef : undefined} className={'py-5 first:pt-1 ' + (task.id === pinnedId ? 'rounded-lg bg-primary/5 px-3' : '')}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1"><p className="break-words text-sm font-semibold leading-6">{task.customerName || '等待确认客户'}</p>
-          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{kinds[task.kind ?? 'first_outreach']}{task.automatic ? ' · 自动准备' : ''}</p>
+          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{kinds[task.kind ?? 'first_outreach']}{task.outreachStep ? ` · 第 ${task.outreachStep} 封` : ''}{task.automatic ? ' · 自动准备' : ''}</p>
         </div>
         <Badge variant={task.status === 'failed' ? 'destructive' : task.status === 'awaiting_review' ? 'developed' : 'muted'} className="shrink-0">{labels[task.status]}</Badge>
       </div>

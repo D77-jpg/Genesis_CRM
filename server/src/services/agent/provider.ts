@@ -46,11 +46,21 @@ export interface CustomerExtractionResult {
   usage: { inputTokens: number; outputTokens: number; totalTokens: number };
 }
 
+export interface PreviousOutreachDraft {
+  step: number;
+  subject: string;
+  bodyText: string;
+}
+
 export interface CustomerAnalysisInput {
   customerResearch?:import('../website/customer-research').CustomerResearchStatus;
   taskType?:SalesMailKind;userRequest?:string;salesRequirements?:SalesRequirements;
   knowledgeContext?: KnowledgeBundle;
   firstOutreach?: boolean;
+  /** 当前是同一客户三封开发信序列中的第几封。 */
+  outreachStep?: 1 | 2 | 3;
+  /** 已生成的上一封（或前两封）；仅用于承接，不能当成新的我方事实。 */
+  previousOutreach?: PreviousOutreachDraft[];
   projectProfile?: ProjectPromptContext;
   seller?: { companyName: string; website?: string; moq?: string; senderName: string; senderEmail?: string };
   customerName: string;

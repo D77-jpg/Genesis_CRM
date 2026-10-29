@@ -232,7 +232,7 @@ export function ProspectingPage(): React.JSX.Element {
           `负责人：${result.customer?.owner?.name || (scope === 'team' ? '原业务员' : '你')}`,
           result.draftError
             ? `草稿任务未创建：${result.draftError}`
-            : result.draftTaskId ? '首封草稿正在后台生成，完成后在“查看草稿”里审核' : (result.customer?.name ?? '可在客户管理里继续写开发信'),
+            : result.draftTaskId ? '三封开发信草稿正在后台依次生成，完成后在“查看草稿”里审核' : (result.customer?.name ?? '可在客户管理里继续写开发信'),
         ].join('；'),
       });
       // 库里已有同公司名 / 同电话的客户：提醒核对，避免一条线索变两条记录
@@ -348,7 +348,7 @@ export function ProspectingPage(): React.JSX.Element {
     toast.success(`已转换 ${ok} 个客户`, {
       description: [
         failed ? `${failed} 个没转成：${failedReasons.slice(0, 3).join('；')}${failedReasons.length > 3 ? '…' : ''}` : '',
-        draftErrors ? `${draftErrors} 个首封草稿未创建` : '首封草稿在后台生成，完成后在“查看草稿”里审核',
+        draftErrors ? `${draftErrors} 个客户的三封草稿未创建` : '三封开发信草稿在后台依次生成，完成后在“查看草稿”里审核',
       ].filter(Boolean).join('；'),
     });
   };
@@ -556,7 +556,7 @@ export function ProspectingPage(): React.JSX.Element {
                   disabled={Boolean(batch) || !convertible.length}
                   title={chosen.length
                     ? `只转换勾选的 ${chosen.length} 个候选`
-                    : `把本组 ${convertible.length} 个已有邮箱的候选一次转为正式客户，并各自创建首封开发信草稿（不发送）`}
+                    : `把本组 ${convertible.length} 个已有邮箱的候选一次转为正式客户，并各自创建三封开发信草稿（不发送）`}
                   onClick={() => convertSelectedOrGroup(convertible, group.items)}
                 >
                   {batch ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
@@ -671,7 +671,7 @@ export function ProspectingPage(): React.JSX.Element {
           <AlertDialogHeader>
             <AlertDialogTitle>一键转为客户？</AlertDialogTitle>
             <AlertDialogDescription>
-              将把 {pendingTargets.length} 个候选转为正式客户，并各自创建首封开发信草稿（不会发送邮件）。
+              将把 {pendingTargets.length} 个候选转为正式客户，并各自创建三封开发信草稿（不会发送邮件）。
               没有邮箱的候选会自动跳过；转换过程中失败的会单独汇总，可稍后重试。
             </AlertDialogDescription>
           </AlertDialogHeader>

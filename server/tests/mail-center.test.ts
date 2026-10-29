@@ -969,6 +969,38 @@ test('开发信跟进节奏：3/7/14 排期、回信停表、三次无回复弃�
   assert.ok((doc?.tags ?? []).includes('三次无回复'));
   assert.ok(doc?.outreachAbandonedAt);
 });
+test('开发信序列：第 2/3 封按上一封的 Message-ID 接入同一线程，并保留 outreachStep', async () => {
+  const sequenceCustomer = await models.Customer.create({
+    projectId, ownerId: salesId, name: `Thread Sequence ${suffix}`, email: `thread.sequence.${suffix}@example.com`,
+    status: 'pending', source: 'manual', tags: [],
+  });
+  const first = await request('POST', '/letters', salesToken, {
+    customerId: String(sequenceCustomer._id), subject: 'Thread sequence first', content: '<p>First step</p>',
+    outreachStep: 1, requestKey: `thread-sequence-first-${suffix}`,
+  }, 201);
+  assert.equal(first.letter.outreachStep, 1);
+  assert.ok(first.letter.messageId);
+
+  const second = await request('POST', '/letters', salesToken, {
+    customerId: String(sequenceCustomer._id), subject: 'Re: Thread sequence first', content: '<p>Second step</p>',
+    outreachStep: 2, requestKey: `thread-sequence-second-${suffix}`,
+  }, 201);
+  assert.equal(second.letter.outreachStep, 2);
+  const secondDoc = await models.DevelopmentLetter.findById(second.letter.id).lean();
+  assert.equal(secondDoc?.inReplyTo, first.letter.messageId);
+  assert.equal(secondDoc?.threadId, first.letter.threadId);
+
+  const third = await request('POST', '/letters', salesToken, {
+    customerId: String(sequenceCustomer._id), subject: 'Re: Thread sequence first', content: '<p>Third step</p>',
+    outreachStep: 3, requestKey: `thread-sequence-third-${suffix}`,
+  }, 201);
+  assert.equal(third.letter.outreachStep, 3);
+  const thirdDoc = await models.DevelopmentLetter.findById(third.letter.id).lean();
+  assert.equal(thirdDoc?.inReplyTo, secondDoc?.messageId);
+  assert.equal(thirdDoc?.threadId, first.letter.threadId);
+  assert.deepEqual(thirdDoc?.references, [...(secondDoc?.references ?? []), secondDoc?.messageId]);
+});
+
 test('88 审核时正文被改过，也必须把人工批准记在通过的那份正文上', async () => {
   // 回归：旧实现要求 rendered.text 与生成时的 bodyHash 完全一致才写 manualApprovedAt，
   // 于是「改过正文再点通过」永远拿不到人工批准，发送被闸门永久拦住。

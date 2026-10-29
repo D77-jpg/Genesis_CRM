@@ -117,6 +117,7 @@ export interface LetterDto {
   scheduledAt?: Date;
   threadId?: string;
   needsReview?: boolean;
+  outreachStep?: number;
   review?: LetterReviewSummary;
   error?: string;
   sentBy?: string;
@@ -323,6 +324,7 @@ function toLetterDto(doc: Record<string, unknown>): LetterDto {
     scheduledAt: doc.scheduledAt as Date | undefined,
     threadId: doc.threadId as string | undefined,
     needsReview: Boolean(doc.needsReview),
+    ...(doc.outreachStep ? { outreachStep: Number(doc.outreachStep) } : {}),
     ...(review ? { review } : {}),
     status: doc.status as IDevelopmentLetter['status'],
     channel: doc.channel as IDevelopmentLetter['channel'],
@@ -437,6 +439,8 @@ async function persistAndSend(options: {
   knowledgeRechecks?:Record<string,unknown>[];
   agentDraftId?:Types.ObjectId;
   agentOutreachId?: Types.ObjectId;
+  /** 同一客户三封开发信序列中的位置；草稿先写入，发送时用于排序和同线程回复。 */
+  outreachStep?: number;
   /** 重发同一封信时不要重复计开发封数 */
   countAsOutreach?: boolean;
 }): Promise<SendLetterResult> {
@@ -454,9 +458,11 @@ async function persistAndSend(options: {
   const countedOutreach = options.countAsOutreach !== false;
   const isOutreach = countedOutreach && !options.replyToId && !options.inReplyTo;
   const currentStep = Number(customer.outreachStep ?? 0);
-  const outreachStep = isOutreach
-    ? (customer.outreachAbandonedAt ? 1 : Math.min(currentStep + 1, OUTREACH_MAX_STEPS))
-    : undefined;
+  const outreachStep = options.outreachStep
+    ? Math.min(OUTREACH_MAX_STEPS, Math.max(1, Math.trunc(options.outreachStep)))
+    : isOutreach
+      ? (customer.outreachAbandonedAt ? 1 : Math.min(currentStep + 1, OUTREACH_MAX_STEPS))
+      : undefined;
 
   const rendered = await renderLetter(
     customer,
@@ -499,6 +505,7 @@ async function persistAndSend(options: {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
       ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
+      ...(outreachStep ? {outreachStep} : {}),
       ...(knowledgeReview ? {knowledgeReview} : {}),
       ...(knowledgeReview ? {aiSnapshot:{subject:rendered.subject,contentText:rendered.text,at:new Date()}} : {}),
       projectId: customer.projectId,
@@ -634,6 +641,9 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     if (input.replyToId) throw ApiError.badRequest('首封开发信不能作为邮件回复');
     agentOutreachId = analysis._id;
     knowledgeReview=analysis.knowledgeReview;
+    if (input.outreachStep && input.outreachStep > 1 && analysis.outreachStep && analysis.outreachStep !== input.outreachStep) {
+      throw ApiError.badRequest('开发信序列位置与草稿不一致，请重新生成');
+    }
   }
   if(input.agentTaskId){const task=await AgentTask.findOne({_id:input.agentTaskId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id,status:{$in:input.saveAsDraft?['running','awaiting_review']:['awaiting_review']}});if(!task)throw ApiError.notFound('任务不存在或状态已变化');const linked=task.mailAnalysisId
  ?await AgentMailThreadAnalysis.findOne({_id:task.mailAnalysisId,projectId:customer.projectId,userId:actor?.id,customerId:customer._id})
@@ -657,9 +667,31 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     };
   }
 
+  let subject = input.templateId ? input.subject : input.subject.trim();
+  let threadId: string | undefined;
+  let inReplyTo: string | undefined;
+  let references: string[] | undefined;
+  if (!input.saveAsDraft && input.outreachStep && input.outreachStep > 1) {
+    // The three-step sequence is generated before the first send, so it cannot
+    // know the future Message-ID. Resolve the preceding sent letter at send
+    // time to keep replies in the same thread (plugin's non-negotiable rule).
+    const previous = await DevelopmentLetter.findOne({
+      projectId: customer.projectId,
+      customerId: customer._id,
+      outreachStep: input.outreachStep - 1,
+      status: { $in: ['sent', 'opened'] },
+      messageId: { $exists: true, $ne: '' },
+    }).sort({ sentAt: -1 });
+    if (!previous?.messageId) throw ApiError.conflict(`请先发送第 ${input.outreachStep - 1} 封开发信，再发送第 ${input.outreachStep} 封`);
+    subject = /^re:/i.test(subject) ? subject : `Re: ${previous.subject}`;
+    threadId = previous.threadId;
+    inReplyTo = previous.messageId;
+    references = [...(previous.references ?? []), previous.messageId];
+  }
+
   return persistAndSend({
     customer,
-    subjectTemplate: input.templateId ? input.subject : input.subject.trim(),
+    subjectTemplate: subject,
     contentTemplate: input.content,
     templateAttribution,
     knowledgeReview,agentOutreachId,agentTaskId:input.agentTaskId?new Types.ObjectId(input.agentTaskId):undefined,
@@ -667,6 +699,10 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
     markAsDeveloped: input.markAsDeveloped,
     saveAsDraft: input.saveAsDraft,
     replyToId: input.replyToId,
+    outreachStep: input.outreachStep,
+    threadId,
+    inReplyTo,
+    references,
     userId: actor?.id,
     scheduledAt: input.scheduledAt,
     requestKey: input.requestKey,
@@ -695,7 +731,7 @@ export async function resendLetter(
   if((original.agentTaskId||original.agentOutreachId)&&await hasProtectedCustomerMail(customer.id,String(customer.projectId)))throw ApiError.conflict('客户已停止营销联系，禁止继续营销发送');
   // 优先用原始模板（含占位符），没有模板时退化为已渲染的正文
   const contentTemplate = input.content ?? original.template ?? original.content;
-  const subjectTemplate = input.subject ?? original.subject;
+  let subjectTemplate = input.subject ?? original.subject;
   const priorReview = activeReview(original.review);
   const signerName = await signerNameFor(customer, actor?.id);
 
@@ -723,6 +759,24 @@ export async function resendLetter(
   }
   assertKnowledgeReviewCanSend(original.knowledgeReview);
 
+  let threadId = original.threadId;
+  let inReplyTo = original.inReplyTo;
+  let references = original.references;
+  if (original.outreachStep && original.outreachStep > 1 && !original.inReplyTo) {
+    const previous = await DevelopmentLetter.findOne({
+      projectId: customer.projectId,
+      customerId: customer._id,
+      outreachStep: original.outreachStep - 1,
+      status: { $in: ['sent', 'opened'] },
+      messageId: { $exists: true, $ne: '' },
+    }).sort({ sentAt: -1 });
+    if (!previous?.messageId) throw ApiError.conflict(`请先发送第 ${original.outreachStep - 1} 封开发信，再发送第 ${original.outreachStep} 封`);
+    if (!/^re:/i.test(subjectTemplate)) subjectTemplate = `Re: ${previous.subject}`;
+    threadId = previous.threadId;
+    inReplyTo = previous.messageId;
+    references = [...(previous.references ?? []), previous.messageId];
+  }
+
   return persistAndSend({
     customer,
     subjectTemplate,
@@ -736,9 +790,10 @@ export async function resendLetter(
     userId: actor?.id,
     scheduledAt: input.scheduledAt,
     requestKey: input.requestKey || `resend_${original.id}_${createHash('sha256').update(JSON.stringify([input, Math.floor(Date.now() / 60000)])).digest('hex')}`,
-    threadId: original.threadId,
-    inReplyTo: original.inReplyTo,
-    references: original.references,
+    outreachStep: original.outreachStep,
+    threadId,
+    inReplyTo,
+    references,
     countAsOutreach: false,
   });
 }

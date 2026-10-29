@@ -28,6 +28,8 @@ export interface IAgentCustomerAnalysis {
   gaps: AgentAnalysisClaim[];
   recommendations: AgentAnalysisClaim[];
   firstOutreach?: boolean;
+  /** 同一客户三封开发信序列中的位置；旧分析没有该字段。 */
+  outreachStep?: number;
   emailDraft: { subject: string; bodyText: string };
   followUpPlan: {
     method: 'email' | 'whatsapp' | 'phone' | 'chat' | 'other';
@@ -75,6 +77,7 @@ const schema = new Schema<IAgentCustomerAnalysis>({
   gaps: { type: [claimSchema], default: [] },
   recommendations: { type: [claimSchema], default: [] },
   firstOutreach: { type: Boolean, default: false },
+  outreachStep: { type: Number, min: 1, max: 3 },
   emailDraft: {
     type: new Schema({
       subject: { type: String, required: true, trim: true, maxlength: 300 },

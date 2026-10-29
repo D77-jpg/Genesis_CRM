@@ -280,7 +280,7 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   const [sendOpen, setSendOpen] = React.useState(false);
   const [quickGenerating, setQuickGenerating] = React.useState(false);
-  const [composeDraft, setComposeDraft] = React.useState<{ analysisId: string; subject: string; content: string } | null>(null);
+  const [composeDraft, setComposeDraft] = React.useState<{ analysisId: string; subject: string; content: string; outreachStep?: number } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const composeAnalysisId = searchParams.get('composeAnalysis');
   React.useEffect(() => { setComposeDraft(null); setSendOpen(false); }, [id]);
