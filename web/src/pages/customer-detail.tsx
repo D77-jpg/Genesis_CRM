@@ -1,4 +1,5 @@
 import {PendingDrafts} from '@/components/letters/pending-drafts';
+import { OutreachSequenceDialog } from '@/components/customers/outreach-sequence-dialog';
 import {usePendingDrafts} from '@/hooks/use-pending-drafts';
 import {CustomerAgreements} from '@/components/agent/customer-agreements';
 import { customerTextPatch } from '@/lib/customer-payload';
@@ -279,6 +280,7 @@ export function CustomerDetailPage(): React.JSX.Element {
   /* ---------------------------- 弹窗状态 ---------------------------- */
 
   const [sendOpen, setSendOpen] = React.useState(false);
+  const [sequenceOpen, setSequenceOpen] = React.useState(false);
   const [quickGenerating, setQuickGenerating] = React.useState(false);
   const [composeDraft, setComposeDraft] = React.useState<{ analysisId: string; subject: string; content: string; outreachStep?: number } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -609,6 +611,16 @@ export function CustomerDetailPage(): React.JSX.Element {
         }
         actions={
           <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={quickGenerating}
+              onClick={() => setSequenceOpen(true)}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+              补齐三封
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -1098,6 +1110,16 @@ export function CustomerDetailPage(): React.JSX.Element {
       <CustomerAttachments customerId={customer.id} />
 
       {/* ---------------------------- 弹窗 ---------------------------- */}
+
+      <OutreachSequenceDialog
+        open={sequenceOpen}
+        customerIds={[customer.id]}
+        onOpenChange={setSequenceOpen}
+        onCompleted={() => {
+          pendingDrafts.refresh();
+          void reloadLetters();
+        }}
+      />
 
       <SendLetterDialog
         open={sendOpen}

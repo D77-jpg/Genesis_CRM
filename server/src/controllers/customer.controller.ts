@@ -42,6 +42,7 @@ import {
   checkCustomerDuplicates,
 } from '../services/customer.service';
 import { buildCustomersWorkbook, buildImportTemplate } from '../services/excel.service';
+import { previewOutreachSequence, queueOutreachSequence } from '../services/agent/outreach-sequence.service';
 import type { CustomerStatus } from '../constants';
 import type {
   CreateCustomerInput,
@@ -148,6 +149,16 @@ export const bulkSetFollowUpHandler = asyncHandler(async (req: Request, res: Res
     throw ApiError.notFound('所选客户均不存在或已被删除');
   }
   sendSuccess(res, { ...result, requested: ids.length, notFound: ids.length - result.matched });
+});
+
+export const previewOutreachSequenceHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: string[] };
+  sendSuccess(res, await previewOutreachSequence(req.user!, ids));
+});
+
+export const bulkOutreachSequenceHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: string[] };
+  sendSuccess(res, await queueOutreachSequence(req.user!, ids), 202);
 });
 
 export const checkDuplicatesHandler = asyncHandler(async (req: Request, res: Response) => {

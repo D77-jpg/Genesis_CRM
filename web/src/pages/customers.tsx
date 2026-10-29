@@ -17,6 +17,7 @@ import { CustomerTable } from '@/components/customers/customer-table';
 import type { CustomerQuickEditPatch } from '@/components/customers/customer-quick-edit';
 import { CustomerFilters, type CustomerFilterValues } from '@/components/customers/customer-filters';
 import { BulkActionsBar } from '@/components/customers/bulk-actions-bar';
+import { OutreachSequenceDialog } from '@/components/customers/outreach-sequence-dialog';
 import {
   BulkActionDialog,
   type BulkActionKind,
@@ -108,6 +109,7 @@ export function CustomersPage(): React.JSX.Element {
   const [bulkDeleteOpen, setBulkDeleteOpen] = React.useState(false);
   /** 当前打开的批量动作弹窗（标签 / 负责人 / 跟进时间）；null 表示未打开 */
   const [bulkKind, setBulkKind] = React.useState<BulkActionKind | null>(null);
+  const [outreachOpen, setOutreachOpen] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
   const [quickSaving, setQuickSaving] = React.useState(false);
   const quickSavingRef = React.useRef(false);
@@ -366,6 +368,7 @@ export function CustomersPage(): React.JSX.Element {
 
       <BulkActionsBar
         onPrepareDrafts={()=>useUiStore.getState().openAgentBatch(selectedIds)}
+        onBackfillSequences={() => setOutreachOpen(true)}
         selectedCount={selectedIds.length}
         busy={mutating || quickSaving}
         disabled={loading}
@@ -406,6 +409,13 @@ export function CustomersPage(): React.JSX.Element {
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <OutreachSequenceDialog
+        open={outreachOpen}
+        customerIds={selectedIds}
+        onOpenChange={setOutreachOpen}
+        onCompleted={() => void fetchList()}
+      />
 
       <SendLetterDialog
         open={sendOpen}

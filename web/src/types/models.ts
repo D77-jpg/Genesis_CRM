@@ -1302,3 +1302,28 @@ export interface HealthResponse {
   mailChannel: MailChannel;
   version: string;
 }
+
+/** 老客户补齐三封开发信：单个客户的步骤计划 */
+export interface OutreachSequencePlan {
+  customerId: string;
+  name: string;
+  status: CustomerStatus;
+  email?: string;
+  sentCount: number;
+  draftSteps: number[];
+  missingSteps: number[];
+  skipReason?: string;
+}
+
+export interface OutreachSequencePreview {
+  requested: number;
+  eligible: number;
+  skipped: number;
+  totalDrafts: number;
+  plans: OutreachSequencePlan[];
+}
+
+export interface OutreachSequenceResult extends OutreachSequencePreview {
+  created: { customerId: string; step: number; taskId: string }[];
+  failed: { customerId: string; step: number; message: string }[];
+}

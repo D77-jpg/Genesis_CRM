@@ -222,6 +222,11 @@ const bulkIdsSchema = z
   .min(1, '请至少选择一个客户')
   .max(MAX_BULK_SIZE, `单次最多处理 ${MAX_BULK_SIZE} 个客户`);
 
+/** 批量补齐三封开发信：只接收客户 ID，缺失步数由服务端按历史记录计算 */
+export const bulkOutreachSequenceSchema = z.object({
+  ids: bulkIdsSchema,
+});
+
 /** 批量标签操作的标签数组：至少 1 个，去重后再交给服务层 */
 const bulkTagsSchema = z
   .array(z.string().trim().min(1, '标签不能为空').max(40, '单个标签不能超过 40 个字符'))
@@ -373,6 +378,7 @@ export type ImportRow = z.infer<typeof importRowSchema>;
 export type BulkTagsInput = z.infer<typeof bulkAddTagsSchema>;
 export type BulkAssignOwnerInput = z.infer<typeof bulkAssignOwnerSchema>;
 export type BulkSetFollowUpInput = z.infer<typeof bulkSetFollowUpSchema>;
+export type BulkOutreachSequenceInput = z.infer<typeof bulkOutreachSequenceSchema>;
 
 /**
  * 新建客户前的查重预检：把要填的邮箱 / 网站 / 公司名 / 电话带上来，

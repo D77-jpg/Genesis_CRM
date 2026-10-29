@@ -13,6 +13,7 @@ import {
   bulkRemoveTagsSchema,
   bulkAssignOwnerSchema,
   bulkSetFollowUpSchema,
+  bulkOutreachSequenceSchema,
   createCustomerSchema,
   idParamsSchema,
   duplicateCheckQuerySchema,
@@ -34,6 +35,8 @@ import {
   bulkRemoveTagsHandler,
   bulkAssignOwnerHandler,
   bulkSetFollowUpHandler,
+  previewOutreachSequenceHandler,
+  bulkOutreachSequenceHandler,
   createCustomerHandler,
   deleteCustomerHandler,
   downloadTemplateHandler,
@@ -112,6 +115,8 @@ router.post('/bulk/tags/remove', validate({ body: bulkRemoveTagsSchema }), bulkR
 // 分配负责人是管理员专属：严格分配制下业务员不能转移客户归属
 router.post('/bulk/owner', requireRole('admin'), validate({ body: bulkAssignOwnerSchema }), bulkAssignOwnerHandler);
 router.post('/bulk/follow-up', validate({ body: bulkSetFollowUpSchema }), bulkSetFollowUpHandler);
+router.post('/bulk/outreach-sequence/preview', validate({ body: bulkOutreachSequenceSchema }), previewOutreachSequenceHandler);
+router.post('/bulk/outreach-sequence', validate({ body: bulkOutreachSequenceSchema }), bulkOutreachSequenceHandler);
 
 /* ---------- 单条操作 ---------- */
 router.get('/:id', validate({ params: idParamsSchema }), getCustomerHandler);
