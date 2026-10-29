@@ -201,6 +201,7 @@ export interface AgentCustomerAnalysis {
   knowledgeFreshness?:KnowledgeFreshness;
   reviewBodyChanged?:boolean;
   firstOutreach?: boolean;
+  outreachStep?: number;
   id: string;
   customerId: string;
   sources: AgentAnalysisSource[];
@@ -448,6 +449,8 @@ export interface DevelopmentLetter {
   template: string;
   status: LetterStatus;
   channel: MailChannel;
+  /** 同一客户三封开发信序列中的位置（1/2/3） */
+  outreachStep?: number;
   sentAt?: string | Date;
   messageId?: string;
   error?: string;
@@ -480,6 +483,7 @@ export interface MailTrackingSummary {
 
 export interface SendLetterPayload {
   agentAnalysisId?: string;
+  outreachStep?: number;
   /** 仅在导入模板原文且未修改时附带；服务端校验并固定归因。 */
   templateId?: string;
   scheduledAt?: string;

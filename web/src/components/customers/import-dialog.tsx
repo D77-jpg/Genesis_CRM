@@ -624,7 +624,7 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
                   <ShieldCheck aria-hidden />
                   <AlertTitle>下一步：去今日开发审核</AlertTitle>
                   <AlertDescription>
-                    导入的 {importResult.created} 条线索已在「今日开发」里，按等级和优先级排好序；确认无误点「转为客户」，系统会自动建客户并准备首封开发信草稿。
+                    导入的 {importResult.created} 条线索已在「今日开发」里，按等级和优先级排好序；确认无误点「转为客户」，系统会自动建客户并准备三封开发信草稿。
                   </AlertDescription>
                 </Alert>
               ) : null}

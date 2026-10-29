@@ -90,7 +90,7 @@ export interface SendLetterDialogProps {
   customer: Customer | null;
   /** 重发场景：带出原信的主题与模板 */
   letter?: DevelopmentLetter | null;
-  initialDraft?: { analysisId: string; subject: string; content: string } | null;
+  initialDraft?: { analysisId: string; subject: string; content: string; outreachStep?: number } | null;
   /** 发送 / 存草稿成功后回调，父级据此刷新历史列表与客户信息 */
   reply?: { id: string; subject: string; from: string };
   onSent?: (result: SendLetterResult) => void;
@@ -445,6 +445,7 @@ export function SendLetterDialog({
             // 跟进草稿的 seed 里 analysisId 是空串，这里要收敛成 undefined，
             // 否则后端会当成「无效的 ID」直接 422。
             agentAnalysisId: initialDraft?.analysisId || undefined,
+            outreachStep: initialDraft?.outreachStep,
             templateId: attributedTemplate && attributedTemplate.subject === values.subject && attributedTemplate.content === values.content
                ? attributedTemplate.id : undefined,
             requestKey: requestKey.current,

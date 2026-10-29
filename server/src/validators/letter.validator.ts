@@ -25,6 +25,8 @@ export const sendLetterSchema = z.object({
   agentTaskId: optionalObjectIdSchema,
   agentAnalysisId: optionalObjectIdSchema,
   replyToId: optionalObjectIdSchema,
+  /** 同一客户三封开发信序列中的位置；任务保存时由服务端写入。 */
+  outreachStep: z.number().int().min(1).max(3).optional(),
   /** 目标客户；也可通过 URL /customers/:id/letters 传入 */
   customerId: optionalObjectIdSchema,
   /** 仅在 subject/content 均与同项目模板原文完全一致时接受归因。 */

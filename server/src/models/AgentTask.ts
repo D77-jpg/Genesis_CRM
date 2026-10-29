@@ -8,6 +8,8 @@ export interface IAgentTask {
  kind:'first_outreach'|'inquiry_reply'|'followup_review'|'quotation_explanation'|'sample_reply';sourceMailId?:Types.ObjectId;sourceDueAt?:Date;automationRuleId?:Types.ObjectId;ruleVersion?:number;mailAnalysisId?:Types.ObjectId;
  workflowEpoch:number; workflowCalls:number; workflowActiveMs:number; workflowStamp?:string; workflowRecords:WorkflowRecord[]; previousArtifacts:{analysisId?:string;mailAnalysisId?:string;draftId?:string;at:string}[];
  parentBatchId?:Types.ObjectId; skillVersion?:number; knowledgeIds:Types.ObjectId[]; tokenBudget:number; budgetCharged:number; contextSummary?:string;
+ /** 同一客户三封开发信序列中的位置；为空表示普通首封/回复任务。 */
+ outreachStep?: 1|2|3;
  requestSignature?:string; requestKey: string; goal: string; customerId?: Types.ObjectId; query?: string;
  candidates: {id: string; name: string; company?: string}[];
  analysisId?: Types.ObjectId; draftId?: Types.ObjectId; sentLetterId?: Types.ObjectId;
@@ -22,6 +24,7 @@ const schema = new Schema<IAgentTask>({
  kind:{type:String,enum:['first_outreach','inquiry_reply','followup_review','quotation_explanation','sample_reply'],default:'first_outreach'},sourceMailId:Schema.Types.ObjectId,sourceDueAt:Date,automationRuleId:Schema.Types.ObjectId,ruleVersion:Number,mailAnalysisId:Schema.Types.ObjectId,
  workflowEpoch:{type:Number,default:0},workflowCalls:{type:Number,default:0},workflowActiveMs:{type:Number,default:0},workflowStamp:String,workflowRecords:[Schema.Types.Mixed],previousArtifacts:[Schema.Types.Mixed],
  parentBatchId:Schema.Types.ObjectId,skillVersion:{type:Number,default:2},knowledgeIds:[Schema.Types.ObjectId],tokenBudget:{type:Number,default:60000},budgetCharged:{type:Number,default:0},contextSummary:{type:String,maxlength:2000},
+ outreachStep:{type:Number,enum:[1,2,3]},
  requestSignature:String, requestKey: {type: String, required: true, maxlength: 128}, goal: {type: String, required: true, maxlength: 8000},
  customerId: Schema.Types.ObjectId, query: {type: String, maxlength: 120},
  candidates: [{_id: false, id: String, name: String, company: String}],

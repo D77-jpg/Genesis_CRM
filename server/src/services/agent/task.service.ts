@@ -93,7 +93,7 @@ async function dto(task: AgentTaskDocument, actor: AuthUser) {
   sentLetterId: task.sentLetterId?.toString(), completedSteps: task.completedSteps, currentStep: task.currentStep,
   workflowEpoch:task.workflowEpoch??0,workflowCalls:task.workflowCalls??0,workflowActiveMs:task.workflowActiveMs??0,previousArtifacts:inputsChanged?[]:task.previousArtifacts??[],workflow:(task.workflowRecords??[]).map(({payload,...record})=>({...record,label:workflowLabels[record.key]??record.key,metrics:stepMetrics(record.key,payload),partial:record.key==='audit_claims'&&(payload as {review?:{completeness?:string}}|undefined)?.review?.completeness==='partial'})),
   events: task.events, error: task.error?.code?task.error:undefined, attempts: task.attempts,
-  candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), kind:task.kind,sourceMailId:task.sourceMailId?.toString(),mailAnalysisId:inputsChanged?undefined:task.mailAnalysisId?.toString(),automatic:Boolean(task.automationRuleId),parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:inputsChanged?undefined:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};
+  candidates: candidates.map(c => ({id: String(c._id), name: c.name, company: c.company})), kind:task.kind,outreachStep:task.outreachStep,sourceMailId:task.sourceMailId?.toString(),mailAnalysisId:inputsChanged?undefined:task.mailAnalysisId?.toString(),automatic:Boolean(task.automationRuleId),parentBatchId:task.parentBatchId?.toString(),skillVersion:task.skillVersion,contextSummary:inputsChanged?undefined:task.contextSummary,tokenBudget:task.tokenBudget,budgetCharged:task.budgetCharged,createdAt: task.createdAt, updatedAt: task.updatedAt};
 }
 async function owned(id: string, actor: AuthUser) {
  const task = await AgentTask.findOne({_id: validId(id), ...scope(actor)});
@@ -109,10 +109,10 @@ export async function listAgentTasks(actor: AuthUser) {
  for (const task of rows) { try { result.push(await dto(task,actor)); } catch (error) { if (!(error instanceof ApiError && error.statusCode === 404)) throw error; } }
  return result;
 }
-export async function createAgentTask(input: {sessionId: string; goal: string; requestKey: string; customerId?:string; parentBatchId?:string; knowledgeIds?:string[]; tokenBudget?:number}, actor: AuthUser) {
+export async function createAgentTask(input: {sessionId: string; goal: string; requestKey: string; customerId?:string; parentBatchId?:string; knowledgeIds?:string[]; tokenBudget?:number; outreachStep?:1|2|3}, actor: AuthUser) {
  const session = await AgentSession.findOne({_id: validId(input.sessionId), ...scope(actor), status: 'active'});
  if (!session) throw ApiError.notFound('会话不存在或无权访问');
- if (!isFirstOutreachCommand(input.goal)&&!isBusinessMailCommand(input.goal)) throw ApiError.badRequest('请明确委托准备邮件草稿');
+ if (!input.outreachStep&&!isFirstOutreachCommand(input.goal)&&!isBusinessMailCommand(input.goal)) throw ApiError.badRequest('请明确委托准备邮件草稿');
  const inquiry=session.context.type==='mail'&&session.context.direction==='inbound';
  if(inquiry)await agentMailOrThrow(session.context.resourceId!,actor);
  const outbound=session.context.type==='mail'&&session.context.direction==='outbound'
@@ -120,9 +120,10 @@ export async function createAgentTask(input: {sessionId: string; goal: string; r
  const customerId = input.customerId ?? (session.context.type === 'customer' ? session.context.resourceId : outbound?.customerId);
  if (customerId) await getCustomerByIdOrThrow(customerId,actor);
  let kind=salesMailKind(input.goal,inquiry);
- if(kind==='first_outreach'&&customerId&&!/首封|第一封|first (?:outreach|introduction)/i.test(input.goal)&&await DevelopmentLetter.exists({projectId:requireProjectId(actor),customerId,status:{$in:['sent','opened']}}))kind='followup_review';
- const data = {...scope(actor), sessionId: session._id, actorRole: actor.role, goal: input.goal, requestKey: input.requestKey,requestSignature:workflowHash({sessionId:input.sessionId,goal:input.goal,customerId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000}),
-  customerId,kind,sourceMailId:inquiry?session.context.resourceId:undefined,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:5, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
+ if(input.outreachStep)kind='first_outreach';
+ else if(kind==='first_outreach'&&customerId&&!/首封|第一封|first (?:outreach|introduction)/i.test(input.goal)&&await DevelopmentLetter.exists({projectId:requireProjectId(actor),customerId,status:{$in:['sent','opened']}}))kind='followup_review';
+ const data = {...scope(actor), sessionId: session._id, actorRole: actor.role, goal: input.goal, requestKey: input.requestKey,requestSignature:workflowHash({sessionId:input.sessionId,goal:input.goal,customerId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,outreachStep:input.outreachStep}),
+  customerId,kind,outreachStep:input.outreachStep,sourceMailId:inquiry?session.context.resourceId:undefined,parentBatchId:input.parentBatchId,knowledgeIds:input.knowledgeIds??[],tokenBudget:input.tokenBudget??60000,skillVersion:5, status: 'queued', events: [{at: new Date(), message: '已接受草稿准备委托；发送仍由业务员操作。'}]};
  let task;
  try { task = await AgentTask.findOneAndUpdate({...scope(actor),requestKey: input.requestKey}, {$setOnInsert: data}, {upsert: true,new: true,runValidators: true}); }
  catch (error) { if ((error as {code?:number}).code !== 11000) throw error; task = await AgentTask.findOne({...scope(actor),requestKey: input.requestKey}); }
@@ -223,7 +224,11 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
   const epochSuffix=(task.workflowEpoch??0)?'-e'+task.workflowEpoch:'';
   if (!task.completedSteps.includes('analyze_customer')) {
    await step('analyze_customer','正在读取客户档案、时间线、邮件与报价，生成有依据的英文草稿。');
-   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}${epochSuffix}`},actor,{firstOutreach:task.kind==='first_outreach',userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id,workflow,taskKind:task.kind,customerResearch:research});
+   const previousOutreach=task.outreachStep&&task.outreachStep>1
+    ?(await DevelopmentLetter.find({projectId:task.projectId,customerId:task.customerId,outreachStep:{$lt:task.outreachStep},status:{$in:['draft','sent','opened']}}).sort({outreachStep:1}).select('outreachStep subject contentText').lean())
+      .map(item=>({step:Number(item.outreachStep),subject:String(item.subject??''),bodyText:String(item.contentText??'').slice(0,1800)}))
+    :undefined;
+   const analysis=await createCustomerAnalysis({customerId:String(task.customerId),idempotencyKey:`task-analysis-${task.id}${epochSuffix}`},actor,{firstOutreach:task.kind==='first_outreach',userRequest:task.goal,provider:providerOverride,knowledgeIds:task.knowledgeIds.map(String),taskId:task.id,workflow,taskKind:task.kind,customerResearch:research,outreachStep:task.outreachStep,previousOutreach});
    await check(); await change({analysisId:new Types.ObjectId(analysis.id),contextSummary:analysis.facts.filter(f=>f.sourceIds.some(id=>/^(?:profile|timeline|mail-in|mail-out|website|followup|attachment):/.test(id))).map(f=>f.text).join('；').slice(0,1500)},'分析与草稿内容已持久保存。','analyze_customer');
   }
   if (!task.completedSteps.includes('save_draft')) {
@@ -238,7 +243,7 @@ export async function processAgentTask(id?: string, providerOverride?: AgentProv
     const signature=resolveProjectSalesProfile(project).signature;
     const saved=await sendLetter({customerId:String(task.customerId),subject:analysis.emailDraft.subject,
      content:renderLetterContent(analysis.emailDraft.bodyText, await resolveSignerName({projectId:task.projectId,ownerId:(await Customer.findById(task.customerId).select('ownerId').lean())?.ownerId,actorId:actor.id}),signature),
-     saveAsDraft:true,markAsDeveloped:false,agentTaskId:task.id,agentAnalysisId:task.kind==='first_outreach'?analysis.id:undefined,requestKey:`task-draft-${task.id}${epochSuffix}`},actor);
+     saveAsDraft:true,markAsDeveloped:false,agentTaskId:task.id,agentAnalysisId:task.kind==='first_outreach'?analysis.id:undefined,outreachStep:analysis.outreachStep??task.outreachStep,requestKey:`task-draft-${task.id}${epochSuffix}`},actor);
     if(analysis.knowledgeReview)await DevelopmentLetter.updateOne({_id:saved.letter.id,projectId:task.projectId,knowledgeReview:{$exists:false}},{$set:{knowledgeReview:{...analysis.knowledgeReview,bodyHash:draftHash(saved.letter.contentText)}}});
     draft=await DevelopmentLetter.findById(saved.letter.id);
    }

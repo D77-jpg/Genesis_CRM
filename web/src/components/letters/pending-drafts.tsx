@@ -117,6 +117,7 @@ export function PendingDrafts({
                   {letter.contentText || '打开草稿查看正文'}
                 </p>
                 <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">
+                  {letter.outreachStep ? <Badge variant="outline">第 {letter.outreachStep} 封</Badge> : null}
                   <Badge variant={status.variant}>{status.label}</Badge>
                   <span>更新于 {formatRelative(letter.updatedAt)}</span>
                 </p>

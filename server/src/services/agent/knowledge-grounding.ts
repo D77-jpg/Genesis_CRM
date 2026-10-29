@@ -190,6 +190,9 @@ export interface GroundedEmailOptions {
  customerEvidence?:string;questions?:string[];seller?:{companyName:string;senderName:string;senderEmail?:string;website?:string};
  /** 当前项目的签名；不传时保持 Genesis 默认（仅用于旧测试/旧调用） */
  signature?:LetterSignature;
+ /** 三封序列中的第几封；用于让兜底稿保持跟进/结束信结构 */
+ outreachStep?:number;
+ previousOutreach?:{step:number;subject:string;bodyText:string}[];
 }
 // Conservative whole-message rendering is the bounded fallback, not a chain of regex deletions.
 // The original model message is retained only by the independent semantic verifier below.
@@ -217,13 +220,27 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  if(!bundle.sources.length)issues.push({code:bundle.status==='retrieval_failed'?'retrieval_failed':'missing',message:'尚无可用业务依据；请补充或恢复检索后再审核'});
  const seller=options.seller;
  const recipient=options.recipientName?.replace(/[\r\n]/g,' ').trim().slice(0,100);
- const outreach=options.taskType==='first_outreach';
- const intro=options.verifiedProse??(options.taskType==='quotation_explanation'?'Here are the quotation details available for review and any points still requiring confirmation.':options.taskType==='sample_reply'?'Here is the available information for your sample request.':options.taskType==='followup_review'?'I wanted to check whether you have any updates on your current requirements.':undefined);
- const asked=/[?？]\s*$/.test((options.verifiedProse??'').trim());
- const sections=[salutationFor(recipient,options.customerProfile?.company),intro??(outreach?'I am reaching out to introduce our team and see whether we could help with your requirements.':answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.'),
- answers.join('\n\n'),missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'',
- // 模型自己已经用提问收尾时（asked），不再补模板问句，否则一封信念出两个问题
- outreach?(asked?'':'Would it help if I sent a few options that fit your product line?'):options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':asked?'':'Could you please confirm your final specifications so we can agree on the next step?',
+ // Explicit sequence tasks get the low-pressure plugin fallback. Legacy
+ // first-outreach callers without outreachStep keep the original deterministic
+ // knowledge fallback (the S4 tests exercise that contract directly).
+ const sequenceMode=options.outreachStep!==undefined;
+ const outreach=options.taskType==='first_outreach'||sequenceMode;
+ const outreachStep=Math.min(3,Math.max(1,Number(options.outreachStep??1)));
+ const previousSubject=(options.previousOutreach?.find(item=>item.step===outreachStep-1)?.subject??'').replace(/^Re:\s*/i,'').trim();
+ const sequenceIntro=outreachStep===2?`Following up on my previous note${previousSubject?` about ${previousSubject}`:''}.`:outreachStep===3?"I don't want to keep filling your inbox, so this will be my last note in this round.":'';
+ const sequenceBody=outreachStep===2?'I can put together a one-page size guide and a simple mockup for one of your current products, so you can check the proportions before sharing specifications.':outreachStep===3?"If this comes up later, or if someone else handles it, I'd be glad to pick this up then.":'';
+ const sequenceCta=outreachStep===2?'Would that be worth a look?':outreachStep===3?'Thank you for your time.':'';
+ const verified=options.verifiedProse?.trim();
+ const genericIntro='I am reaching out to introduce our team and see whether we could help with your requirements.';
+ const intro=verified??(options.taskType==='quotation_explanation'?'Here are the quotation details available for review and any points still requiring confirmation.':options.taskType==='sample_reply'?'Here is the available information for your sample request.':options.taskType==='followup_review'?'I wanted to check whether you have any updates on your current requirements.':outreach?(sequenceMode?sequenceIntro||genericIntro:genericIntro):undefined);
+ const asked=/[?？]/.test((verified??'').trim());
+ const hasThanks=/thank you/i.test(verified??'');
+ const bodySection=sequenceMode?(outreach?(verified?'':sequenceBody):answers.join('\n\n')):answers.join('\n\n');
+ const missingSection=sequenceMode?'':missing.length?'To confirm the remaining details:\n'+missing.map(x=>'- '+x).join('\n'):'';
+ const ctaSection=sequenceMode
+  ? (outreach?(verified?(asked||hasThanks?'':sequenceCta||'Would it help if I sent a few options that fit your product line?'):sequenceCta):options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':asked?'':'Could you please confirm your final specifications so we can agree on the next step?')
+  : (outreach?(asked?'':'Would it help if I sent a few options that fit your product line?'):options.knownRequirements?.quantity!==undefined?'We will review the remaining points and confirm the details with you.':asked?'':'Could you please confirm your final specifications so we can agree on the next step?');
+ const sections=[salutationFor(recipient,options.customerProfile?.company),intro??(outreach?genericIntro:answers.length?'Thank you for getting in touch. Here are the details for the scope below.':'Thank you for getting in touch. We would be happy to review your requirements.'),bodySection,missingSection,ctaSection,
  seller?renderSignatureText(signatureName(seller.senderName,seller.companyName),options.signature):''];
  const bodyText=sections.filter(Boolean).join('\n\n');
  const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));

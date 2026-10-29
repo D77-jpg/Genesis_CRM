@@ -163,16 +163,37 @@ export class MockAgentProvider implements AgentProvider {
       gaps,
       recommendations: [{ text: '发送一封简短英文邮件，确认当前采购优先级、规格和目标时间。', rationale: '先补齐关键需求，再决定是否准备正式报价。', sourceIds: evidence.length ? evidence : profile ? [profile.sourceId] : [] }],
       emailDraft: {
-        ...(request.input.firstOutreach ? {
-          subject: `${request.input.projectProfile?.subjectFocus || 'Product'} ideas for ${String(profileData.company || request.input.customerName)}`,
-          bodyText: `Dear ${request.input.customerName},
+        ...(request.input.firstOutreach ? (() => {
+          const step = Number(request.input.outreachStep ?? 1);
+          const previous = request.input.previousOutreach?.at(-1);
+          const subject = step > 1
+            ? (/^re:/i.test(previous?.subject ?? '') ? previous!.subject : `Re: ${previous?.subject ?? `${request.input.projectProfile?.subjectFocus || 'Product'} ideas`}`)
+            : `${request.input.projectProfile?.subjectFocus || 'Product'} ideas for ${String(profileData.company || request.input.customerName)}`;
+          const bodyText = step === 1
+            ? `Dear ${request.input.customerName},
 
-I am ${request.input.seller?.senderName || 'the sales team'} from ${request.input.seller?.companyName || 'our company'}. Would it be useful to compare ${request.input.projectProfile?.outreachFocus || 'our product options'} for your current range?
+Your website shows a focused range in this category. A clear, consistent presentation often matters as much as the product itself.
 
-Best regards,
-${request.input.seller?.senderName || 'Sales team'}
-${request.input.seller?.companyName || ''}${request.input.seller?.senderEmail ? '\n' + request.input.seller.senderEmail : ''}`,
-        } : {
+I am ${request.input.seller?.senderName || 'the sales team'} from ${request.input.seller?.companyName || 'our company'}. We help brands make that presentation easier to source and repeat. Would a short reference sheet for your current range be useful?
+
+Best regards,`
+            : step === 2
+              ? `Dear ${request.input.customerName},
+
+Quick follow-up with one more concrete idea for your current range.
+
+We can put together a simple comparison or sample reference so you can judge the fit without a long call. Worth a look?
+
+Best regards,`
+              : `Dear ${request.input.customerName},
+
+I do not want to keep filling your inbox, so this is my last note on this topic.
+
+If it becomes relevant later, just reply here and I will pick it up. If someone else handles this area, a pointer would be appreciated.
+
+Thanks for reading.`;
+          return { subject, bodyText };
+        })() : {
         subject: `Next steps for ${String(profileData.company || request.input.customerName)}`,
         bodyText: `Dear ${request.input.customerName},\n\nThank you for your interest. To make sure we prepare the most relevant information, could you please confirm your preferred product specifications, estimated quantity, and target timeline?\n\nOnce we have these details, we will review the next steps with you.\n\nBest regards,`,
         }),

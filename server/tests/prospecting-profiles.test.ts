@@ -10,6 +10,7 @@ import {getProspectingConfig,updateProspectingConfig,startProspecting,approvePro
 import {ProspectingConfig} from '../src/models/ProspectingConfig';
 import {ProspectingRun} from '../src/models/ProspectingRun';
 import {Prospect} from '../src/models/Prospect';
+import {AgentTask} from '../src/models/AgentTask';
 import {prospectingConfigSchema,runProspectingSchema} from '../src/validators/prospecting.validator';
 import type {AuthUser} from '../src/types/express';
 
@@ -87,7 +88,7 @@ test('a chosen run snapshots settings and does not overwrite defaults even if co
   while(complete?.status==='running'&&Date.now()<until){await new Promise(resolve=>setTimeout(resolve,20));complete=await ProspectingRun.findById(run.id);}
   assert.equal(complete?.status,'completed');assert.equal(complete?.profileId,'a');assert.deepEqual(complete?.queries,['one-off fictional query']);assert.equal(complete?.settings?.enrichLimit,1);assert.equal(complete?.settings?.hunterLimit,0);assert.equal(complete?.settings?.minScore,0);
   const stored=await Prospect.findOne({projectId:actor.projectId,domain:lead.domain});assert.ok(stored);for(const [key,value] of Object.entries(fields))assert.equal(stored.get(key),value,key);
-  const converted=await approveProspect(actor,stored.id);assert.equal(converted.customer.country,'美国') /* 客户记录统一存中文简称 */;assert.equal(converted.customer.phone,fields.phone);assert.equal(converted.customer.address,fields.address);assert.equal(converted.customer.industry,fields.industry);assert.equal(converted.customer.instagram,fields.instagram);assert.ok(converted.customer.notes?.includes('网站自述'));
+  const converted=await approveProspect(actor,stored.id);assert.equal(converted.customer.country,'美国') /* 客户记录统一存中文简称 */;assert.equal(converted.draftTaskIds?.length,3);const sequenceTasks=await AgentTask.find({projectId:actor.projectId,customerId:converted.customer.id}).select('outreachStep').lean();assert.deepEqual(sequenceTasks.map(task=>task.outreachStep).sort(),[1,2,3]);assert.equal(converted.customer.phone,fields.phone);assert.equal(converted.customer.address,fields.address);assert.equal(converted.customer.industry,fields.industry);assert.equal(converted.customer.instagram,fields.instagram);assert.ok(converted.customer.notes?.includes('网站自述'));
   const today=await prospectingToday(actor);assert.equal(today.prospects.find(p=>p.id===stored.id)?.country,'US');assert.equal(today.prospects.find(p=>p.id===stored.id)?.linkedin,fields.linkedin);
   const {Customer}=await import('../src/models');
   await Customer.updateOne({_id:converted.customer.id},{$unset:{country:1,instagram:1},$set:{phone:'Manually edited phone',notes:'My manual note'}});

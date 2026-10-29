@@ -1042,6 +1042,27 @@ test('first outreach command persists a durable task and draft analysis without 
   const messages = await service.listAgentMessages(session.id, actorA);
   assert.equal(messages[1]?.taskId, task.id);
   await assert.rejects(() => analysisWorkflow.getCustomerAnalysis(String(analysis!._id), actorB));
+
+  // The same customer can receive the remaining two sequence drafts. Each
+  // task owns its own analysis/draft, so completing one does not block the next.
+  for (const step of [2, 3] as const) {
+    const sequenceTask = await tasks.createAgentTask({
+      sessionId: session.id,
+      customerId: customer.id,
+      goal: `请为同一客户的开发信序列准备第 ${step} 封英文草稿，不要发送`,
+      requestKey: `first-outreach-sequence-${step}`,
+      outreachStep: step,
+    }, actorA);
+    await tasks.processAgentTask(sequenceTask.id);
+    const ready = await tasks.getAgentTask(sequenceTask.id, actorA);
+    assert.equal(ready.status, 'awaiting_review');
+    assert.equal(ready.outreachStep, step);
+  }
+  const sequenceDrafts = await DevelopmentLetter.find({ customerId: customer._id, status: 'draft' }).sort({ outreachStep: 1 }).lean();
+  assert.deepEqual(sequenceDrafts.map((letter) => letter.outreachStep), [1, 2, 3]);
+  assert.equal(new Set(sequenceDrafts.map((letter) => String(letter.agentTaskId))).size, 3);
+  assert.equal(await AgentCustomerAnalysis.countDocuments({ customerId: customer._id }), 3);
+  assert.equal(await FollowUp.countDocuments({ customerId: customer._id }), 0);
   await UserMailAccount.deleteOne({ _id: account._id });
 });
 
