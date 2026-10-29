@@ -1,5 +1,6 @@
 import {PendingDrafts} from '@/components/letters/pending-drafts';
 import { OutreachSequenceDialog } from '@/components/customers/outreach-sequence-dialog';
+import { DraftCleanupDialog } from '@/components/customers/draft-cleanup-dialog';
 import {usePendingDrafts} from '@/hooks/use-pending-drafts';
 import {CustomerAgreements} from '@/components/agent/customer-agreements';
 import { customerTextPatch } from '@/lib/customer-payload';
@@ -25,6 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
   Contact,
+  Eraser,
   Facebook,
   Flag,
   FolderTree,
@@ -281,6 +283,7 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   const [sendOpen, setSendOpen] = React.useState(false);
   const [sequenceOpen, setSequenceOpen] = React.useState(false);
+  const [cleanupOpen, setCleanupOpen] = React.useState(false);
   const [quickGenerating, setQuickGenerating] = React.useState(false);
   const [composeDraft, setComposeDraft] = React.useState<{ analysisId: string; subject: string; content: string; outreachStep?: number } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -611,6 +614,16 @@ export function CustomerDetailPage(): React.JSX.Element {
         }
         actions={
           <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={quickGenerating}
+              onClick={() => setCleanupOpen(true)}
+            >
+              <Eraser className="h-4 w-4" aria-hidden />
+              整理草稿
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -1110,6 +1123,16 @@ export function CustomerDetailPage(): React.JSX.Element {
       <CustomerAttachments customerId={customer.id} />
 
       {/* ---------------------------- 弹窗 ---------------------------- */}
+
+      <DraftCleanupDialog
+        open={cleanupOpen}
+        customerIds={[customer.id]}
+        onOpenChange={setCleanupOpen}
+        onCompleted={() => {
+          pendingDrafts.refresh();
+          void reloadLetters();
+        }}
+      />
 
       <OutreachSequenceDialog
         open={sequenceOpen}

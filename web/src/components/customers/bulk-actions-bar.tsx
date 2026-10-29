@@ -6,7 +6,7 @@
  * 执行结果由页面 toast。
  */
 import * as React from 'react';
-import { CalendarClock, Sparkles, Tag, Trash2, UserRound, X } from 'lucide-react';
+import { CalendarClock, Eraser, Sparkles, Tag, Trash2, UserRound, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -33,6 +33,8 @@ export interface BulkActionsBarProps {
   onPrepareDrafts?:()=>void;
   /** 老客户按历史补齐第 1/2/3 封中缺失的步骤 */
   onBackfillSequences?: () => void;
+  /** 清理老客户的重复草稿并补齐第几封标记 */
+  onCleanupDrafts?: () => void;
   onDelete: () => void;
   onClear: () => void;
   className?: string;
@@ -49,6 +51,7 @@ export function BulkActionsBar({
   onSetFollowUp,
   onPrepareDrafts,
   onBackfillSequences,
+  onCleanupDrafts,
   onDelete,
   onClear,
   className,
@@ -87,6 +90,12 @@ export function BulkActionsBar({
         <Button variant="outline" className="min-h-11" disabled={busyOrDisabled || selectedCount > 20} onClick={onBackfillSequences}>
           <Sparkles className="h-3.5 w-3.5" aria-hidden />
           补齐三封开发信
+        </Button>
+      ) : null}
+      {onCleanupDrafts ? (
+        <Button variant="outline" className="min-h-11" disabled={busyOrDisabled || selectedCount > 20} onClick={onCleanupDrafts}>
+          <Eraser className="h-3.5 w-3.5" aria-hidden />
+          整理重复草稿
         </Button>
       ) : null}
       <Separator orientation="vertical" className="hidden h-5 sm:block" />

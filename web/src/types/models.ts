@@ -1327,3 +1327,41 @@ export interface OutreachSequenceResult extends OutreachSequencePreview {
   created: { customerId: string; step: number; taskId: string }[];
   failed: { customerId: string; step: number; message: string }[];
 }
+
+/** 老客户草稿整理：删除重复草稿并补齐第几封标记 */
+export interface DraftCleanupItem {
+  id: string;
+  subject: string;
+  step: number;
+  reason?: string;
+}
+
+export interface DraftCleanupPlan {
+  customerId: string;
+  name: string;
+  draftCount: number;
+  keepCount: number;
+  removeCount: number;
+  relabelCount: number;
+  sentStepUpdates: number;
+  keep: DraftCleanupItem[];
+  remove: DraftCleanupItem[];
+  skipReason?: string;
+}
+
+export interface DraftCleanupPreview {
+  requested: number;
+  customers: number;
+  totalDrafts: number;
+  kept: number;
+  removed: number;
+  relabeled: number;
+  sentStepUpdates: number;
+  plans: DraftCleanupPlan[];
+}
+
+export interface DraftCleanupResult extends DraftCleanupPreview {
+  deleted: number;
+  updated: number;
+  failed: { customerId: string; message: string }[];
+}

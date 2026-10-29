@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Sortable
 import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 import { LetterStatusBadge } from '@/components/common/status-badge';
 import { MailInteractionSummary } from '@/components/letters/mail-interaction-summary';
 import { DataPagination } from '@/components/common/data-pagination';
@@ -140,8 +141,11 @@ export function LetterHistoryTable({
                   className="block max-w-[22rem] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => onView(letter)}
                 >
-                  <span className="block truncate text-sm font-medium hover:text-primary hover:underline">
-                    {letter.subject || '（无主题）'}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {letter.outreachStep ? <Badge variant="outline" className="shrink-0">第 {letter.outreachStep} 封</Badge> : null}
+                    <span className="truncate text-sm font-medium hover:text-primary hover:underline">
+                      {letter.subject || '（无主题）'}
+                    </span>
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {htmlToPlainText(letter.content).replace(/\n+/g, ' ').slice(0, 80) || '（无正文）'}
