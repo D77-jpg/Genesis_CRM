@@ -16,7 +16,7 @@ import { LetterStatusBadge } from '@/components/common/status-badge';
 import { MailInteractionSummary } from '@/components/letters/mail-interaction-summary';
 import { DataPagination } from '@/components/common/data-pagination';
 import { EmptyState, ErrorState } from '@/components/common/empty-state';
-import { copyToClipboard, formatDateTime, formatRelative, htmlToPlainText } from '@/lib/format';
+import { copyToClipboard, formatDateTime, formatRelative, htmlToPlainText, toDate } from '@/lib/format';
 import { MAIL_CHANNEL_LABEL } from '@/constants';
 import type { LetterSortField } from '@/store/letter.store';
 import type { DevelopmentLetter } from '@/types';
@@ -42,6 +42,22 @@ export interface LetterHistoryTableProps {
   onSendFirst?: () => void;
   /** 删除进行中，用于禁用行内按钮 */
   busy?: boolean;
+  /** 客户详情按三封序列排序，避免草稿按创建时间倒序出现「3、2」 */
+  sequenceOrder?: boolean;
+}
+
+function sequenceRank(letter: DevelopmentLetter): number {
+  const step = Number(letter.outreachStep);
+  return Number.isFinite(step) && step > 0 ? step : Number.MAX_SAFE_INTEGER;
+}
+
+function compareSequenceLetters(a: DevelopmentLetter, b: DevelopmentLetter): number {
+  const aRank = sequenceRank(a);
+  const bRank = sequenceRank(b);
+  if (aRank !== bRank) return aRank - bRank;
+  const aTime = toDate(a.sentAt ?? a.createdAt)?.getTime() ?? 0;
+  const bTime = toDate(b.sentAt ?? b.createdAt)?.getTime() ?? 0;
+  return aRank === Number.MAX_SAFE_INTEGER ? bTime - aTime : aTime - bTime;
 }
 
 export function LetterHistoryTable({
@@ -63,6 +79,7 @@ export function LetterHistoryTable({
   onRetry,
   onSendFirst,
   busy = false,
+  sequenceOrder = false,
 }: LetterHistoryTableProps): React.JSX.Element {
   const copyText = React.useCallback(async (letter: DevelopmentLetter) => {
     const text = letter.contentText || htmlToPlainText(letter.content);
@@ -118,6 +135,8 @@ export function LetterHistoryTable({
       <TableHead className={className}>{label}</TableHead>
     );
 
+  const rows = sequenceOrder ? [...letters].sort(compareSequenceLetters) : letters;
+
   return (
     <div>
       <Table aria-label="开发信历史">
@@ -133,7 +152,7 @@ export function LetterHistoryTable({
         </TableHeader>
 
         <TableBody>
-          {letters.map((letter) => (
+          {rows.map((letter) => (
             <TableRow key={letter.id}>
               <TableCell>
                 <button

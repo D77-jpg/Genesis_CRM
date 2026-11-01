@@ -35,12 +35,15 @@ export function CustomerStatusBadge({
 export function LetterStatusBadge({
   status,
   className,
+  showDot = true,
 }: {
   status: LetterStatus;
   className?: string;
+  showDot?: boolean;
 }): React.JSX.Element {
   return (
-    <Badge variant="outline" className={cn(LETTER_STATUS_BADGE_CLASS[status] ?? LETTER_STATUS_BADGE_CLASS.draft, className)}>
+    <Badge variant="outline" className={cn('gap-1.5', LETTER_STATUS_BADGE_CLASS[status] ?? LETTER_STATUS_BADGE_CLASS.draft, className)}>
+      {showDot ? <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden /> : null}
       {LETTER_STATUS_LABEL[status] ?? status}
     </Badge>
   );
