@@ -89,7 +89,7 @@ export const listLettersQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(200).optional(),
   status: z.enum(['all', 'draft', 'sent', 'failed']).optional(),
   channel: z.enum(['all', 'mock', 'smtp']).optional(),
-  /** 按审核结论过滤：todo = 还需要处理的（不含已标记不通过的草稿） */
+  /** 按审核结论过滤：todo = 还需要处理的（不含已标记不通过的草稿；草稿只显示当前到期步骤） */
   review: z.enum(['all', 'todo', 'pending', 'approved', 'rejected']).optional(),
   sentFrom: isoDateSchema.optional(),
   sentTo: isoDateSchema.optional(),

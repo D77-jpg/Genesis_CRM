@@ -1,7 +1,8 @@
 /**
  * 客户表格
  * ------------------------------------------------------------------
- * - 桌面端：语义化表格，行点击进详情，Checkbox 与操作按钮阻止冒泡
+ * - 桌面端：语义化表格；宽屏点击行打开右侧速览，窄屏进入完整详情；
+ *   姓名链接始终进入完整详情；Checkbox 与操作按钮阻止冒泡
  * - 移动端（< 768px）：卡片列表，避免横向滚动带来的糟糕体验
  * - 姓名单元格同时展示公司/职位与国家/行业，业务员扫一眼即可判断客户画像
  * - 表头支持排序（姓名 / 状态 / 开发信数 / 下次跟进 / 最近联系 / 更新时间）
@@ -66,59 +67,41 @@ export interface CustomerTableProps {
   onCreate: () => void;
   onImport: () => void;
   onResetFilters: () => void;
+  /** 当前右侧速览的客户；用于高亮对应行 */
+  previewId?: string | null;
+  /** 宽屏时点击行打开速览；窄屏仍进入完整详情 */
+  previewEnabled?: boolean;
+  /** 右侧速览开启时压缩低优先级列，把空间留给客户与状态 */
+  compactColumns?: boolean;
+  onPreview?: (customer: Customer) => void;
 }
 
 /**
- * 客户标识：固定两行，保证每行高度一致、看着整齐。
- *   第一行：行业 · 国家（弱化的小字，业务员先扫市场和品类）
- *   第二行：姓名（主信息，放不下才省略）
- * 公司 / 职位不占版面，鼠标停在名字上能在提示里看到。
+ * Customer identity: name first, then company + market context. Keeps the
+ * primary scan target visible before secondary metadata.
  */
 function CustomerIdentity({ customer }: { customer: Customer }): React.JSX.Element {
   const country = countryInfo(customer.country);
-  // 潜客转来的记录常常没有联系人（客户名 = 公司名），提示里不再把公司重复一遍
   const company = secondaryCompanyLabel(customer) || CUSTOMER_SOURCE_LABEL[customer.source] || '';
   const companyLine = [company || '未填写公司', customer.title, isCompanyOnlyCustomer(customer) ? '未填联系人' : '']
     .filter(Boolean)
     .join(' · ');
-  const line = [customer.industry, country?.name, customer.name].filter(Boolean).join(' · ');
-  const hasMarket = Boolean(customer.industry || country);
+  const context = [company, customer.industry, country?.name].filter(Boolean).join(' · ');
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-2.5 md:w-[18rem]">
+    <div className="flex w-full min-w-0 items-center gap-2.5 md:w-[15rem]">
       <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-semibold text-muted-foreground"
         aria-hidden
       >
         {initials(customer.name)}
       </span>
-      {/* 两行固定栅格：高度恒定，扫下来不会一行高一行低 */}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5" title={companyLine ? `${line}\n${companyLine}` : line}>
-        <span className="flex min-w-0 items-center gap-1 text-xs leading-4 text-muted-foreground">
-          {hasMarket ? (
-            <>
-              {customer.industry ? (
-                <span className="min-w-0 truncate" title={customer.industry}>
-                  {customer.industry}
-                </span>
-              ) : null}
-              {customer.industry && country ? (
-                <span className="shrink-0 text-muted-foreground/40" aria-hidden>
-                  ·
-                </span>
-              ) : null}
-              {country ? (
-                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap" title={country.name}>
-                  <CountryFlag value={customer.country} />
-                  {country.name}
-                </span>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-muted-foreground/60">未填行业 / 国家</span>
-          )}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5" title={companyLine ? `${customer.name}\n${companyLine}` : customer.name}>
+        <span className="block truncate text-[0.8125rem] font-medium leading-4 text-foreground">{customer.name}</span>
+        <span className="flex min-w-0 items-center gap-1 text-[11px] leading-4 text-muted-foreground">
+          {customer.country ? <CountryFlag value={customer.country} /> : null}
+          <span className="truncate" title={context || undefined}>{context || '未填写公司 / 国家'}</span>
         </span>
-        <span className="block truncate text-sm font-medium leading-5 text-foreground">{customer.name}</span>
       </span>
     </div>
   );
@@ -142,7 +125,7 @@ function EmailCell({ email }: { email?: string }): React.JSX.Element {
   return (
     <a
       href={`mailto:${email}`}
-      className="flex max-w-full items-center gap-1.5 truncate text-xs text-foreground underline-offset-2 hover:text-primary hover:underline"
+      className="flex min-w-0 max-w-full items-center gap-1.5 truncate text-xs text-foreground underline-offset-2 hover:text-primary hover:underline"
       title={email}
       onClick={(event) => event.stopPropagation()}
     >
@@ -254,7 +237,13 @@ export function CustomerTable({
   onCreate,
   onImport,
   onResetFilters,
+  previewId,
+  previewEnabled = false,
+  compactColumns = false,
+  onPreview,
 }: CustomerTableProps): React.JSX.Element {
+  const secondaryColumnClass = compactColumns ? 'hidden min-[1800px]:table-cell' : 'hidden min-[1360px]:table-cell';
+  const ownerColumnClass = compactColumns ? 'min-[1360px]:hidden min-[1440px]:table-cell' : '';
   const navigate = useNavigate();
   const pageIds = React.useMemo(() => customers.map((item) => item.id), [customers]);
   const selected = React.useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -308,13 +297,13 @@ export function CustomerTable({
   /* ---------------------------- 移动端卡片列表 ---------------------------- */
 
   const mobileList = (
-    <ul className="divide-y md:hidden">
+    <ul className="divide-y xl:hidden">
       {customers.map((customer) => (
         <li
           key={customer.id}
           className={cn(
             'cursor-pointer p-3 transition-colors hover:bg-muted/50',
-            selected.has(customer.id) && 'bg-primary/5',
+            selected.has(customer.id) && 'bg-muted',
           )}
           onClick={() => navigate(customerDetailPath(customer.id))}
         >
@@ -383,7 +372,7 @@ export function CustomerTable({
     <div className="relative">
       {mobileList}
 
-      <div className="hidden md:block">
+      <div className="hidden xl:block">
         <Table aria-label="客户列表">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -398,7 +387,7 @@ export function CustomerTable({
               <SortableHeader field="name" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)}>
                 客户
               </SortableHeader>
-              <TableHead className="min-w-[10.5rem]">联系方式</TableHead>
+              <TableHead className="w-[11rem] max-w-[11rem]">联系方式</TableHead>
               <SortableHeader
                 field="status"
                 activeField={sortBy}
@@ -408,13 +397,13 @@ export function CustomerTable({
               >
                 状态
               </SortableHeader>
-              {showOwner ? <TableHead className="w-[6.5rem]">负责人</TableHead> : null}
+              {showOwner ? <TableHead className={cn('w-[6.5rem]', ownerColumnClass)}>负责人</TableHead> : null}
               <SortableHeader
                 field="letterCount"
                 activeField={sortBy}
                 activeOrder={sortOrder}
                 onSort={(f) => onSort(f as CustomerSortField)}
-                className="text-center"
+                className={cn('text-center', secondaryColumnClass)}
               >
                 开发信
               </SortableHeader>
@@ -423,6 +412,7 @@ export function CustomerTable({
                 activeField={sortBy}
                 activeOrder={sortOrder}
                 onSort={(f) => onSort(f as CustomerSortField)}
+                className={secondaryColumnClass}
               >
                 下次跟进
               </SortableHeader>
@@ -431,10 +421,11 @@ export function CustomerTable({
                 activeField={sortBy}
                 activeOrder={sortOrder}
                 onSort={(f) => onSort(f as CustomerSortField)}
+                className={secondaryColumnClass}
               >
                 最近联系
               </SortableHeader>
-              <SortableHeader field="updatedAt" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)}>
+              <SortableHeader field="updatedAt" activeField={sortBy} activeOrder={sortOrder} onSort={(f) => onSort(f as CustomerSortField)} className="hidden min-[1600px]:table-cell">
                 更新时间
               </SortableHeader>
               <TableHead className="w-12 pr-3">
@@ -448,8 +439,12 @@ export function CustomerTable({
               <TableRow
                 key={customer.id}
                 data-state={selected.has(customer.id) ? 'selected' : undefined}
-                className="cursor-pointer"
-                onClick={() => navigate(customerDetailPath(customer.id))}
+                data-preview={previewEnabled && previewId === customer.id ? 'true' : undefined}
+                className={cn('cursor-pointer', previewEnabled && previewId === customer.id && 'bg-muted/35')}
+                onClick={() => {
+                  if (previewEnabled && onPreview) onPreview(customer);
+                  else navigate(customerDetailPath(customer.id));
+                }}
               >
                 <TableCell className="pl-3" onClick={(event) => event.stopPropagation()}>
                   <Checkbox
@@ -469,13 +464,13 @@ export function CustomerTable({
                   </Link>
                 </TableCell>
 
-                <TableCell>
-                  <div className="space-y-1">
+                <TableCell className="w-[11rem] max-w-[11rem]">
+                  <div className="min-w-0 space-y-1">
                     <EmailCell email={customer.email} />
                     {customer.phone ? (
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                         <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                        {customer.phone}
+                        <span className="truncate">{customer.phone}</span>
                       </span>
                     ) : null}
                   </div>
@@ -490,16 +485,16 @@ export function CustomerTable({
                 </TableCell>
 
                 {showOwner ? (
-                  <TableCell className="whitespace-nowrap text-xs">
+                  <TableCell className={cn('whitespace-nowrap text-xs', ownerColumnClass)}>
                     <CustomerQuickEdit customer={customer} field="ownerId" owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
                   </TableCell>
                 ) : null}
 
-                <TableCell className="text-center">
+                <TableCell className={cn('text-center', secondaryColumnClass)}>
                   {customer.letterCount > 0 ? (
                     <Link
                       to={`${customerDetailPath(customer.id)}#letters`}
-                      className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-semibold tabular-nums text-primary transition-colors hover:bg-primary/20"
+                      className="inline-flex h-5 min-w-5 items-center justify-center rounded text-[11px] font-medium tabular-nums text-foreground underline-offset-2 hover:underline"
                       title="查看开发信记录"
                       onClick={(event) => event.stopPropagation()}
                     >
@@ -510,11 +505,11 @@ export function CustomerTable({
                   )}
                 </TableCell>
 
-                <TableCell className="whitespace-nowrap">
+                <TableCell className={cn('whitespace-nowrap', secondaryColumnClass)}>
                   <FollowUpCell value={customer.nextFollowUpAt} />
                 </TableCell>
 
-                <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                <TableCell className={cn('whitespace-nowrap text-xs text-muted-foreground', secondaryColumnClass)}>
                   {customer.lastContactAt ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -528,7 +523,7 @@ export function CustomerTable({
                 </TableCell>
 
                 <TableCell
-                  className="whitespace-nowrap text-xs text-muted-foreground"
+                  className="hidden whitespace-nowrap text-xs text-muted-foreground min-[1600px]:table-cell"
                   title={formatDateTime(customer.updatedAt)}
                 >
                   {formatShortDateTime(customer.updatedAt)}
@@ -559,7 +554,7 @@ export function CustomerTablePlaceholder(): React.JSX.Element {
     <div className="space-y-3 p-4">
       {Array.from({ length: 5 }).map((_, index) => (
         <div key={index} className="flex items-center gap-3">
-          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-7 w-7 rounded-md" />
           <Skeleton className="h-4 flex-1" />
           <Skeleton className="h-4 w-24" />
         </div>

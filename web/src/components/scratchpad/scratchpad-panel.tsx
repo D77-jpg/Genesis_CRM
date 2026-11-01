@@ -334,11 +334,11 @@ export function ScratchpadPanel(): React.JSX.Element | null {
       <WorkspaceDrawer
         title="个人随手记"
         onClose={closePanel}
-        className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-border/70 bg-card shadow-[var(--shadow-pop)] sm:inset-y-3 sm:right-3 sm:w-[420px] sm:rounded-3xl sm:border"
+        className="fixed inset-y-0 right-0 z-40 flex w-full flex-col workspace-drawer border-border/70 bg-card shadow-[var(--shadow-pop)] sm:inset-y-2 sm:right-2 sm:w-[400px] sm:rounded-lg sm:border"
       >
-        <div className="flex min-h-16 shrink-0 items-center gap-3 border-b px-4">
-          <span className="brand-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
-            <StickyNote className="h-5 w-5" aria-hidden />
+        <div className="flex h-12 shrink-0 items-center gap-2.5 border-b px-3.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+            <StickyNote className="h-4 w-4" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold">个人随手记</h2>
@@ -349,7 +349,7 @@ export function ScratchpadPanel(): React.JSX.Element | null {
           </Button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3.5">
           <div className="flex items-center justify-between gap-3">
             <label htmlFor="personal-scratchpad" className="text-sm font-medium">临时记录</label>
             <span
@@ -396,13 +396,13 @@ export function ScratchpadPanel(): React.JSX.Element | null {
             spellCheck
           />
 
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <div className="rounded-lg border border-border bg-muted/30 p-3">
             <div className="flex items-start gap-2">
-              <UserRoundPlus className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <UserRoundPlus className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               <div className="min-w-0 flex-1"><p className="text-sm font-medium">让 AI 整理成客户</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">先提取并查重，再由你编辑确认。原随手记始终保留。</p></div>
             </div>
-            <Button type="button" className="mt-3 w-full" onClick={() => void handleExtractCustomer()} disabled={!content.trim() || extracting || status === 'loading' || status === 'saving' || status === 'offline' || status === 'conflict'}>
-              {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRoundPlus className="h-4 w-4" />}
+            <Button type="button" variant="outline" size="sm" className="mt-2.5 w-full" onClick={() => void handleExtractCustomer()} disabled={!content.trim() || extracting || status === 'loading' || status === 'saving' || status === 'offline' || status === 'conflict'}>
+              {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserRoundPlus className="h-3.5 w-3.5" />}
               {extracting ? '正在提取并查重…' : '提取客户信息'}
             </Button>
           </div>

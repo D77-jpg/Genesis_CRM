@@ -31,25 +31,25 @@ export function PageHeader({
   const navigate = useNavigate();
 
   return (
-    <header className={cn('workspace-page-header flex flex-col gap-3', className)}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <header className={cn('workspace-page-header flex flex-col gap-2.5', className)}>
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           {backTo ? (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="-ml-2 mb-1 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              className="-ml-1.5 mb-1 h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
               onClick={() => navigate(backTo)}
             >
               <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
               {backLabel}
             </Button>
           ) : null}
-          <h1 className="break-words text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] sm:text-[1.6875rem]">{title}</h1>
-          {description ? <p className="mt-1.5 max-w-4xl text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p> : null}
+          <h1 className="break-words text-[1.25rem] font-semibold leading-tight tracking-[-0.025em] sm:text-[1.375rem]">{title}</h1>
+          {description ? <p className="mt-1 max-w-4xl text-xs leading-relaxed text-muted-foreground">{description}</p> : null}
         </div>
-        {actions ? <div className="workspace-page-actions flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        {actions ? <div className="workspace-page-actions flex shrink-0 flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
       {children}
     </header>

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
     <div className="table-scroll workspace-table relative w-full" role="region" aria-label={`${props['aria-label'] || '数据表格'}，可横向滚动`} tabIndex={0}>
-      <table ref={ref} className={cn('w-full caption-bottom border-collapse text-sm', className)} {...props} />
+      <table ref={ref} className={cn('w-full caption-bottom border-collapse text-[0.8125rem]', className)} {...props} />
     </div>
   ),
 );
@@ -22,7 +22,7 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttribut
     <thead
       ref={ref}
       className={cn(
-        'sticky top-0 z-10 bg-surface/95 backdrop-blur-sm [&_tr]:border-b [&_tr]:border-border/70',
+        'sticky top-0 z-10 bg-surface [&_tr]:border-b [&_tr]:border-border',
         className,
       )}
       {...props}
@@ -50,8 +50,8 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        'border-b border-border/60 transition-colors last:border-0',
-        'hover:bg-accent/70 data-[state=selected]:bg-primary/5 data-[disabled]:opacity-60',
+        'border-b border-border/80 transition-colors last:border-0',
+        'hover:bg-muted/45 data-[state=selected]:bg-primary/[0.04] data-[disabled]:opacity-60',
         className,
       )}
       {...props}
@@ -65,7 +65,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        'h-11 whitespace-nowrap px-3 text-left align-middle text-xs font-medium tracking-normal text-muted-foreground',
+        'h-9 whitespace-nowrap px-3 text-left align-middle text-[11px] font-medium tracking-[0.01em] text-muted-foreground',
         className,
       )}
       {...props}
@@ -76,7 +76,7 @@ TableHead.displayName = 'TableHead';
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn('px-3 py-3.5 align-middle', className)} {...props} />
+    <td ref={ref} className={cn('px-3 py-2.5 align-middle', className)} {...props} />
   ),
 );
 TableCell.displayName = 'TableCell';

@@ -91,6 +91,7 @@ test('accepted quote model and explicit quantity are required; fallback profile 
 });
 
 import {checkSemanticResults,verifyGroundedEmail,verifyLanguageTransform,type SemanticVerifier,inspectEditedDraft} from '../src/services/agent/fact-verifier';
+import {selectOutreachPlaybook} from '../src/services/agent/outreach-playbook';
 import {conditionalSentence,transformNumbersMatch,draftHash} from '../src/services/agent/knowledge-grounding';
 const prose={...source,sourceId:'knowledge:prose:v1',knowledgeId:undefined,category:'company' as const,content:'We manufacture velvet pouches. We do not manufacture steel racks.',terms:[]};
 function proof(text:string,authority:string,sourceId:string){const start=Array.from(authority).join('').indexOf(text);return {sourceId,quote:text,start,end:start+Array.from(text).length};}
@@ -287,8 +288,8 @@ test('live evaluation and production share exactly the authorized semantic evide
 test('bounded address questions and standard closings are non-claims; disguised commitments stay blocked',()=>{
  const text='Could you please share your delivery address?\nWe look forward to hearing from you.';
  assert.ok(checkSemanticResults(text,bundle([],[]),[]).every(c=>c.status==='non_claim'));
- for(const safe of ['Could you please tell us whether your earrings ship as individual pairs or as boxed sets?','Could you please let us know your current packaging format?','Could you please share the dimensions of one earring pair and whether they currently ship on a card or in a box, so I can suggest two or three suitable structures?'])assert.ok(checkSemanticResults(safe,bundle([],[]),[]).every(c=>c.status==='non_claim'));
- for(const unsafe of ['Could you please confirm our free shipping?','Could you please confirm our delivery in 7 days?','We look forward to guaranteeing free samples.'])assert.ok(checkSemanticResults(unsafe,bundle([],[]),[]).every(c=>c.status!=='non_claim'));
+ for(const safe of ['Could you please tell us whether your earrings ship as individual pairs or as boxed sets?','Could you please let us know your current packaging format?','Could you please share the dimensions of one earring pair and whether they currently ship on a card or in a box, so I can suggest two or three suitable structures?','Would a material-and-finish comparison for this collection be useful?','What’s the latest date the packaging needs to arrive?'])assert.ok(checkSemanticResults(safe,bundle([],[]),[]).every(c=>c.status==='non_claim'));
+ for(const unsafe of ['Could you please confirm our free shipping?','Could you please confirm our delivery in 7 days?','Could you please reply, we can hold stock for you?','We look forward to guaranteeing free samples.'])assert.ok(checkSemanticResults(unsafe,bundle([],[]),[]).every(c=>c.status!=='non_claim'));
 });
 
 
@@ -315,4 +316,26 @@ test('safe model prose cannot hide unanswered price or freight questions in inte
  assert.match(result.bodyText,/firm price needs confirmation/);assert.match(result.bodyText,/Freight cost needs confirmation/);
  assert.equal(result.review.completeness,'partial');assert.ok(result.review.questions.every(q=>q.status==='unanswered'));
  assert.equal(result.review.bodyHash,draftHash(result.bodyText));assert.doesNotMatch(result.bodyText,/USD\s*\d/);
+});
+test('genesis playbook only selects a card when the customer signals match',()=>{
+ const jewelry=selectOutreachPlaybook({projectKey:'genesis',taskType:'first_outreach',industry:'Jewelry',interestedProducts:'jewelry packaging, pouches',websiteText:'Fine jewelry and everyday gold pieces. Shop necklaces, earrings and rings.'});
+ assert.equal(jewelry?.segmentCode,'I01');assert.equal(jewelry?.preferenceCode,'P01');assert.ok(jewelry?.logic);
+ assert.equal(selectOutreachPlaybook({projectKey:'genesis',taskType:'first_outreach',industry:'',interestedProducts:'',websiteText:''}),undefined);
+ assert.equal(selectOutreachPlaybook({projectKey:'ironhue',taskType:'first_outreach',industry:'Jewelry',websiteText:'necklaces and earrings'}),undefined);
+});
+
+test('ironhue and velaturo playbooks stay inside their own project vocabulary',()=>{
+ const ironhue=selectOutreachPlaybook({projectKey:'ironhue',taskType:'first_outreach',industry:'Fitness Equipment',websiteText:'Our brand sells private-label dumbbells and kettlebells with molded logos.'});
+ assert.ok(ironhue?.segmentCode.startsWith('IH'));assert.ok(ironhue?.preferenceCode?.startsWith('IHP'));assert.match(ironhue?.logic??'',/./);
+ const velaturo=selectOutreachPlaybook({projectKey:'velaturo',taskType:'first_outreach',industry:'Interior Design',websiteText:'We specify hand-painted wall art and canvas paintings for boutique hotel interiors.'});
+ assert.ok(velaturo?.segmentCode.startsWith('VA'));assert.ok(velaturo?.preferenceCode?.startsWith('VAP'));
+ assert.equal(selectOutreachPlaybook({projectKey:'ironhue',taskType:'first_outreach',industry:'Jewelry',websiteText:'necklaces and earrings'}),undefined);
+ assert.equal(selectOutreachPlaybook({projectKey:'velaturo',taskType:'first_outreach',industry:'Fitness',websiteText:'dumbbells and gym equipment'}),undefined);
+});
+
+test('imported project cards replace built-in gates and preferences without becoming evidence',()=>{
+ const segments=[{id:'CUSTOM-S1',name:'Marine packaging',signals:'marine brand',products:'marine packaging',logic:'strategy only',avoid:'',cta:'',prepare:'',check:'',subjects:['Marine packaging idea'],keywords:['marine']}];
+ const preferences=[{id:'CUSTOM-P1',name:'Marine preference',signals:'',products:'',logic:'compare total cost',avoid:'',cta:'',prepare:'',check:'',subjects:[],keywords:[]}];
+ const selected=selectOutreachPlaybook({projectKey:'ironhue',taskType:'first_outreach',websiteText:'A marine packaging buyer for dockside equipment',cards:{segments,preferences}});
+ assert.equal(selected?.segmentCode,'CUSTOM-S1');assert.equal(selected?.preferenceCode,'CUSTOM-P1');
 });

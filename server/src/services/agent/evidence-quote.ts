@@ -4,13 +4,13 @@ import type {EvidenceQuote} from './fact-verifier';
 // letter case, punctuation and width variants may differ; words and digits must
 // still match exactly (no paraphrase). The returned quote is always the ORIGINAL
 // source substring in Unicode points.
-export function resolveEvidenceQuote(quote:EvidenceQuote,source:string):EvidenceQuote|undefined{
+export function resolveEvidenceQuote(quote:EvidenceQuote,source:string,options?:{allowDuplicate?:boolean}):EvidenceQuote|undefined{
  if(!quote.quote.trim())return undefined;
  const points=Array.from(source);
  if(points.slice(quote.start,quote.end).join('')===quote.quote)return {...quote};
  const exact=source.indexOf(quote.quote);
  if(exact>=0){
-  if(source.indexOf(quote.quote,exact+1)>=0)return undefined;
+  if(!options?.allowDuplicate&&source.indexOf(quote.quote,exact+1)>=0)return undefined;
   const start=Array.from(source.slice(0,exact)).length;
   return {...quote,start,end:start+Array.from(quote.quote).length};
  }
@@ -29,7 +29,7 @@ export function resolveEvidenceQuote(quote:EvidenceQuote,source:string):Evidence
  if(!needle.length)return undefined;
  const hayText=hay.chars.join(''),needleText=needle.join('');
  const position=hayText.indexOf(needleText);
- if(position<0||hayText.indexOf(needleText,position+1)>=0)return undefined;
+ if(position<0||(!options?.allowDuplicate&&hayText.indexOf(needleText,position+1)>=0))return undefined;
  const start=hay.starts[position],end=hay.ends[position+needle.length-1];
  return {...quote,quote:points.slice(start,end).join(''),start,end};
 }

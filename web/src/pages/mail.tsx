@@ -24,7 +24,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/common/page-header';
-import { WorkspaceToolbar } from '@/components/common/workspace';
 import { EmptyState, ErrorState } from '@/components/common/empty-state';
 import { SendLetterDialog } from '@/components/letters/send-letter-dialog';
 import { useAuthStore, selectIsAdmin } from '@/store/auth.store';
@@ -99,13 +98,11 @@ function mailSrcdoc(html: string): string {
 
 function StatusChip({ status }: { status?: LetterStatus }): React.JSX.Element | null {
   if (!status) return null;
-  const tone = status === 'sent' || status === 'opened'
-    ? 'chip-mint'
-    : status === 'failed'
-      ? 'chip-rose'
-      : status === 'draft' || status === 'scheduled' || status === 'queued' || status === 'retrying'
-        ? 'chip-amber'
-        : 'chip-muted';
+  const tone = status === 'failed' || status === 'retrying'
+    ? 'chip-rose'
+    : status === 'opened'
+      ? 'chip-violet'
+      : 'chip-muted';
   return <span className={cn('chip', tone)}>{LETTER_STATUS_LABEL[status]}</span>;
 }
 
@@ -281,8 +278,8 @@ export function MailPage(): React.JSX.Element {
         </Button>
       </>} />
 
-    <WorkspaceToolbar label="邮件文件夹与操作" className="justify-between">
-      <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-surface p-1" aria-label="邮件文件夹">
+    <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border pb-0" aria-label="邮件文件夹">
+      <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto" aria-label="邮件文件夹">
         {(Object.keys(folderLabels) as Folder[]).filter(f => admin || f !== 'unknown').map(f => {
           const active = folder === f;
           return (
@@ -292,24 +289,24 @@ export function MailPage(): React.JSX.Element {
               aria-pressed={active}
               onClick={() => { setFolder(f); setPage(1); setParams({}); }}
               className={cn(
-                'inline-flex min-h-8 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
-                active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                '-mb-px inline-flex h-9 shrink-0 items-center gap-1.5 border-b-2 px-2.5 text-xs font-medium transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+                active ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
               {f === 'inbox' ? <Inbox className="h-3.5 w-3.5" aria-hidden /> : f === 'sent' ? <Send className="h-3.5 w-3.5" aria-hidden /> : f === 'tasks' ? <Clock className="h-3.5 w-3.5" aria-hidden /> : f === 'followup' ? <BellRing className="h-3.5 w-3.5" aria-hidden /> : <MailSearch className="h-3.5 w-3.5" aria-hidden />}
               {folderLabels[f]}
-              {active ? <span className="chip chip-violet ml-0.5 px-1.5 py-0 text-[10px] tabular-nums">{total}</span> : null}
+              {active ? <span className="tabular-nums text-[11px] text-muted-foreground">{total}</span> : null}
             </button>
           );
         })}
-      </div>
-      <p className="hidden text-xs text-muted-foreground sm:block">列表自动刷新</p>
-    </WorkspaceToolbar>
+      </nav>
+      <p className="hidden pb-2 text-[11px] text-muted-foreground sm:block">列表自动刷新</p>
+    </div>
 
-    {status && <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border/80 bg-card px-4 py-3 text-xs text-muted-foreground shadow-card">
+    {status && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border py-2 text-[11px] text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
-        <span className={cn('h-1.5 w-1.5 rounded-full', syncOk ? 'bg-mint' : 'bg-amberx')} aria-hidden />
+        <span className={cn('h-1.5 w-1.5 rounded-full', syncOk ? 'bg-emerald-500' : 'bg-amber-500')} aria-hidden />
         {syncOk
           ? `${status.source === 'personal' ? '个人' : '项目统一'}收件同步${status.mailboxAddress ? `：${status.mailboxAddress}` : ''}`
           : status.enabled ? '收件邮箱还没验证通过' : '收件邮箱未开通：开通后客户的来信会自动进来'}
@@ -318,30 +315,31 @@ export function MailPage(): React.JSX.Element {
       <span className="inline-flex items-center gap-1"><Send className="h-3 w-3" aria-hidden />发件方式：{status.channel === 'mock' ? '模拟发送' : '邮箱直发'}</span>
       {status.lastError && <span className="inline-flex items-center gap-1 text-destructive"><BellRing className="h-3 w-3" aria-hidden />{admin ? status.lastError : '收件同步出错了，请联系管理员看一下'}</span>}
       {status.skipped > 0 && <span>超大邮件已跳过：{status.skipped}</span>}
-      <Button variant="ghost" size="sm" className="ml-auto" disabled={busy || !syncOk || !status.configured} onClick={() => void action(() => apiPost('/mail/sync'))}>立即同步收件</Button>
+      <Button variant="ghost" size="sm" className="ml-auto h-7 px-2 text-[11px]" disabled={busy || !syncOk || !status.configured} onClick={() => void action(() => apiPost('/mail/sync'))}>立即同步收件</Button>
     </div>}
 
     {error && <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</p>}
     {compose && !selectedCustomer && customerPicker}
 
-    <div className="mail-workspace grid gap-4 xl:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.5fr)]">
-      <section className="panel min-w-0 overflow-hidden" aria-label={folderLabels[folder]} aria-busy={loading}>
-        <header className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
-          <p className="flex items-center gap-2 text-[0.8125rem] font-semibold">{folderLabels[folder]}<span className="chip chip-muted tabular-nums">{total}</span></p>
+    <div className="mail-workspace grid min-h-[520px] overflow-hidden rounded-lg border border-border bg-card xl:h-[calc(100dvh-15.25rem)] xl:grid-cols-[21rem_minmax(0,1fr)]">
+      <section className="flex min-w-0 flex-col overflow-hidden border-b border-border xl:border-b-0 xl:border-r" aria-label={folderLabels[folder]} aria-busy={loading}>
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2.5">
+          <p className="flex items-center gap-2 text-[0.8125rem] font-semibold">{folderLabels[folder]}<span className="text-[11px] font-normal tabular-nums text-muted-foreground">{total}</span></p>
           {loading ? <span className="text-[11px] text-muted-foreground">加载中…</span> : null}
         </header>
+        <div className="min-h-0 flex-1 overflow-y-auto">
         {folder === 'followup' ? (
           <div>
-            <p className="border-b border-border/50 px-4 py-2 text-[11px] leading-5 text-muted-foreground">
+            <p className="border-b border-border px-3 py-2 text-[11px] leading-5 text-muted-foreground">
               节奏：第 1 封 → 3 天 → 第 2 封 → 7 天 → 第 3 封 → 14 天仍无回复自动弃用（客户状态改「已流失」并打标签「三次无回复」）
             </p>
             {followups?.items.length ? followups.items.map(row => (
-              <div key={row.customerId} className="border-b border-border/50 px-4 py-3">
+              <div key={row.customerId} className="border-b border-border px-3 py-2.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <Link className="min-w-0 truncate text-[0.8125rem] font-medium hover:text-primary" to={`/customers/${row.customerId}`}>
                     {row.company || row.name}
                   </Link>
-                  <span className={cn('chip shrink-0', row.overdueDays > 0 ? 'chip-amber' : 'chip-muted')}>
+                  <span className={cn('chip shrink-0', row.overdueDays > 0 ? 'chip-rose' : 'chip-muted')}>
                     {row.overdueDays > 0 ? `逾期 ${row.overdueDays} 天` : '今天到期'}
                   </span>
                 </div>
@@ -350,7 +348,7 @@ export function MailPage(): React.JSX.Element {
                   已发第 {row.step} 封：{row.lastSubject || '（无主题）'}{row.lastSentAt ? ` · ${formatDateTime(row.lastSentAt)}` : ''}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <span className="chip chip-violet">该发第 {row.nextStep} 封</span>
+                  <span className="text-[11px] text-muted-foreground">该发第 {row.nextStep} 封</span>
                   <Button size="sm" className="ml-auto" disabled={followupBusy} onClick={() => void startFollowUp(row)}>
                     {followupBusy
                       ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />生成草稿中…</>
@@ -375,13 +373,13 @@ export function MailPage(): React.JSX.Element {
               key={item.id}
               onClick={() => open(item)}
               className={cn(
-                'block w-full border-b border-border/50 px-4 py-3 text-left transition-colors',
-                'hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset',
-                selected && 'bg-primary-soft/60',
+                'block w-full border-b border-border px-3 py-2.5 text-left transition-colors',
+                'hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset',
+                selected && 'bg-muted',
               )}
             >
               <span className="flex items-start gap-2.5">
-                <span className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold', item.direction === 'inbound' ? 'bg-mint-soft text-mint' : 'bg-primary-soft text-primary')} aria-hidden>
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-semibold text-muted-foreground" aria-hidden>
                   {initialsOf(who)}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -390,29 +388,30 @@ export function MailPage(): React.JSX.Element {
                       {unread ? <span className="mr-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary align-middle" aria-label="未读" /> : null}
                       {who || '（未知发件人）'}
                     </span>
-                    <span className="shrink-0 text-[11px] text-muted-foreground">{formatDateTime(item.scheduledAt || item.sentAt)}</span>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">{formatDateTime(item.scheduledAt || item.sentAt)}</span>
                   </span>
                   <span className={cn('mt-0.5 block truncate text-[0.8125rem]', unread ? 'font-medium text-foreground' : 'text-muted-foreground')}>{item.subject || '（无主题）'}</span>
-                  <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="mt-1 flex flex-wrap items-center gap-1">
                     <StatusChip status={item.status} />
-                    <span className={cn('chip chip-muted', !item.customerId && !item.prospectId && 'opacity-65')}>{item.customerId ? (item.customerName || '已关联客户') : item.prospectId ? `线索 · ${item.prospectName || '已匹配线索'}` : '未关联客户'}</span>
-                    {item.attachments.length > 0 && <span className="chip chip-muted"><Paperclip className="h-3 w-3" aria-hidden />{item.attachments.length}</span>}
+                    <span className={cn('text-[10px] text-muted-foreground', !item.customerId && !item.prospectId && 'opacity-65')}>{item.customerId ? (item.customerName || '已关联客户') : item.prospectId ? `线索 · ${item.prospectName || '已匹配线索'}` : '未关联客户'}</span>
+                    {item.attachments.length > 0 && <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"><Paperclip className="h-3 w-3" aria-hidden />{item.attachments.length}</span>}
                   </span>
                 </span>
               </span>
-              {item.direction === 'outbound' && ['sent', 'opened'].includes(item.status || '') && <span className="mt-2 block pl-[2.625rem]"><MailInteractionSummary sentAt={item.sentAt} tracking={item.tracking} /></span>}
+              {item.direction === 'outbound' && ['sent', 'opened'].includes(item.status || '') && <span className="mt-2 block pl-[2.125rem]"><MailInteractionSummary sentAt={item.sentAt} tracking={item.tracking} /></span>}
             </button>
           );
         })}
-        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2 px-3 py-2">
           <Button variant="ghost" size="sm" disabled={page === 1 || loading} onClick={() => setPage(p => p - 1)}>上一页</Button>
-          <span className="text-xs tabular-nums text-muted-foreground">{page} / {totalPages}</span>
+          <span className="text-[11px] tabular-nums text-muted-foreground">{page} / {totalPages}</span>
           <Button variant="ghost" size="sm" disabled={page * 25 >= total || loading} onClick={() => setPage(p => p + 1)}>下一页</Button>
         </div>
         </>)}
+        </div>
       </section>
 
-      <section className="panel min-w-0 p-4 sm:p-5" aria-label="邮件会话详情">
+      <section className={cn('flex min-w-0 flex-col overflow-y-auto p-4 sm:p-5', !detail && 'justify-center')} aria-label="邮件会话详情">
         {!detail
           ? folder === 'followup' ? (
             <div className="mx-auto max-w-lg space-y-3 py-8 text-sm">
@@ -461,10 +460,10 @@ export function MailPage(): React.JSX.Element {
             {!detail.customer && admin && customerPicker}
 
             {detail.thread.map(mail => (
-              <article key={mail.id} className="space-y-3 rounded-2xl border border-border/70 bg-card p-3.5">
+              <article key={mail.id} className="space-y-3 border-b border-border py-4 first:pt-0 last:border-0">
                 <header className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold', mail.direction === 'inbound' ? 'bg-mint-soft text-mint' : 'bg-primary-soft text-primary')} aria-hidden>
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-semibold text-muted-foreground" aria-hidden>
                       {initialsOf(mail.direction === 'inbound' ? (mail.fromName || mail.from) : mail.to.join(', '))}
                     </span>
                     <div className="min-w-0">
@@ -475,17 +474,17 @@ export function MailPage(): React.JSX.Element {
                   <StatusChip status={mail.status} />
                 </header>
 
-                {mail.error && <p role="status" className="rounded-xl bg-destructive/5 px-3 py-2 text-xs text-destructive">{mail.error}{mail.needsReview ? '（待核实，不会自动重发）' : ''}</p>}
+                {mail.error && <p role="status" className="rounded-md bg-destructive/5 px-3 py-2 text-xs text-destructive">{mail.error}{mail.needsReview ? '（待核实，不会自动重发）' : ''}</p>}
                 {mail.scheduledAt && <p className="text-[11px] text-muted-foreground">定时时间：{formatDateTime(mail.scheduledAt)}</p>}
                 {mail.status === 'retrying' && <p className="text-[11px] text-muted-foreground">下次重试：{formatDateTime(mail.nextAttemptAt)} · 已尝试 {mail.attempts} 次</p>}
 
                 {mail.direction === 'outbound' && ['sent', 'opened'].includes(mail.status || '') && <MailInteractionSummary sentAt={mail.sentAt} tracking={mail.tracking} detailed />}
 
                 {mail.html
-                  ? <iframe title={`邮件正文：${mail.subject}`} sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" className="min-h-64 w-full rounded-xl border border-border/60 bg-white" srcDoc={mailSrcdoc(mail.html)} />
+                  ? <iframe title={`邮件正文：${mail.subject}`} sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" className="min-h-64 w-full rounded-md border border-border bg-white" srcDoc={mailSrcdoc(mail.html)} />
                   : <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{mail.text || '（无正文）'}</p>}
 
-                {mail.attachments.map(a => <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-surface/70 px-3 py-2 text-xs">
+                {mail.attachments.map(a => <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface/70 px-3 py-2 text-xs">
                   <Paperclip className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                   <span className="min-w-0 break-all">{a.name} · {Math.ceil(a.size / 1024)} KB</span>
                   {a.blocked ? <span className="text-destructive">{a.blocked}</span> : <Button variant="outline" size="sm" className="ml-auto" disabled={busy} onClick={() => void action(() => downloadFile(`/mail/${mail.id}/attachments/${a.id}`, a.name))}>下载</Button>}

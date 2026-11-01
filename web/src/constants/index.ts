@@ -51,6 +51,7 @@ export const ROUTES = {
   prospecting: '/prospecting',
   letters: '/letters',
   templates: '/templates',
+  products: '/products',
   users: '/users',
   projects: '/projects',
   agentDiagnostics: '/agent-diagnostics',
@@ -89,34 +90,34 @@ export const CUSTOMER_STATUS_OPTIONS: { value: CustomerStatus; label: string }[]
   CUSTOMER_STATUS_VALUES.map((value) => ({ value, label: CUSTOMER_STATUS_LABEL[value] }));
 
 /**
- * Badge 样式：8 种状态用 Tailwind 内置调色板做「明显但简洁」的区分。
- * 待开发=石板灰 / 已联系=蓝 / 已回复=青 / 有意向=琥珀 / 报价中=橙 /
- * 谈判中=紫 / 已成交=翠绿 / 已流失=玫红。
+ * Status badges: a restrained semantic spectrum. Neutral = not started,
+ * blue = outreach, green = reply/won, amber/orange = commercial interest,
+ * violet = negotiation, rose = lost. Tags, grades and source stay neutral.
  */
 export const CUSTOMER_STATUS_BADGE_CLASS: Record<CustomerStatus, string> = {
-  pending: 'border-transparent bg-slate-100 text-slate-500 dark:bg-slate-400/15 dark:text-slate-300',
-  contacted: 'border-transparent bg-indigo-50 text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300',
-  replied: 'border-transparent bg-sky-50 text-sky-600 dark:bg-sky-400/15 dark:text-sky-300',
-  interested: 'border-transparent bg-amber-50 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300',
-  quoting: 'border-transparent bg-orange-50 text-orange-600 dark:bg-orange-400/15 dark:text-orange-300',
-  negotiating: 'border-transparent bg-violet-50 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300',
-  won: 'border-transparent bg-emerald-50 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300',
-  lost: 'border-transparent bg-rose-50 text-rose-600 dark:bg-rose-400/15 dark:text-rose-300',
+  pending: 'border-slate-200/90 bg-slate-50 text-slate-600 dark:border-slate-400/20 dark:bg-slate-400/10 dark:text-slate-300',
+  contacted: 'border-sky-200/80 bg-sky-50/70 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300',
+  replied: 'border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300',
+  interested: 'border-amber-200/80 bg-amber-50/70 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300',
+  quoting: 'border-orange-200/80 bg-orange-50/70 text-orange-700 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-300',
+  negotiating: 'border-violet-200/80 bg-violet-50/70 text-violet-700 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-300',
+  won: 'border-emerald-300/80 bg-emerald-100/70 text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/15 dark:text-emerald-200',
+  lost: 'border-rose-200/80 bg-rose-50/70 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300',
 };
 
 /**
- * 销售漏斗 / 状态分布条形的实心填充色，与上方彽章调色板一一对应。
+ * 销售漏斗 / 状态分布条形的实心填充色，与上方徽章调色板一一对应。
  * 仅用于 Dashboard 漏斗的条形背景。
  */
 export const CUSTOMER_STATUS_BAR_CLASS: Record<CustomerStatus, string> = {
-  pending: 'bg-violet-200',
-  contacted: 'bg-primary/30',
-  replied: 'bg-primary/40',
-  interested: 'bg-primary/50',
-  quoting: 'bg-primary/60',
-  negotiating: 'bg-primary/75',
-  won: 'bg-primary',
-  lost: 'bg-slate-300',
+  pending: 'bg-slate-400/45',
+  contacted: 'bg-sky-500/55',
+  replied: 'bg-emerald-500/55',
+  interested: 'bg-amber-500/60',
+  quoting: 'bg-orange-500/60',
+  negotiating: 'bg-violet-500/60',
+  won: 'bg-emerald-600/70',
+  lost: 'bg-rose-500/50',
 };
 
 /** 跟进时间筛选项 */
@@ -221,11 +222,11 @@ export const LETTER_STATUS_LABEL: Record<LetterStatus, string> = {
 };
 
 export const LETTER_STATUS_BADGE_CLASS: Record<LetterStatus, string> = {
-  queued: 'text-muted-foreground', scheduled: 'text-primary', sending: 'text-primary', retrying: 'text-destructive', cancelled: 'text-muted-foreground',
-  draft: 'border-transparent bg-slate-100 text-slate-500 dark:bg-slate-400/15 dark:text-slate-300',
-  sent: 'border-transparent bg-mint-soft text-mint',
-  opened: 'border-transparent bg-indigo-50 text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300',
-  failed: 'border-transparent bg-rose-soft text-rose dark:bg-rose-400/15',
+  queued: 'border-border bg-card text-muted-foreground', scheduled: 'border-border bg-card text-foreground', sending: 'border-border bg-card text-foreground', retrying: 'border-rose-200 bg-rose-50 text-rose-700', cancelled: 'border-border bg-card text-muted-foreground',
+  draft: 'border-border bg-card text-muted-foreground',
+  sent: 'border-border bg-card text-foreground',
+  opened: 'border-primary/20 bg-primary-soft text-primary',
+  failed: 'border-rose-200/80 bg-rose-50/70 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300',
 };
 
 export const LETTER_STATUS_OPTIONS: { value: LetterStatus | 'all'; label: string }[] = [
@@ -285,12 +286,12 @@ export const QUOTATION_STATUS_FILTER_OPTIONS: { value: QuotationStatus | 'all'; 
  * 已接受=翠绿 / 已拒绝=玫红 / 已过期=琥珀。
  */
 export const QUOTATION_STATUS_BADGE_CLASS: Record<QuotationStatus, string> = {
-  draft: 'border-transparent bg-slate-100 text-slate-500 dark:bg-slate-400/15 dark:text-slate-300',
-  sent: 'border-transparent bg-indigo-50 text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300',
-  negotiating: 'border-transparent bg-violet-50 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300',
-  accepted: 'border-transparent bg-emerald-50 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300',
-  rejected: 'border-transparent bg-rose-50 text-rose-600 dark:bg-rose-400/15 dark:text-rose-300',
-  expired: 'border-transparent bg-amber-50 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300',
+  draft: 'border-border bg-card text-muted-foreground',
+  sent: 'border-border bg-card text-foreground',
+  negotiating: 'border-primary/20 bg-primary-soft text-primary',
+  accepted: 'border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300',
+  rejected: 'border-rose-200/80 bg-rose-50/70 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300',
+  expired: 'border-amber-200/80 bg-amber-50/70 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300',
 };
 
 /** 报价币种取值顺序（与后端 QUOTATION_CURRENCY 一致），默认 USD */
@@ -400,10 +401,10 @@ export const USER_ROLE_LABEL: Record<UserRole, string> = {
 export const USER_ROLE_OPTIONS: { value: UserRole; label: string }[] =
   USER_ROLE_VALUES.map((value) => ({ value, label: USER_ROLE_LABEL[value] }));
 
-/** 角色徽章配色：管理员=紫 / 业务员=蓝 */
+/** 角色徽章：管理员用深色文字强调，业务员保持中性。 */
 export const USER_ROLE_BADGE_CLASS: Record<UserRole, string> = {
-  admin: 'border-transparent bg-violet-50 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300',
-  user: 'border-transparent bg-indigo-50 text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300',
+  admin: 'border-border bg-muted text-foreground',
+  user: 'border-border bg-card text-muted-foreground',
 };
 
 /* ---------------------------- 用户账号状态 ---------------------------- */
@@ -418,8 +419,8 @@ export const USER_STATUS_LABEL: Record<UserStatus, string> = {
 
 /** 账号状态徽章配色：启用=翠绿 / 停用=石板灰 */
 export const USER_STATUS_BADGE_CLASS: Record<UserStatus, string> = {
-  active: 'border-transparent bg-emerald-50 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300',
-  disabled: 'border-transparent bg-slate-100 text-slate-500 dark:bg-slate-400/15 dark:text-slate-300',
+  active: 'border-emerald-200/70 bg-emerald-50/60 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300',
+  disabled: 'border-border bg-muted text-muted-foreground',
 };
 
 /* ---------------------------- 开发信占位符 ---------------------------- */

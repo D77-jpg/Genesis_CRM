@@ -26,6 +26,19 @@ test('numeric customer facts pass only with a supported verdict and authorized e
  assert.equal(edited.checks[0].status,'supported');
 });
 
+test('outreach drafts always get a server-rendered salutation',async()=>{
+ const verifier:SemanticVerifier={model:'fixture',async check({segments}){return segments.map(part=>part.text===description?{...verdict,id:part.id}:{id:part.id,status:'non_claim',quotes:[],reason:'greeting'});}};
+ for(const body of [description,'Dear there,\n\n'+description]){
+  const result=await verifyGroundedEmail(body,bundle,{...options,recipientName:'UVARA',outreachStep:1},verifier);
+  assert.match(result.bodyText,/^Dear UVARA team,\n\n/);
+  assert.match(result.bodyText,/Your website shows/);
+  assert.doesNotMatch(result.bodyText,/Dear there/);
+ }
+ const retained=await verifyGroundedEmail(description,bundle,{...options,recipientName:'UVARA',outreachStep:1});
+ assert.match(retained.bodyText,/^Dear UVARA team,\n\n/);
+ assert.match(retained.bodyText,/Your website shows/);
+});
+
 test('numeric customer facts are retained when another paragraph fails or a later rewrite fails',async()=>{
  for(const failure of ['none','rewrite','second_check']){
   let calls=0;
@@ -96,6 +109,7 @@ test('quote location repairs whitespace only and records exact original Unicode 
   assert.equal(resolveEvidenceQuote({...input,quote:changed},source),undefined);
  const duplicate='uses\n925 silver. uses  925 silver.';
  assert.equal(resolveEvidenceQuote({...input,quote:'uses 925 silver.'},duplicate),undefined);
+ assert.ok(resolveEvidenceQuote({...input,quote:'uses 925 silver.'},duplicate,{allowDuplicate:true}));
  assert.equal(resolveEvidenceQuote({...input,quote:''},source),undefined);
 });
 
@@ -105,6 +119,7 @@ test('generated subjects cannot smuggle commitments or numbers into the customer
  for(const value of ['Guaranteed free samples','Best price for your order','MOQ 500 pcs available','ISO certified factory','Exclusive stock reserved'])
   assert.equal(safeGeneratedSubject(value,fallback),fallback,value);
  assert.equal(safeGeneratedSubject('A quick question about your packaging',fallback),'A quick question about your packaging');
+ assert.equal(safeGeneratedSubject('Free-Weight Private Label Supply',fallback),'Free-Weight Private Label Supply');
 });
 
 test('automatic send gate blocks retained drafts and stale knowledge reviews',()=>{
@@ -112,6 +127,7 @@ test('automatic send gate blocks retained drafts and stale knowledge reviews',()
  assert.equal(knowledgeReviewSendIssue(undefined),undefined);
  assert.equal(knowledgeReviewSendIssue(review({factAudit:{contract:'s4.1',mode:'unavailable',attempts:1,checks:[],facts:[]}})),undefined);
  assert.match(knowledgeReviewSendIssue(review({issues:[{code:'draft_unverified',message:'retained model draft'}]}))??'',/retained model draft/);
+ assert.equal(knowledgeReviewSendIssue(review({issues:[{code:'draft_unverified',message:'retained model draft'}]}),{manualApproved:true}),undefined);
  assert.equal(knowledgeReviewSendIssue(review({issues:[{code:'semantic_unverified',message:'verifier failed'}]})),undefined);
  assert.match(knowledgeReviewSendIssue(review({status:'index_stale'}))??'',/依据检索状态异常/);
  assert.match(knowledgeReviewSendIssue(review({issues:[{code:'access_changed',message:'source access changed'}]}))??'',/source access changed/);
@@ -123,6 +139,13 @@ test('high-risk commercial claims need a human approval from the existing review
  assert.equal(knowledgeReviewRequiresApproval(base),true);
  assert.match(knowledgeReviewSendIssue(base)??'',/人工批准/);
  assert.equal(knowledgeReviewSendIssue({...base,manualApprovedAt:'2026-10-26T00:10:00Z'}),undefined);
+ assert.equal(knowledgeReviewRequiresApproval({...base,claims:[{text:'Our free-weight line covers bumper plates.',sourceIds:['knowledge:product']}]}),false);
+});
+
+test('third follow-up closing questions are non-claims, not unsupported facts',()=>{
+ const body="Dear NC Fitness team,\n\nI don't want to keep filling your inbox, so this is my last note in this round.\n\nIf kettlebells or plates come up for a future fit-out, I'd be glad to pick it up then. Could you please point me to whoever handles that purchasing?\n\nThank you for your time.";
+ const checks=checkSemanticResults(body,bundle,[],undefined,undefined,3);
+ assert.deepEqual(checks.map(item=>item.status),['non_claim','non_claim','non_claim','non_claim']);
 });
 
 test('merged request evidence keeps initial and tool sources for final verification',()=>{
@@ -133,6 +156,31 @@ test('merged request evidence keeps initial and tool sources for final verificat
  assert.equal(merged.status,'ready');assert.equal(merged.factContext?.quantity,500);
 });
 
+
+test('free-weight is a product category, not a free-of-charge commitment',()=>{
+ const product={sourceId:'knowledge:free-weight:v1',title:'Free weight products',version:1,kind:'knowledge' as const,category:'product' as const,content:'IRONHUE manufactures free-weight equipment.',source:'fixture',applicability:'',products:[],validFrom:'2020-01-01',terms:[]};
+ const b={...bundle,sources:[product]};
+ const content=product.content,start=content.indexOf('free-weight');
+ const supported={id:'s0',status:'supported' as const,quotes:[{sourceId:product.sourceId,quote:'free-weight',start,end:start+'free-weight'.length}],reason:'direct product category'};
+ assert.equal(checkSemanticResults(content,b,[supported])[0].status,'supported');
+ const question='Could you please tell us which free-weight line you would review first for private-label supply?';
+ assert.equal(checkSemanticResults(question,b,[{id:'s0',status:'non_claim',quotes:[],reason:'pure request'}])[0].status,'non_claim');
+});
+
+test('outreach verifier outage or rejection keeps specific prose and requires review',async()=>{
+ const product={sourceId:'knowledge:outreach:v1',title:'Outreach fixture',version:1,kind:'knowledge' as const,category:'company' as const,content:'IRONHUE manufactures bumper plates.',source:'fixture',applicability:'',products:[],validFrom:'2020-01-01',terms:[]};
+ const body='Dear Bulldog Gear team,\n\nYour website shows BUMPER PLATES under Bars & Bumpers.\n\nWe are IRONHUE, an OEM/ODM manufacturer of free weights.\n\nCould you please tell us which line you would review first?';
+ for(const verifier of [
+  {model:'fixture-outage',async check(){throw Error('verifier outage');}} as SemanticVerifier,
+  {model:'fixture-rejected',async check({segments}){return segments.map(p=>({id:p.id,status:'unsupported' as const,quotes:[],reason:'no direct support'}));}} as SemanticVerifier,
+ ]){
+  const result=await verifyGroundedEmail(body,{...bundle,sources:[product]},{...options,taskType:'first_outreach',outreachStep:1,recipientName:'Bulldog Gear'},verifier);
+  assert.match(result.bodyText,/BUMPER PLATES/);assert.doesNotMatch(result.bodyText,/I am reaching out to introduce our team/);
+  assert.ok(result.review.issues.some(i=>i.code==='draft_unverified'));
+  assert.ok(knowledgeReviewSendIssue(result.review));
+  assert.equal(knowledgeReviewSendIssue(result.review,{manualApproved:true}),undefined);
+ }
+});
 
 test('short follow-ups still retrieve knowledge before answering',()=>{
  for(const text of ['那这个呢？','多少钱','what about this?','can you make this?'])assert.equal(needsKnowledge(text),true,text);

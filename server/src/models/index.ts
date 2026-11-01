@@ -21,6 +21,12 @@ export type { ICustomerEvent, CustomerEventDocument } from './CustomerEvent';
 export { CustomerAttachment } from './CustomerAttachment';
 export type { ICustomerAttachment, CustomerAttachmentDocument } from './CustomerAttachment';
 
+export { ProjectPlaybook } from './ProjectPlaybook';
+export type { IProjectPlaybook, ProjectPlaybookDocument, ProjectPlaybookModel } from './ProjectPlaybook';
+
+export { Product } from './Product';
+export type { IProduct, ProductSpec, ProductPriceTier, ProductDocument, ProductModel } from './Product';
+
 export { Quotation, computeQuotationTotals, roundMoney } from './Quotation';
 export type {
   IQuotation,

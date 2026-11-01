@@ -54,7 +54,7 @@ import { ensureSignature } from './letter-signature';
 import { resolveProjectSalesProfile } from './project-profile';
 import { resolveSignerName } from './signer.service';
 import { getActiveChannel, getProjectActiveChannel } from './mailer.service';
-import { assertCustomerAccess, customerRefScope, projectScope, requireProjectId } from '../utils/access';
+import { assertCustomerAccess, customerRefScope, customerScope, projectScope, requireProjectId } from '../utils/access';
 import type { AuthUser } from '../types/express';
 import type {
   ListLettersQuery,
@@ -237,6 +237,37 @@ function buildLetterFilter(query: ListLettersQuery): FilterQuery<IDevelopmentLet
   return filter as FilterQuery<IDevelopmentLetter>;
 }
 
+/**
+ * 待处理草稿只展示「现在轮得到」的一封：
+ * - 第 1 封：客户还没发出首封；
+ * - 第 2/3 封：上一封已发，且下一封跟进时间已经到期。
+ * 后续步骤虽然会提前生成，但在到期前不占用审核待办。
+ */
+async function actionableOutreachDraftFilter(actor?: AuthUser): Promise<FilterQuery<IDevelopmentLetter>> {
+  if (!actor) return {};
+  const scope = customerScope(actor);
+  const now = new Date();
+  const customerIds = async (match: Record<string, unknown>): Promise<Types.ObjectId[]> => {
+    const rows = await Customer.find({ ...scope, ...match }).select('_id').lean();
+    return (rows as unknown as { _id: Types.ObjectId }[]).map((row) => row._id);
+  };
+  const [firstStepCustomers, secondStepCustomers, thirdStepCustomers] = await Promise.all([
+    customerIds({ $or: [{ outreachStep: { $exists: false } }, { outreachStep: null }, { outreachStep: 0 }] }),
+    customerIds({ outreachStep: 1, status: { $nin: ['won', 'lost'] }, outreachRepliedAt: null, outreachAbandonedAt: null, nextFollowUpAt: { $lte: now } }),
+    customerIds({ outreachStep: 2, status: { $nin: ['won', 'lost'] }, outreachRepliedAt: null, outreachAbandonedAt: null, nextFollowUpAt: { $lte: now } }),
+  ]);
+  return {
+    $or: [
+      { outreachStep: { $exists: false } },
+      { outreachStep: null },
+      { outreachStep: 0 },
+      { outreachStep: 1, customerId: { $in: firstStepCustomers } },
+      { outreachStep: 2, customerId: { $in: secondStepCustomers } },
+      { outreachStep: 3, customerId: { $in: thirdStepCustomers } },
+    ],
+  };
+}
+
 /** 判断 customerId 是「已 populate 的对象」还是「裸 ObjectId」 */
 interface PopulatedCustomer {
   _id: Types.ObjectId | string;
@@ -347,7 +378,11 @@ export async function listLetters(query: ListLettersQuery, actor?: AuthUser): Pr
     { allowedSortFields: sortableFields.letter, defaultSortBy: 'sentAt' },
   );
 
-  const filter = { $and: [buildLetterFilter(query), await customerRefScope(actor)] } as FilterQuery<IDevelopmentLetter>;
+  const filterParts: FilterQuery<IDevelopmentLetter>[] = [buildLetterFilter(query), await customerRefScope(actor)];
+  if (query.status === 'draft' && query.review === 'todo') {
+    filterParts.push(await actionableOutreachDraftFilter(actor));
+  }
+  const filter = { $and: filterParts } as FilterQuery<IDevelopmentLetter>;
   const sortSpec: Record<string, 1 | -1> = {};
   sortSpec[sortBy] = sortOrder;
   sortSpec._id = -1;
@@ -439,6 +474,8 @@ async function persistAndSend(options: {
   knowledgeRechecks?:Record<string,unknown>[];
   agentDraftId?:Types.ObjectId;
   agentOutreachId?: Types.ObjectId;
+  /** 已有草稿直接转为发送任务；不新建一条重复的发送记录。 */
+  sendDraftId?: Types.ObjectId;
   /** 同一客户三封开发信序列中的位置；草稿先写入，发送时用于排序和同线程回复。 */
   outreachStep?: number;
   /** 重发同一封信时不要重复计开发封数 */
@@ -576,31 +613,82 @@ async function persistAndSend(options: {
     logger.warn('邮件追踪准备失败，已降级为正常发送');
   }
   let letter;
-  try {
-    letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
-      ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
-      ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
-      ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
-      ...(knowledgeReview ? {knowledgeReview} : {}),
-      ...(knowledgeReview ? {aiSnapshot:{subject:rendered.subject,contentText:rendered.text,at:new Date()}} : {}),
-      projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
-      recipientEmail: rendered.recipientEmail, subject: rendered.subject,
-      senderAddress: sender.senderAddress,
-      mailAccountId: sender.mailAccountId,
-      content: rendered.html, deliveryContent: prepared.deliveryHtml,
-      contentText: rendered.text, template: contentTemplate,
-      ...options.templateAttribution,
-      status: options.scheduledAt ? 'scheduled' : 'queued', channel: activeChannel,
-      messageId: newMessageId(), threadId, inReplyTo, references,
-      ...(outreachStep ? { outreachStep } : {}),
-      scheduledAt: options.scheduledAt, nextAttemptAt: due, markAsDeveloped,
-      sentBy: userId ? new Types.ObjectId(userId) : undefined,
-      ...(prepared.tracking ? { tracking: prepared.tracking } : {}),
-      history: [{ at: new Date(), status: options.scheduledAt ? 'scheduled' : 'queued' }],
-    } }, { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true });
-  } catch (error) {
-    if ((error as { code?: number }).code !== 11000) throw error;
-    letter = await DevelopmentLetter.findOne({ requestKey, projectId: customer.projectId });
+  if (options.sendDraftId) {
+    // Sending a reviewed draft must promote that same record. Creating a new
+    // sent row leaves the original draft in the customer's history and makes
+    // one send look like two letters.
+    if (options.scheduledAt && options.scheduledAt.getTime() <= Date.now()) {
+      throw ApiError.badRequest('定时时间必须晚于当前时间');
+    }
+    const historyEntry = { at: new Date(), status: options.scheduledAt ? 'scheduled' : 'queued' };
+    letter = await DevelopmentLetter.findOneAndUpdate({
+      _id: options.sendDraftId,
+      projectId: customer.projectId,
+      customerId: customer._id,
+      status: 'draft',
+    }, {
+      $set: {
+        ...(options.agentTaskId ? { agentTaskId: options.agentTaskId } : {}),
+        ...(options.agentDraftId ? { agentDraftId: options.agentDraftId } : {}),
+        ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
+        ...(knowledgeReview ? { knowledgeReview } : {}),
+        ...(knowledgeReview ? { aiSnapshot: { subject: rendered.subject, contentText: rendered.text, at: new Date() } } : {}),
+        recipientName: rendered.recipientName,
+        recipientEmail: rendered.recipientEmail,
+        subject: rendered.subject,
+        senderAddress: sender.senderAddress,
+        mailAccountId: sender.mailAccountId,
+        content: rendered.html,
+        deliveryContent: prepared.deliveryHtml,
+        contentText: rendered.text,
+        template: contentTemplate,
+        ...options.templateAttribution,
+        status: options.scheduledAt ? 'scheduled' : 'queued',
+        channel: activeChannel,
+        messageId: newMessageId(),
+        threadId,
+        inReplyTo,
+        references,
+        ...(outreachStep ? { outreachStep } : {}),
+        scheduledAt: options.scheduledAt,
+        nextAttemptAt: due,
+        markAsDeveloped,
+        sentBy: userId ? new Types.ObjectId(userId) : undefined,
+        needsReview: false,
+        effectsPending: false,
+        ...(prepared.tracking ? { tracking: prepared.tracking } : {}),
+      },
+      $push: { history: historyEntry },
+      $unset: { error: 1 },
+    }, { new: true, runValidators: true });
+    if (!letter) throw ApiError.conflict('草稿状态已变化，请刷新后重试');
+  } else {
+    try {
+      letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
+        ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
+        ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
+        ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
+        ...(knowledgeReview ? {knowledgeReview} : {}),
+        ...(knowledgeReview ? {aiSnapshot:{subject:rendered.subject,contentText:rendered.text,at:new Date()}} : {}),
+        projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
+        recipientEmail: rendered.recipientEmail, subject: rendered.subject,
+        senderAddress: sender.senderAddress,
+        mailAccountId: sender.mailAccountId,
+        content: rendered.html, deliveryContent: prepared.deliveryHtml,
+        contentText: rendered.text, template: contentTemplate,
+        ...options.templateAttribution,
+        status: options.scheduledAt ? 'scheduled' : 'queued', channel: activeChannel,
+        messageId: newMessageId(), threadId, inReplyTo, references,
+        ...(outreachStep ? { outreachStep } : {}),
+        scheduledAt: options.scheduledAt, nextAttemptAt: due, markAsDeveloped,
+        sentBy: userId ? new Types.ObjectId(userId) : undefined,
+        ...(prepared.tracking ? { tracking: prepared.tracking } : {}),
+        history: [{ at: new Date(), status: options.scheduledAt ? 'scheduled' : 'queued' }],
+      } }, { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true });
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+      letter = await DevelopmentLetter.findOne({ requestKey, projectId: customer.projectId });
+    }
   }
   if (!letter) throw ApiError.internal('发送任务保存失败');
   if (String(letter.customerId) !== String(customer._id)) throw ApiError.conflict('请求标识已用于其他客户');
@@ -712,7 +800,8 @@ export async function sendLetter(input: SendLetterInput, actor?: AuthUser): Prom
 /**
  * 重新发送一封已有的开发信。
  * 默认沿用原始模板（template）与主题；也允许传入新的主题 / 正文覆盖。
- * 会生成一条「新记录」，原记录保留，形成完整的历史轨迹。
+ * 已发送记录的重新发送会生成新记录，保留完整历史；首次发送已有草稿则
+ * 原地把该草稿推进为发送任务，避免同一次发送留下草稿和发送两条记录。
  */
 export async function resendLetter(
   letterId: string,
@@ -781,8 +870,12 @@ export async function resendLetter(
     customer,
     subjectTemplate,
     contentTemplate,
-    agentTaskId:original.agentTaskId,agentDraftId:original.agentDraftId??(original.status==='draft'?original._id:undefined),
+    agentTaskId:original.agentTaskId,
+    // A draft is promoted in place; a sent record keeps its historical draft
+    // association when a new resend row is created.
+    agentDraftId:original.agentDraftId??(original.status!=='draft'?original._id:undefined),
     agentOutreachId: original.agentOutreachId,
+    sendDraftId: original.status === 'draft' ? original._id : undefined,
     knowledgeReview:original.knowledgeReview,
     recipientEmailOverride: input.recipientEmail ?? original.recipientEmail,
     markAsDeveloped: input.markAsDeveloped,
@@ -824,8 +917,9 @@ export async function reviewLetter(id: string, input: ReviewLetterInput, actor?:
     return toLetterDto(cleared.toObject() as unknown as Record<string, unknown>);
   }
 
-  // 硬拦截（模型原稿未核验、依据过期/冲突等）人工批准也解决不了：
-  // 直接拒绝记录「通过」，避免出现「已通过但永远发不出去」的死状态。
+  // 依据过期/冲突等结构性问题人工批准也解决不了：直接拒绝记录「通过」，
+  // 避免出现「已通过但永远发不出去」的死状态。模型原稿未核验（draft_unverified）
+  // 属于可人工核对的风险提示，审核通过后允许发送。
   if (input.decision === 'approve') {
     const blocker = knowledgeReviewHardBlocker(letter.knowledgeReview);
     if (blocker) throw ApiError.conflict(`这封草稿不能通过审核：${blocker} 请按最新依据重新生成后再审核。`);

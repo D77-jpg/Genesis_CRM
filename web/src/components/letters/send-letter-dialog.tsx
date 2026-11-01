@@ -687,6 +687,13 @@ export function SendLetterDialog({
   );
 
   const contentLength = (content ?? '').replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length;
+  const preflight = [
+    { ok: Boolean(recipientEmail.trim()), label: '收件人邮箱', detail: recipientEmail.trim() ? recipientEmail.trim() : '请填写收件地址' },
+    { ok: Boolean((subject ?? '').trim() && contentLength > 0), label: '主题与正文', detail: (subject ?? '').trim() && contentLength > 0 ? '内容已填写' : '主题或正文为空' },
+    { ok: canSend, label: '发件邮箱', detail: senderLoading ? '正在检查…' : canSend ? '已就绪' : senderStatus?.reason || '尚未配置可用发件邮箱' },
+    { ok: missingLabels.length === 0, label: '客户占位符', detail: missingLabels.length ? `${missingLabels.length} 个占位符没有对应资料` : '全部可替换' },
+    { ok: true, label: '发送时间', detail: scheduledAt ? formatDateTime(scheduledAt) : isDraftReview ? '审核通过后立即发送' : '立即发送' },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -746,7 +753,7 @@ export function SendLetterDialog({
             ) : null}
 
             {/* ---------------- 邮件内容：编辑 / 预览 / 中英对照 ---------------- */}
-            <section className="min-w-0 rounded-2xl border border-border/80 bg-card shadow-card">
+            <section className="min-w-0 rounded-lg border border-border bg-card">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2">
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                   <FileText className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -860,7 +867,7 @@ export function SendLetterDialog({
                       <div id="letter-content" className="mt-2">
                         <LetterEditor
                           ref={editorRef}
-                          className={isDraftReview ? 'min-h-[26rem]' : undefined}
+                          className={isDraftReview ? 'min-h-[20rem]' : undefined}
                           value={content ?? ''}
                           onChange={(html) => setValue('content', html, { shouldValidate: true, shouldDirty: true })}
                           onBlur={() => setValue('content', content ?? '', { shouldValidate: true })}
@@ -968,7 +975,7 @@ export function SendLetterDialog({
           {/* ---------------- 右栏：依据核对 → 审核结论 → 发送设置 ---------------- */}
           <aside className="min-w-0 space-y-4 lg:sticky lg:top-0">
             {isDraftReview ? (
-              <section className="rounded-2xl border border-border/80 bg-card shadow-card">
+              <section className="rounded-lg border border-border bg-card">
                 <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2">
                   <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                     <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
@@ -985,7 +992,8 @@ export function SendLetterDialog({
               </section>
             ) : null}
 
-            <section className="rounded-2xl border border-border/80 bg-card shadow-card p-3">
+            {letter?.id || initialDraft?.analysisId ? (
+            <section className="rounded-lg border border-border bg-card p-3">
               <KnowledgeReviewPanel
                 letterId={letter?.id}
                 analysisId={initialDraft?.analysisId}
@@ -993,8 +1001,9 @@ export function SendLetterDialog({
                 currentSubject={subject}
               />
             </section>
+            ) : null}
 
-            <section className="rounded-2xl border border-border/80 bg-card shadow-card p-3">
+            <section className="rounded-lg border border-border bg-card p-3">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                 <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden />
                 发送设置
@@ -1033,6 +1042,21 @@ export function SendLetterDialog({
                   </p>
                 </div>
               </div>
+            </section>
+
+            <section className="rounded-lg border border-border bg-card p-3">
+              <h3 className="text-[0.8125rem] font-semibold">发送前检查</h3>
+              <ul className="mt-2 space-y-2">
+                {preflight.map((item) => (
+                  <li key={item.label} className="flex items-start gap-2 text-xs leading-5">
+                    {item.ok ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden /> : <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />}
+                    <span className="min-w-0">
+                      <span className="font-medium">{item.label}</span>
+                      <span className="block break-words text-[11px] text-muted-foreground">{item.detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </section>
           </aside>
         </DialogBody>

@@ -99,7 +99,7 @@ export function KnowledgeSalesLibrary({admin,initialId,onManage,onImport}:{admin
   return()=>paintHits([],-1);
  },[query,selected?.id]);
  const goHit=(delta:number)=>{const ranges=rangesRef.current;if(!ranges.length)return;const next=(hitIndex+delta+ranges.length)%ranges.length;setHitIndex(next);paintHits(ranges,next);revealHit(ranges[next]);};
- return <div className="p-4 sm:p-6 lg:p-7 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
+ return <div className="knowledge-sales-library p-4 sm:p-6 lg:p-7 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
   <header className="flex flex-wrap items-start justify-between gap-4 xl:hidden">
    <div className="max-w-2xl space-y-2"><p className="text-sm font-medium text-muted-foreground">{project?.name} · 本项目资料</p><h1 className="text-2xl font-semibold tracking-tight">销售资料库</h1><p className="text-sm leading-6 text-muted-foreground">找产品卖点、确认交易条件，再交给销售助手准备邮件。</p></div>
    <div className="flex flex-wrap items-center gap-2"><Button variant="ghost" className="min-h-11" disabled={loading} onClick={()=>setRefresh(n=>n+1)}><RefreshCw className="h-4 w-4" aria-hidden/>刷新资料</Button>{admin&&<Button variant="outline" className="min-h-11" onClick={()=>onManage()}>管理资料<ArrowRight className="h-4 w-4" aria-hidden/></Button>}</div>

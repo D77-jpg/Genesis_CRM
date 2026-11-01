@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import { Building2, Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useProjectStore } from '@/store/project.store';
+import { ProjectLogo } from '@/components/projects/project-logo';
 
 export function ProjectSwitcher(): React.JSX.Element {
   const items = useProjectStore((state) => state.items).filter((item) => item.status === 'active');
@@ -20,23 +21,21 @@ export function ProjectSwitcher(): React.JSX.Element {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="workspace-project-switcher min-w-0 max-w-[9rem] gap-2 rounded-full text-xs sm:max-w-[15rem]" aria-label={`切换项目，当前为 ${active.name}`}>
-          <Building2 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+        <Button type="button" variant="ghost" size="sm" className="workspace-project-switcher h-8 min-w-0 max-w-[10rem] gap-2 px-2 text-xs font-medium sm:max-w-[14rem]" aria-label={`切换项目，当前为 ${active.name}`}>
+          <ProjectLogo project={active} size="xs" />
           <span className="truncate">{active.name}</span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>当前项目工作空间</DropdownMenuLabel>
+      <DropdownMenuContent align="start" className="max-h-[min(24rem,70vh)] w-64 overflow-y-auto">
+        <DropdownMenuLabel>切换项目</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {items.map((project) => (
-          <DropdownMenuItem key={project.id} onSelect={() => switchProject(project.id)} className="min-h-11">
-            <span className="avatar-bubble flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold" aria-hidden>
-              {project.code.slice(0, 2)}
-            </span>
+          <DropdownMenuItem key={project.id} onSelect={() => switchProject(project.id)} className="min-h-10">
+            <ProjectLogo project={project} size="sm" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{project.name}</span>
-              <span className="block truncate text-xs text-muted-foreground">{project.industry || project.companyName}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{project.industry || project.companyName}</span>
             </span>
             {project.id === active.id ? <Check className="h-4 w-4 text-primary" aria-label="当前项目" /> : null}
           </DropdownMenuItem>

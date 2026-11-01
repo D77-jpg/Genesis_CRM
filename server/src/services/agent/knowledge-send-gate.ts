@@ -1,7 +1,6 @@
 import type {KnowledgeReview} from './knowledge-types';
 
 const BLOCKING_REVIEW_CODES = new Set([
-  'draft_unverified',
   'fact_budget',
   'index_stale',
   'retrieval_failed',
@@ -10,7 +9,7 @@ const BLOCKING_REVIEW_CODES = new Set([
   'access_changed',
 ]);
 
-const HIGH_RISK_CLAIM = /\b(?:price|pricing|discount|free|sample|shipping|freight|payment|deposit|stock|exclusive|guarantee(?:d)?|certif(?:ied|icate)|legal|contract)\b|价格|报价|折扣|免费|样品|运费|付款|定金|库存|独家|保证|认证|合同|法律/i;
+const HIGH_RISK_CLAIM = /\b(?:price|pricing|discount|free(?![\s-]+weights?)|sample|shipping|freight|payment|deposit|stock|exclusive|guarantee(?:d)?|certif(?:ied|icate)|legal|contract)\b|价格|报价|折扣|免费|样品|运费|付款|定金|库存|独家|保证|认证|合同|法律/i;
 
 export function knowledgeReviewRequiresApproval(review?:KnowledgeReview):boolean{
  if(!review)return false;
@@ -18,20 +17,22 @@ export function knowledgeReviewRequiresApproval(review?:KnowledgeReview):boolean
 }
 
 // A generated draft may only be sent after its knowledge audit is complete enough.
-// A deterministic fallback is safe to send, but a retained model draft, stale evidence
-// or an unapproved high-risk commitment must not slip through the normal send route.
-// `manualApproved` is only for asking "would this still be blocked after the human
-// approves it?" — it bypasses the high-risk gate alone, never the structural blocks.
+// `draft_unverified` means the verifier could not finish its work: it still requires
+// an explicit human approval, but it is not a permanent dead end. Once the reviewer
+// has inspected the body and approved it, the normal send route may proceed.
+// Stale evidence or structural failures remain hard blocks even after approval.
+// `manualApproved` is the "would this still be blocked after the human approves it?"
+// probe used by the review UI; it bypasses the human-review gates only.
 export function knowledgeReviewSendIssue(review?:KnowledgeReview,options?:{manualApproved?:boolean}):string|undefined{
  if(!review)return undefined;
  if(['retrieval_failed','index_stale','index_not_ready','conflict'].includes(review.status))return '依据检索状态异常';
- const issue=(review.issues??[]).find(issue=>BLOCKING_REVIEW_CODES.has(issue.code));
+ const issue=(review.issues??[]).find(issue=>BLOCKING_REVIEW_CODES.has(issue.code)||(issue.code==='draft_unverified'&&!options?.manualApproved&&!review.manualApprovedAt));
  if(issue)return issue.message;
  if(knowledgeReviewRequiresApproval(review)&&!review.manualApprovedAt&&!options?.manualApproved)return '高风险内容还没有人工批准';
  return undefined;
 }
 
-/** 人工批准也解决不了的硬拦截（模型原稿、依据异常、冲突等）；高风险待批准不算。 */
+/** 人工批准也解决不了的硬拦截（依据异常、冲突等）；模型原稿和高风险待批准都可由人审放行。 */
 export function knowledgeReviewHardBlocker(review?:KnowledgeReview):string|undefined{
  return knowledgeReviewSendIssue(review,{manualApproved:true});
 }

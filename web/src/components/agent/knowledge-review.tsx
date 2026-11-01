@@ -323,7 +323,7 @@ export function KnowledgeReviewPanel({
       key: 'unverified',
       title: '这封稿子没做逐项核对',
       detail: rawModelDraft
-        ? '这封是未完成逐项核验的模型原稿，系统不允许发送；请按最新依据重新生成后再审核。'
+        ? '这封是未完成逐项核验的模型原稿；请对照依据核对数字、条件和承诺，审核通过后即可发送。'
         : '系统只保留了有依据的安全内容；发送前请确认，或重新生成。',
       action: letterId ? 'regenerate' : undefined,
     });
@@ -357,6 +357,15 @@ export function KnowledgeReviewPanel({
           )
         ) : null}
       </div>
+
+      {value?.context?.playbook ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+          <span className="font-medium text-foreground">本次行业卡</span>
+          <Badge variant="outline">{value.context.playbook.segmentCode} · {value.context.playbook.segmentName}</Badge>
+          {value.context.playbook.preferenceCode ? <Badge variant="outline">{value.context.playbook.preferenceCode} · {value.context.playbook.preferenceName}</Badge> : null}
+          <span>选卡置信度：{value.context.playbook.confidence === 'high' ? '高' : value.context.playbook.confidence === 'low' ? '低' : '中'}</span>
+        </div>
+      ) : null}
 
       {error ? <p role="alert" className="text-sm leading-6 text-destructive">{error}</p> : null}
 

@@ -38,7 +38,7 @@ function MetricCard({
     <button type="button" onClick={onClick} className="dashboard-metric">
       <span className="flex items-start justify-between gap-2">
         <span className="pt-0.5 text-[0.8125rem] font-medium text-foreground/70">{label}</span>
-        <span className={cn('chip shrink-0', `chip-${tone}`)}>{chip}</span>
+        <span className={cn('chip hidden shrink-0 sm:inline-flex', tone === 'violet' ? 'chip-violet' : 'chip-muted')}>{chip}</span>
       </span>
       <strong className="dashboard-metric-value">{value}</strong>
       <span className="text-xs leading-relaxed text-muted-foreground">{detail}</span>
@@ -55,8 +55,8 @@ function BarList({ data, emptyLabel, total }: { data: { _id: string; count: numb
         <span className="truncate text-foreground/80">{item._id || '未填写'}</span>
         <span className="shrink-0 tabular-nums text-muted-foreground">{item.count} · {total ? Math.round(item.count / total * 100) : 0}%</span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-        <div className="h-full rounded-full bg-gradient-to-r from-primary/70 to-primary" style={{ width: `${item.count / max * 100}%` }} />
+      <div className="h-1 overflow-hidden rounded-sm bg-muted" aria-hidden>
+        <div className="h-full rounded-sm bg-primary/55" style={{ width: `${item.count / max * 100}%` }} />
       </div>
     </li>
   ))}</ul>;
@@ -67,11 +67,11 @@ function TrendChart({ data }: { data: { _id: string; count: number }[] }): React
   const max = Math.max(...data.map(item => item.count), 1);
   return (
     <div className="mt-4">
-      <ul aria-label="近 14 天每日发送量" className="flex h-28 items-end gap-1.5 border-b border-border/70 pb-px">
+      <ul aria-label="近 14 天每日发送量" className="flex h-24 items-end gap-1.5 border-b border-border pb-px">
         {data.map(item => <li key={item._id} className="relative min-w-0 flex-1" title={`${item._id}：${item.count} 封`}>
           <span className="sr-only">{item._id}：{item.count} 封</span>
-          <span aria-hidden className={cn('absolute inset-x-0 bottom-0 rounded-full', item.count > 0 ? 'bg-gradient-to-t from-primary/45 to-primary/85' : 'bg-muted')}
-            style={{ height: `${Math.max(4, item.count / max * 100)}%` }} />
+          <span aria-hidden className={cn('absolute inset-x-0 bottom-0 rounded-sm', item.count > 0 ? 'bg-primary/55' : 'bg-muted')}
+            style={{ height: `${Math.max(3, item.count / max * 100)}%` }} />
         </li>)}
       </ul>
       <div className="mt-2 flex justify-between gap-2 text-xs text-muted-foreground">
@@ -110,7 +110,7 @@ export function DashboardPage(): React.JSX.Element {
       value: data.letter.sent7d.toLocaleString('zh-CN'),
       detail: `近 30 天 ${data.letter.sent30d} 封`,
       chip: `近 30 天 ${data.letter.sent30d} 封`,
-      tone: 'violet' as MetricTone,
+      tone: 'mint' as MetricTone,
       action: () => openLetters(),
     },
     {

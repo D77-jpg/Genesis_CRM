@@ -1066,6 +1066,73 @@ test('first outreach command persists a durable task and draft analysis without 
   await UserMailAccount.deleteOne({ _id: account._id });
 });
 
+test('sequence backfill ignores failed tasks and tasks whose draft was deleted', async () => {
+  const { planForCustomer } = await import('../src/services/agent/outreach-sequence.service');
+  const customerId = new Types.ObjectId();
+  const liveDraftId = new Types.ObjectId();
+  const deletedDraftId = new Types.ObjectId();
+  const allMissing = planForCustomer(
+    { _id: customerId, name: 'Gym Curators', status: 'pending', email: 'sales@gymcurators.ca' },
+    [],
+    [
+      { _id: new Types.ObjectId(), status: 'awaiting_review', outreachStep: 1, draftId: deletedDraftId },
+      { _id: new Types.ObjectId(), status: 'failed', outreachStep: 2, error: { message: '本日 Agent 使用额度已达上限' } },
+      { _id: new Types.ObjectId(), status: 'awaiting_review', outreachStep: 3, draftId: new Types.ObjectId() },
+    ],
+  );
+  assert.deepEqual(allMissing.missingSteps, [1, 2, 3]);
+  assert.equal(allMissing.skipReason, undefined);
+  assert.equal(allMissing.lastError, '本日 Agent 使用额度已达上限');
+
+  // A live step occupies only itself; it does not block other missing steps.
+  const livePlan = planForCustomer(
+    { _id: customerId, name: 'Gym Curators', status: 'pending', email: 'sales@gymcurators.ca' },
+    [{ _id: liveDraftId, status: 'draft', outreachStep: 1 }],
+    [
+      { _id: new Types.ObjectId(), status: 'awaiting_review', outreachStep: 1, draftId: liveDraftId },
+      { _id: new Types.ObjectId(), status: 'failed', outreachStep: 2 },
+    ],
+  );
+  assert.deepEqual(livePlan.missingSteps, [2, 3]);
+  assert.equal(livePlan.skipReason, undefined);
+
+  const deletedFirstWithLaterDrafts = planForCustomer(
+    { _id: customerId, name: 'Bulldog Gear', status: 'pending', email: 'sales@bulldoggear.com' },
+    [
+      { _id: liveDraftId, status: 'draft', outreachStep: 2 },
+      { _id: new Types.ObjectId(), status: 'draft', outreachStep: 3 },
+    ],
+    [
+      { _id: new Types.ObjectId(), status: 'awaiting_review', outreachStep: 2, draftId: liveDraftId },
+      { _id: new Types.ObjectId(), status: 'awaiting_review', outreachStep: 3, draftId: new Types.ObjectId() },
+    ],
+  );
+  assert.deepEqual(deletedFirstWithLaterDrafts.missingSteps, [1]);
+  assert.equal(deletedFirstWithLaterDrafts.skipReason, undefined);
+});
+
+test('sequence backfill replaces deleted-draft tasks with new tasks instead of reusing stale request keys', async () => {
+  const { Customer } = await import('../src/models');
+  const { AgentTask } = await import('../src/models/AgentTask');
+  const { queueOutreachSequence } = await import('../src/services/agent/outreach-sequence.service');
+  const customer = await Customer.create({ projectId: projectA, ownerId: userA, name: 'Backfill Fixture', email: 'backfill@example.test', status: 'pending', source: 'manual' });
+  const session = await service.createAgentSession({ context: { type: 'customer', resourceId: customer.id } }, actorA);
+  const base = `sequence-backfill:${customer.id}`;
+  const stale = await AgentTask.create([
+    { projectId: projectA, userId: userA, sessionId: session.id, actorRole: 'user', kind: 'first_outreach', goal: 'step 1', requestKey: `${base}:step1`, customerId: customer._id, outreachStep: 1, status: 'awaiting_review', draftId: new Types.ObjectId(), knowledgeIds: [], tokenBudget: 60000 },
+    { projectId: projectA, userId: userA, sessionId: session.id, actorRole: 'user', kind: 'first_outreach', goal: 'step 2', requestKey: `${base}:step2`, customerId: customer._id, outreachStep: 2, status: 'failed', knowledgeIds: [], tokenBudget: 60000 },
+    { projectId: projectA, userId: userA, sessionId: session.id, actorRole: 'user', kind: 'first_outreach', goal: 'step 3', requestKey: `${base}:step3`, customerId: customer._id, outreachStep: 3, status: 'awaiting_review', draftId: new Types.ObjectId(), knowledgeIds: [], tokenBudget: 60000 },
+  ]);
+  const result = await queueOutreachSequence(actorA, [customer.id]);
+  assert.equal(result.failed.length, 0);
+  assert.deepEqual(result.created.map((item) => item.step), [1, 2, 3]);
+  const cancelled = await AgentTask.find({ _id: { $in: stale.map((task) => task._id) } }).lean();
+  assert.ok(cancelled.every((task) => task.status === 'cancelled'));
+  const fresh = await AgentTask.find({ customerId: customer._id, _id: { $nin: stale.map((task) => task._id) } }).lean();
+  assert.equal(fresh.length, 3);
+  assert.ok(fresh.every((task) => task.status === 'queued' && task.requestKey.includes(':retry-')));
+});
+
 test('first outreach intent requires a direct command and never upgrades CRM data or a negative/question into an action', async () => {
   const { isFirstOutreachCommand } = await import('../src/services/agent/first-outreach-intent');
   assert.equal(isFirstOutreachCommand('帮我给这个客户写第一封开发信'), true);
@@ -1424,4 +1491,33 @@ test('a provider that ignores the no-tools final turn cannot execute further que
  const models=await import('../src/models');const {MockAgentProvider}=await import('../src/services/agent/mock-provider');const {default:env}=await import('../src/config/env');const provider=new MockAgentProvider();let rounds=0;const session=await service.createAgentSession({context:{type:'global'}},actorA);
  provider.createTurn=async()=>({text:'',output:[],toolCalls:Array.from({length:env.AI_MAX_TOOL_CALLS+1},(_,i)=>({callId:'ignore-'+(++rounds)+'-'+i,name:'search_customers',arguments:JSON.stringify({query:'Independent denied '+i})})),usage:{inputTokens:1,outputTokens:1,totalTokens:2}});
  const answer=await service.sendAgentMessage(session.id,'只查询独立测试客户',actorA,undefined,provider);assert.equal(answer.degraded,true);assert.equal(await models.AgentAction.countDocuments({sessionId:session.id}),env.AI_MAX_TOOL_CALLS);assert.equal((await models.AgentRun.findOne({sessionId:session.id}))!.errorCode,'AGENT_TOOL_LIMIT');
+});
+
+test('pending review exposes only the currently due outreach step', async () => {
+  const { Customer, DevelopmentLetter } = await import('../src/models');
+  const letterService = await import('../src/services/letter.service');
+  const customer = await Customer.create({
+    projectId: projectA, ownerId: userA, name: 'Sequence Timing', email: 'sequence-timing@example.test',
+    status: 'pending', source: 'manual',
+  });
+  await DevelopmentLetter.create([
+    { projectId: projectA, customerId: customer._id, recipientEmail: customer.email, subject: 'Step 1', content: '<p>one</p>', contentText: 'one', status: 'draft', channel: 'mock', outreachStep: 1 },
+    { projectId: projectA, customerId: customer._id, recipientEmail: customer.email, subject: 'Step 2', content: '<p>two</p>', contentText: 'two', status: 'draft', channel: 'mock', outreachStep: 2 },
+    { projectId: projectA, customerId: customer._id, recipientEmail: customer.email, subject: 'Step 3', content: '<p>three</p>', contentText: 'three', status: 'draft', channel: 'mock', outreachStep: 3 },
+  ]);
+  const query = { customerId: customer.id, status: 'draft' as const, review: 'todo' as const, page: 1, limit: 10 };
+  const first = await letterService.listLetters(query, actorA);
+  assert.deepEqual(first.items.map((item) => item.outreachStep), [1]);
+
+  await Customer.updateOne({ _id: customer._id }, { $set: { outreachStep: 1, nextFollowUpAt: new Date(Date.now() + 3_600_000) } });
+  const notDue = await letterService.listLetters(query, actorA);
+  assert.deepEqual(notDue.items.map((item) => item.outreachStep), []);
+
+  await Customer.updateOne({ _id: customer._id }, { $set: { outreachStep: 1, nextFollowUpAt: new Date(Date.now() - 3_600_000) } });
+  const second = await letterService.listLetters(query, actorA);
+  assert.deepEqual(second.items.map((item) => item.outreachStep), [2]);
+
+  await Customer.updateOne({ _id: customer._id }, { $set: { outreachStep: 2, nextFollowUpAt: new Date(Date.now() - 60_000) } });
+  const third = await letterService.listLetters(query, actorA);
+  assert.deepEqual(third.items.map((item) => item.outreachStep), [3]);
 });

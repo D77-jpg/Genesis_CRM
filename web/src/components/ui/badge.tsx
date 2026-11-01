@@ -1,27 +1,24 @@
 /**
- * Badge —— 柔色标签（无描边、浅底深字，参考稿的薄荷/玫瑰/紫罗兰胶囊）
+ * Badge — compact status label. Color is reserved for meaningful state.
  */
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-1',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground',
-        secondary: 'chip-muted',
-        outline: 'border border-border/80 bg-card text-muted-foreground',
-        muted: 'chip-muted',
-        destructive: 'chip-rose',
-        /** 待开发：紫罗兰 */
-        pending: 'chip-violet',
-        /** 已开发：薄荷绿 */
-        developed: 'chip-mint',
-        failed: 'chip-rose',
-        /** 琥珀色提醒 */
-        warning: 'chip-amber',
+        default: 'border-border bg-card text-foreground',
+        secondary: 'chip-muted border-transparent',
+        outline: 'border-border bg-card text-muted-foreground',
+        muted: 'chip-muted border-transparent',
+        destructive: 'chip-rose border-transparent',
+        pending: 'chip-violet border-transparent',
+        developed: 'chip-mint border-transparent',
+        failed: 'chip-rose border-transparent',
+        warning: 'chip-amber border-transparent',
       },
     },
     defaultVariants: { variant: 'default' },
