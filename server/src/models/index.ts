@@ -127,3 +127,16 @@ export type {
   IntegrationIdempotencyDocument,
   IntegrationIdempotencyModel,
 } from './IntegrationIdempotency';
+
+export {
+  OutreachAutomationConfig,
+  OutreachAutomationEnrollment,
+  OutreachAutomationDay,
+} from './OutreachAutomation';
+export type {
+  IOutreachAutomationConfig,
+  IOutreachAutomationEnrollment,
+  OutreachAutomationEnrollmentStatus,
+  OutreachAutomationConfigDocument,
+  OutreachAutomationEnrollmentDocument,
+} from './OutreachAutomation';

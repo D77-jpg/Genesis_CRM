@@ -50,6 +50,9 @@ export interface IDevelopmentLetter {
   agentDraftId?:Types.ObjectId;
   agentTaskId?:Types.ObjectId;
   agentOutreachId?: Types.ObjectId;
+  /** 自动开发活动；人工发送的邮件为空。 */
+  automationCampaignId?: Types.ObjectId;
+  automationEnrollmentId?: Types.ObjectId;
   requestKey?: string;
   threadId?: string;
   inReplyTo?: string;
@@ -165,6 +168,8 @@ const DevelopmentLetterSchema = new Schema<IDevelopmentLetter>(
     agentDraftId:{type:Schema.Types.ObjectId,ref:'DevelopmentLetter'},
     agentTaskId:{type:Schema.Types.ObjectId,ref:'AgentTask'},
     agentOutreachId: { type: Schema.Types.ObjectId, ref: 'AgentCustomerAnalysis' },
+    automationCampaignId: { type: Schema.Types.ObjectId, ref: 'OutreachAutomationConfig', index: true },
+    automationEnrollmentId: { type: Schema.Types.ObjectId, ref: 'OutreachAutomationEnrollment', index: true },
     requestKey: { type: String },
     threadId: { type: String, index: true },
     inReplyTo: String,
