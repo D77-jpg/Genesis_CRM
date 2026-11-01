@@ -14,6 +14,7 @@ const projectFields = {
   /** 项目级真实发送开关；不传时沿用服务端配置 */
   mailTransport: z.enum(['mock', 'smtp']).optional(),
   // Browser-compressed data URL (<=600k chars) or an https URL; '' clears it.
+  logoImage: z.string().max(600000).optional(),
   coverImage: z.string().max(600000).optional(),
 };
 
@@ -28,6 +29,7 @@ export const updateProjectSchema = z.object({
   mailFrom: projectFields.mailFrom,
   mailProfileKey: projectFields.mailProfileKey.optional(),
   mailTransport: projectFields.mailTransport,
+  logoImage: projectFields.logoImage,
   coverImage: projectFields.coverImage,
   status: z.enum(['active', 'archived']).optional(),
 }).refine((value) => Object.keys(value).length > 0, '至少提供一个更新字段');

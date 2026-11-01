@@ -45,6 +45,7 @@ function PlanRow({ plan }: { plan: OutreachSequencePlan }): React.JSX.Element {
         {plan.draftSteps.length ? <span>已有草稿：{plan.draftSteps.join('、')}</span> : null}
         {!skipped ? <StepBadges steps={plan.missingSteps} /> : null}
         {skipped ? <span>{plan.skipReason}</span> : null}
+        {!skipped && plan.lastError ? <span className="text-destructive">上次失败：{plan.lastError}</span> : null}
       </div>
     </li>
   );
@@ -93,11 +94,14 @@ export function OutreachSequenceDialog({
     setError('');
     try {
       const result = await apiPost<OutreachSequenceResult>('/customers/bulk/outreach-sequence', { ids: customerIds });
-      const failed = result.failed.length;
-      toast.success(`已创建 ${result.created.length} 封开发信草稿`, {
-        description: failed
-          ? `${failed} 个步骤创建失败，可在对应客户的任务里重试。`
-          : '草稿会陆续出现在客户详情的「当前客户的开发信草稿」中，不会自动发送。',
+      if (result.created.length === 0) {
+        setError(result.failed[0]?.message || '没有创建生成任务');
+        return;
+      }
+      toast.info(`已创建 ${result.created.length} 个生成任务`, {
+        description: result.failed.length
+          ? `${result.failed.length} 个步骤创建失败，可在对应客户的任务里重试。`
+          : '生成完成后会出现在客户详情的「当前客户的开发信草稿」中，不会自动发送。',
       });
       onCompleted?.();
       onOpenChange(false);

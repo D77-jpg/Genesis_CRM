@@ -7,7 +7,7 @@
  */
 import * as React from 'react';
 import { WorkspaceToolbar } from '@/components/common/workspace';
-import { FilterX } from 'lucide-react';
+import { ChevronDown, FilterX, SlidersHorizontal } from 'lucide-react';
 import { SearchInput } from '@/components/common/search-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,7 +87,7 @@ function FilterSelect({
 }): React.JSX.Element {
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={className ?? 'h-8 w-auto min-w-[7.5rem] max-w-[12rem] text-xs'} aria-label={label}>
+      <SelectTrigger className={className ?? 'h-7 w-auto min-w-[7.25rem] max-w-[11rem] text-xs'} aria-label={label}>
         <SelectValue placeholder={label} />
       </SelectTrigger>
       <SelectContent>
@@ -154,7 +154,7 @@ function GradeFilter({
       placeholder="等级"
       disabled={disabled}
       aria-label="客户等级"
-      className="h-8 w-[6rem] text-xs"
+      className="h-7 w-[6rem] text-xs"
     />
   );
 }
@@ -172,6 +172,7 @@ export function CustomerFilters({
   onChange,
   onReset,
 }: CustomerFiltersProps): React.JSX.Element {
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const industryOptions = React.useMemo(
     () => [{ value: ALL, label: '全部行业' }, ...industries.map((item) => ({ value: item, label: item }))],
     [industries],
@@ -207,104 +208,123 @@ export function CustomerFilters({
 
   return (
     <WorkspaceToolbar label="客户搜索与筛选">
-      <SearchInput
-        value={values.search}
-        onChange={(search) => onChange({ search })}
-        placeholder="搜索姓名 / 公司 / 邮箱…"
-        disabled={disabled}
-        className="w-full sm:w-64 lg:w-72"
-        aria-label="搜索客户"
-      />
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
+        <SearchInput
+          value={values.search}
+          onChange={(search) => onChange({ search })}
+          placeholder="搜索姓名 / 公司 / 邮箱…"
+          disabled={disabled}
+          className="h-8 w-full sm:w-64 lg:w-72"
+          aria-label="搜索客户"
+        />
 
-      <FilterSelect
-        label="客户状态"
-        value={values.status}
-        options={STATUS_OPTIONS}
-        onValueChange={(status) => onChange({ status: status as CustomerStatus | 'all' })}
-        disabled={disabled}
-      />
-
-      <FilterSelect
-        label="跟进"
-        value={values.followUp}
-        options={FOLLOW_UP_FILTER_OPTIONS}
-        onValueChange={(followUp) => onChange({ followUp: followUp as FollowUpFilter })}
-        disabled={disabled}
-      />
-
-      <FilterSelect
-        label="标签"
-        value={values.tag || ALL}
-        options={tagOptions}
-        onValueChange={(tag) => onChange({ tag: tag === ALL ? '' : tag })}
-        disabled={disabled}
-      />
-
-      {showOwner ? (
         <FilterSelect
-          label="负责人"
-          value={values.ownerId}
-          options={ownerOptions}
-          onValueChange={(ownerId) => onChange({ ownerId })}
+          label="客户状态"
+          value={values.status}
+          options={STATUS_OPTIONS}
+          onValueChange={(status) => onChange({ status: status as CustomerStatus | 'all' })}
           disabled={disabled}
         />
-      ) : null}
 
-      <FilterSelect
-        label="邮箱"
-        value={values.hasEmail}
-        options={EMAIL_OPTIONS}
-        onValueChange={(hasEmail) => onChange({ hasEmail: hasEmail as HasEmailFilter })}
-        disabled={disabled}
-      />
+        <FilterSelect
+          label="跟进"
+          value={values.followUp}
+          options={FOLLOW_UP_FILTER_OPTIONS}
+          onValueChange={(followUp) => onChange({ followUp: followUp as FollowUpFilter })}
+          disabled={disabled}
+        />
 
-      <FilterSelect
-        label="国家"
-        value={values.country || ALL}
-        options={countryOptions}
-        onValueChange={(country) => onChange({ country: country === ALL ? '' : country })}
-        disabled={disabled}
-      />
+        {showOwner ? (
+          <FilterSelect
+            label="负责人"
+            value={values.ownerId}
+            options={ownerOptions}
+            onValueChange={(ownerId) => onChange({ ownerId })}
+            disabled={disabled}
+          />
+        ) : null}
 
-      <FilterSelect
-        label="行业"
-        value={values.industry || ALL}
-        options={industryOptions}
-        onValueChange={(industry) => onChange({ industry: industry === ALL ? '' : industry })}
-        disabled={disabled}
-      />
+        <Button
+          type="button"
+          variant={advancedOpen ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => setAdvancedOpen((open) => !open)}
+          aria-expanded={advancedOpen}
+          className="h-7 gap-1.5 px-2 text-xs"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+          更多筛选
+          <ChevronDown className={advancedOpen ? 'h-3.5 w-3.5 rotate-180 transition-transform' : 'h-3.5 w-3.5 transition-transform'} aria-hidden />
+        </Button>
 
-      <FilterSelect
-        label="来源"
-        value={values.leadSource || ALL}
-        options={CUSTOMER_LEAD_SOURCE_FILTER_OPTIONS}
-        onValueChange={(leadSource) => onChange({ leadSource: leadSource === ALL ? '' : leadSource })}
-        disabled={disabled}
-      />
-
-      <FilterSelect
-        label="优先级"
-        value={values.priority}
-        options={CUSTOMER_PRIORITY_FILTER_OPTIONS}
-        onValueChange={(priority) => onChange({ priority: priority as CustomerPriority | 'all' })}
-        disabled={disabled}
-      />
-
-      {/* 等级数量有限且可能是自由文本，用输入框 + datalist 兼容任意值 */}
-      <div className="relative">
-        <GradeFilter value={values.grade} disabled={disabled} onChange={(grade) => onChange({ grade })} />
-        <datalist id="customer-grade-options">
-          {grades.map((grade) => (
-            <option key={grade} value={grade} />
-          ))}
-        </datalist>
+        {hasActiveFilters ? (
+          <Button type="button" variant="ghost" size="sm" onClick={onReset} disabled={disabled} className="h-7 px-2 text-xs">
+            <FilterX className="h-3.5 w-3.5" aria-hidden />
+            清空筛选
+          </Button>
+        ) : null}
       </div>
 
-      {hasActiveFilters ? (
-        <Button type="button" variant="ghost" size="sm" onClick={onReset} disabled={disabled} className="h-8 text-xs">
-          <FilterX className="h-3.5 w-3.5" aria-hidden />
-          清空筛选
-        </Button>
+      {advancedOpen ? (
+        <div className="flex w-full flex-wrap items-center gap-1.5 border-t border-border pt-2">
+          <FilterSelect
+            label="标签"
+            value={values.tag || ALL}
+            options={tagOptions}
+            onValueChange={(tag) => onChange({ tag: tag === ALL ? '' : tag })}
+            disabled={disabled}
+          />
+
+          <FilterSelect
+            label="邮箱"
+            value={values.hasEmail}
+            options={EMAIL_OPTIONS}
+            onValueChange={(hasEmail) => onChange({ hasEmail: hasEmail as HasEmailFilter })}
+            disabled={disabled}
+          />
+
+          <FilterSelect
+            label="国家"
+            value={values.country || ALL}
+            options={countryOptions}
+            onValueChange={(country) => onChange({ country: country === ALL ? '' : country })}
+            disabled={disabled}
+          />
+
+          <FilterSelect
+            label="行业"
+            value={values.industry || ALL}
+            options={industryOptions}
+            onValueChange={(industry) => onChange({ industry: industry === ALL ? '' : industry })}
+            disabled={disabled}
+          />
+
+          <FilterSelect
+            label="来源"
+            value={values.leadSource || ALL}
+            options={CUSTOMER_LEAD_SOURCE_FILTER_OPTIONS}
+            onValueChange={(leadSource) => onChange({ leadSource: leadSource === ALL ? '' : leadSource })}
+            disabled={disabled}
+          />
+
+          <FilterSelect
+            label="优先级"
+            value={values.priority}
+            options={CUSTOMER_PRIORITY_FILTER_OPTIONS}
+            onValueChange={(priority) => onChange({ priority: priority as CustomerPriority | 'all' })}
+            disabled={disabled}
+          />
+
+          {/* 等级数量有限且可能是自由文本，用输入框 + datalist 兼容任意值 */}
+          <div className="relative">
+            <GradeFilter value={values.grade} disabled={disabled} onChange={(grade) => onChange({ grade })} />
+            <datalist id="customer-grade-options">
+              {grades.map((grade) => (
+                <option key={grade} value={grade} />
+              ))}
+            </datalist>
+          </div>
+        </div>
       ) : null}
     </WorkspaceToolbar>
   );

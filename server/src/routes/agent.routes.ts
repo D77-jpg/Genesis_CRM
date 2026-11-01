@@ -44,8 +44,11 @@ import {
 import {
   agentMailAnalysisParamsSchema,
   createAgentMailAnalysisSchema,
+  quoteCheckSchema,
   updateAgentMailAnalysisSchema,
 } from '../validators/agent.validator';
+import {checkQuote} from '../services/quote-check.service';
+import {clearProjectPlaybook,getProjectPlaybook,importProjectPlaybook,playbookImportInput} from '../services/playbook-import.service';
 import {
   cancelScratchpadCustomerPreview,
   confirmScratchpadCustomerPreview,
@@ -203,6 +206,20 @@ router.post('/customer-analyses/:id/save-email-draft', messageLimiter, validate(
 }));
 router.post('/customer-analyses/:id/schedule-followup', messageLimiter, validate({ params: agentCustomerAnalysisParamsSchema, body: confirmAgentAnalysisActionSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await scheduleAnalysisFollowUp(req.params.id, req.body, req.user!), 201);
+}));
+
+router.get('/playbooks', asyncHandler(async (req, res) => {
+  sendSuccess(res, await getProjectPlaybook(req.user!));
+}));
+router.put('/playbooks', requireRole('admin'), messageLimiter, validate({ body: playbookImportInput }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await importProjectPlaybook(req.body, req.user!));
+}));
+router.delete('/playbooks', requireRole('admin'), asyncHandler(async (req, res) => {
+  sendSuccess(res, await clearProjectPlaybook(req.user!));
+}));
+
+router.post('/quote-checks', messageLimiter, validate({ body: quoteCheckSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await checkQuote(req.body, req.user!));
 }));
 
 router.post('/mail-analyses', messageLimiter, validate({ body: createAgentMailAnalysisSchema }), asyncHandler(async (req, res) => {

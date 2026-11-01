@@ -11,13 +11,14 @@
  */
 import * as React from 'react';
 import { toast } from 'sonner';
-import { Plus, ReceiptText } from 'lucide-react';
+import { Calculator, Plus, ReceiptText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { QuotationList } from '@/components/customers/quotation-list';
 import { QuotationFormDialog } from '@/components/customers/quotation-form-dialog';
 import { QuotationViewDialog } from '@/components/customers/quotation-view-dialog';
+import { QuoteCheckDialog } from '@/components/customers/quote-check-dialog';
 import { useQuotationStore } from '@/store/quotation.store';
 import { useFollowUpStore } from '@/store/followup.store';
 import type { Quotation } from '@/types';
@@ -38,6 +39,7 @@ export function CustomerQuotations({ customerId, onCustomerChanged }: CustomerQu
   const reset = useQuotationStore((state) => state.reset);
 
   const [formOpen, setFormOpen] = React.useState(false);
+  const [checkOpen, setCheckOpen] = React.useState(false);
   // 非空表示编辑该报价单，null 表示新增
   const [formTarget, setFormTarget] = React.useState<Quotation | null>(null);
   const [viewOpen, setViewOpen] = React.useState(false);
@@ -121,7 +123,7 @@ export function CustomerQuotations({ customerId, onCustomerChanged }: CustomerQu
             </CardTitle>
             <CardDescription>为该客户创建与管理报价，金额由系统统一核算，并留档到客户动态</CardDescription>
           </div>
-          {addButton}
+          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => setCheckOpen(true)}><Calculator className="h-4 w-4" aria-hidden />报价核对</Button>{addButton}</div>
         </CardHeader>
 
         <CardContent>
@@ -138,6 +140,8 @@ export function CustomerQuotations({ customerId, onCustomerChanged }: CustomerQu
           />
         </CardContent>
       </Card>
+
+      <QuoteCheckDialog open={checkOpen} onOpenChange={setCheckOpen} customerId={customerId} />
 
       <QuotationFormDialog
         open={formOpen}

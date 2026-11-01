@@ -3,6 +3,8 @@ import {websiteCustomerEvidence} from '../website/research.service';
 import {prepareSalesEvidence,assertSalesEvidenceCurrent,salesMailKind,salesSubjects,type SalesMailKind} from './sales-evidence';
 import {workflowStage,type EvidenceWorkflow} from './evidence-workflow';
 import {verifyGroundedEmail,providerFactVerifier} from './fact-verifier';
+import {selectOutreachPlaybook} from './outreach-playbook';
+import {loadImportedPlaybook} from '../playbook-import.service';
 import {knowledgeForModel,knowledgeForAudit,knowledgeSourceForModel} from './knowledge-types';
 import type {KnowledgeBundle} from './knowledge-types';
 import {inboundAgentScope} from './mail-access';
@@ -165,7 +167,21 @@ async function buildAnalysisInput(customerId: string, actor: AuthUser, knowledge
     add({sourceId:item.sourceId,kind:item.kind,recordId:item.knowledgeId??item.quotationId??item.agreementId!,label:`已发布产品知识 · ${item.title} · v${item.version}`},{...modelKnowledge,content:clipped(modelKnowledge.content,300)});
   }
   for(const item of await customerAttachmentEvidence(customerId,actor))add({sourceId:item.sourceId,kind:'attachment',recordId:item.id,label:`客户附件 · ${item.name} · ${item.status}`},{...item,text:item.text.slice(0,3000)});
-  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext),projectProfile:projectPromptContext(salesProfile),
+  const importedPlaybook=await loadImportedPlaybook(actor.projectId);
+  const playbook=selectOutreachPlaybook({
+    ...(importedPlaybook?{cards:importedPlaybook}:{}),
+    projectKey:salesProfile.key,
+    taskType:taskKind??salesMailKind(goal),
+    outreachStep,
+    industry:customer.industry,
+    interestedProducts:customer.interestedProducts,
+    productCategory:customer.productCategory,
+    // Website text often starts with cookie/country selectors. Put the
+    // extracted product hint first so a real product signal is not buried.
+    websiteText:[websiteHint,...websiteSources.map(item=>item.content.text)].join(' ').slice(0,16000),
+  });
+  const profileContext=projectPromptContext(salesProfile);
+  return { input: { customerName: customer.name, customerEmail: customer.email, sourceCatalog,salesRequirements:prepared.requirements,taskType:taskKind??salesMailKind(goal),knowledgeContext:knowledgeForModel(knowledgeContext),projectProfile:playbook?{...profileContext,playbook}:profileContext,
     ...(outreachStep ? { outreachStep: (Math.min(3, Math.max(1, outreachStep)) as 1|2|3) } : {}),
     ...(previousOutreach?.length ? { previousOutreach } : {}) }, sources, knowledgeBundle:knowledgeForAudit(knowledgeContext), signature:salesProfile.signature };
 }
@@ -255,6 +271,7 @@ export async function createCustomerAnalysis(input: CreateAgentCustomerAnalysisB
       customerProfile:customerProfileOf(context.input.sourceCatalog.find(s=>s.kind==='profile')!.content as {name:string;company?:string;country?:string;industry?:string;interestedProducts?:string}),recipientName:context.input.customerName,customerId:input.customerId,request:options?.userRequest,
       customerWebsites:context.input.sourceCatalog.filter(s=>s.kind==='website').map(s=>{const c=s.content as {url:string;text:string;sha256:string;collectedAt:string};return {sourceId:s.sourceId,url:c.url,text:c.text,sha256:c.sha256,collectedAt:c.collectedAt};}),
       customerEvidence:JSON.stringify(context.input.sourceCatalog.filter(item=>item.kind!=='knowledge')),
+      playbook:context.input.projectProfile?.playbook,
       seller:context.input.seller,
       signature:context.signature,
       outreachStep:options?.outreachStep,

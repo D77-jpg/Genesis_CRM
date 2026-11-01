@@ -14,6 +14,7 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CustomerTable } from '@/components/customers/customer-table';
+import { CustomerPreviewPanel } from '@/components/customers/customer-preview-panel';
 import type { CustomerQuickEditPatch } from '@/components/customers/customer-quick-edit';
 import { CustomerFilters, type CustomerFilterValues } from '@/components/customers/customer-filters';
 import { BulkActionsBar } from '@/components/customers/bulk-actions-bar';
@@ -29,9 +30,11 @@ import { ImportDialog } from '@/components/customers/import-dialog';
 import { SendLetterDialog } from '@/components/letters/send-letter-dialog';
 import { useCountries, useCustomerList, useIndustries, useOwners, useTags } from '@/hooks/use-queries';
 import { usePageTitle } from '@/hooks/use-ui';
+import { useMediaQuery } from '@/hooks/use-ui';
 import { selectHasActiveFilters, useCustomerStore } from '@/store/customer.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { downloadFile, stampedFilename } from '@/lib/download';
+import { cn } from '@/lib/utils';
 import { CUSTOMER_STATUS_LABEL } from '@/constants';
 import type { Customer, CustomerStatus, SendLetterResult } from '@/types';
 
@@ -115,6 +118,24 @@ export function CustomersPage(): React.JSX.Element {
   const [exporting, setExporting] = React.useState(false);
   const [quickSaving, setQuickSaving] = React.useState(false);
   const quickSavingRef = React.useRef(false);
+  const [previewId, setPreviewId] = React.useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = React.useState(true);
+  const canPreview = useMediaQuery('(min-width: 1360px)');
+
+  // Keep the right-side quick view useful as the list, filter or page changes.
+  React.useEffect(() => {
+    setPreviewId((current) => {
+      if (!items.length) return null;
+      if (current && items.some((item) => item.id === current)) return current;
+      return items[0]?.id ?? null;
+    });
+  }, [items]);
+
+  const previewCustomer = React.useMemo(
+    () => (previewId ? items.find((item) => item.id === previewId) ?? null : null),
+    [items, previewId],
+  );
+  const showPreview = canPreview && previewOpen && previewCustomer !== null;
 
   /* ---------------------------- 派生数据 ---------------------------- */
 
@@ -274,7 +295,9 @@ export function CustomersPage(): React.JSX.Element {
 
   return (
     <div className="workspace-page">
-      <PageHeader
+      <div className={cn('min-w-0', showPreview && 'min-[1360px]:grid min-[1360px]:grid-cols-[minmax(0,1fr)_20rem] min-[1360px]:items-stretch min-[1360px]:gap-3')}>
+        <div className="min-w-0 space-y-4">
+          <PageHeader
         title="客户管理"
         description={
           total > 0 ? (
@@ -325,48 +348,66 @@ export function CustomersPage(): React.JSX.Element {
         onReset={resetFilters}
       />
 
-      <Card className="relative overflow-hidden">
-        <CustomerTable
-          customers={items}
-          loading={loading}
-          error={error}
-          selectedIds={selectedIds}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          hasFilters={hasActiveFilters}
-          showOwner={isAdmin}
-          owners={owners}
-          quickEditDisabled={loading || mutating || quickSaving}
-          onQuickEdit={handleQuickEdit}
-          onSort={setSorting}
-          onToggleSelect={toggleSelect}
-          onToggleSelectAll={toggleSelectAll}
-          onRetry={() => void fetchList()}
-          onEdit={openEdit}
-          onSend={openSend}
-          onDelete={setDeleting}
-          onCreate={openCreate}
-          onImport={() => setImportOpen(true)}
-          onResetFilters={resetFilters}
-        />
+        <Card className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <CustomerTable
+            customers={items}
+            loading={loading}
+            error={error}
+            selectedIds={selectedIds}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            hasFilters={hasActiveFilters}
+            showOwner={isAdmin}
+            owners={owners}
+            quickEditDisabled={loading || mutating || quickSaving}
+            onQuickEdit={handleQuickEdit}
+            onSort={setSorting}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+            onRetry={() => void fetchList()}
+            onEdit={openEdit}
+            onSend={openSend}
+            onDelete={setDeleting}
+            onCreate={openCreate}
+            onImport={() => setImportOpen(true)}
+            onResetFilters={resetFilters}
+            previewId={previewOpen ? previewId : null}
+            previewEnabled={canPreview}
+            compactColumns={showPreview}
+            onPreview={(customer) => {
+              setPreviewId(customer.id);
+              setPreviewOpen(true);
+            }}
+          />
 
-        <DataPagination
-          page={page}
-          limit={limit}
-          total={total}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          onLimitChange={setLimit}
-          disabled={loading}
-          extra={
-            selectedIds.length > 0 ? (
-              <span className="text-primary">
-                已选 <span className="font-medium tabular-nums">{selectedIds.length}</span> 项
-              </span>
-            ) : null
-          }
-        />
-      </Card>
+          <DataPagination
+            page={page}
+            limit={limit}
+            total={total}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+            disabled={loading}
+            extra={
+              selectedIds.length > 0 ? (
+                <span className="text-primary">
+                  已选 <span className="font-medium tabular-nums">{selectedIds.length}</span> 项
+                </span>
+              ) : null
+            }
+          />
+        </Card>
+        </div>
+
+        {showPreview && previewCustomer ? (
+          <CustomerPreviewPanel
+            customer={previewCustomer}
+            onEdit={openEdit}
+            onSend={openSend}
+            onClose={() => setPreviewOpen(false)}
+          />
+        ) : null}
+      </div>
 
       <BulkActionsBar
         onPrepareDrafts={()=>useUiStore.getState().openAgentBatch(selectedIds)}

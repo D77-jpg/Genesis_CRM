@@ -62,6 +62,13 @@ import { CustomerStatusBadge } from '@/components/common/status-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/separator';
 import { EditableInfoRow } from '@/components/customers/editable-info-row';
@@ -587,7 +594,7 @@ export function CustomerDetailPage(): React.JSX.Element {
         title={
           <span className="flex items-center gap-2.5">
             <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground"
               aria-hidden
             >
               {initials(customer.name)}
@@ -614,46 +621,34 @@ export function CustomerDetailPage(): React.JSX.Element {
         }
         actions={
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={quickGenerating}
-              onClick={() => setCleanupOpen(true)}
-            >
-              <Eraser className="h-4 w-4" aria-hidden />
-              整理草稿
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={quickGenerating}
-              onClick={() => setSequenceOpen(true)}
-            >
-              <Sparkles className="h-4 w-4" aria-hidden />
-              补齐三封
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={quickGenerating}
-              onClick={() => void quickGenerate()}
-            >
-              {quickGenerating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-              {quickGenerating ? '生成中…' : '快捷生成首封'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => setDeleteCustomerOpen(true)}
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-              删除
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" disabled={quickGenerating}>
+                  {quickGenerating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+                  {quickGenerating ? '生成中…' : '生成草稿'}
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onSelect={() => void quickGenerate()} disabled={quickGenerating}>
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                  快捷生成首封
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setSequenceOpen(true)} disabled={quickGenerating}>
+                  <Layers className="h-4 w-4" aria-hidden />
+                  补齐三封草稿
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setCleanupOpen(true)} disabled={quickGenerating}>
+                  <Eraser className="h-4 w-4" aria-hidden />
+                  整理当前草稿
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setDeleteCustomerOpen(true)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                  删除客户
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               type="button"
               size="sm"

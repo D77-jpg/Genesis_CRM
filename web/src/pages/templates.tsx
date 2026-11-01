@@ -7,12 +7,11 @@
  */
 import * as React from 'react';
 import { toast } from 'sonner';
-import { FilePlus2, FilterX } from 'lucide-react';
+import { ChevronDown, FilePlus2, FilterX } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
 import { WorkspaceToolbar } from '@/components/common/workspace';
 import { SearchInput } from '@/components/common/search-input';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TemplateList } from '@/components/templates/template-list';
@@ -171,14 +170,18 @@ export function TemplatesPage(): React.JSX.Element {
         </Select>
       </WorkspaceToolbar>
 
-      <Card className="space-y-4 p-4" aria-label="模板效果">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div><h2 className="font-semibold">模板效果</h2><p className="text-xs text-muted-foreground">看每个模板发出去之后，客户有没有回复、问到报价、最终成交。</p></div>
-          <Select value={String(windowDays)} onValueChange={(value) => setWindowDays(Number(value) as 30 | 90 | 180)}>
-            <SelectTrigger className="w-32" aria-label="统计窗口"><SelectValue /></SelectTrigger>
-            <SelectContent>{([30, 90, 180] as const).map((days) => <SelectItem key={days} value={String(days)}>近 {days} 天</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
+      <details className="group rounded-lg border border-border bg-card" aria-label="模板效果">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+          <div><h2 className="text-[0.8125rem] font-semibold">模板效果</h2><p className="mt-0.5 text-[11px] text-muted-foreground">看模板发出后客户的回复、询价和成交动作；样本不足只展示、不比较。</p></div>
+          <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">近 {windowDays} 天 <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden /></span>
+        </summary>
+        <div className="space-y-3 border-t border-border p-4">
+          <div className="flex justify-end">
+            <Select value={String(windowDays)} onValueChange={(value) => setWindowDays(Number(value) as 30 | 90 | 180)}>
+              <SelectTrigger className="h-7 w-28 text-[11px]" aria-label="统计窗口"><SelectValue /></SelectTrigger>
+              <SelectContent>{([30, 90, 180] as const).map((days) => <SelectItem key={days} value={String(days)}>近 {days} 天</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
         {performanceLoading ? <p role="status">正在加载效果统计…</p> : null}
         {performanceError ? <div role="alert" className="text-sm text-destructive">{performanceError} <Button type="button" variant="outline" size="sm" onClick={() => setRefreshVersion((value) => value + 1)}>重试</Button></div> : null}
         {performance ? <>
@@ -195,7 +198,8 @@ export function TemplatesPage(): React.JSX.Element {
               })}</div>
             </div>)}</div>}
         </> : null}
-      </Card>
+        </div>
+      </details>
 
       {/* ---------------------------- 模板卡片 ---------------------------- */}
 

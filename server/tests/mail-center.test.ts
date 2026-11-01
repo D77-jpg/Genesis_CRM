@@ -455,7 +455,7 @@ test('62 tracking preparation failure never blocks normal SMTP/mock delivery', a
 let ironCustomerId = '';
 test('63 project directory is role-aware and project administration remains admin-only', async () => {
   const adminProjects = await request('GET', '/projects', adminToken);
-  assert.deepEqual(new Set(adminProjects.map((project: { slug: string }) => project.slug)), new Set(['genesis-bags', 'ironhue']));
+  assert.deepEqual(new Set(adminProjects.map((project: { slug: string }) => project.slug)), new Set(['genesis-bags', 'ironhue', 'velaturo']));
   const salesProjects = await request('GET', '/projects', salesToken);
   assert.deepEqual(salesProjects.map((project: { id: string }) => project.id), [projectId]);
   await request('POST', '/projects', salesToken, { name: 'Forbidden', slug: 'forbidden', code: 'FORBIDDEN', companyName: 'Forbidden', mailProfileKey: 'forbidden' }, 403);
@@ -895,7 +895,8 @@ test('87 审核结论决定草稿能否发送，不通过无需理由、审核�
   // 通过后又改正文：发送被挡住；按审核时的内容发送成功
   await request('POST', `/letters/${id}/resend`, salesToken, { content: '<p>Changed after approval</p>', requestKey: `review-stale-${suffix}` }, 409);
   const sent = await request('POST', `/letters/${id}/resend`, salesToken, { subject: 'Review fixture v2', content: '<p>Fixed lead time</p>', requestKey: `review-send-${suffix}` }, 201);
-  assert.notEqual(sent.letter.id, id);
+  assert.equal(sent.letter.id, id);
+  assert.equal((await models.DevelopmentLetter.findById(id))?.status, 'sent');
 
   // 没有审核结论的历史草稿保持可直接发送；不通过的草稿也能重新通过
   const legacy = await request('POST', '/letters', salesToken, { customerId, subject: 'Legacy fixture', content: '<p>Legacy</p>', saveAsDraft: true, requestKey: `review-legacy-${suffix}` }, 201);
@@ -1031,10 +1032,11 @@ test('88 审核时正文被改过，也必须把人工批准记在通过的那�
 
   // 通过后直接发送：不应再被「高风险内容还没有人工批准」拦住（测试环境为 mock 通道）
   const sent = await request('POST', `/letters/${draft.letter.id}/resend`, salesToken, { requestKey: `approval-hash-send-${suffix}` }, 201);
-  assert.notEqual(sent.letter.id, draft.letter.id);
+  assert.equal(sent.letter.id, draft.letter.id);
+  assert.equal(sent.letter.status, 'sent');
 });
 
-test('89 未完成逐项核验的模型原稿不能被审核通过，只能重新生成', async () => {
+test('89 未完成逐项核验的模型原稿需要人工核对，审核通过后可发送', async () => {
   const { draftHash } = await import('../src/services/agent/knowledge-grounding');
   const draft = await request('POST', '/letters', salesToken, {
     customerId, subject: 'Unverified model draft fixture', content: '<p>Raw model body</p>', saveAsDraft: true, requestKey: `unverified-draft-${suffix}`,
@@ -1051,17 +1053,17 @@ test('89 未完成逐项核验的模型原稿不能被审核通过，只能重�
     },
   });
 
-  // 列表/详情要把硬拦截原因给前端，界面据此禁用「审核通过」
+  // 未核验是人工可处理的风险提示，不再让草稿永久处于「不可发送」
   const detail = await request('GET', `/letters/${draft.letter.id}`, salesToken, undefined, 200);
-  assert.match(String(detail.sendBlocker), /模型原稿/);
+  assert.equal(detail.sendBlocker, undefined);
 
-  // 人工通过也解决不了：直接拒绝记「通过」，避免出现「已通过但永远发不出去」
-  await request('POST', `/letters/${draft.letter.id}/review`, salesToken, { decision: 'approve' }, 409);
-  const stillDraft = await models.DevelopmentLetter.findById(draft.letter.id).lean();
-  assert.equal(stillDraft?.review?.decision, undefined);
-
-  // 不通过仍然允许，草稿可以留在待处理清单外
-  await request('POST', `/letters/${draft.letter.id}/review`, salesToken, { decision: 'reject' }, 200);
+  // 人工审核通过后，发送闸门放行
+  const approved = await request('POST', `/letters/${draft.letter.id}/review`, salesToken, { decision: 'approve' }, 200);
+  assert.equal(approved.review.decision, 'approved');
+  assert.ok(approved.knowledgeReview.manualApprovedAt);
+  const sent = await request('POST', `/letters/${draft.letter.id}/resend`, salesToken, { requestKey: `unverified-send-${suffix}` }, 201);
+  assert.equal(sent.letter.id, draft.letter.id);
+  assert.equal(sent.letter.status, 'sent');
 });
 
 test('跟进草稿：按上一封生成第 2 封，不带签名；没发过信的客户报错', async () => {

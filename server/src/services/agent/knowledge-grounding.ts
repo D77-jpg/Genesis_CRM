@@ -42,7 +42,7 @@ export function needsKnowledge(text:string){
 // commitment that the verified body never made, even when they contain no digits.
 export function safeGeneratedSubject(subject:string,fallback:string){
  const value=subject.normalize('NFKC').trim();
- const risky=/\b(?:guarantee(?:d)?|free|best|lowest|cheapest|exclusive|risk[- ]?free|reserve(?:d)?|stock|discount|certified|certificate|approved|iso|fsc|moq|lead time|delivery|price|quote|offer)\b|保证|免费|最低|独家|留货|现货|库存|折扣|认证|报价|价格|交期/i;
+ const risky=/\b(?:guarantee(?:d)?|free(?![\s-]+weights?)|best|lowest|cheapest|exclusive|risk[- ]?free|reserve(?:d)?|stock|discount|certified|certificate|approved|iso|fsc|moq|lead time|delivery|price|quote|offer)\b|保证|免费|最低|独家|留货|现货|库存|折扣|认证|报价|价格|交期/i;
  return value.length>=8&&value.length<=90&&!/[\d€£$¥%]|USD|EUR|GBP|RMB|CNY/i.test(value)&&!risky.test(value)?value:fallback;
 }
 export function transformNumbersMatch(text:string,original:string){
@@ -193,6 +193,8 @@ export interface GroundedEmailOptions {
  /** 三封序列中的第几封；用于让兜底稿保持跟进/结束信结构 */
  outreachStep?:number;
  previousOutreach?:{step:number;subject:string;bodyText:string}[];
+  /** Internal strategy trace; never used as factual evidence. */
+  playbook?:import('../project-profile').OutreachPlaybookContext;
 }
 // Conservative whole-message rendering is the bounded fallback, not a chain of regex deletions.
 // The original model message is retained only by the independent semantic verifier below.
@@ -246,7 +248,7 @@ export function auditGroundedEmail(body:string,bundle:KnowledgeBundle,options:Gr
  const checks=claims.map((c,i)=>({id:'f'+i,text:c.text,status:'supported' as const,sourceIds:c.sourceIds,reason:'仅使用适用的已审核结构化条件；数值、单位和完整条件由服务端呈现'}));
  return {bodyText,review:{version:1,projectId:bundle.projectId,taskType:options.taskType,generatedAt:new Date().toISOString(),
  status:facts.some(f=>f.status==='conflict')?'conflict':bundle.status,completeness:issues.some(i=>i.code!=='claim_rewritten')?'partial':'complete',sources:bundle.sources,claims,questions,issues,
- context:{customerWebsites:options.customerWebsites,customerProfile:options.customerProfile,factContext:bundle.factContext,customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request},bodyHash:draftHash(bodyText),factAudit:{contract:'s4.1',mode:'deterministic',attempts:0,checks,facts}}};
+ context:{customerWebsites:options.customerWebsites,customerProfile:options.customerProfile,factContext:bundle.factContext,customerId:options.customerId,mailId:options.mailId,direction:options.direction,request:options.request,playbook:options.playbook},bodyHash:draftHash(bodyText),factAudit:{contract:'s4.1',mode:'deterministic',attempts:0,checks,facts}}};
 }
 export async function knowledgeFreshness(review:KnowledgeReview,actor:AuthUser):Promise<KnowledgeFreshness>{
  const result:KnowledgeFreshness={checkedAt:new Date().toISOString(),changed:[]};

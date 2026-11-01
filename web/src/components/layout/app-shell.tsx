@@ -18,7 +18,7 @@ import { AgentPanel } from '@/components/agent/agent-panel';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 const SIDEBAR_WIDTH = '15rem';
-const SIDEBAR_WIDTH_COLLAPSED = '4.75rem';
+const SIDEBAR_WIDTH_COLLAPSED = '3.75rem';
 
 export function AppShell(): React.JSX.Element {
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
@@ -52,24 +52,28 @@ export function AppShell(): React.JSX.Element {
     <div className="workspace-shell overflow-hidden">
       <a href="#workspace-main" className="workspace-skip-link">跳转到主要内容</a>
 
-      {/* 主面板：铺满窗口、直角贴合（不再有外框留白和圆角） */}
-      <div className="workspace-shell-body flex h-full w-full overflow-hidden bg-card">
+      {/* App frame: flush white chrome, neutral canvas, content owns the hierarchy. */}
+      <div className="workspace-shell-body flex h-full w-full overflow-hidden bg-background">
         {/* 桌面端侧栏 */}
         <aside
-          className="hidden shrink-0 border-r border-border/60 transition-[width] duration-200 ease-out lg:block"
+          className="hidden shrink-0 border-r border-border bg-card transition-[width] duration-200 ease-out lg:block"
           style={{ width: sidebarWidth }}
         >
-          <Sidebar collapsed={collapsed} onToggleCollapse={toggleSidebar} />
+          <Sidebar collapsed={collapsed} />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <Header onOpenMobileNav={() => setMobileNavOpen(true)} />
+          <Header
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            sidebarCollapsed={collapsed}
+            onToggleSidebar={toggleSidebar}
+          />
 
           <main
             id="workspace-main"
             ref={scrollRef}
             tabIndex={-1}
-            className="workspace-main no-print min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5 sm:py-6"
+            className="workspace-main no-print min-w-0 flex-1 overflow-y-auto bg-background px-4 py-4 sm:px-4 sm:py-4"
           >
             <div className="mx-auto min-w-0 w-full max-w-[var(--workspace-content-width)]">
               <Outlet />
@@ -83,10 +87,10 @@ export function AppShell(): React.JSX.Element {
         <DialogContent
           hideClose
           aria-describedby={undefined}
-          className={cn('left-0 top-0 h-dvh max-h-none w-[17rem] max-w-[85vw] translate-x-0 translate-y-0 gap-0 rounded-none border-0 p-0 sm:p-0')}
+          className={cn('left-0 top-0 h-dvh max-h-none w-[16rem] max-w-[85vw] translate-x-0 translate-y-0 gap-0 rounded-none border-0 p-0 sm:p-0')}
         >
           <DialogTitle className="sr-only">主导航</DialogTitle>
-          <Sidebar collapsed={false} onToggleCollapse={toggleSidebar} mobile onNavigate={() => setMobileNavOpen(false)} />
+          <Sidebar collapsed={false} mobile onNavigate={() => setMobileNavOpen(false)} />
         </DialogContent>
       </Dialog>
 

@@ -50,6 +50,7 @@ import knowledgeDocumentRoutes from './knowledge-documents.routes';
 import mailAccountRoutes from './mail-account.routes';
 import integrationRoutes from './integration.routes';
 import prospectingRoutes from './prospecting.routes';
+import productRoutes from './product.routes';
 
 const router = Router();
 
@@ -115,6 +116,7 @@ router.use('/website-research', requireAuth, requireProject, websiteResearchRout
 router.use('/letters', requireAuth, requireProject, letterRoutes);
 router.use('/mail', requireAuth, requireProject, mailRoutes);
 router.use('/quotations', requireAuth, requireProject, quotationRoutes);
+router.use('/products', requireAuth, requireProject, productRoutes);
 router.use('/templates', requireAuth, requireProject, templateRoutes);
 router.use('/scratchpad', requireAuth, requireProject, scratchpadRoutes);
 router.use('/agent', requireAuth, requireProject, agentRoutes);

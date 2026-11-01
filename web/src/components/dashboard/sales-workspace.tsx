@@ -26,7 +26,7 @@ function CustomerRow({ customer, overdue, recent = false }: {
     <li>
       <Link to={customerDetailPath(customer.id)} className="dashboard-customer-row group">
         <span className="flex min-w-0 items-center gap-3">
-          <span className="avatar-bubble flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold" aria-hidden>
+          <span className="avatar-bubble flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold" aria-hidden>
             {initials(customer.name)}
           </span>
           <span className="min-w-0">
@@ -51,7 +51,7 @@ function CustomerRow({ customer, overdue, recent = false }: {
 function RecentFollowUpRow({ item }: { item: RecentFollowUpItem }): React.JSX.Element {
   return (
     <li>
-      <Link to={customerDetailPath(item.customerId)} className="group -mx-2 block rounded-xl border-b border-border/60 px-2 py-4 transition-colors last:border-0 hover:bg-accent/70">
+      <Link to={customerDetailPath(item.customerId)} className="group -mx-2 block rounded-md border-b border-border/70 px-2 py-3 transition-colors last:border-0 hover:bg-muted/55">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span className="text-sm font-medium group-hover:text-primary">{item.customerName}</span>
           <time dateTime={new Date(item.followUpAt).toISOString()} className="text-xs text-muted-foreground">{formatRelative(item.followUpAt)}</time>
@@ -68,10 +68,10 @@ function RecentFollowUpRow({ item }: { item: RecentFollowUpItem }): React.JSX.El
 
 function RecentLetterRow({ letter }: { letter: DevelopmentLetter }): React.JSX.Element {
   return (
-    <li className="border-b border-border/60 last:border-0">
+    <li className="border-b border-border/70 last:border-0">
       <Link to={letter.customer ? customerDetailPath(letter.customer.id) : ROUTES.letters}
-        className="group -mx-2 flex items-start gap-3 rounded-xl px-2 py-4 transition-colors hover:bg-accent/70">
-        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary" aria-hidden>
+        className="group -mx-2 flex items-start gap-2.5 rounded-md px-2 py-3 transition-colors hover:bg-muted/55">
+        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden>
           <Mail className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1">
@@ -92,8 +92,8 @@ function ListEmpty({ icon: Icon, title, description, children }: React.PropsWith
 }>): React.JSX.Element {
   return (
     <div className="flex min-h-52 flex-col items-center justify-center px-4 py-8 text-center">
-      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-surface" aria-hidden>
-        <Icon className="h-6 w-6 text-muted-foreground/70" />
+      <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-surface" aria-hidden>
+        <Icon className="h-5 w-5 text-muted-foreground/70" />
       </span>
       <p className="text-sm font-medium">{title}</p>
       <p className="mt-1 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
@@ -111,7 +111,7 @@ const REMINDER_ICONS = {
   email: Users,
 } as const;
 
-const tabClass = 'px-3 text-xs sm:text-sm';
+const tabClass = 'text-xs';
 
 export function SalesWorkspaceSection({ stats }: { stats: OverviewStats }): React.JSX.Element {
   const { workspace, customer, letter } = stats;
@@ -206,7 +206,7 @@ export function SalesWorkspaceSection({ stats }: { stats: OverviewStats }): Reac
             <h2 id="dashboard-reminders-title" className="section-title">工作提醒</h2>
             <p className="mt-1 text-xs text-muted-foreground">从这里继续处理未完成的事项</p>
           </div>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary" aria-hidden>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden>
             <CalendarCheck2 className="h-4 w-4" />
           </span>
         </div>
@@ -221,8 +221,8 @@ export function SalesWorkspaceSection({ stats }: { stats: OverviewStats }): Reac
             const Icon = REMINDER_ICONS[item.key];
             return (
               <li key={item.label}>
-                <button type="button" onClick={item.action} className="group flex min-h-12 w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface text-muted-foreground" aria-hidden>
+                <button type="button" onClick={item.action} className="group flex min-h-10 w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[0.8125rem] transition-colors hover:bg-muted/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-surface text-muted-foreground" aria-hidden>
                     <Icon className="h-3.5 w-3.5" />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-foreground/80 group-hover:text-foreground">{item.label}</span>
@@ -233,7 +233,7 @@ export function SalesWorkspaceSection({ stats }: { stats: OverviewStats }): Reac
             );
           })}
         </ul>
-        <div className="mt-4 rounded-xl bg-surface p-3.5">
+        <div className="mt-3 rounded-md border border-border bg-surface p-3">
           <h3 className="text-xs font-medium text-muted-foreground">今日进度</h3>
           <dl className="mt-2.5 grid grid-cols-2 gap-3">
             <div><dt className="text-2xs text-muted-foreground">已发送开发信</dt><dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight">{workspace.lettersSentToday}<span className="ml-1 text-xs font-normal text-muted-foreground">封</span></dd></div>

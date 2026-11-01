@@ -3,137 +3,132 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   主题变量
+   Design tokens
    ------------------------------------------------------------------
-   设计基调（参考 LoopAI CRM）：
-     · 画布：淡薰衣草渐变；工作区：白色「悬浮岛」+
-     · 主色：紫罗兰 #7C5CFF；标签：薄荷 / 玫瑰 / 琥珀柔色
-     · 大圆角 + 极轻描边 + 柔和弥散阴影
-   所有颜色以 HSL 分量存储，配合 tailwind.config.ts 的 hsl(var(--x)) 使用。
+   A quiet, content-first workspace: warm neutral canvas, crisp white surfaces,
+   one restrained violet accent, compact type and 8px radii. No decorative
+   gradients or ambient glows; hierarchy comes from type, spacing and borders.
    ========================================================================== */
 @layer base {
   :root {
-    --background: 252 62% 96%;
-    --foreground: 251 22% 12%;
+    --background: 240 10% 97%;
+    --foreground: 240 10% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 251 22% 12%;
+    --card-foreground: 240 10% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 251 22% 12%;
+    --popover-foreground: 240 10% 7%;
 
-    /* 主色：紫罗兰 */
-    --primary: 254 100% 68%;
+    --primary: 252 62% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 254 100% 96%;
+    --primary-soft: 252 60% 96%;
 
-    --secondary: 252 45% 96%;
-    --secondary-foreground: 251 24% 22%;
+    --secondary: 240 6% 96%;
+    --secondary-foreground: 240 8% 18%;
 
-    --muted: 252 42% 96.5%;
-    --muted-foreground: 251 11% 48%;
+    --muted: 240 6% 95.5%;
+    --muted-foreground: 240 4% 45%;
 
-    --accent: 254 100% 97%;
-    --accent-foreground: 254 55% 42%;
+    --accent: 240 6% 95%;
+    --accent-foreground: 240 8% 12%;
 
-    --destructive: 350 84% 58%;
+    --destructive: 0 68% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 252 42% 92%;
-    --input: 252 40% 89%;
-    --ring: 254 100% 68%;
+    --border: 240 6% 90%;
+    --input: 240 6% 84%;
+    --ring: 252 62% 58%;
 
-    /* 次级面板 / 内凹区域 */
-    --surface: 252 50% 98%;
-    --surface-foreground: 251 22% 12%;
+    --surface: 240 8% 97.5%;
+    --surface-foreground: 240 10% 7%;
 
-    /* 柔色标签（浅底 + 深字） */
-    --mint: 162 72% 34%;
-    --mint-soft: 160 74% 93%;
-    --rose: 350 84% 56%;
-    --rose-soft: 350 100% 96%;
-    --amber: 32 90% 42%;
-    --amber-soft: 40 100% 93%;
-    --violet-soft: 254 100% 96%;
+    --mint: 160 62% 30%;
+    --mint-soft: 158 50% 94%;
+    --rose: 352 66% 48%;
+    --rose-soft: 352 80% 96.5%;
+    --amber: 32 80% 38%;
+    --amber-soft: 38 90% 94%;
+    --violet-soft: 252 60% 96%;
 
-    --radius: 0.875rem;
-    --workspace-content-width: 1600px;
-    --workspace-shadow: 0 1px 2px hsl(252 34% 22% / 0.035);
-    --workspace-panel-shadow: 0 18px 44px -28px hsl(254 60% 40% / 0.32);
-    --workspace-motion: 160ms;
+    --radius: 0.5rem;
+    /* Data pages should use the available workspace width; forms keep their own
+       inner max-widths. A global 1480px cap left visible side gutters on wide /
+       collapsed-sidebar layouts. */
+    --workspace-content-width: 100%;
+    --workspace-shadow: 0 1px 2px hsl(240 10% 10% / 0.03);
+    --workspace-panel-shadow: 0 8px 24px -16px hsl(240 10% 10% / 0.22);
+    --workspace-motion: 140ms;
 
-    /* 阴影阶梯 */
-    --shadow-card: 0 1px 2px hsl(252 34% 22% / 0.035), 0 10px 28px -22px hsl(254 55% 38% / 0.28);
-    --shadow-island: 0 24px 60px -34px hsl(254 55% 32% / 0.35), 0 2px 8px hsl(252 34% 22% / 0.04);
-    --shadow-pop: 0 18px 46px -18px hsl(254 50% 30% / 0.26), 0 2px 8px hsl(252 34% 22% / 0.06);
+    --shadow-card: 0 1px 2px hsl(240 10% 10% / 0.035);
+    --shadow-island: 0 8px 24px -20px hsl(240 10% 10% / 0.22);
+    --shadow-pop: 0 10px 28px -18px hsl(240 10% 10% / 0.26), 0 1px 3px hsl(240 10% 10% / 0.06);
 
-    /* 侧边栏（移动端抽屉） */
     --sidebar: 0 0% 100%;
-    --sidebar-foreground: 251 22% 12%;
-    --sidebar-accent: 254 100% 97%;
-    --sidebar-border: 252 42% 93%;
+    --sidebar-foreground: 240 10% 9%;
+    --sidebar-accent: 240 6% 95%;
+    --sidebar-border: 240 6% 90%;
 
-    /* 业务状态色 */
-    --status-pending: 244 76% 60%;
-    --status-developed: 162 74% 32%;
-    --status-failed: 350 84% 56%;
+    --status-pending: 244 62% 55%;
+    --status-developed: 160 62% 30%;
+    --status-failed: 352 66% 48%;
   }
 
   .dark {
-    --background: 252 32% 7%;
-    --foreground: 250 30% 96%;
+    --background: 240 8% 6%;
+    --foreground: 240 6% 96%;
 
-    --card: 252 26% 11%;
-    --card-foreground: 250 30% 96%;
+    --card: 240 7% 9%;
+    --card-foreground: 240 6% 96%;
 
-    --popover: 252 26% 12%;
-    --popover-foreground: 250 30% 96%;
+    --popover: 240 7% 10%;
+    --popover-foreground: 240 6% 96%;
 
-    --primary: 254 100% 74%;
-    --primary-foreground: 252 40% 10%;
-    --primary-soft: 254 40% 20%;
+    --primary: 252 76% 70%;
+    --primary-foreground: 240 10% 7%;
+    --primary-soft: 252 24% 18%;
 
-    --secondary: 252 22% 17%;
-    --secondary-foreground: 250 30% 96%;
+    --secondary: 240 6% 14%;
+    --secondary-foreground: 240 6% 94%;
 
-    --muted: 252 22% 16%;
-    --muted-foreground: 250 14% 66%;
+    --muted: 240 6% 14%;
+    --muted-foreground: 240 5% 62%;
 
-    --accent: 254 30% 20%;
-    --accent-foreground: 254 90% 90%;
+    --accent: 240 6% 15%;
+    --accent-foreground: 240 6% 96%;
 
-    --destructive: 350 76% 56%;
+    --destructive: 0 62% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 252 20% 20%;
-    --input: 252 20% 23%;
-    --ring: 254 100% 74%;
+    --border: 240 6% 18%;
+    --input: 240 6% 22%;
+    --ring: 252 76% 70%;
 
-    --surface: 252 24% 13%;
-    --surface-foreground: 250 30% 96%;
+    --surface: 240 6% 11%;
+    --surface-foreground: 240 6% 96%;
 
-    --mint: 162 74% 62%;
-    --mint-soft: 162 40% 18%;
-    --rose: 350 88% 72%;
-    --rose-soft: 350 40% 20%;
-    --amber: 38 92% 66%;
-    --amber-soft: 36 40% 20%;
-    --violet-soft: 254 34% 20%;
+    --mint: 158 58% 60%;
+    --mint-soft: 158 28% 16%;
+    --rose: 352 72% 68%;
+    --rose-soft: 352 28% 18%;
+    --amber: 38 76% 64%;
+    --amber-soft: 36 28% 17%;
+    --violet-soft: 252 24% 18%;
 
     --workspace-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
-    --workspace-panel-shadow: 0 18px 44px -26px hsl(0 0% 0% / 0.7);
-    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.28);
-    --shadow-island: 0 24px 60px -34px hsl(0 0% 0% / 0.75);
-    --shadow-pop: 0 18px 46px -18px hsl(0 0% 0% / 0.7), 0 2px 8px hsl(0 0% 0% / 0.35);
+    --workspace-panel-shadow: 0 10px 28px -20px hsl(0 0% 0% / 0.7);
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.25);
+    --shadow-island: 0 12px 28px -22px hsl(0 0% 0% / 0.7);
+    --shadow-pop: 0 12px 32px -20px hsl(0 0% 0% / 0.75), 0 1px 3px hsl(0 0% 0% / 0.35);
 
-    --sidebar: 252 26% 10%;
-    --sidebar-foreground: 250 30% 96%;
-    --sidebar-accent: 254 30% 19%;
-    --sidebar-border: 252 20% 19%;
+    --sidebar: 240 7% 8%;
+    --sidebar-foreground: 240 6% 94%;
+    --sidebar-accent: 240 6% 14%;
+    --sidebar-border: 240 6% 17%;
 
-    --status-pending: 244 90% 74%;
-    --status-developed: 162 70% 54%;
-    --status-failed: 350 88% 68%;
+    --status-pending: 244 76% 70%;
+    --status-developed: 158 58% 54%;
+    --status-failed: 352 72% 66%;
   }
 
   * {
@@ -146,24 +141,18 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    line-height: 1.6;
+    line-height: 1.5;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-    letter-spacing: -0.005em;
-    /* 画布：淡薰衣草渐变 + 柔光雾团（参考稿的紫色氛围） */
-    background-image:
-      radial-gradient(58rem 38rem at 8% -12%, hsl(258 100% 93% / 0.95), transparent 62%),
-      radial-gradient(48rem 34rem at 96% -6%, hsl(222 100% 94% / 0.85), transparent 58%),
-      radial-gradient(44rem 30rem at 74% 108%, hsl(274 100% 95% / 0.9), transparent 62%);
-    background-attachment: fixed;
-    /* 避免模态框滚动穿透时的布局抖动 */
+    letter-spacing: -0.006em;
+    background-color: hsl(var(--background));
+    background-image: none;
+    /* Avoid layout shift when dialogs lock body scrolling. */
     scrollbar-gutter: stable;
   }
 
   .dark body {
-    background-image:
-      radial-gradient(58rem 38rem at 8% -12%, hsl(258 70% 20% / 0.7), transparent 62%),
-      radial-gradient(48rem 34rem at 96% -6%, hsl(222 70% 18% / 0.6), transparent 58%),
-      radial-gradient(44rem 30rem at 74% 108%, hsl(274 70% 20% / 0.55), transparent 62%);
+    background-color: hsl(var(--background));
+    background-image: none;
   }
 
   ::selection {
@@ -172,22 +161,22 @@
 
   /* 键盘可达性：仅在键盘操作时显示 focus ring（保持轻柔，避免和组件自带聚焦环叠成粗描边） */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring/35 ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-ring/30 ring-offset-2 ring-offset-background;
   }
 
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
   }
   ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
     @apply rounded-full;
-    background: hsl(var(--primary) / 0.16);
+    background: hsl(var(--foreground) / 0.14);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.28);
+    background: hsl(var(--foreground) / 0.24);
   }
 }
 
@@ -240,62 +229,72 @@
       min-height: 100vh;
     }
   }
-  .workspace-page { @apply min-w-0 space-y-5; }
-  .workspace-surface { box-shadow: var(--workspace-shadow); }
+  .workspace-page { @apply min-w-0 space-y-4; }
+  .workspace-surface { box-shadow: none; }
+  .sidebar-project-list {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .sidebar-project-list::-webkit-scrollbar { width: 4px; }
+  .sidebar-project-list::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-project-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: hsl(var(--border));
+  }
+  .sidebar-project-list::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.35); }
 
-  /* 卡片 / 悬浮岛：白底 + 极轻描边 + 大圆角 + 柔和弥散阴影 */
+  /* Surfaces: crisp 8px corners, hairline borders, no floating-card effect. */
   .panel {
-    @apply min-w-0 rounded-2xl border border-border/80 bg-card text-card-foreground;
+    @apply min-w-0 rounded-lg border border-border bg-card text-card-foreground;
     box-shadow: var(--shadow-card);
   }
   .panel-flat {
-    @apply min-w-0 rounded-2xl border border-border/70 bg-card text-card-foreground;
+    @apply min-w-0 rounded-lg border border-border bg-card text-card-foreground;
   }
-  /* 内凹区域：淡薰衣草底，用于表头、漏斗背景、说明块 */
   .well {
-    @apply rounded-2xl border border-border/60 bg-surface;
+    @apply rounded-lg border border-border bg-surface;
   }
 
   .workspace-toolbar {
-    @apply flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-border/80 bg-card p-3 sm:p-4;
-    box-shadow: var(--shadow-card);
+    @apply flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5;
+    box-shadow: none;
   }
   .workspace-toolbar > :first-child { flex-shrink: 0; }
-  [data-ui="field"] { min-height: 36px; }
+  [data-ui="field"] { min-height: 34px; }
   .workspace-main:focus { outline: none; box-shadow: none; }
   .workspace-skip-link {
     @apply sr-only;
   }
   .workspace-skip-link:focus {
-    @apply fixed left-4 top-3 z-[100] h-auto w-auto rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground;
+    @apply fixed left-4 top-3 z-[100] h-auto w-auto rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground;
     clip: auto;
     clip-path: none;
   }
-  .workspace-topbar { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .workspace-topbar { padding-top: 0.375rem; padding-bottom: 0.375rem; }
   .workspace-table {
-    max-height: min(65vh, 740px);
+    max-height: min(68rem, calc(100vh - 18rem));
     overflow: auto;
     overscroll-behavior: contain;
   }
   .workspace-table :is(td, th) { overflow-wrap: anywhere; }
   .workspace-table th { color: hsl(var(--muted-foreground)); }
-  .workspace-table td { line-height: 1.5; }
+  .workspace-table td { line-height: 1.45; }
   .workspace-drawer { overscroll-behavior: contain; }
   .workspace-drawer .workspace-tabs { min-width: 0; width: auto; flex: 1; }
   .workspace-shell button { touch-action: manipulation; }
   .workspace-page :is(dl, article, section) { min-width: 0; }
   .workspace-page :is(dd, article p) { overflow-wrap: anywhere; }
   .workspace-page select:not([aria-hidden="true"]) {
-    @apply min-h-9 rounded-xl border border-input bg-card px-3 py-1 text-sm;
+    @apply min-h-9 rounded-md border border-input bg-card px-2.5 py-1 text-sm;
   }
   .workspace-page details > summary {
-    @apply rounded-xl transition-colors hover:text-foreground;
+    @apply rounded-md transition-colors hover:text-foreground;
   }
   .workspace-page-actions > button { flex-shrink: 0; }
 
-  /* ---------------------------- 柔色标签 ---------------------------- */
+  /* ---------------------------- restrained status labels ---------------------------- */
   .chip {
-    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium leading-none;
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium leading-none;
   }
   .chip-mint { background: hsl(var(--mint-soft)); color: hsl(var(--mint)); }
   .chip-rose { background: hsl(var(--rose-soft)); color: hsl(var(--rose)); }
@@ -306,47 +305,56 @@
     @apply border border-border bg-card text-muted-foreground;
   }
 
-  /* ---------------------------- 品牌与头像 ---------------------------- */
+  /* ---------------------------- brand + avatars ---------------------------- */
   .brand-mark {
-    background-image: linear-gradient(140deg, hsl(262 100% 68%), hsl(254 100% 62%) 55%, hsl(230 100% 66%));
-    box-shadow: 0 8px 20px -10px hsl(254 90% 55% / 0.75), inset 0 1px 0 hsl(0 0% 100% / 0.35);
+    background-image: none;
+    background-color: hsl(var(--foreground));
+    box-shadow: none;
   }
   .avatar-bubble {
-    background-image: linear-gradient(150deg, hsl(258 100% 96%), hsl(230 100% 95%));
-    color: hsl(254 55% 46%);
+    background-image: none;
+    background-color: hsl(var(--muted));
+    color: hsl(var(--foreground) / 0.7);
   }
   .dark .avatar-bubble {
-    background-image: linear-gradient(150deg, hsl(254 40% 24%), hsl(230 40% 22%));
-    color: hsl(254 90% 84%);
+    background-image: none;
+    background-color: hsl(var(--muted));
+    color: hsl(var(--foreground) / 0.75);
   }
-  /* 头像叠加（品牌区的成员堆叠） */
   .avatar-stack > * + * { margin-left: -0.5rem; }
 
-  /* 主按钮渐变（参考稿的「Run Analysis」胶囊按钮） */
   .btn-gradient {
-    background-image: linear-gradient(100deg, hsl(226 96% 68%), hsl(252 96% 68%) 46%, hsl(272 96% 70%));
-    color: hsl(0 0% 100%);
-    box-shadow: 0 12px 26px -14px hsl(252 90% 52% / 0.85), inset 0 1px 0 hsl(0 0% 100% / 0.22);
+    background-image: none;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 1px 2px hsl(var(--primary) / 0.25);
   }
-  .btn-gradient:hover { filter: brightness(1.05); }
+  .btn-gradient:hover { filter: none; background-color: hsl(var(--primary) / 0.9); }
+  /* 登录页主按钮：与参考稿的紫色渐变保持一致，不跟随工作区的蓝紫渐变 */
+  .login-submit {
+    background-image: none;
+    background-color: hsl(var(--primary));
+    box-shadow: 0 1px 2px hsl(var(--primary) / 0.25);
+  }
+  .login-submit:hover { filter: none; background-color: hsl(var(--primary) / 0.9); }
 
-  /* AI 助手区：淡紫渐变 */
+  /* AI surfaces stay neutral so assistant content reads as work product, not decoration. */
   .assistant-surface {
-    background-image:
-      linear-gradient(165deg, hsl(258 100% 97%), hsl(262 100% 96%) 42%, hsl(232 100% 97%));
-    border: 1px solid hsl(254 100% 92%);
+    background-image: none;
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
   }
   .dark .assistant-surface {
-    background-image: linear-gradient(165deg, hsl(254 36% 17%), hsl(262 36% 15%) 45%, hsl(232 34% 16%));
-    border-color: hsl(254 30% 24%);
+    background-image: none;
+    background-color: hsl(var(--surface));
+    border-color: hsl(var(--border));
   }
 
-  /* 区块小标题（跟随参考稿的字重与字距） */
   .section-title {
-    @apply text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground;
+    @apply text-[0.8125rem] font-semibold tracking-[-0.01em] text-foreground;
   }
   .section-subtitle {
-    @apply text-xs text-muted-foreground;
+    @apply text-xs leading-relaxed text-muted-foreground;
   }
 }
 
@@ -589,3 +597,61 @@
 /* Article search hits: painted through the CSS Custom Highlight API, not DOM edits. */
 ::highlight(kb-hit) { background-color: rgb(253 230 138); color: hsl(var(--foreground)); }
 ::highlight(kb-hit-active) { background-color: rgb(245 158 11); color: #111827; }
+
+/* --------------------------------------------------------------------------
+   Legacy surface normalization
+   Keep older feature components on the same visual grammar while they are
+   progressively refactored: no oversized radii or floating-card shadows.
+   -------------------------------------------------------------------------- */
+.rounded-2xl,
+.rounded-3xl {
+  border-radius: var(--radius);
+}
+.rounded-xl {
+  border-radius: calc(var(--radius) - 1px);
+}
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+.workspace-page .bg-gradient-to-r,
+.workspace-page .bg-gradient-to-t,
+.workspace-page .bg-gradient-to-br {
+  background-image: none;
+}
+/* Desktop density: keep mobile touch targets, tighten pointer-sized controls. */
+@media (min-width: 640px) {
+  .workspace-page .min-h-11 { min-height: 2rem; }
+  .workspace-page .min-h-12 { min-height: 2.25rem; }
+  .workspace-page .min-h-10 { min-height: 1.875rem; }
+}
+/* Knowledge library: categories read as navigation, not as a row of buttons. */
+.knowledge-sales-library nav[aria-label="销售资料分类"] {
+  gap: 0;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.knowledge-sales-library nav[aria-label="销售资料分类"] button {
+  min-height: 2rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 0.625rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.knowledge-sales-library nav[aria-label="销售资料分类"] button[aria-pressed="true"] {
+  border-bottom-color: hsl(var(--foreground));
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+.knowledge-sales-library [aria-current="true"] {
+  border-left-color: hsl(var(--foreground)) !important;
+  background: hsl(var(--muted)) !important;
+}
+.knowledge-sales-library .bg-primary\/5 {
+  background: hsl(var(--muted) / 0.55);
+}
+.knowledge-sales-library .border-primary {
+  border-left-color: hsl(var(--foreground) / 0.4);
+}

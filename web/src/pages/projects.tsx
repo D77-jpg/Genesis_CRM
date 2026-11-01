@@ -10,13 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePageTitle } from '@/hooks/use-ui';
+import { ProjectLogo } from '@/components/projects/project-logo';
 import { useProjectStore } from '@/store/project.store';
 import { useMetaStore } from '@/store/meta.store';
 import type { Project } from '@/types';
 
 const slugify = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-type ProjectForm = Record<'name' | 'code' | 'slug' | 'industry' | 'companyName' | 'website' | 'moq' | 'senderName' | 'mailFrom' | 'mailProfileKey', string> & { coverImage: string; mailTransport: 'mock' | 'smtp' };
-const EMPTY_FORM: ProjectForm = { name: '', code: '', slug: '', industry: '', companyName: '', website: '', moq: '', senderName: '', mailFrom: '', mailProfileKey: '', coverImage: '', mailTransport: 'mock' };
+type ProjectForm = Record<'name' | 'code' | 'slug' | 'industry' | 'companyName' | 'website' | 'moq' | 'senderName' | 'mailFrom' | 'mailProfileKey', string> & { logoImage: string; coverImage: string; mailTransport: 'mock' | 'smtp' };
+const EMPTY_FORM: ProjectForm = { name: '', code: '', slug: '', industry: '', companyName: '', website: '', moq: '', senderName: '', mailFrom: '', mailProfileKey: '', logoImage: '', coverImage: '', mailTransport: 'mock' };
 
 export function ProjectsPage(): React.JSX.Element {
   usePageTitle('项目工作空间');
@@ -40,8 +41,27 @@ export function ProjectsPage(): React.JSX.Element {
     setForm({ name: project.name, code: project.code, slug: project.slug, industry: project.industry ?? '',
       companyName: project.companyName, website: project.website ?? '', moq: project.moq ?? '',
       senderName: project.senderName ?? '', mailFrom: project.mailFrom ?? '', mailProfileKey: project.mailProfileKey,
-      coverImage: project.coverImage ?? '', mailTransport: project.mailChannel === 'smtp' ? 'smtp' : 'mock' });
+      logoImage: project.logoImage ?? '', coverImage: project.coverImage ?? '', mailTransport: project.mailChannel === 'smtp' ? 'smtp' : 'mock' });
     setOpen(true);
+  };
+
+  const applyLogo = async (file?: File) => {
+    if (!file) return;
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { toast.error('请选择 PNG / JPG / WebP 图片'); return; }
+    if (file.size > 4 * 1024 ** 2) { toast.error('Logo 请小于 4MB'); return; }
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 512 / bitmap.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const logoImage = canvas.toDataURL('image/png');
+      if (logoImage.length > 590000) { toast.error('Logo 文件仍偏大，请换一张更简单的图片'); return; }
+      setForm((value) => ({ ...value, logoImage }));
+    } catch {
+      toast.error('图片读取失败，请换一张试试');
+    }
   };
 
   const applyCover = async (file?: File) => {
@@ -69,14 +89,14 @@ export function ProjectsPage(): React.JSX.Element {
       if (editingId) {
         await updateProject(editingId, { name: form.name.trim(), industry: form.industry.trim(), companyName: form.companyName.trim(),
           website: form.website.trim(), moq: form.moq.trim(), senderName: form.senderName.trim(), mailFrom: form.mailFrom.trim(),
-          mailProfileKey: slugify(form.mailProfileKey || form.slug), mailTransport: form.mailTransport, coverImage: form.coverImage });
+          mailProfileKey: slugify(form.mailProfileKey || form.slug), mailTransport: form.mailTransport, logoImage: form.logoImage, coverImage: form.coverImage });
         if (editingId === activeProject?.id) useMetaStore.getState().setMailChannel(form.mailTransport);
         toast.success('项目资料已更新');
       } else {
         await createProject({ name: form.name.trim(), code: form.code.trim().toUpperCase(), slug,
           industry: form.industry.trim(), companyName: form.companyName.trim(), website: form.website.trim(), moq: form.moq.trim(),
           senderName: form.senderName.trim(), mailFrom: form.mailFrom.trim(), mailProfileKey: slugify(form.mailProfileKey || slug),
-          mailTransport: form.mailTransport, coverImage: form.coverImage });
+          mailTransport: form.mailTransport, logoImage: form.logoImage, coverImage: form.coverImage });
         toast.success('项目工作空间已创建', { description: `${form.name} 已与其他项目严格隔离` });
       }
       setForm(EMPTY_FORM);
@@ -112,60 +132,58 @@ export function ProjectsPage(): React.JSX.Element {
   return (
     <div className="workspace-page">
       <PageHeader title="项目工作空间" description="每个项目各自一套客户、邮件、模板和报价，互不影响。"
-        actions={<Button type="button" onClick={openCreate}><Plus className="h-4 w-4" aria-hidden />新建项目</Button>} />
+        actions={<Button type="button" size="sm" onClick={openCreate}><Plus className="h-4 w-4" aria-hidden />新建项目</Button>} />
 
-      <div role="note" className="flex gap-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
-        <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <div>
-          <p className="font-medium">多个项目可以同时使用，数据互不混淆。</p>
-          <p className="mt-1 text-muted-foreground">顶部切换器决定你现在在哪个项目里干活；每次只显示一个项目的客户和邮件。要归档当前项目，请先切换到别的项目。</p>
-        </div>
-      </div>
+      <p role="note" className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+        <CircleHelp className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>多个项目可以同时使用，数据互不混淆。顶部切换器决定当前工作空间；要归档当前项目，请先切换到别的项目。</span>
+      </p>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {items.map((project) => {
           const isCurrent = project.id === activeProject?.id;
           return (
-          <Card key={project.id} className={'overflow-hidden ' + (project.status === 'archived' ? 'opacity-70' : isCurrent ? 'border-primary/50 ring-1 ring-primary/20' : '')}>
+          <Card key={project.id} className={'overflow-hidden ' + (project.status === 'archived' ? 'opacity-70' : isCurrent ? 'border-foreground/30' : '')}>
             {project.coverImage ? (
-              <div className="aspect-[16/9] w-full bg-muted">
+              <div className="h-28 w-full bg-muted">
                 <img src={project.coverImage} alt={`${project.name} 封面`} className="h-full w-full object-cover" loading="lazy" />
               </div>
             ) : null}
-            <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary" aria-hidden>{project.code.slice(0, 2)}</span>
-                <div className="min-w-0"><CardTitle className="truncate text-base" title={project.name}>{project.name}</CardTitle><p className="truncate text-xs text-muted-foreground">{project.code} · {project.industry || '未设置行业'}</p></div>
+            <CardHeader className="flex-row items-start justify-between gap-3 space-y-0 p-3.5 pb-2">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <ProjectLogo project={project} size="sm" />
+                <div className="min-w-0"><CardTitle className="truncate text-[0.8125rem]" title={project.name}>{project.name}</CardTitle><p className="truncate text-[11px] text-muted-foreground">{project.code} · {project.industry || '未设置行业'}</p></div>
               </div>
-              <Badge variant={project.status === 'archived' ? 'muted' : isCurrent ? 'developed' : 'outline'}>
+              <Badge variant="outline" className="gap-1.5 font-normal">
+                <span className={isCurrent && project.status !== 'archived' ? 'h-1.5 w-1.5 rounded-full bg-primary' : 'h-1.5 w-1.5 rounded-full bg-muted-foreground/40'} aria-hidden />
                 {project.status === 'archived' ? '已归档' : isCurrent ? '当前使用' : '可切换'}
               </Badge>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div><p className="text-xs text-muted-foreground">公司主体</p><p className="truncate" title={project.companyName}>{project.companyName}</p></div>
-              <div className="flex flex-wrap gap-2"><Badge variant="outline">{project.mailChannel === 'smtp' ? '邮箱直发' : '模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
-              <div className="flex flex-wrap gap-2">
+            <CardContent className="space-y-2.5 p-3.5 pt-0 text-[0.8125rem]">
+              <div className="flex items-baseline gap-2"><p className="shrink-0 text-[11px] text-muted-foreground">公司主体</p><p className="min-w-0 truncate" title={project.companyName}>{project.companyName}</p></div>
+              <div className="flex flex-wrap gap-1.5"><Badge variant="muted">{project.mailChannel === 'smtp' ? '邮箱直发' : '模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
+              <div className="flex flex-wrap gap-1.5 border-t border-border pt-2.5">
                 {project.status === 'active' && !isCurrent ? (
                   <Button type="button" size="sm" onClick={() => switchProject(project.id)}>
-                    <ArrowRight className="h-4 w-4" aria-hidden />切换到此项目
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />切换
                   </Button>
                 ) : null}
-                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(project)}><Pencil className="h-4 w-4" aria-hidden />编辑资料</Button>
-                <Button type="button" variant="outline" size="sm"
+                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(project)}><Pencil className="h-3.5 w-3.5" aria-hidden />编辑</Button>
+                <Button type="button" variant="ghost" size="sm"
                   disabled={project.isDefault || (isCurrent && project.status === 'active')}
                   aria-describedby={`project-archive-help-${project.id}`}
                   onClick={() => void toggleArchive(project.id, project.status === 'archived')}>
-                  {project.status === 'archived' ? <RotateCcw className="h-4 w-4" aria-hidden /> : <Archive className="h-4 w-4" aria-hidden />}
-                  {project.status === 'archived' ? '恢复项目' : '归档项目'}
+                  {project.status === 'archived' ? <RotateCcw className="h-3.5 w-3.5" aria-hidden /> : <Archive className="h-3.5 w-3.5" aria-hidden />}
+                  {project.status === 'archived' ? '恢复' : '归档'}
                 </Button>
-                {!project.isDefault ? <Button type="button" variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => { setDeleteTarget(project); setDeleteConfirm(''); }}>
-                  <Trash2 className="h-4 w-4" aria-hidden />删除项目
+                {!project.isDefault ? <Button type="button" variant="ghost" size="sm" className="ml-auto text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => { setDeleteTarget(project); setDeleteConfirm(''); }} aria-label={`删除项目 ${project.name}`}>
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 </Button> : null}
               </div>
               {project.isDefault || (isCurrent && project.status === 'active') ? (
-                <p id={`project-archive-help-${project.id}`} className="text-xs text-muted-foreground">
-                  {project.isDefault ? '默认项目保留历史数据，不能归档。' : '正在使用中；切换到别的项目后就能归档。'}
+                <p id={`project-archive-help-${project.id}`} className="text-[10px] text-muted-foreground">
+                  {project.isDefault ? '默认项目保留历史数据，不能归档。' : '使用中；切换到别的项目后可归档。'}
                 </p>
               ) : null}
             </CardContent>
@@ -203,6 +221,17 @@ export function ProjectsPage(): React.JSX.Element {
                   ? '请确认该项目下需要发信的业务员都已在「用户管理」配置并验证个人发件邮箱。'
                   : '当前为模拟发送，草稿和统计照常记录，但不会真实投递。'}
               </p>
+            </div>
+            <div className="sm:col-span-2 space-y-2">
+              <Label htmlFor="project-logo">项目 Logo（可选）</Label>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex h-16 w-32 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-white p-2">
+                  {form.logoImage ? <img src={form.logoImage} alt="Logo 预览" className="max-h-full max-w-full object-contain" /> : <span className="text-[11px] text-muted-foreground">未上传</span>}
+                </div>
+                <Input id="project-logo" type="file" accept="image/png,image/jpeg,image/webp" className="max-w-[16rem]" onChange={(event) => { void applyLogo(event.target.files?.[0]); event.target.value = ''; }} />
+                {form.logoImage ? <Button type="button" variant="ghost" size="sm" onClick={() => setForm((value) => ({ ...value, logoImage: '' }))}>移除 Logo</Button> : null}
+              </div>
+              <p className="text-xs text-muted-foreground">建议使用透明背景 PNG，自动压缩到 512px 宽。Logo 会显示在左侧栏品牌区、项目卡片和顶部项目切换器中；Genesis / IRONHUE 未上传时使用内置品牌 Logo。</p>
             </div>
             <div className="sm:col-span-2 space-y-2">
               <Label htmlFor="project-cover">封面图（可选）</Label>

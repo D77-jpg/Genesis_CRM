@@ -104,6 +104,20 @@ export const updateAgentMailAnalysisSchema = z.object({
 }).strict().refine((value) => Boolean(value.replyDraft || value.statusSuggestion || value.followUpSuggestion), { message: '至少需要更新一项内容' });
 export const agentMailAnalysisParamsSchema = z.object({ id: objectId }).strict();
 
+export const quoteCheckSchema = z.object({
+  analysisId: objectId.optional(),
+  customerId: objectId.optional(),
+  items: z.array(z.object({
+    name: z.string().trim().min(1).max(300),
+    quantity: z.coerce.number().int().positive().max(1_000_000_000).optional(),
+  }).strict()).max(50).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (!value.analysisId && !value.customerId) ctx.addIssue({ code: 'custom', message: '需要 analysisId 或 customerId' });
+  if (!value.analysisId && !value.items?.length) ctx.addIssue({ code: 'custom', message: '需要分析记录或至少一个待核对产品' });
+});
+
+export type QuoteCheckBody = z.infer<typeof quoteCheckSchema>;
+
 export type CreateAgentSessionBody = z.infer<typeof createAgentSessionSchema>;
 export type UpdateAgentSessionBody = z.infer<typeof updateAgentSessionSchema>;
 export type SendAgentMessageBody = z.infer<typeof sendAgentMessageSchema>;

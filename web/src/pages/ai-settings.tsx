@@ -116,7 +116,7 @@ export function AiSettingsPage(): React.JSX.Element {
   return (
     <div className="workspace-page">
       <PageHeader title="AI 配置" description="这里设置整个系统用的 AI。所有项目共用，保存后立即生效。" />
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(250px,0.7fr)_minmax(0,1.6fr)]">
+      <div className="grid max-w-[920px] items-start gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
       <Card>
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -140,16 +140,16 @@ export function AiSettingsPage(): React.JSX.Element {
       <Card>
         <CardHeader><CardTitle>更换 AI 服务</CardTitle><CardDescription>填服务商的模型和连接信息。测试不会发送客户资料，但可能产生少量费用。</CardDescription></CardHeader>
         <CardContent>
-          <form className="space-y-5" onSubmit={(event) => { event.preventDefault(); void submit('save'); }} noValidate>
+          <form className="space-y-3.5" onSubmit={(event) => { event.preventDefault(); void submit('save'); }} noValidate>
             {formError && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive">{formError}</div>}
             <div className="space-y-1.5">
               <Label htmlFor="ai-provider">运行模式</Label>
-              <select id="ai-provider" value={form.provider} onChange={(event) => change('provider', event.target.value as AiSettingsForm['provider'])} disabled={Boolean(busy)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <select id="ai-provider" value={form.provider} onChange={(event) => change('provider', event.target.value as AiSettingsForm['provider'])} disabled={Boolean(busy)} className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-[0.8125rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <option value="mock">演示模式（不调用外部 AI）</option>
                 <option value="openai">连接 AI 服务</option>
               </select>
             </div>
-            {live && <div className="grid gap-5 md:grid-cols-2">
+            {live && <div className="grid gap-3.5 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="ai-model">模型名称</Label>
                 <Input id="ai-model" value={form.model} onChange={(event) => change('model', event.target.value)} maxLength={120} disabled={Boolean(busy)} invalid={Boolean(errors.model)} aria-describedby={errors.model ? 'ai-model-error' : 'ai-model-hint'} />

@@ -33,20 +33,20 @@ export function PendingDrafts({
 }) {
   const showRejected = feed.view === 'rejected';
   return (
-    <section aria-label="开发信草稿" className="min-w-0 rounded-xl border border-primary/20 bg-card p-4 sm:p-5">
+    <section aria-label="开发信草稿" className="min-w-0 rounded-lg border border-border bg-card p-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-base font-semibold">
-          <FilePenLine className="h-4 w-4 text-primary" aria-hidden />
+        <h2 className="flex items-center gap-2 text-[0.8125rem] font-semibold">
+          <FilePenLine className="h-4 w-4 text-muted-foreground" aria-hidden />
           {feed.customerId ? '当前客户的开发信草稿' : '开发信草稿'}
-          <span className="text-sm tabular-nums text-muted-foreground">{feed.total}</span>
+          <span className="text-[11px] font-normal tabular-nums text-muted-foreground">{feed.total}</span>
         </h2>
-        <div className="flex items-center gap-1.5">
-          <div role="group" aria-label="草稿筛选" className="flex items-center gap-1 rounded-lg border p-1">
+        <div className="flex items-center gap-1">
+          <div role="group" aria-label="草稿筛选" className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
             <Button
               type="button"
               size="sm"
               variant={showRejected ? 'ghost' : 'secondary'}
-              className={cn('rounded-md', showRejected && 'text-muted-foreground')}
+              className={cn('h-7 px-2 text-[11px]', showRejected && 'text-muted-foreground')}
               aria-pressed={!showRejected}
               onClick={() => feed.setView('todo')}
             >
@@ -56,25 +56,30 @@ export function PendingDrafts({
               type="button"
               size="sm"
               variant={showRejected ? 'secondary' : 'ghost'}
-              className={cn('rounded-md', !showRejected && 'text-muted-foreground')}
+              className={cn('h-7 px-2 text-[11px]', !showRejected && 'text-muted-foreground')}
               aria-pressed={showRejected}
               onClick={() => feed.setView('rejected')}
             >
               不通过
             </Button>
           </div>
-          <Button type="button" variant="ghost" className="min-h-11" disabled={feed.loading} onClick={feed.refresh}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            刷新草稿
+          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px]" disabled={feed.loading} onClick={feed.refresh}>
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            刷新
           </Button>
         </div>
       </div>
 
-      <p className="mt-1 text-sm leading-6 text-muted-foreground">
-        {showRejected
-          ? '标记为不通过的草稿不会发送，留在这里备查；想改用其中一封，打开后点「审核通过并发送」。'
-          : '发之前先自己过一遍：内容没问题就「审核通过并发送」，觉得不能用就标记「不通过」。不通过的草稿不会发送，也不占这张清单。'}
-      </p>
+      {feed.items.length ? (
+        <>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {showRejected
+              ? '标记为不通过的草稿不会发送，留在这里备查；想改用其中一封，打开后点「审核通过并发送」。'
+              : '先过一遍内容：没问题就「审核通过并发送」，不能用就标记「不通过」。'}
+          </p>
+          {!showRejected && <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">第 2、3 封会在对应跟进到期后进入待处理。</p>}
+        </>
+      ) : null}
 
       {feed.error ? (
         <div role="alert" className="mt-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
@@ -93,7 +98,7 @@ export function PendingDrafts({
       ) : null}
 
       {!feed.loading && !feed.error && !feed.items.length ? (
-        <p className="mt-4 text-sm text-muted-foreground">
+        <p className="mt-2 text-xs text-muted-foreground">
           {showRejected
             ? '没有标记为不通过的草稿。'
             : '没有待处理的草稿。新生成或保存的草稿会自动出现在这里。'}

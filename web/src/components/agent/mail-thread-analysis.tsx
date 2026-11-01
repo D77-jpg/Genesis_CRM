@@ -1,7 +1,7 @@
 import {KnowledgeReviewPanel} from './knowledge-review';
 import * as React from 'react';
 import {
-  AlertOctagon, CheckCircle2, FileCheck2, Loader2, Mail, MessageSquareReply, Save, ShieldAlert, UserPlus, UserRoundCog,
+  AlertOctagon, Calculator, CheckCircle2, FileCheck2, Loader2, Mail, MessageSquareReply, Save, ShieldAlert, UserPlus, UserRoundCog,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -21,7 +21,7 @@ import { apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { useAuthStore } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
-import type { AgentMailThreadAnalysis, CustomerStatus, FollowUpMethod, FollowUpResult } from '@/types';
+import type { AgentMailThreadAnalysis, CustomerStatus, FollowUpMethod, FollowUpResult, QuoteCheckResult } from '@/types';
 
 type Approval = 'reply' | 'status' | 'followup';
 function newKey(): string { return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`; }
@@ -37,6 +37,15 @@ const intentLabels: Record<string, string> = {
   support: '售后/支持', positive: '积极反馈', neutral: '一般沟通', unsubscribe: '退订', bounce: '退信', rejection: '明确拒绝', spam: '垃圾邮件', other: '其他',
 };
 const safetyLabels = { normal: '未发现停止营销信号', unsubscribe: '客户退订', bounce: '邮件退信', rejection: '客户明确拒绝', spam: '垃圾邮件' } as const;
+const quoteStatusLabels: Record<string, { label: string; tone: 'developed' | 'warning' | 'destructive' | 'secondary' }> = {
+  matched: { label: '一致', tone: 'developed' },
+  catalog_missing: { label: '需补报价单', tone: 'warning' },
+  product_missing: { label: '目录缺产品', tone: 'destructive' },
+  quantity_missing: { label: '缺数量', tone: 'warning' },
+  price_mismatch: { label: '价格不一致', tone: 'destructive' },
+  below_catalog: { label: '低于目录价', tone: 'destructive' },
+  review_required: { label: '需人工确认', tone: 'warning' },
+};
 
 function Evidence({ ids, analysis }: { ids: string[]; analysis: AgentMailThreadAnalysis }) {
   if (!ids.length) return <span className="text-[11px] text-muted-foreground">未提取到明确来源</span>;
@@ -60,9 +69,10 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
   const [followUpContent, setFollowUpContent] = React.useState(''); const [nextFollowUpAt, setNextFollowUpAt] = React.useState('');
   const [loading, setLoading] = React.useState(true); const [saving, setSaving] = React.useState(false); const [error, setError] = React.useState('');
   const [confirmAction, setConfirmAction] = React.useState<Approval | null>(null); const [reviewed, setReviewed] = React.useState(false);
+  const [quoteCheck, setQuoteCheck] = React.useState<QuoteCheckResult | null>(null); const [checkingQuote, setCheckingQuote] = React.useState(false);
 
   const hydrate = React.useCallback((data: AgentMailThreadAnalysis) => {
-    setAnalysis(data); setSubject(data.replyDraft.subject); setBodyText(data.replyDraft.bodyText);
+    setAnalysis(data); setQuoteCheck(null); setSubject(data.replyDraft.subject); setBodyText(data.replyDraft.bodyText);
     setCustomerStatus(data.statusSuggestion.status); setStatusReason(data.statusSuggestion.reason);
     setMethod(data.followUpSuggestion.method); setResult(data.followUpSuggestion.result); setFollowUpContent(data.followUpSuggestion.content);
     setNextFollowUpAt(localDateTime(data.followUpSuggestion.nextFollowUpAt));
@@ -92,6 +102,15 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
       toast.success('审批卡片编辑已保存'); return updated;
     } catch (reason) { setError(toErrorMessage(reason, '编辑保存失败')); return null; }
     finally { setSaving(false); }
+  }
+  async function runQuoteCheck() {
+    if (!analysis || checkingQuote) return;
+    setCheckingQuote(true); setError('');
+    try {
+      const result = await apiPost<QuoteCheckResult>('/agent/quote-checks', { analysisId: analysis.id });
+      setQuoteCheck(result);
+    } catch (reason) { setError(toErrorMessage(reason, '报价核对失败')); }
+    finally { setCheckingQuote(false); }
   }
   async function createCustomerPreview() {
     if (!analysis || analysis.rootDirection !== 'inbound' || analysis.customerId || !isAdmin || creatingPreview) return;
@@ -156,6 +175,27 @@ export function MailThreadAnalysisView({ analysisId, onRecordsChanged }: { analy
           ['交期', analysis.extracted.delivery.value, analysis.extracted.delivery.evidenceMessageIds],
         ].map(([label, value, ids]) => <div key={label as string} className="rounded-md bg-muted/50 p-3"><p className="text-xs font-medium text-muted-foreground">{label as string}</p><p className="mt-1 text-sm">{(value as string) || '未明确'}</p><Evidence ids={ids as string[]} analysis={analysis} /></div>)}</div>
         <div className="mt-3"><p className="text-xs font-medium text-muted-foreground">待回答问题</p>{analysis.extracted.questions.length ? <ul className="mt-2 space-y-2">{analysis.extracted.questions.map((item, index) => <li key={`${item.text}-${index}`} className="rounded-md bg-muted/50 p-3 text-sm">{item.text}<Evidence ids={item.evidenceMessageIds} analysis={analysis} /></li>)}</ul> : <p className="mt-1 text-sm">未提取到明确问题</p>}</div>
+      </section>
+
+      <section className="rounded-lg border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div><h3 className="flex items-center gap-2 font-semibold"><Calculator className="h-4 w-4" aria-hidden />报价核对</h3><p className="mt-1 text-xs text-muted-foreground">用产品目录价和该客户最近报价单做确定性核对；只作为内部检查，不会自动写进回复。</p></div>
+          <Button type="button" variant="outline" size="sm" onClick={() => void runQuoteCheck()} disabled={!analysis.customerId || checkingQuote}>{checkingQuote ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}开始核对</Button>
+        </div>
+        {!analysis.customerId && <p className="mt-3 text-xs text-muted-foreground">这封邮件尚未关联客户，暂时无法匹配客户历史报价。</p>}
+        {quoteCheck && <div className="mt-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-2"><Badge variant={quoteCheck.summary.blockers ? 'destructive' : quoteCheck.summary.warnings ? 'warning' : 'developed'}>{quoteCheck.summary.message}</Badge><span className="text-xs text-muted-foreground">一致 {quoteCheck.summary.matched} · 待确认 {quoteCheck.summary.warnings} · 风险 {quoteCheck.summary.blockers}</span></div>
+          <div className="space-y-2">{quoteCheck.items.map((item, index) => {
+            const tone = quoteStatusLabels[item.status] ?? { label: item.status, tone: 'secondary' as const };
+            return <div key={`${item.requestedName}-${index}`} className="rounded-md border bg-muted/20 p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{item.requestedName}{item.requestedQuantity ? ` · ${item.requestedQuantity}` : ''}</span><Badge variant={tone.tone}>{tone.label}</Badge></div>
+              {item.product && <p className="mt-1 text-xs text-muted-foreground">匹配 {item.product.sku} · {item.product.name}</p>}
+              <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">{item.tier && <div className="rounded bg-card p-2"><span className="text-muted-foreground">目录价：</span>{item.tier.currency} {item.tier.unitPrice}（{item.tier.minQuantity}{item.tier.maxQuantity ? `–${item.tier.maxQuantity}` : '+'} 件）{item.tier.moq ? ` · MOQ ${item.tier.moq}` : ''}{item.tier.leadTime ? ` · ${item.tier.leadTime}` : ''}</div>}{item.quoted && <div className="rounded bg-card p-2"><span className="text-muted-foreground">最近报价：</span>{item.quoted.quotationNo} · {item.quoted.currency} {item.quoted.unitPrice}（{item.quoted.quantity} 件）</div>}</div>
+              {item.messages.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">{item.messages.map((message) => <li key={message}>{message}</li>)}</ul>}
+            </div>;
+          })}</div>
+          <p className="text-[11px] text-muted-foreground">核对时间 {formatDateTime(quoteCheck.checkedAt)}。报价前仍需确认币种、贸易条款、有效期和定制工艺。</p>
+        </div>}
       </section>
 
       {Boolean(analysis.productSources?.length)&&<section className="border-y py-3"><h3 className="text-sm font-medium">回复采用的产品知识</h3>{analysis.productSources!.map(k=><p key={k.sourceId} className="mt-2 text-xs text-muted-foreground">{k.title} · v{k.version} · {k.source}</p>)}</section>}

@@ -22,7 +22,7 @@ export interface ProjectLike {
 }
 
 export interface ProjectSalesProfile {
-  key: 'genesis' | 'ironhue' | 'general';
+  key: 'genesis' | 'ironhue' | 'velaturo' | 'general';
   label: string;
   /** 对外身份，一句话 */
   identity: string;
@@ -46,7 +46,31 @@ export interface ProjectSalesProfile {
   signature: LetterSignature;
 }
 
-export type ProjectPromptContext = Omit<ProjectSalesProfile, 'signature'>;
+/**
+ * A selected playbook card is strategy, not a factual source. It is injected
+ * only into the writing prompt; the fact verifier never treats it as evidence.
+ */
+export interface OutreachPlaybookContext {
+  segmentCode: string;
+  segmentName: string;
+  signals: string;
+  products: string;
+  logic: string;
+  avoid: string;
+  cta: string;
+  prepare: string;
+  check: string;
+  subjects: string[];
+  preferenceCode?: string;
+  preferenceName?: string;
+  preferenceLogic?: string;
+  preferenceCta?: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export type ProjectPromptContext = Omit<ProjectSalesProfile, 'signature'> & {
+  playbook?: OutreachPlaybookContext;
+};
 
 const GENESIS_SIGNATURE: LetterSignature = {
   title: 'Sales Manager, Genesis (Xiamen) Bags Co., Ltd.',
@@ -70,6 +94,15 @@ const IRONHUE_SIGNATURE: LetterSignature = {
   ],
   logoPath: IRONHUE_LOGO_PATH,
   logoAlt: 'IRONHUE',
+};
+
+const VELATURO_SIGNATURE: LetterSignature = {
+  title: 'Sales Manager, VELATURO',
+  lines: [
+    'Hand-painting studio in Xiamen · trade, interiors & custom portraits',
+    'W: velaturo.com',
+  ],
+  logoAlt: 'VELATURO',
 };
 
 const GENESIS_PROFILE: ProjectSalesProfile = {
@@ -100,6 +133,21 @@ const IRONHUE_PROFILE: ProjectSalesProfile = {
   ctaExamples: '客户当前采购的产品线、定制 Logo/颜色需求或样品需求',
   subjectFocus: '自由重量/力量训练器材',
   signature: IRONHUE_SIGNATURE,
+};
+
+const VELATURO_PROFILE: ProjectSalesProfile = {
+  key: 'velaturo',
+  label: 'VELATURO｜手绘艺术与商业空间配画',
+  identity: 'VELATURO 手绘艺术工作室（厦门）',
+  offerSummary: '我们提供手绘丙烯原作、商业空间艺术与定制肖像。',
+  outreachFocus: '客户的艺术品、墙面艺术采购与定制项目',
+  avoidTopics: '客户的其他品类采购、未核实的价格、交期、认证、独家或版权承诺',
+  insightLabel: '空间艺术洞察',
+  insightExamples: '墙面艺术影响空间的第一眼气质；原作、印刷品与定制肖像的采购逻辑不同',
+  proofExamples: '手绘丙烯原作、按 brief 确认媒介与尺寸、先看样画/授权再进入制作',
+  ctaExamples: '项目空间、尺寸、风格参考、预算与节点',
+  subjectFocus: '手绘艺术/墙面艺术',
+  signature: VELATURO_SIGNATURE,
 };
 
 function generalProfile(project: ProjectLike): ProjectSalesProfile {
@@ -134,6 +182,7 @@ export function resolveProjectSalesProfile(project?: ProjectLike | null): Projec
   const p = project ?? {};
   // 只按项目标识匹配已知项目；不要按行业猜测，否则未来同行业项目会误继承 Genesis/IronHue 话术。
   const identity = `${p.code ?? ''} ${p.slug ?? ''} ${p.name ?? ''}`.toLowerCase();
+  if (identity.includes('velaturo')) return VELATURO_PROFILE;
   if (identity.includes('ironhue')) return IRONHUE_PROFILE;
   if (identity.includes('genesis')) return GENESIS_PROFILE;
   return generalProfile(p);

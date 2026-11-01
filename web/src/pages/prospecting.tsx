@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { CountryFlag } from '@/components/common/country-flag';
 import { countryInfo } from '@/lib/country';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -23,18 +22,14 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import type { Prospect, ProspectingReport, ProspectingToday } from '@/types';
 
-const STATUS_LABEL: Record<Prospect['status'], string> = {
-  ready: '可发送', needs_contact: '待补联系方式', low: '评分不足', rejected: '已跳过', converted: '已转客户',
-};
-
 function socialHref(value:string,host:string,prefix=''){
  try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&url.hostname.replace(/^www\./,'')===host?url.href:undefined;}
  catch{return /^[\w.%-]{1,100}$/.test(value)?'https://'+host+'/'+prefix+encodeURIComponent(value):undefined;}
 }
 function scoreClass(score: number) {
-  if (score >= 80) return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-  if (score >= 60) return 'bg-amber-100 text-amber-800 border-amber-200';
-  return 'bg-muted text-muted-foreground';
+  if (score >= 80) return 'border-foreground bg-foreground text-background';
+  if (score >= 60) return 'border-border bg-muted text-foreground';
+  return 'border-border bg-card text-muted-foreground';
 }
 
 function ProspectCard({ prospect, today, busy, onApprove, onReject, onClaim, onRelease, onSync,onRefresh,selectable,selected,onToggle }: {
@@ -48,55 +43,55 @@ function ProspectCard({ prospect, today, busy, onApprove, onReject, onClaim, onR
   const converted = prospect.status === 'converted';
   const mine = Boolean(prospect.ownerId && prospect.ownerId === currentUser?.id);
   return (
-    <div className={cn('rounded-2xl border border-border/80 bg-card shadow-card p-4', selected && 'border-primary/50 ring-1 ring-primary/20')}>
+    <div className={cn('rounded-lg border border-border bg-card p-3.5', selected && 'border-foreground/40 ring-1 ring-foreground/10')}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
+        <div className="flex min-w-0 items-start gap-2.5">
           {selectable ? (
             <Checkbox
               checked={Boolean(selected)}
               disabled={busy}
               onCheckedChange={() => onToggle?.(prospect.id)}
               aria-label={`选择 ${prospect.name || prospect.company || prospect.domain}`}
-              className="mt-3"
+              className="mt-2.5"
             />
           ) : null}
-          <span className={cn('mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold', scoreClass(prospect.score))} title="系统打分：按资料完整度和匹配度算的">
+          <span className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-xs font-semibold tabular-nums', scoreClass(prospect.score))} title="系统打分：按资料完整度和匹配度算的">
             {prospect.score}
           </span>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {prospect.website ? (
-                <a href={prospect.website} target="_blank" rel="noreferrer" className="truncate font-medium hover:underline">
+                <a href={prospect.website} target="_blank" rel="noreferrer" className="truncate text-sm font-medium hover:underline">
                   {prospect.name || prospect.company || prospect.domain}
                 </a>
               ) : (
-                <span className="truncate font-medium">{prospect.name || prospect.company || prospect.domain}</span>
+                <span className="truncate text-sm font-medium">{prospect.name || prospect.company || prospect.domain}</span>
               )}
-              {prospect.source === 'excel' ? <Badge variant="muted" title="从 Excel 导入，没有抓取到的网站资料">Excel 导入</Badge> : null}
-              <Badge variant={converted ? 'developed' : prospect.status === 'ready' ? 'default' : 'outline'}>{STATUS_LABEL[prospect.status]}</Badge>
+              {prospect.source === 'excel' ? <Badge variant="muted" title="从 Excel 导入，没有抓取到的网站资料" className="font-normal">Excel 导入</Badge> : null}
               <Badge
                 variant={mine ? 'outline' : 'muted'}
+                className="font-normal"
                 title={prospect.ownerName ? `负责人：${prospect.ownerName}` : prospect.ownerId ? '已被其他业务员领取' : '公共池线索，可领取或直接转化'}
               >
                 {mine ? '我的' : prospect.ownerId ? (prospect.ownerName || '同事跟进') : '公共池'}
               </Badge>
-              {prospect.aiScore !== undefined ? <Badge variant="outline" title="AI 按客户画像评分">AI {prospect.aiScore}</Badge> : null}
-              {prospect.outcome && prospect.outcome.replied > 0 ? <Badge variant="developed">已回复</Badge> : null}
-              {prospect.day !== today ? <Badge variant="muted" title="之前没处理完的候选">{prospect.day.slice(5)}</Badge> : null}
+              {prospect.aiScore !== undefined ? <Badge variant="outline" className="font-normal" title="AI 按客户画像评分">AI {prospect.aiScore}</Badge> : null}
+              {prospect.outcome && prospect.outcome.replied > 0 ? <Badge variant="outline" className="font-normal">已回复</Badge> : null}
+              {prospect.day !== today ? <Badge variant="muted" className="font-normal" title="之前没处理完的候选">{prospect.day.slice(5)}</Badge> : null}
               {prospect.country ? (
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                   <CountryFlag value={prospect.country} />
                   {countryInfo(prospect.country)?.name ?? prospect.country}
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{prospect.domain}{prospect.snippet ? ` · ${prospect.snippet}` : ''}</p>
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{prospect.domain}{prospect.snippet ? ` · ${prospect.snippet}` : ''}</p>
             {prospect.contactName || prospect.contactTitle ? (
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">{prospect.contactName}{prospect.contactName && prospect.contactTitle ? ' · ' : ''}{prospect.contactTitle}</p>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{prospect.contactName}{prospect.contactName && prospect.contactTitle ? ' · ' : ''}{prospect.contactTitle}</p>
             ) : null}
           </div>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-1.5">
           {converted && prospect.customerId ? (
             <>
               <Button size="sm" variant="outline" onClick={() => { window.location.assign(`/customers/${prospect.customerId}`); }}>
@@ -135,30 +130,30 @@ function ProspectCard({ prospect, today, busy, onApprove, onReject, onClaim, onR
           )}
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
         {prospect.emails.map((email) => (
           <a key={email} href={`mailto:${email}`} className="inline-flex items-center gap-1 text-primary hover:underline"><AtSign className="h-3.5 w-3.5" aria-hidden />{email}</a>
         ))}
         {prospect.instagram ? <a href={socialHref(prospect.instagram,'instagram.com')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Instagram className="h-3.5 w-3.5" aria-hidden />Instagram</a> : null}
-        {prospect.emailSource === 'hunter' ? <Badge variant="outline" className="font-normal">Hunter{prospect.emailConfidence ? ` ${prospect.emailConfidence}%` : ''}</Badge> : null}
+        {prospect.emailSource === 'hunter' ? <span className="text-muted-foreground">Hunter{prospect.emailConfidence ? ` ${prospect.emailConfidence}%` : ''}</span> : null}
         {prospect.linkedin ? <a href={socialHref(prospect.linkedin,'linkedin.com','company/')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Linkedin className="h-3.5 w-3.5" aria-hidden />LinkedIn</a> : null}
         {prospect.sourceUrl ? <a href={prospect.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><ExternalLink className="h-3.5 w-3.5" aria-hidden />来源</a> : null}
         {converted && prospect.outcome ? (
-          <span className="text-xs text-muted-foreground">已发 {prospect.outcome.sent} · 回复 {prospect.outcome.replied} · 退信 {prospect.outcome.bounced}</span>
+          <span className="text-muted-foreground">已发 {prospect.outcome.sent} · 回复 {prospect.outcome.replied} · 退信 {prospect.outcome.bounced}</span>
         ) : null}
       </div>
-      {converted&&onSync&&<Button type="button" variant="outline" className="mt-3 min-h-11" disabled={busy} onClick={()=>onSync(prospect.id)}>补齐已获取资料</Button>}
-      {onRefresh&&<div className="mt-2 flex flex-wrap items-center gap-2"><Button type="button" variant="ghost" className="min-h-11" disabled={busy} onClick={()=>onRefresh(prospect.id)}>{busy?'正在处理…':converted?'重新采集并补齐空白项':'重新采集官网资料'}</Button><span className="text-xs text-muted-foreground">最多读取 3 个官网页面，消耗 Firecrawl 额度；保留客户已有内容。</span></div>}
-      <details className="mt-3 rounded-md border bg-muted/20 p-3 text-sm"><summary className="min-h-11 cursor-pointer font-medium">查看将导入客户的资料</summary><dl className="mt-3 grid gap-3 sm:grid-cols-2">{[
+      {converted&&onSync&&<Button type="button" variant="outline" size="sm" className="mt-2" disabled={busy} onClick={()=>onSync(prospect.id)}>补齐已获取资料</Button>}
+      {onRefresh&&<div className="mt-1.5 flex flex-wrap items-center gap-2"><Button type="button" variant="ghost" size="sm" disabled={busy} onClick={()=>onRefresh(prospect.id)}>{busy?'正在处理…':converted?'重新采集并补齐空白项':'重新采集官网资料'}</Button><span className="text-[11px] text-muted-foreground">最多读取 3 个官网页面，消耗 Firecrawl 额度；保留客户已有内容。</span></div>}
+      <details className="mt-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs"><summary className="min-h-7 cursor-pointer font-medium">查看将导入客户的资料</summary><dl className="mt-2 grid gap-2 sm:grid-cols-2">{[
  ['公司',prospect.company],['联系人',prospect.contactName],['职位',prospect.contactTitle],['电话',prospect.phone],['国家 / 地区',prospect.country],['行业',prospect.industry],['地址',prospect.address],['Instagram',prospect.instagram],['LinkedIn',prospect.linkedin],['Facebook',prospect.facebook],['WhatsApp',prospect.whatsapp],
- ].map(([label,value])=><div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 break-words">{value||'暂时没有'}</dd></div>)}</dl><p className="mt-3 text-xs leading-6 text-muted-foreground">抓到的资料和官网简介会一起存进客户档案；查不到的保持空白，也不会拿网站卖的东西去猜采购需求。</p></details>
+ ].map(([label,value])=><div key={label} className="min-w-0"><dt className="text-[10px] text-muted-foreground">{label}</dt><dd className="mt-0.5 break-words">{value||'暂时没有'}</dd></div>)}</dl><p className="mt-2 text-[11px] leading-5 text-muted-foreground">抓到的资料和官网简介会一起存进客户档案；查不到的保持空白，也不会拿网站卖的东西去猜采购需求。</p></details>
       {prospect.notes ? (
-        <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{prospect.notes}</p>
+        <p className="mt-2 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{prospect.notes}</p>
       ) : prospect.excerpt ? (
-        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{prospect.excerpt}</p>
+        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{prospect.excerpt}</p>
       ) : null}
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {prospect.reasons.map((reason) => <Badge key={reason} variant="outline" className="font-normal text-muted-foreground">{reason}</Badge>)}
+      <div className="mt-2 flex flex-wrap gap-1">
+        {prospect.reasons.map((reason) => <span key={reason} className="text-[10px] text-muted-foreground">· {reason}</span>)}
       </div>
     </div>
   );
@@ -385,17 +380,17 @@ export function ProspectingPage(): React.JSX.Element {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: '待处理候选', value: counts?.total ?? 0, icon: Target },
           { label: '可以发送', value: counts?.ready ?? 0, icon: Check },
           { label: '待补联系方式', value: counts?.needsContact ?? 0, icon: AtSign },
           { label: '已转客户', value: counts?.converted ?? 0, icon: Sparkles },
         ].map((item) => (
-          <Card key={item.label}><CardContent className="flex items-center justify-between p-4">
-            <div><p className="text-xs text-muted-foreground">{item.label}</p><p className="mt-1 text-2xl font-semibold">{item.value}</p></div>
-            <item.icon className="h-5 w-5 text-muted-foreground" aria-hidden />
-          </CardContent></Card>
+          <div key={item.label} className="flex items-center justify-between bg-card px-3.5 py-2.5 sm:px-4 sm:py-3">
+            <div><p className="text-[11px] text-muted-foreground">{item.label}</p><p className="mt-1 text-xl font-semibold tabular-nums tracking-[-0.02em]">{item.value}</p></div>
+            <item.icon className="h-4 w-4 text-muted-foreground/70" aria-hidden />
+          </div>
         ))}
       </div>
 
@@ -420,7 +415,7 @@ export function ProspectingPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1 border-b border-border">
         {([
           { key: 'mine' as const, label: '我的今日开发', count: data?.scopeTotals?.mine ?? 0 },
           { key: 'shared' as const, label: '公共池', count: data?.scopeTotals?.shared ?? 0 },
@@ -432,17 +427,17 @@ export function ProspectingPage(): React.JSX.Element {
             aria-pressed={scope === tab.key}
             onClick={() => { setScope(tab.key); setStatusFilter('all'); }}
             className={cn(
-              'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+              '-mb-px inline-flex h-9 items-center gap-1.5 border-b-2 px-2.5 text-xs font-medium transition-colors',
               scope === tab.key
-                ? 'border-primary/60 bg-primary text-primary-foreground'
-                : 'border-border bg-card text-muted-foreground hover:text-foreground',
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
             )}
           >
             {tab.label}
-            <span className="ml-1 tabular-nums">{tab.count}</span>
+            <span className="text-[11px] font-normal tabular-nums text-muted-foreground">{tab.count}</span>
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="ml-auto hidden pb-2 text-[11px] text-muted-foreground lg:block">
           {scope === 'mine' ? '只显示你搜索生成、领取或导入的线索；不会和公共池重复。' : scope === 'shared' ? '未领取的共用线索；领取或转化后归你负责。' : '其他业务员名下的线索；由管理员查看。'}
         </span>
       </div>
@@ -456,7 +451,7 @@ export function ProspectingPage(): React.JSX.Element {
         ];
         if ((data?.counts.low ?? 0) > 0) tabs.push({ key: 'low', label: '低优先', count: data?.counts.low ?? 0 });
         return (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -464,18 +459,18 @@ export function ProspectingPage(): React.JSX.Element {
                 aria-pressed={statusFilter === tab.key}
                 onClick={() => setStatusFilter(tab.key)}
                 className={cn(
-                  'rounded-full border px-3 py-1 text-xs transition-colors',
+                  'inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] transition-colors',
                   statusFilter === tab.key
-                    ? 'border-primary/60 bg-primary/10 text-foreground'
-                    : 'border-border bg-card text-muted-foreground hover:text-foreground',
+                    ? 'bg-muted font-medium text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                 )}
               >
                 {tab.label}
-                <span className="ml-1 tabular-nums">{tab.count}</span>
+                <span className="tabular-nums text-muted-foreground">{tab.count}</span>
               </button>
             ))}
             {data?.hasMore ? (
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="ml-auto text-[11px] text-muted-foreground">
                 共 {data.openTotal ?? 0} 条，已显示 {data.prospects.length} 条
               </span>
             ) : null}
@@ -624,7 +619,7 @@ export function ProspectingPage(): React.JSX.Element {
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{report.warning.message}</div>
           ) : null}
           <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[640px] text-sm">              <thead className="bg-muted/40 text-xs text-muted-foreground">
+            <table className="w-full min-w-[640px] text-sm"><thead className="bg-muted/40 text-xs text-muted-foreground">
                 <tr>
                   {['日期', '状态', '搜索', '去重', '补全', 'Hunter', '入选', '失败'].map((title) => (
                     <th key={title} className="px-3 py-2 text-left font-medium">{title}</th>

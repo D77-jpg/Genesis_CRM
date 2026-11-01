@@ -43,6 +43,7 @@ export interface ProjectDto {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  logoImage?: string;
   coverImage?: string;
   status: 'active' | 'archived';
   isDefault: boolean;
@@ -55,6 +56,7 @@ const dto = (raw: Record<string, unknown>): ProjectDto => ({
   companyName: String(raw.companyName), website: raw.website ? String(raw.website) : undefined,
   moq: raw.moq ? String(raw.moq) : undefined, senderName: raw.senderName ? String(raw.senderName) : undefined,
   mailFrom: raw.mailFrom ? String(raw.mailFrom) : undefined, mailProfileKey: String(raw.mailProfileKey),
+  logoImage: raw.logoImage ? String(raw.logoImage) : undefined,
   coverImage: raw.coverImage ? String(raw.coverImage) : undefined,
   status: raw.status as 'active' | 'archived', isDefault: Boolean(raw.isDefault),
 });
@@ -155,7 +157,7 @@ async function dropLegacyRequestKeyIndex(): Promise<void> {
   }
 }
 
-/** 幂等启动迁移：创建两个初始空间，并把 V1-V2.5 历史数据完整归入 Genesis Bags。 */
+/** 幂等启动迁移：创建三个初始空间，并把 V1-V2.5 历史数据完整归入 Genesis Bags。 */
 export async function bootstrapProjects(): Promise<void> {
   const genesis = await Project.findOneAndUpdate(
     { slug: 'genesis-bags' },
@@ -168,6 +170,12 @@ export async function bootstrapProjects(): Promise<void> {
     { slug: 'ironhue' },
     { $setOnInsert: { name: 'IRONHUE', code: 'IRONHUE', industry: '运动器材外贸', companyName: 'IRONHUE',
       mailProfileKey: 'ironhue', status: 'active', isDefault: false } },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  await Project.findOneAndUpdate(
+    { slug: 'velaturo' },
+    { $setOnInsert: { name: 'VELATURO', code: 'VELATURO', industry: '手绘艺术与商业空间配画', companyName: 'VELATURO',
+      website: 'https://velaturo.com', mailProfileKey: 'velaturo', mailTransport: 'mock', status: 'active', isDefault: false } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
 

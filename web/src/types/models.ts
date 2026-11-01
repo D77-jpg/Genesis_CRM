@@ -1065,6 +1065,8 @@ export interface Project {
   mailProfileKey: string;
   /** 项目级真实发送开关；未设置时沿用服务端配置 */
   mailTransport?: MailChannel;
+  /** 项目 Logo（压缩 data URL 或 HTTPS 地址） */
+  logoImage?: string;
   coverImage?: string;
   mailChannel?: MailChannel;
   status: ProjectStatus;
@@ -1315,6 +1317,7 @@ export interface OutreachSequencePlan {
   draftSteps: number[];
   missingSteps: number[];
   skipReason?: string;
+  lastError?: string;
 }
 
 export interface OutreachSequencePreview {

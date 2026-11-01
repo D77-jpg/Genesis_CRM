@@ -1,5 +1,5 @@
 /**
- * 状态彽章：客户 8 段销售状态各用一种颜色区分（见 CUSTOMER_STATUS_BADGE_CLASS）；开发信状态同理
+ * 状态徽章：客户 8 段销售状态各用一种低饱和语义色区分（见 CUSTOMER_STATUS_BADGE_CLASS）；开发信状态同理
  */
 import type * as React from 'react';
 import {

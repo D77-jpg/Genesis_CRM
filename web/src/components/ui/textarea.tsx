@@ -15,9 +15,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({ classNa
     aria-invalid={invalid || undefined}
     className={cn(
       [
-        'flex min-h-[84px] w-full rounded-xl border border-input/80 bg-card px-3.5 py-2.5 text-sm shadow-none',
-        'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        'focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-55',
+        'flex min-h-[76px] w-full rounded-md border border-input/80 bg-card px-2.5 py-2 text-[0.8125rem] shadow-none',
+        'placeholder:text-muted-foreground/75 focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/15',
+        'focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-55',
       ].join(' '),
       invalid && 'border-destructive focus-visible:ring-destructive',
       className,
