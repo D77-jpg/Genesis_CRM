@@ -217,7 +217,7 @@ export async function importMailCustomers(input: {
       company: item.company,
       email: item.email,
       website: item.website,
-      // 已经有真实往来，不是待开发的陌生客户：用「已联系」，别再进今日开发的初次开发队列
+      // 已经有真实往来，不是待开发的陌生客户：用「已联系」，别再进客户线索池的初次开发队列
       status: 'contacted',
       priority: 'medium',
       leadSource: '邮件来访',

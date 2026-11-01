@@ -86,8 +86,8 @@ test('搜索来的线索保持原有备注口径（回归保护）', () => {
     snippet: 'Fictional Buyer makes widgets',
   });
 
-  assert.match(customer.notes ?? '', /今日开发候选 · 评分 78\/100/);
+  assert.match(customer.notes ?? '', /客户线索池 · 评分 78\/100/);
   assert.match(customer.notes ?? '', /搜索来源：https:\/\/buyer\.test\/directory/);
   assert.deepEqual(customer.tags, ['自动开发']);
-  assert.equal(customer.leadSource, '今日开发');
+  assert.equal(customer.leadSource, '客户线索池');
 });

@@ -289,7 +289,7 @@ export function CustomersPage(): React.JSX.Element {
               {hasActiveFilters ? '（已应用筛选条件）' : ''}
             </>
           ) : (
-            '导入的名单默认先进「今日开发」审核，通过后再成为客户；已核实过的名单也可以直接建客户'
+            '导入的名单默认先进「客户线索池」审核，通过后再成为客户；已核实过的名单也可以直接建客户'
           )
         }
         actions={

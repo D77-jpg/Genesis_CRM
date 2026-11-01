@@ -22,7 +22,7 @@ export function prospectCustomerInput(prospect:RawLead&{emails:string[];score:nu
     prospect.notes?.trim()?'备注：'+prospect.notes.trim():'',
    ].filter(Boolean).join('\n').slice(0,5000)
   :[
-    '今日开发候选 · 评分 '+prospect.score+'/100 · 邮箱来源 '+(prospect.emailSource==='hunter'?'Hunter':'官网'),
+    '客户线索池 · 评分 '+prospect.score+'/100 · 邮箱来源 '+(prospect.emailSource==='hunter'?'Hunter':'官网'),
     '搜索来源：'+prospect.sourceUrl,
     prospect.emails.length>1?'其它公开邮箱：'+prospect.emails.slice(1).join('、'):'',
     ...(prospect.contactSources??[]).map(s=>'资料来源（'+(s.source==='hunter'?'Hunter':'官网')+'）：'+s.url+'；字段 '+s.fields.join('、')),
@@ -36,7 +36,7 @@ export function prospectCustomerInput(prospect:RawLead&{emails:string[];score:nu
   instagram:text(prospect.instagram,300),linkedin:text(prospect.linkedin,300),facebook:text(prospect.facebook,300),whatsapp:text(prospect.whatsapp,200),
   status:'pending',
   priority:(prospect.priority==='high'||prospect.priority==='medium'||prospect.priority==='low')?prospect.priority:'medium',
-  leadSource:text(prospect.leadSource,120)??(prospect.source==='excel'?'Excel 导入':'今日开发'),
+  leadSource:text(prospect.leadSource,120)??(prospect.source==='excel'?'Excel 导入':'客户线索池'),
   grade:text(prospect.grade,20),
   tags:[prospect.source==='excel'?'Excel 导入':'自动开发'],
   notes,
