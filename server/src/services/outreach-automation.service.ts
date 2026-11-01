@@ -819,6 +819,11 @@ export async function tickOutreachAutomation(now = new Date()): Promise<void> {
       }
 
       if (!isWithinSendWindow(configDto(config), now)) continue;
+      const today = await OutreachAutomationDay.findOne({
+        campaignId: config._id,
+        day: dayIn(config.timezone, now),
+      }).select('sent').lean();
+      if (Number(today?.sent ?? 0) >= config.dailyLimit) continue;
       if (!syncedProjects.has(String(config.projectId))) {
         syncedProjects.add(String(config.projectId));
         try {
