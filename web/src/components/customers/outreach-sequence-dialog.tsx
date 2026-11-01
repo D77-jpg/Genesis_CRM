@@ -12,14 +12,142 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
+import type { AgentTask } from '@/components/agent/agent-tasks';
 import type { OutreachSequencePreview, OutreachSequencePlan, OutreachSequenceResult } from '@/types';
+
+const WORKFLOW_STEPS = ['locate_customer', 'research_customer', 'analyze_customer', 'save_draft', 'verify_draft'];
+const WORKFLOW_LABELS: Record<string, string> = {
+  locate_customer: '定位客户',
+  research_customer: '分析客户背景',
+  analyze_customer: '分析与起草',
+  save_draft: '保存草稿',
+  verify_draft: '核对结果',
+};
+const TERMINAL_STATUSES = new Set<AgentTask['status']>(['awaiting_review', 'completed', 'failed', 'cancelled', 'waiting_input', 'paused']);
+
+interface GenerationTask {
+  taskId: string;
+  customerId: string;
+  step: number;
+  status: AgentTask['status'];
+  currentStep?: string;
+  completedSteps: string[];
+  error?: string;
+}
+
+interface GenerationState {
+  tasks: GenerationTask[];
+  total: number;
+  completed: number;
+  succeeded: number;
+  failed: number;
+  percent: number;
+  done: boolean;
+  creationFailed: number;
+}
+
+function taskProgress(task: GenerationTask): number {
+  if (TERMINAL_STATUSES.has(task.status)) return 1;
+  const completed = task.completedSteps.filter((step) => WORKFLOW_STEPS.includes(step)).length;
+  return Math.min(0.95, completed / WORKFLOW_STEPS.length);
+}
+
+function summarizeGeneration(tasks: GenerationTask[], creationFailed: number): GenerationState {
+  const completed = tasks.filter((task) => TERMINAL_STATUSES.has(task.status)).length;
+  const succeeded = tasks.filter((task) => task.status === 'awaiting_review' || task.status === 'completed').length;
+  const failed = tasks.filter((task) => task.status === 'failed' || task.status === 'cancelled' || task.status === 'waiting_input' || task.status === 'paused').length;
+  const rawPercent = tasks.length ? tasks.reduce((total, task) => total + taskProgress(task), 0) / tasks.length : 0;
+  const percent = tasks.length > 0 && completed === tasks.length
+    ? 100
+    : Math.max(2, Math.min(99, Math.round(rawPercent * 100)));
+  return {
+    tasks,
+    total: tasks.length,
+    completed,
+    succeeded,
+    failed,
+    percent,
+    done: tasks.length > 0 && completed === tasks.length,
+    creationFailed,
+  };
+}
+
+function taskStatusLabel(task: GenerationTask): string {
+  if (task.status === 'awaiting_review' || task.status === 'completed') return '草稿已生成';
+  if (task.status === 'failed') return task.error || '生成失败';
+  if (task.status === 'cancelled') return '已取消';
+  if (task.status === 'waiting_input') return '需要补充资料';
+  if (task.status === 'paused') return '已暂停';
+  if (task.status === 'queued') return '排队中';
+  return task.currentStep ? WORKFLOW_LABELS[task.currentStep] ?? '正在生成' : '正在生成';
+}
+
+function ProgressBar({ percent, label }: { percent: number; label: string }): React.JSX.Element {
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percent}
+      className="h-1.5 overflow-hidden rounded-full bg-muted"
+    >
+      <div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out" style={{ width: `${percent}%` }} />
+    </div>
+  );
+}
+
+function GenerationPanel({
+  generation,
+  plans,
+}: {
+  generation: GenerationState;
+  plans?: OutreachSequencePlan[];
+}): React.JSX.Element {
+  const names = new Map((plans ?? []).map((plan) => [plan.customerId, plan.name]));
+  return (
+    <section className="rounded-lg border border-border/70 bg-muted/20 p-3.5" aria-live="polite">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold">{generation.done ? '草稿生成完成' : '正在生成开发信草稿'}</p>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {generation.completed}/{generation.total}
+        </span>
+      </div>
+      <div className="mt-2">
+        <ProgressBar
+          percent={generation.percent}
+          label={`补齐开发信进度 ${generation.percent}%`}
+        />
+      </div>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+        {generation.done
+          ? generation.failed > 0 || generation.creationFailed > 0
+            ? `有 ${generation.failed + generation.creationFailed} 封未完成，请在销售助手的任务里查看原因。`
+            : '已自动更新到开发信记录，不会自动发送。'
+          : '生成期间可以保持当前页面，完成后会直接出现在开发信记录中。'}
+      </p>
+      <ul className="mt-3 space-y-2">
+        {generation.tasks.map((task) => (
+          <li key={task.taskId} className="flex items-center justify-between gap-3 text-xs">
+            <span className="min-w-0 truncate">
+              {names.get(task.customerId) ?? '客户'} · 第 {task.step} 封
+            </span>
+            <span className={task.status === 'failed' || task.status === 'cancelled' || task.status === 'waiting_input' || task.status === 'paused' ? 'shrink-0 text-destructive' : 'shrink-0 text-muted-foreground'}>
+              {taskStatusLabel(task)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 interface OutreachSequenceDialogProps {
   open: boolean;
   customerIds: string[];
   onOpenChange: (open: boolean) => void;
-  onCompleted?: () => void;
+  onCompleted?: () => void | Promise<void>;
 }
 
 function StepBadges({ steps }: { steps: number[] }): React.JSX.Element {
@@ -64,16 +192,19 @@ export function OutreachSequenceDialog({
   const [preview, setPreview] = React.useState<OutreachSequencePreview | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [generation, setGeneration] = React.useState<GenerationState | null>(null);
   const [error, setError] = React.useState('');
   const requestKey = customerIds.join(',');
 
   React.useEffect(() => {
-    if (!open || customerIds.length === 0) return;
+    if (!open || !requestKey) return;
+    const ids = requestKey.split(',');
     let active = true;
     setPreview(null);
+    setGeneration(null);
     setError('');
     setLoading(true);
-    void apiPost<OutreachSequencePreview>('/customers/bulk/outreach-sequence/preview', { ids: customerIds })
+    void apiPost<OutreachSequencePreview>('/customers/bulk/outreach-sequence/preview', { ids })
       .then((data) => {
         if (active) setPreview(data);
       })
@@ -86,11 +217,12 @@ export function OutreachSequenceDialog({
     return () => {
       active = false;
     };
-  }, [open, requestKey, customerIds]);
+  }, [open, requestKey]);
 
   const handleSubmit = async (): Promise<void> => {
     if (!preview || preview.totalDrafts === 0) return;
     setSubmitting(true);
+    setGeneration(null);
     setError('');
     try {
       const result = await apiPost<OutreachSequenceResult>('/customers/bulk/outreach-sequence', { ids: customerIds });
@@ -98,13 +230,61 @@ export function OutreachSequenceDialog({
         setError(result.failed[0]?.message || '没有创建生成任务');
         return;
       }
-      toast.info(`已创建 ${result.created.length} 个生成任务`, {
-        description: result.failed.length
-          ? `${result.failed.length} 个步骤创建失败，可在对应客户的任务里重试。`
-          : '生成完成后会出现在客户详情的「当前客户的开发信草稿」中，不会自动发送。',
+
+      const tasks: GenerationTask[] = result.created.map((created) => ({
+        taskId: created.taskId,
+        customerId: created.customerId,
+        step: created.step,
+        status: 'queued',
+        completedSteps: [],
+      }));
+      setGeneration(summarizeGeneration(tasks, result.failed.length));
+      toast.info(`已开始生成 ${tasks.length} 封草稿`, {
+        description: '进度会自动更新，完成后直接写入开发信记录，无需刷新页面。',
       });
-      onCompleted?.();
-      onOpenChange(false);
+
+      // The API creates durable AgentTasks; poll their real workflow state so
+      // the dialog can show progress and refresh the letter history at the
+      // exact moment the drafts become available.
+      for (let attempt = 0; attempt < 300; attempt += 1) {
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+        const polled = await Promise.all(tasks.map(async (task) => {
+          const current = await apiGet<AgentTask>(`/agent/tasks/${task.taskId}`);
+          return {
+            ...task,
+            status: current.status,
+            currentStep: current.currentStep,
+            completedSteps: current.completedSteps ?? [],
+            error: current.error?.message,
+          };
+        }));
+        const next = summarizeGeneration(polled, result.failed.length);
+        setGeneration(next);
+        if (!next.done) continue;
+
+        try {
+          await onCompleted?.();
+        } catch {
+          toast.warning('草稿已生成，但列表自动刷新失败，请点击刷新');
+        }
+        if (next.failed > 0) {
+          if (next.succeeded === 0) {
+            toast.error('草稿生成未完成', {
+              description: '请打开销售助手查看失败原因后重试。',
+            });
+          } else {
+            toast.success(`${next.succeeded} 封草稿已生成`, {
+              description: `${next.failed} 封未完成，请在销售助手的任务里查看原因。`,
+            });
+          }
+        } else {
+          toast.success(`${next.succeeded} 封草稿已生成`, {
+            description: '已自动更新到开发信记录，不会自动发送。',
+          });
+        }
+        return;
+      }
+      throw new Error('生成时间较长，任务仍在后台运行，请稍后在销售助手中查看');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '创建草稿任务失败');
     } finally {
@@ -117,7 +297,7 @@ export function OutreachSequenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !submitting && onOpenChange(next)}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" hideClose={submitting}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" aria-hidden />
@@ -143,7 +323,9 @@ export function OutreachSequenceDialog({
             </p>
           ) : null}
 
-          {preview && !loading ? (
+          {generation ? <GenerationPanel generation={generation} plans={preview?.plans} /> : null}
+
+          {preview && !loading && !generation ? (
             <>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
@@ -187,17 +369,25 @@ export function OutreachSequenceDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="outline" disabled={submitting} onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button
-            type="button"
-            disabled={loading || submitting || !preview || preview.totalDrafts === 0}
-            onClick={() => void handleSubmit()}
-          >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FilePenLine className="h-4 w-4" aria-hidden />}
-            {submitting ? '创建中…' : preview ? `开始生成 ${preview.totalDrafts} 封草稿` : '准备中…'}
-          </Button>
+          {generation ? (
+            <Button type="button" disabled={submitting} onClick={() => onOpenChange(false)}>
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden />生成中…</> : '完成'}
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="outline" disabled={submitting} onClick={() => onOpenChange(false)}>
+                取消
+              </Button>
+              <Button
+                type="button"
+                disabled={loading || submitting || !preview || preview.totalDrafts === 0}
+                onClick={() => void handleSubmit()}
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FilePenLine className="h-4 w-4" aria-hidden />}
+                {submitting ? '创建中…' : preview ? `开始生成 ${preview.totalDrafts} 封草稿` : '准备中…'}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -458,7 +458,7 @@ export function CustomersPage(): React.JSX.Element {
         open={outreachOpen}
         customerIds={selectedIds}
         onOpenChange={setOutreachOpen}
-        onCompleted={() => void fetchList()}
+        onCompleted={() => fetchList()}
       />
 
       <DraftCleanupDialog
