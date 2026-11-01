@@ -45,8 +45,13 @@ export interface OutreachAutomationQueueRow {
   email?: string;
   customerStatus: string;
   status: string;
+  /** 实际已发送的开发信封数（以客户开发信记录为准）。 */
   currentStep: number;
+  actualStep: number;
   nextStep: number;
+  /** waiting=等待下一次；generating=准备草稿；ready=待发送；sending=发送中；due=到期待处理。 */
+  phase: 'waiting' | 'generating' | 'ready' | 'sending' | 'due' | 'paused' | 'blocked' | 'completed' | 'failed';
+  draftReady: boolean;
   nextRunAt: string;
   lastError?: string;
   lastSentAt?: string;
@@ -369,9 +374,42 @@ export async function getOutreachAutomationOverview(actor: AuthUser, targetUserI
     .filter((id) => /^[a-f\d]{24}$/i.test(id))
     .map((id) => new Types.ObjectId(id));
   const customers = customerIds.length
-    ? await Customer.find({ _id: { $in: customerIds }, projectId: config.projectId }).select('name company email status').lean()
+    ? await Customer.find({ _id: { $in: customerIds }, projectId: config.projectId })
+      .select('name company email status letterCount outreachStep nextFollowUpAt')
+      .lean()
     : [];
   const customerMap = new Map(customers.map((customer) => [String(customer._id), customer]));
+  const queueCustomerIds = rows.map((row) => row.customerId);
+  const queueNextSteps = [...new Set(rows.map((row) => {
+    const customer = customerMap.get(String(row.customerId));
+    const actualStep = Math.min(
+      MAX_AUTO_STEPS,
+      Math.max(
+        Number(customer?.outreachStep ?? 0),
+        Math.min(MAX_AUTO_STEPS, Number(customer?.letterCount ?? 0)),
+        Number(row.currentStep ?? 0),
+      ),
+    );
+    return Math.min(MAX_AUTO_STEPS, actualStep + 1);
+  }))];
+  const [queueLetters, queueTasks] = queueCustomerIds.length
+    ? await Promise.all([
+      DevelopmentLetter.find({
+        projectId: config.projectId,
+        customerId: { $in: queueCustomerIds },
+        outreachStep: { $in: queueNextSteps },
+        status: { $in: ['draft', 'queued', 'scheduled', 'sending', 'retrying'] },
+      }).select('customerId outreachStep status').lean(),
+      AgentTask.find({
+        projectId: config.projectId,
+        customerId: { $in: queueCustomerIds },
+        outreachStep: { $in: queueNextSteps },
+        status: { $in: ['queued', 'running', 'paused', 'waiting_input', 'awaiting_review'] },
+      }).select('customerId outreachStep status').lean(),
+    ])
+    : [[], []];
+  const queueLetterMap = new Map(queueLetters.map((letter) => [`${String(letter.customerId)}:${Number(letter.outreachStep)}`, String(letter.status)]));
+  const queueTaskMap = new Map(queueTasks.map((task) => [`${String(task.customerId)}:${Number(task.outreachStep)}`, String(task.status)]));
   const counts = grouped.reduce<Record<string, number>>((acc, row) => {
     acc[String(row._id)] = Number(row.count);
     return acc;
@@ -404,6 +442,31 @@ export async function getOutreachAutomationOverview(actor: AuthUser, targetUserI
     },
     queue: rows.map((row) => {
       const customer = customerMap.get(String(row.customerId));
+      const actualStep = Math.min(
+        MAX_AUTO_STEPS,
+        Math.max(
+          Number(customer?.outreachStep ?? 0),
+          Math.min(MAX_AUTO_STEPS, Number(customer?.letterCount ?? 0)),
+          Number(row.currentStep ?? 0),
+        ),
+      );
+      const nextStep = Math.min(MAX_AUTO_STEPS, actualStep + 1);
+      const key = `${String(row.customerId)}:${nextStep}`;
+      const nextLetterStatus = queueLetterMap.get(key);
+      const draftReady = nextLetterStatus === 'draft';
+      const hasTask = queueTaskMap.has(key);
+      const nextRunAt = new Date(row.nextRunAt);
+      let phase: OutreachAutomationQueueRow['phase'];
+      if (row.status === 'completed' || actualStep >= MAX_AUTO_STEPS) phase = 'completed';
+      else if (row.status === 'paused') phase = 'paused';
+      else if (row.status === 'blocked') phase = 'blocked';
+      else if (row.status === 'failed') phase = 'failed';
+      else if (nextRunAt.getTime() > now.getTime()) phase = 'waiting';
+      else if (nextLetterStatus === 'draft') phase = 'ready';
+      else if (nextLetterStatus) phase = 'sending';
+      else if (hasTask) phase = 'generating';
+      else phase = 'due';
+
       return {
         id: String(row._id),
         customerId: String(row.customerId),
@@ -412,9 +475,12 @@ export async function getOutreachAutomationOverview(actor: AuthUser, targetUserI
         ...(customer?.email ? { email: customer.email } : {}),
         customerStatus: customer?.status ?? '',
         status: row.status,
-        currentStep: Number(row.currentStep ?? 0),
-        nextStep: Math.min(MAX_AUTO_STEPS, Number(row.currentStep ?? 0) + 1),
-        nextRunAt: new Date(row.nextRunAt).toISOString(),
+        currentStep: actualStep,
+        actualStep,
+        nextStep,
+        phase,
+        draftReady,
+        nextRunAt: nextRunAt.toISOString(),
         ...(row.lastError ? { lastError: row.lastError } : {}),
         ...(row.lastSentAt ? { lastSentAt: new Date(row.lastSentAt).toISOString() } : {}),
       };

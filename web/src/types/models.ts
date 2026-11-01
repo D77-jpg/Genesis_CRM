@@ -1404,7 +1404,10 @@ export interface OutreachAutomationQueueRow {
   customerStatus: string;
   status: 'active' | 'paused' | 'blocked' | 'completed' | 'failed';
   currentStep: number;
+  actualStep: number;
   nextStep: number;
+  phase: 'waiting' | 'generating' | 'ready' | 'sending' | 'due' | 'paused' | 'blocked' | 'completed' | 'failed';
+  draftReady: boolean;
   nextRunAt: string;
   lastError?: string;
   lastSentAt?: string;
