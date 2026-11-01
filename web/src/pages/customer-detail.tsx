@@ -1086,6 +1086,7 @@ export function CustomerDetailPage(): React.JSX.Element {
 
           <LetterHistoryTable
             letters={letters}
+            sequenceOrder
             loading={lettersQuery.loading}
             error={lettersQuery.error}
             page={letterPage}

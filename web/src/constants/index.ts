@@ -222,10 +222,14 @@ export const LETTER_STATUS_LABEL: Record<LetterStatus, string> = {
 };
 
 export const LETTER_STATUS_BADGE_CLASS: Record<LetterStatus, string> = {
-  queued: 'border-border bg-card text-muted-foreground', scheduled: 'border-border bg-card text-foreground', sending: 'border-border bg-card text-foreground', retrying: 'border-rose-200 bg-rose-50 text-rose-700', cancelled: 'border-border bg-card text-muted-foreground',
-  draft: 'border-border bg-card text-muted-foreground',
-  sent: 'border-border bg-card text-foreground',
-  opened: 'border-primary/20 bg-primary-soft text-primary',
+  queued: 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300',
+  scheduled: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-300',
+  sending: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300',
+  retrying: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300',
+  cancelled: 'border-border bg-muted/40 text-muted-foreground',
+  draft: 'border-amber-200/80 bg-amber-50/80 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300',
+  sent: 'border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300',
+  opened: 'border-sky-200/80 bg-sky-50/70 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300',
   failed: 'border-rose-200/80 bg-rose-50/70 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300',
 };
 
