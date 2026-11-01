@@ -1133,10 +1133,7 @@ export function CustomerDetailPage(): React.JSX.Element {
         open={sequenceOpen}
         customerIds={[customer.id]}
         onOpenChange={setSequenceOpen}
-        onCompleted={() => {
-          pendingDrafts.refresh();
-          void reloadLetters();
-        }}
+        onCompleted={refreshAll}
       />
 
       <SendLetterDialog
