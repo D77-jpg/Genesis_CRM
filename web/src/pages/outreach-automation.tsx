@@ -325,7 +325,7 @@ export function OutreachAutomationPage(): React.JSX.Element {
 
           <section aria-label="自动开发指标" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: '可加入客户', value: overview.stats.eligible, hint: '已有邮箱、待开发/已联系', icon: Users },
+              { label: '可加入客户', value: overview.stats.eligible, hint: '待开发，或已有开发信记录', icon: Users },
               { label: '进行中', value: overview.stats.active, hint: `队列共 ${overview.stats.enrolled} 位`, icon: Bot },
               { label: '今日已发', value: `${overview.stats.sentToday}/${overview.config.dailyLimit}`, hint: `剩余 ${overview.stats.remainingToday} 封`, icon: Send },
               { label: '需要处理', value: issueCount, hint: '暂停、失败或已停止', icon: ShieldCheck },
@@ -432,7 +432,7 @@ export function OutreachAutomationPage(): React.JSX.Element {
                     <Bot className="mx-auto h-7 w-7 text-muted-foreground/60" aria-hidden />
                     <p className="mt-2 text-sm font-medium">还没有自动开发客户</p>
                     <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">
-                      {canStart ? '点击右上角「开始自动开发」，系统会从符合条件的客户开始准备并发送第一封。' : '先配置并验证个人发件邮箱，再开始自动开发。'}
+                      {canStart ? '点击右上角「开始自动开发」，系统会从符合条件的客户开始准备并发送下一封。' : '先配置并验证个人发件邮箱，再开始自动开发。'}
                     </p>
                   </div>
                 ) : (
