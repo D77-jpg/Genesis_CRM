@@ -18,7 +18,7 @@ import { connectDatabase, disconnectDatabase } from './config/db';
 import { createLogger } from './config/logger';
 import { bootstrapAdminUser } from './services/auth.service';
 import { bootstrapProjects } from './services/project.service';
-import { migrateLegacyCustomerStatus } from './services/customer.service';
+import { migrateLegacyCustomerStatus, migrateMailCustomerLastContact } from './services/customer.service';
 import { migrateLegacyQuotationVersion } from './services/quotation.service';
 import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
@@ -39,6 +39,7 @@ async function bootstrap(): Promise<void> {
     await bootstrapAdminUser();
     await bootstrapProjects();
     await migrateLegacyCustomerStatus();
+    await migrateMailCustomerLastContact();
     await migrateLegacyQuotationVersion();
     await Promise.all([Project.init(), User.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
       FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Product.init(), ProjectPlaybook.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),

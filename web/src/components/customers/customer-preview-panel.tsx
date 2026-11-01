@@ -185,7 +185,7 @@ export function CustomerPreviewPanel({
             </div>
             <div>
               <dt className="text-muted-foreground">最近联系</dt>
-              <dd className="mt-0.5 font-medium">{customer.lastContactAt ? formatRelative(customer.lastContactAt) : '未联系'}</dd>
+              <dd className="mt-0.5 font-medium">{customer.lastContactAt ? formatRelative(customer.lastContactAt) : customer.status === 'pending' ? '未联系' : '未记录'}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">开发信</dt>
