@@ -201,23 +201,20 @@ Before/After 截图索引：`docs/ui-refactor/screenshots/README.md`（含本地
 - `web npm run test:agent-workflow`：5/5 通过
 - `web npm run test:customer-fields`：5/5 通过
 - `server npm run test:prospecting`：22/22 通过
-- `server npm run test:mail`：119/120 通过（失败项为既有测试 fixture 假设，见第 5 节）
+- `server npm run test:mail`：120/120 通过
 
 ## 5. 未解决 / 需要说明的问题
 
-1. **`server test:mail` 的 1 项失败是测试数据假设，不是 UI 回归。**  
-   失败用例期望项目目录只有 `genesis-bags`、`ironhue`，当前本地数据库多了一个真实项目 `velaturo`。实际集合为 3 个。建议在干净测试库执行，或把该断言改为按测试 fixture 动态读取项目集合；本次没有为了通过测试而删除 VELATURO 数据。
-
-2. **真实邮件发送未被 UI 冒烟测试触发。**  
+1. **真实邮件发送未被 UI 冒烟测试触发。**  
    当前账号未配置个人发件邮箱，发送弹窗正确显示“不可发送”并保留审核/存草稿能力；SMTP、定时任务、失败重试由 `server test:mail` 覆盖。
 
-3. **VELATURO 的单独图标来自提供的独立插画。**  
+2. **VELATURO 的单独图标来自提供的独立插画。**  
    项目卡继续使用完整 VELATURO 字标/封面；项目轨道等 24–28px 紧凑位置改用提供的“画家 + 画架”插画裁成的方形图标（`web/public/project-icons/velaturo.png`），没有伪造或重绘品牌。未知且无图标的项目才使用中性字母回退。
 
-4. **截图数据会变化。**  
+3. **截图数据会变化。**  
    截图基于本地真实数据（客户数、线索数、最近登录时间等），不是固定假数据；报告中的数字只用于说明密度和布局。
 
-5. **未覆盖所有历史弹窗的逐像素截图。**  
+4. **未覆盖所有历史弹窗的逐像素截图。**  
    共享 Dialog/Button/Input/Select/Table 的规则已统一应用；已重点人工检查发送开发信、销售助手、随手记、客户详情和客户表单相关结构。若后续新增页面，应直接复用 `PageHeader` 与共享组件，不要重新引入旧的 `rounded-3xl`/渐变写法。
 
 ## 6. 界面截图

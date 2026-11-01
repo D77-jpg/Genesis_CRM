@@ -455,7 +455,7 @@ test('62 tracking preparation failure never blocks normal SMTP/mock delivery', a
 let ironCustomerId = '';
 test('63 project directory is role-aware and project administration remains admin-only', async () => {
   const adminProjects = await request('GET', '/projects', adminToken);
-  assert.deepEqual(new Set(adminProjects.map((project: { slug: string }) => project.slug)), new Set(['genesis-bags', 'ironhue']));
+  assert.deepEqual(new Set(adminProjects.map((project: { slug: string }) => project.slug)), new Set(['genesis-bags', 'ironhue', 'velaturo']));
   const salesProjects = await request('GET', '/projects', salesToken);
   assert.deepEqual(salesProjects.map((project: { id: string }) => project.id), [projectId]);
   await request('POST', '/projects', salesToken, { name: 'Forbidden', slug: 'forbidden', code: 'FORBIDDEN', companyName: 'Forbidden', mailProfileKey: 'forbidden' }, 403);

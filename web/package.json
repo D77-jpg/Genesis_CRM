@@ -74,6 +74,6 @@
   },
   "overrides": {
     "braces": "$braces",
-    "follow-redirects": "1.16.1"
+    "follow-redirects": "1.16.2"
   }
 }
