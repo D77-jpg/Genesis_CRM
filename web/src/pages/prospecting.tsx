@@ -117,8 +117,8 @@ function ProspectCard({ prospect, today, busy, onApprove, onReject, onClaim, onR
               ) : null}
               <Button
                 size="sm"
-                disabled={busy || !prospect.emails.length}
-                title={!prospect.emails.length ? '没有邮箱，先补联系方式' : !prospect.ownerId ? '领取到我的线索池并转为客户，负责人会是你' : ''}
+                disabled={busy}
+                title={!prospect.emails.length ? '没有邮箱也可以先转为客户，转后补邮箱再生成开发信' : !prospect.ownerId ? '领取到我的线索池并转为客户，负责人会是你' : ''}
                 onClick={() => onApprove(prospect.id)}
               >
                 <Check className="h-4 w-4" aria-hidden />转为客户
@@ -134,6 +134,9 @@ function ProspectCard({ prospect, today, busy, onApprove, onReject, onClaim, onR
         {prospect.emails.map((email) => (
           <a key={email} href={`mailto:${email}`} className="inline-flex items-center gap-1 text-primary hover:underline"><AtSign className="h-3.5 w-3.5" aria-hidden />{email}</a>
         ))}
+        {!prospect.emails.length ? (
+          <span className="text-[11px] text-status-following">未填写邮箱 · 可先转客户，稍后补录</span>
+        ) : null}
         {prospect.instagram ? <a href={socialHref(prospect.instagram,'instagram.com')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Instagram className="h-3.5 w-3.5" aria-hidden />Instagram</a> : null}
         {prospect.emailSource === 'hunter' ? <span className="text-muted-foreground">Hunter{prospect.emailConfidence ? ` ${prospect.emailConfidence}%` : ''}</span> : null}
         {prospect.linkedin ? <a href={socialHref(prospect.linkedin,'linkedin.com','company/')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:underline"><Linkedin className="h-3.5 w-3.5" aria-hidden />LinkedIn</a> : null}
@@ -220,14 +223,17 @@ export function ProspectingPage(): React.JSX.Element {
 
   const approve = async (id: string) => {
     setBusy(id);
+    const hasEmail = Boolean(data?.prospects.find((item) => item.id === id)?.emails.length);
     try {
       const result = await apiPost<{ customer: { id: string; name: string; owner?: { name?: string } }; draftTaskId?: string; draftError?: string; duplicates?: { id: string; name: string; reason: string }[] }>(`/prospecting/${id}/approve`, {});
       toast.success('已转为正式客户', {
         description: [
           `负责人：${result.customer?.owner?.name || (scope === 'team' ? '原业务员' : '你')}`,
-          result.draftError
-            ? `草稿任务未创建：${result.draftError}`
-            : result.draftTaskId ? '三封开发信草稿正在后台依次生成，完成后在“查看草稿”里审核' : (result.customer?.name ?? '可在客户管理里继续写开发信'),
+          !hasEmail
+            ? '没有邮箱，已先转为客户；补上邮箱后可再生成开发信'
+            : result.draftError
+              ? `草稿任务未创建：${result.draftError}`
+              : result.draftTaskId ? '三封开发信草稿正在后台依次生成，完成后在“查看草稿”里审核' : (result.customer?.name ?? '可在客户管理里继续写开发信'),
         ].join('；'),
       });
       // 库里已有同公司名 / 同电话的客户：提醒核对，避免一条线索变两条记录
@@ -290,7 +296,7 @@ export function ProspectingPage(): React.JSX.Element {
   React.useEffect(() => { setSelected(new Set()); }, [scope, statusFilter]);
 
   const isConvertible = React.useCallback(
-    (item: Prospect) => item.status !== 'converted' && item.emails.length > 0,
+    (item: Prospect) => item.status !== 'converted',
     [],
   );
 
@@ -322,6 +328,7 @@ export function ProspectingPage(): React.JSX.Element {
     let ok = 0;
     let failed = 0;
     let draftErrors = 0;
+    const noEmailCount = targets.filter((prospect) => !prospect.emails.length).length;
     // 失败原因（含查重拦下的重复线索）逐条记下来，最后一起提示
     const failedReasons: string[] = [];
     for (const prospect of targets) {
@@ -343,7 +350,10 @@ export function ProspectingPage(): React.JSX.Element {
     toast.success(`已转换 ${ok} 个客户`, {
       description: [
         failed ? `${failed} 个没转成：${failedReasons.slice(0, 3).join('；')}${failedReasons.length > 3 ? '…' : ''}` : '',
-        draftErrors ? `${draftErrors} 个客户的三封草稿未创建` : '三封开发信草稿在后台依次生成，完成后在“查看草稿”里审核',
+        noEmailCount ? `${noEmailCount} 个没有邮箱，已先转为客户；补邮箱后可生成开发信` : '',
+        draftErrors
+          ? `${draftErrors} 个客户的三封草稿未创建`
+          : (ok > noEmailCount ? '有邮箱的客户三封开发信草稿在后台依次生成，完成后在“查看草稿”里审核' : ''),
       ].filter(Boolean).join('；'),
     });
   };
@@ -666,8 +676,8 @@ export function ProspectingPage(): React.JSX.Element {
           <AlertDialogHeader>
             <AlertDialogTitle>一键转为客户？</AlertDialogTitle>
             <AlertDialogDescription>
-              将把 {pendingTargets.length} 个线索转为正式客户，并各自创建三封开发信草稿（不会发送邮件）。
-              没有邮箱的线索会自动跳过；转换过程中失败的会单独汇总，可稍后重试。
+              将把 {pendingTargets.length} 个线索转为正式客户，有邮箱的会创建三封开发信草稿（不会发送邮件）。
+              没有邮箱的会先转为客户，补上邮箱后再生成开发信；转换过程中失败的会单独汇总，可稍后重试。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
