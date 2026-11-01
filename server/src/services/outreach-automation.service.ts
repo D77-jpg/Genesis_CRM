@@ -205,7 +205,19 @@ function eligibleFilter(actor: AuthUser, targetUserId?: string) {
     status: { $in: [...AUTO_TARGET_STATUSES] },
     outreachAbandonedAt: null,
     outreachRepliedAt: null,
-    $or: [{ outreachStep: { $lt: MAX_AUTO_STEPS } }, { outreachStep: { $exists: false } }],
+    // 待开发客户可以开始首封；已经标记为「已联系」的客户只有在确实
+    // 发过开发信或已有序列进度时才进入自动开发，避免把邮件来访、
+    // 手动沟通过的客户误判成需要再发首封开发信。
+    $and: [
+      {
+        $or: [
+          { status: 'pending' },
+          { status: 'contacted', letterCount: { $gt: 0 } },
+          { status: 'contacted', outreachStep: { $gte: 1 } },
+        ],
+      },
+      { $or: [{ outreachStep: { $lt: MAX_AUTO_STEPS } }, { outreachStep: { $exists: false } }] },
+    ],
   };
 }
 
