@@ -220,7 +220,7 @@ export async function getCustomer(id: string, actor?: AuthUser): Promise<Custome
 export async function createCustomer(
   input: CreateCustomerInput,
   actor?: AuthUser,
-  options?: { agentCreationKey?: string; source?: CustomerSource; ownerId?: string; lastContactAt?: Date },
+  options?: { agentCreationKey?: string; source?: CustomerSource; ownerId?: string; lastContactAt?: Date; status?: CustomerStatus },
 ): Promise<CustomerDto> {
   // 查重：邮箱撞库直接拒绝（DB 唯一索引兜底，这里提前拦并说清撞的是哪一位客户）。
   // 同网站 / 同公司名只提示不拦——同一家公司的第二个联系人也是正常业务。
@@ -231,6 +231,8 @@ export async function createCustomer(
   );
   const payload: Record<string, unknown> = {
     ...input,
+    // 客户状态由系统根据开发信、回复和报价推进；新建一律从待开发开始。
+    status: options?.status ?? 'pending',
     // 国家统一成中文简称（UK / England / 英国 都存成「英国」）
     ...(typeof input.country === 'string' ? { country: normalizeCountry(input.country) ?? '' } : {}),
     projectId: requireProjectId(actor),
@@ -255,9 +257,13 @@ export async function updateCustomer(
   id: string,
   input: UpdateCustomerInput,
   actor?: AuthUser,
+  options?: { systemStatus?: boolean },
 ): Promise<CustomerDto> {
   if (!Types.ObjectId.isValid(id)) {
     throw ApiError.badRequest('客户 ID 格式不正确');
+  }
+  if (input.status !== undefined && !options?.systemStatus) {
+    throw ApiError.badRequest('客户状态由系统根据开发信、回复和报价自动维护，不能手动修改');
   }
 
   // 先取改动前的快照，用于对比出「状态变化 / 下一次跟进时间变化」并写入活动时间线
@@ -315,18 +321,11 @@ export async function deleteCustomer(id: string, actor?: AuthUser): Promise<{ id
 
 /** 批量修改状态 */
 export async function bulkUpdateStatus(
-  ids: string[],
-  status: CustomerStatus,
-  actor?: AuthUser,
+  _ids: string[],
+  _status: CustomerStatus,
+  _actor?: AuthUser,
 ): Promise<{ matched: number; modified: number }> {
-  const objectIds = ids.map((id) => new Types.ObjectId(id));
-  // 严格分配制：只操作业务员自己名下的客户
-  const result = await Customer.updateMany(
-    { _id: { $in: objectIds }, ...customerScope(actor) },
-    { $set: { status } },
-    { runValidators: true },
-  );
-  return { matched: result.matchedCount, modified: result.modifiedCount };
+  throw ApiError.badRequest('客户状态由系统根据开发信、回复和报价自动维护，不能批量修改');
 }
 
 /** 批量删除（含开发信 / 跟进记录 / 活动事件级联） */
@@ -671,6 +670,8 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
 
     toInsert.push({
       ...buildPatchFromRow(row, defaultStatus),
+      // 新导入客户一律从待开发开始，之后由开发信、回复和报价自动推进。
+      status: 'pending' as CustomerStatus,
       projectId: requireProjectId(actor),
       source: 'excel' as CustomerSource,
       createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
@@ -762,8 +763,10 @@ export async function importCustomers(input: ImportCustomersInput, actor?: AuthU
 
 /** 把导入行转换成模型 patch（去掉空值、统一状态） */
 /** 导出供单测：导入行 → 客户字段（含国家归一） */
-export function buildPatchFromRow(row: ImportRow, defaultStatus: CustomerStatus): Partial<ICustomer> {
-  const patch: Partial<ICustomer> = { status: row.status ?? defaultStatus };
+export function buildPatchFromRow(row: ImportRow, _defaultStatus: CustomerStatus): Partial<ICustomer> {
+  // 状态由系统根据真实操作推进；Excel 中的「状态」列只作为历史信息，
+  // 不直接成为客户状态，避免导入把人工判断带进系统状态。
+  const patch: Partial<ICustomer> = {};
   const fields: (keyof ImportRow)[] = [
     'name',
     'company',

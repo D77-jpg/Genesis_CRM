@@ -29,11 +29,11 @@ import { ApiClientError, apiGet } from '@/lib/api';
 import { defaultCustomerFormValues, customerFormSchema, type CustomerFormValues } from '@/lib/validators';
 import { toCustomerPayload } from '@/lib/customer-payload';
 import { toInputDate } from '@/lib/format';
-import { CUSTOMER_LEAD_SOURCE_OPTIONS, CUSTOMER_PRIORITY_OPTIONS, CUSTOMER_STATUS_OPTIONS } from '@/constants';
+import { CUSTOMER_LEAD_SOURCE_OPTIONS, CUSTOMER_PRIORITY_OPTIONS } from '@/constants';
 import { useCustomerStore } from '@/store/customer.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { useSaveShortcut } from '@/hooks/use-ui';
-import type { Customer, CustomerPriority, CustomerStatus, OwnerOption } from '@/types';
+import type { Customer, CustomerPriority, OwnerOption } from '@/types';
 
 /** 负责人 Select 里表示「未分配」的哨兵值（Radix 不允许 value=""） */
 const OWNER_NONE = '__none__';
@@ -184,7 +184,6 @@ export function CustomerFormDialog({
     setDuplicates([]);
     setDuplicateConfirmed(false);
   }, [duplicateKey]);
-  const statusValue = watch('status');
   const ownerValue = watch('ownerId');
   const leadSourceValue = watch('leadSource');
   const priorityValue = watch('priority');
@@ -437,24 +436,6 @@ export function CustomerFormDialog({
 
               <Field label="地址" htmlFor="cf-address" error={fieldError('address')} className="sm:col-span-2">
                 <Input id="cf-address" placeholder="街道 / 城市 / 邮编" autoComplete="off" {...register('address')} />
-              </Field>
-
-              <Field label="开发状态" required htmlFor="cf-status" error={fieldError('status')}>
-                <Select
-                  value={statusValue}
-                  onValueChange={(value) => setValue('status', value as CustomerStatus, { shouldValidate: true })}
-                >
-                  <SelectTrigger id="cf-status" invalid={Boolean(errors.status)}>
-                    <SelectValue placeholder="请选择状态" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CUSTOMER_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </Field>
 
               {isAdmin ? (

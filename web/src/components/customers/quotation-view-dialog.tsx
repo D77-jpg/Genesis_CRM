@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -67,7 +66,6 @@ export function QuotationViewDialog({
 }: QuotationViewDialogProps): React.JSX.Element {
   const updateQuotationStatus = useQuotationStore((state) => state.updateQuotationStatus);
   const [pendingStatus, setPendingStatus] = React.useState<QuotationStatus>('draft');
-  const [markAsQuoting, setMarkAsQuoting] = React.useState(false);
   const [updating, setUpdating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -75,7 +73,6 @@ export function QuotationViewDialog({
   React.useEffect(() => {
     if (open && quotation) {
       setPendingStatus(quotation.status);
-      setMarkAsQuoting(false);
       setError(null);
     }
   }, [open, quotation]);
@@ -87,7 +84,6 @@ export function QuotationViewDialog({
     try {
       await updateQuotationStatus(customerId, quotation.id, {
         status: pendingStatus,
-        ...(markAsQuoting ? { markCustomerAsQuoting: true } : {}),
       });
       toast.success('报价单状态已更新');
       onChanged?.();
@@ -99,10 +95,9 @@ export function QuotationViewDialog({
     } finally {
       setUpdating(false);
     }
-  }, [quotation, customerId, pendingStatus, markAsQuoting, updateQuotationStatus, onChanged, onOpenChange]);
+  }, [quotation, customerId, pendingStatus, updateQuotationStatus, onChanged, onOpenChange]);
 
-  // 状态未变且未勾选联动时无需提交
-  const canSubmit = Boolean(quotation) && (pendingStatus !== quotation?.status || markAsQuoting);
+  const canSubmit = Boolean(quotation) && pendingStatus !== quotation?.status;
 
   return (
     <Dialog open={open} onOpenChange={(next) => !updating && onOpenChange(next)}>
@@ -221,17 +216,6 @@ export function QuotationViewDialog({
                   <Button type="button" size="sm" onClick={() => void handleStatusUpdate()} loading={updating} disabled={!canSubmit}>
                     更新状态
                   </Button>
-                </div>
-                <div className="mt-3 flex items-start gap-2">
-                  <Checkbox
-                    id="qt-view-mark"
-                    checked={markAsQuoting}
-                    disabled={updating}
-                    onCheckedChange={(checked) => setMarkAsQuoting(checked === true)}
-                  />
-                  <Label htmlFor="qt-view-mark" className="cursor-pointer text-xs font-normal leading-relaxed text-muted-foreground">
-                    同时把客户标记为「报价中」。仅在客户处于待开发 / 已联系 / 已回复 / 有意向时推进，不会覆盖谈判中 / 成交 / 流失等更靠后的状态。
-                  </Label>
                 </div>
               </div>
             </DialogBody>

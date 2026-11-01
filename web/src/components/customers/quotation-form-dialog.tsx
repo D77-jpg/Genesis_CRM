@@ -26,7 +26,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label, FieldMessage, RequiredMark } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ApiClientError, toErrorMessage } from '@/lib/api';
 import { formatMoney, roundMoney, toInputDate } from '@/lib/format';
@@ -51,7 +50,7 @@ export interface QuotationFormDialogProps {
 }
 
 /** 表单值 → 接口载荷（编号 / 有效期空串转约定值；明细去掉金额，后端计算） */
-function toPayload(values: QuotationFormValues, isEdit: boolean): QuotationInput {
+function toPayload(values: QuotationFormValues): QuotationInput {
   const text = (value?: string): string | undefined => {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;
@@ -73,8 +72,6 @@ function toPayload(values: QuotationFormValues, isEdit: boolean): QuotationInput
     moq: text(values.moq),
     notes: text(values.notes),
     status: values.status,
-    // 普通编辑绝不携带联动标记（后端 updateQuotationSchema 也不接收）
-    ...(isEdit ? {} : { markCustomerAsQuoting: values.markCustomerAsQuoting }),
   };
 }
 
@@ -175,7 +172,6 @@ export function QuotationFormDialog({
   const watchedItems = useWatch({ control, name: 'items' });
   const currency = watch('currency');
   const status = watch('status');
-  const markAsQuoting = watch('markCustomerAsQuoting');
   const lineAmounts = (watchedItems ?? []).map((item) =>
     roundMoney((Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0)),
   );
@@ -186,7 +182,7 @@ export function QuotationFormDialog({
       setSubmitting(true);
       setServerError(null);
       try {
-        const payload = toPayload(values, isEdit);
+        const payload = toPayload(values);
         if (quotation) {
           await updateQuotation(customerId, quotation.id, payload);
           toast.success('报价单已更新');
@@ -211,7 +207,7 @@ export function QuotationFormDialog({
         setSubmitting(false);
       }
     })();
-  }, [handleSubmit, customerId, quotation, isEdit, createQuotation, updateQuotation, onOpenChange, onSaved, setError]);
+  }, [handleSubmit, customerId, quotation, createQuotation, updateQuotation, onOpenChange, onSaved, setError]);
 
   useSaveShortcut(() => {
     if (open && !submitting) void submit();
@@ -455,26 +451,6 @@ export function QuotationFormDialog({
                 {...register('notes')}
               />
             </Field>
-
-            {/* ---------- 显式状态联动（仅新增） ---------- */}
-            {!isEdit ? (
-              <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3">
-                <Switch
-                  id="qt-mark-quoting"
-                  checked={Boolean(markAsQuoting)}
-                  disabled={submitting}
-                  onCheckedChange={(checked) => setValue('markCustomerAsQuoting', checked)}
-                />
-                <div>
-                  <Label htmlFor="qt-mark-quoting" className="cursor-pointer text-sm font-medium">
-                    同时把客户标记为「报价中」
-                  </Label>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    仅在客户处于待开发 / 已联系 / 已回复 / 有意向时推进，不会覆盖谈判中 / 成交 / 流失等更靠后的状态。
-                  </p>
-                </div>
-              </div>
-            ) : null}
           </DialogBody>
 
           <DialogFooter>

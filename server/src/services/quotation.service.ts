@@ -9,9 +9,9 @@
  * 金额可信性：items[].amount 与 totalAmount 一律由 computeQuotationTotals 重算，
  * 前端传入的金额在校验层已被剥离，服务层不会采信。
  *
- * 客户状态联动：仅在「显式确认」（markCustomerAsQuoting=true）时，把处于
- * 报价中之前阶段的客户推进到「报价中」，复用 customer.service.updateCustomer
- * （内含改动快照 + Timeline 事件记录）；普通编辑绝不改动客户销售状态。
+ * 客户状态联动：报价单是系统操作，客户状态由系统按报价进度自动推进：
+ * 草稿不改，发送/谈判中/已接受分别推进到报价中/谈判中/已成交；
+ * 只升级不下级，复用 customer.service.updateCustomer 记录 Timeline。
  */
 import { Types, type FilterQuery } from 'mongoose';
 import {
@@ -304,18 +304,21 @@ export async function getCustomerQuotation(customerId: string, quotationId: stri
 /* 增 / 改 / 删                                                        */
 /* ------------------------------------------------------------------ */
 
-/** 显式联动：把处于报价中之前阶段的客户推进到「报价中」（best-effort，失败不阻断主流程） */
-async function linkCustomerToQuoting(
+/** 显式联动：把客户按报价进度推进（best-effort，失败不阻断主流程） */
+async function linkCustomerToQuotationStage(
   customerId: string,
   currentStatus: CustomerStatus | undefined,
+  target: 'quoting' | 'negotiating' | 'won',
   actor?: AuthUser,
 ): Promise<void> {
-  if (!currentStatus || !QUOTING_LINKABLE_FROM.includes(currentStatus)) return;
+  if (!currentStatus || currentStatus === 'won') return;
+  if (target === 'quoting' && !QUOTING_LINKABLE_FROM.includes(currentStatus)) return;
+  if (target === 'negotiating' && ['negotiating', 'won', 'lost'].includes(currentStatus)) return;
   try {
     // 复用成熟的状态更新逻辑：内部会做改动快照 + 写入 Timeline 状态变化事件
-    await updateCustomer(customerId, { status: 'quoting' }, actor);
+    await updateCustomer(customerId, { status: target }, actor, { systemStatus: true });
   } catch (error) {
-    logger.warn(`联动客户状态为「报价中」失败（已忽略）: customer=${customerId} ${(error as Error).message}`);
+    logger.warn(`联动客户状态为「${target}」失败（已忽略）: customer=${customerId} ${(error as Error).message}`);
   }
 }
 
@@ -359,8 +362,8 @@ export async function createQuotation(
     mapWriteError(error);
   }
 
-  if (input.markCustomerAsQuoting) {
-    await linkCustomerToQuoting(String(customer._id), customer.status, actor);
+  if (input.status !== 'draft' || input.markCustomerAsQuoting) {
+    await linkCustomerToQuotationStage(String(customer._id), customer.status, 'quoting', actor);
   }
 
   logger.info(`新建报价单: ${doc.quotationNo} customer=${customerId} total=${totalAmount} ${input.currency}`);
@@ -438,8 +441,15 @@ export async function updateQuotationStatus(
   );
   if (!doc) throw ApiError.notFound('报价单不存在或无权修改');
 
-  if (input.markCustomerAsQuoting) {
-    await linkCustomerToQuoting(String(customer._id), customer.status, actor);
+  const nextStage = input.status === 'accepted'
+    ? 'won'
+    : input.status === 'negotiating'
+      ? 'negotiating'
+      : (input.status === 'sent' || input.markCustomerAsQuoting)
+        ? 'quoting'
+        : null;
+  if (nextStage) {
+    await linkCustomerToQuotationStage(String(customer._id), customer.status, nextStage, actor);
   }
 
   logger.info(`更新报价单状态: ${doc.quotationNo} -> ${input.status}`);

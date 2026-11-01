@@ -59,8 +59,7 @@ import {
 } from '@/lib/excel';
 import { useCustomerStore } from '@/store/customer.store';
 import { cn } from '@/lib/utils';
-import { CUSTOMER_STATUS_OPTIONS } from '@/constants';
-import type { CustomerStatus, ImportFailure, ImportResult, ImportWarning } from '@/types';
+import type { ImportFailure, ImportResult, ImportWarning } from '@/types';
 
 type Step = 'file' | 'map' | 'check' | 'done';
 
@@ -135,7 +134,8 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
   const [target, setTarget] = React.useState<ImportTarget>('prospect');
   const effectiveTarget: ImportTarget = lockTarget ? 'prospect' : target;
   const [onDuplicate, setOnDuplicate] = React.useState<'skip' | 'update'>('skip');
-  const [defaultStatus, setDefaultStatus] = React.useState<CustomerStatus>('pending');
+  // 客户状态由系统根据真实操作推进；导入不再允许指定初始开发状态。
+  const defaultStatus = 'pending' as const;
   const [importResult, setImportResult] = React.useState<ImportResult | null>(null);
   /** 预检结果（dryRun），确认后才真正写入 */
   const [checkResult, setCheckResult] = React.useState<ImportResult | null>(null);
@@ -163,7 +163,6 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
     setCheckResult(null);
     setTarget('prospect');
     setOnDuplicate('skip');
-    setDefaultStatus('pending');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
@@ -508,31 +507,6 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
                   </Select>
                   <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
                     有邮箱时按邮箱判重，无邮箱时按「姓名 + 公司」判重。
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="import-status" className="text-xs">
-                    默认开发状态
-                  </Label>
-                  <Select
-                    value={defaultStatus}
-                    onValueChange={(value) => setDefaultStatus(value as CustomerStatus)}
-                    disabled={mutating}
-                  >
-                    <SelectTrigger id="import-status" className="mt-1.5 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CUSTOMER_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="text-xs">
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
-                    仅对 Excel 中「状态」列为空或未识别的行生效。
                   </p>
                 </div>
               </div>

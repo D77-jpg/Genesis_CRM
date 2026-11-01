@@ -237,6 +237,8 @@ export async function importMailCustomers(input: {
         // 这是客户主动来信建出来的档案；把实际最近来信时间写进最近联系，
         // 不能只把状态标成「已联系」却让列表显示「未联系」。
         lastContactAt: item.lastAt,
+        // 邮件来访是系统检测到真实往来后建立的档案，属于系统状态。
+        status: 'contacted',
       });
     } catch (error) {
       failures.push({ email: item.email, reason: error instanceof Error ? error.message : '建客户失败' });
