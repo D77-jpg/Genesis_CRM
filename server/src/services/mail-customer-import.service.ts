@@ -234,6 +234,9 @@ export async function importMailCustomers(input: {
       customer = await createCustomer(payload, input.actor, {
         source: 'mail',
         ...(item.ownerId ? { ownerId: item.ownerId } : {}),
+        // 这是客户主动来信建出来的档案；把实际最近来信时间写进最近联系，
+        // 不能只把状态标成「已联系」却让列表显示「未联系」。
+        lastContactAt: item.lastAt,
       });
     } catch (error) {
       failures.push({ email: item.email, reason: error instanceof Error ? error.message : '建客户失败' });

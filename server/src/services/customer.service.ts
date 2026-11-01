@@ -6,6 +6,7 @@ import { prepareMailDeletion, purgeCustomerMail } from './mail-cleanup.service';
  */
 import { Types, type AnyKeys, type FilterQuery } from 'mongoose';
 import { AgentCustomerAnalysis, AgentMailThreadAnalysis, Customer, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, Quotation, User, type CustomerDocument, type ICustomer } from '../models';
+import { MailMessage } from '../models/MailMessage';
 import { CUSTOMER_STATUS, type CustomerStatus, type CustomerSource } from '../constants';
 import { ApiError } from '../utils/ApiError';
 import { buildPaginated, parsePagination, sortableFields, type Paginated } from '../utils/pagination';
@@ -219,7 +220,7 @@ export async function getCustomer(id: string, actor?: AuthUser): Promise<Custome
 export async function createCustomer(
   input: CreateCustomerInput,
   actor?: AuthUser,
-  options?: { agentCreationKey?: string; source?: CustomerSource; ownerId?: string },
+  options?: { agentCreationKey?: string; source?: CustomerSource; ownerId?: string; lastContactAt?: Date },
 ): Promise<CustomerDto> {
   // 查重：邮箱撞库直接拒绝（DB 唯一索引兜底，这里提前拦并说清撞的是哪一位客户）。
   // 同网站 / 同公司名只提示不拦——同一家公司的第二个联系人也是正常业务。
@@ -235,6 +236,7 @@ export async function createCustomer(
     projectId: requireProjectId(actor),
     source: (options?.source ?? 'manual') as CustomerSource,
     createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
+    ...(options?.lastContactAt ? { lastContactAt: options.lastContactAt } : {}),
     ...(options?.agentCreationKey ? { agentCreationKey: options.agentCreationKey } : {}),
   };
   // 严格分配制：业务员新建的客户强制归自己，忽略传入 ownerId；管理员可自由指定
@@ -952,6 +954,48 @@ export async function migrateLegacyCustomerStatus(): Promise<number> {
     logger.info(`兼容迁移：已将 ${modified} 个旧「developed」客户状态迁移为「contacted」`);
   }
   return modified;
+}
+
+/**
+ * 兼容修复：早期「邮件来访」建客户时只把状态写成 contacted，
+ * 没有把真实最近来信时间写入 lastContactAt，导致列表出现
+ * 「已联系 + 未联系」的矛盾。这里从 MailMessage 回填一次。
+ */
+export async function migrateMailCustomerLastContact(): Promise<number> {
+  const customers = await Customer.find({
+    source: 'mail',
+    $or: [{ lastContactAt: { $exists: false } }, { lastContactAt: null }],
+  }).select('_id projectId').lean();
+  if (!customers.length) return 0;
+
+  let updated = 0;
+  const CHUNK = 500;
+  for (let i = 0; i < customers.length; i += CHUNK) {
+    const chunk = customers.slice(i, i + CHUNK);
+    const ids = chunk.map((customer) => customer._id);
+    const latest = await MailMessage.aggregate<{
+      _id: { projectId: Types.ObjectId; customerId: Types.ObjectId };
+      lastAt: Date;
+    }>([
+      { $match: { customerId: { $in: ids }, projectId: { $in: [...new Set(chunk.map((customer) => customer.projectId))] }, deleted: { $ne: true } } },
+      { $group: { _id: { projectId: '$projectId', customerId: '$customerId' }, lastAt: { $max: '$sentAt' } } },
+    ]);
+    for (const row of latest) {
+      if (!row.lastAt) continue;
+      const result = await Customer.updateOne(
+        {
+          _id: row._id.customerId,
+          projectId: row._id.projectId,
+          source: 'mail',
+          $or: [{ lastContactAt: { $exists: false } }, { lastContactAt: null }],
+        },
+        { $max: { lastContactAt: row.lastAt } },
+      );
+      updated += result.modifiedCount ?? 0;
+    }
+  }
+  if (updated > 0) logger.info(`兼容修复：已从邮件记录回填 ${updated} 个客户的最近联系时间`);
+  return updated;
 }
 
 /**

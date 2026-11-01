@@ -518,7 +518,9 @@ export function CustomerTable({
                       <TooltipContent>{formatDateTime(customer.lastContactAt)}</TooltipContent>
                     </Tooltip>
                   ) : (
-                    <span>未联系</span>
+                    <span title={customer.status !== 'pending' ? '状态已标记为已联系，但还没有实际联系时间记录' : undefined}>
+                      {customer.status === 'pending' ? '未联系' : '未记录'}
+                    </span>
                   )}
                 </TableCell>
 
