@@ -1424,6 +1424,7 @@ export interface OutreachAutomationRecentRow {
 
 export interface OutreachAutomationOverview {
   config: OutreachAutomationConfig;
+  windowOpen: boolean;
   mailbox: OutreachAutomationMailbox | null;
   stats: {
     eligible: number;

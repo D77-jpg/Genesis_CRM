@@ -68,6 +68,7 @@ export interface OutreachAutomationRecentRow {
 
 export interface OutreachAutomationOverview {
   config: OutreachAutomationConfigDto;
+  windowOpen: boolean;
   mailbox: {
     email: string;
     displayName: string;
@@ -141,6 +142,19 @@ export function isWithinSendWindow(
   const start = startHour * 60 + startMinute;
   const end = endHour * 60 + endMinute;
   return start <= end ? minutes >= start && minutes <= end : minutes >= start || minutes <= end;
+}
+
+/** 下一个实际可发送的时间；周末和夜间会顺延到下一个工作日时段。 */
+export function nextSendWindow(
+  config: Pick<OutreachAutomationConfigDto, 'windowStart' | 'windowEnd' | 'timezone'>,
+  from: Date,
+): Date {
+  const startAt = new Date(from);
+  for (let minute = 0; minute <= 8 * 24 * 60; minute += 1) {
+    const candidate = new Date(startAt.getTime() + minute * 60_000);
+    if (isWithinSendWindow(config, candidate)) return candidate;
+  }
+  return startAt;
 }
 
 function configDto(doc: InstanceType<typeof OutreachAutomationConfig>): OutreachAutomationConfigDto {
@@ -417,9 +431,11 @@ export async function getOutreachAutomationOverview(actor: AuthUser, targetUserI
   const enrolled = grouped.reduce((total, row) => total + Number(row.count), 0);
   const sentTodayBucket = await OutreachAutomationDay.findOne({ campaignId: config._id, day: dayIn(config.timezone, now) }).lean();
   const sentToday = Number(sentTodayBucket?.sent ?? 0);
+  const windowOpen = isWithinSendWindow(configDto(config), now);
 
   return {
     config: configDto(config),
+    windowOpen,
     mailbox: mailbox.account ? {
       email: mailbox.account.email,
       displayName: mailbox.account.displayName,
@@ -456,12 +472,14 @@ export async function getOutreachAutomationOverview(actor: AuthUser, targetUserI
       const draftReady = nextLetterStatus === 'draft';
       const hasTask = queueTaskMap.has(key);
       const nextRunAt = new Date(row.nextRunAt);
+      const effectiveAt = nextSendWindow(configDto(config), nextRunAt.getTime() > now.getTime() ? nextRunAt : now);
       let phase: OutreachAutomationQueueRow['phase'];
       if (row.status === 'completed' || actualStep >= MAX_AUTO_STEPS) phase = 'completed';
       else if (row.status === 'paused') phase = 'paused';
       else if (row.status === 'blocked') phase = 'blocked';
       else if (row.status === 'failed') phase = 'failed';
       else if (nextRunAt.getTime() > now.getTime()) phase = 'waiting';
+      else if (!windowOpen) phase = 'waiting';
       else if (nextLetterStatus === 'draft') phase = 'ready';
       else if (nextLetterStatus) phase = 'sending';
       else if (hasTask) phase = 'generating';
@@ -480,7 +498,7 @@ export async function getOutreachAutomationOverview(actor: AuthUser, targetUserI
         nextStep,
         phase,
         draftReady,
-        nextRunAt: nextRunAt.toISOString(),
+        nextRunAt: effectiveAt.toISOString(),
         ...(row.lastError ? { lastError: row.lastError } : {}),
         ...(row.lastSentAt ? { lastSentAt: new Date(row.lastSentAt).toISOString() } : {}),
       };
@@ -696,6 +714,7 @@ async function processEnrollment(
   enrollment: InstanceType<typeof OutreachAutomationEnrollment>,
   actor: AuthUser,
   now: Date,
+  allowSend: boolean,
 ): Promise<{ sent: boolean; queued?: boolean }> {
   const customer = await Customer.findOne({
     _id: enrollment.customerId,
@@ -805,6 +824,14 @@ async function processEnrollment(
     await markEnrollment(enrollment._id, { status: 'failed', lastError: '草稿内容不完整或仍有未替换的占位符' });
     return { sent: false };
   }
+  if (!allowSend) {
+    // 夜间/周末仍然可以准备下一封草稿，但不能越过发送时段。
+    await markEnrollment(enrollment._id, {
+      nextRunAt: nextSendWindow(configDto(config), now),
+      lastError: null,
+    });
+    return { sent: false };
+  }
   if (await domainAtLimit(config._id, draft.recipientEmail, config.perDomainLimit, now)) {
     await markEnrollment(enrollment._id, { nextRunAt: new Date(now.getTime() + 30 * 60_000) });
     return { sent: false };
@@ -896,7 +923,7 @@ export async function tickOutreachAutomation(now = new Date()): Promise<void> {
         continue;
       }
 
-      if (!isWithinSendWindow(configDto(config), now)) continue;
+      const allowSend = isWithinSendWindow(configDto(config), now);
       const today = await OutreachAutomationDay.findOne({
         campaignId: config._id,
         day: dayIn(config.timezone, now),
@@ -918,7 +945,7 @@ export async function tickOutreachAutomation(now = new Date()): Promise<void> {
       }).sort({ nextRunAt: 1 }).limit(20);
 
       for (const row of rows) {
-        const result = await processEnrollment(config, row, actor, now);
+        const result = await processEnrollment(config, row, actor, now, allowSend);
         if (result.sent || result.queued) break;
       }
     }
