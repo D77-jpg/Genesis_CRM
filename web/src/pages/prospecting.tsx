@@ -376,11 +376,9 @@ export function ProspectingPage(): React.JSX.Element {
         actions={
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => setImportOpen(true)}><FileSpreadsheet className="h-4 w-4" aria-hidden />导入线索</Button>
+            <Button type="button" variant="outline" onClick={() => setEnrichOpen(true)} title={isAdmin ? undefined : '只处理公共线索池和你自己名下的线索'}><Wand2 className="h-4 w-4" aria-hidden />批量补全</Button>
             {isAdmin ? (
-              <>
-                <Button type="button" variant="outline" onClick={() => setEnrichOpen(true)}><Wand2 className="h-4 w-4" aria-hidden />批量补全</Button>
-                <Button type="button" variant="outline" onClick={() => void openConfig()}><Settings2 className="h-4 w-4" aria-hidden />搜索设置</Button>
-              </>
+              <Button type="button" variant="outline" onClick={() => void openConfig()}><Settings2 className="h-4 w-4" aria-hidden />搜索设置</Button>
             ) : null}
             <Button type="button" onClick={() => void openRun()} disabled={run?.status === 'running'}>
               {run?.status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
