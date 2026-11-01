@@ -27,6 +27,7 @@ const CustomerDetailPage = React.lazy(() =>
   import('@/pages/customer-detail').then((m) => ({ default: m.CustomerDetailPage })),
 );
 const ProspectingPage = React.lazy(() => import('@/pages/prospecting').then((m) => ({ default: m.ProspectingPage })));
+const OutreachAutomationPage = React.lazy(() => import('@/pages/outreach-automation').then((m) => ({ default: m.OutreachAutomationPage })));
 const MailPage = React.lazy(() => import('@/pages/mail').then(m => ({ default: m.MailPage })));
 const LettersPage = React.lazy(() => import('@/pages/letters').then((m) => ({ default: m.LettersPage })));
 const KnowledgePage = React.lazy(() => import('@/pages/knowledge').then(m=>({default:m.KnowledgePage})));
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
       { path: 'customers', element: withSuspense(<CustomersPage />) },
       { path: 'customers/:id', element: withSuspense(<CustomerDetailPage />) },
       { path: 'prospecting', element: withSuspense(<ProspectingPage />) },
+      { path: 'outreach-automation', element: withSuspense(<OutreachAutomationPage />) },
       { path: 'mail', element: withSuspense(<MailPage />) },
       { path: 'letters', element: withSuspense(<LettersPage />) },
       { path: 'knowledge', element: withSuspense(<KnowledgePage />) },

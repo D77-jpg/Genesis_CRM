@@ -4,6 +4,7 @@ import {stopAgentTaskWorker} from './services/agent/task.service';
 import {semanticPool} from './services/knowledge/embedding';
 import {startProspectingScheduler, stopProspectingScheduler} from './services/prospecting/scheduler';
 import {startOutreachFollowUpWorker} from './services/outreach-followup.service';
+import {startOutreachAutomationWorker, stopOutreachAutomationWorker} from './services/outreach-automation.service';
 /**
  * 服务启动入口
  * ------------------------------------------------------------------
@@ -24,7 +25,7 @@ import { createApp } from './app';
 import { beginShutdown } from './services/runtime-state';
 import { runMailQueue } from './services/mail-queue.service';
 import { syncInbox } from './services/mail-sync.service';
-import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, Product, Project, ProjectPlaybook, Quotation, Scratchpad, User, UserMailAccount } from './models';
+import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, OutreachAutomationConfig, OutreachAutomationDay, OutreachAutomationEnrollment, Product, Project, ProjectPlaybook, Quotation, Scratchpad, User, UserMailAccount } from './models';
 import { MailMessage, MailSyncState } from './models/MailMessage';
 
 const mailTimers: NodeJS.Timeout[] = [];
@@ -43,7 +44,8 @@ async function bootstrap(): Promise<void> {
       FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Product.init(), ProjectPlaybook.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),
       AgentSession.init(), AgentMessage.init(), AgentRun.init(), AgentAction.init(), AgentCustomerPreview.init(),
       KnowledgeFeedback.init(), KnowledgeTrainingState.init(),
-      UserMailAccount.init(), MailQuotaBucket.init(), MailAccountAudit.init()]);
+      UserMailAccount.init(), MailQuotaBucket.init(), MailAccountAudit.init(),
+      OutreachAutomationConfig.init(), OutreachAutomationEnrollment.init(), OutreachAutomationDay.init()]);
     const app = createApp();
     const server = http.createServer(app);
     // 邮箱连通性检查可能受网络、防火墙或上游超时影响，不能阻塞 CRM 登录与启动。
@@ -56,6 +58,7 @@ async function bootstrap(): Promise<void> {
     mailTimers.push(setInterval(() => void syncInbox(), env.IMAP_SYNC_INTERVAL_MS));
     startProspectingScheduler();
     startOutreachFollowUpWorker();
+    startOutreachAutomationWorker();
 
     server.listen(env.PORT, env.HOST, () => {
       logger.info('==============================================');
@@ -99,6 +102,7 @@ function registerShutdown(server: http.Server): void {
     beginShutdown();
     mailTimers.forEach(clearInterval);
     stopProspectingScheduler();
+    stopOutreachAutomationWorker();
     stopAgentTaskWorker();stopKnowledgeDocumentWorker();stopKnowledgeIndexWorker();semanticPool.close();
     logger.info(`收到 ${signal}，开始优雅停机...`);
 

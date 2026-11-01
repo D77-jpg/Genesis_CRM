@@ -8,6 +8,7 @@ import * as React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import {
   BookOpen,
+  Bot,
   FileText,
   FolderKanban,
   LayoutDashboard,
@@ -41,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.dashboard, label: '仪表盘', icon: LayoutDashboard, end: true },
   { to: ROUTES.customers, label: '客户管理', icon: Users, end: false },
   { to: ROUTES.prospecting, label: '今日开发', icon: Target, end: false },
+  { to: ROUTES.outreachAutomation, label: '自动开发', icon: Bot, end: false },
   { to: '/mail', label: '邮件中心', icon: Mail, end: false },
   { to: ROUTES.letters, label: '开发信记录', icon: Mail, end: false },
   { to: '/knowledge', label: '知识库', icon: BookOpen, end: false },

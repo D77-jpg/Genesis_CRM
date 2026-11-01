@@ -1370,3 +1370,75 @@ export interface DraftCleanupResult extends DraftCleanupPreview {
   updated: number;
   failed: { customerId: string; message: string }[];
 }
+
+/* ---------------------------- 自动开发 ---------------------------- */
+
+export interface OutreachAutomationConfig {
+  id: string;
+  enabled: boolean;
+  pausedReason?: string;
+  dailyLimit: number;
+  perDomainLimit: number;
+  windowStart: string;
+  windowEnd: string;
+  timezone: string;
+  version: number;
+}
+
+export interface OutreachAutomationMailbox {
+  email: string;
+  displayName: string;
+  channel: 'mock' | 'smtp';
+  canSend: boolean;
+  reason?: string;
+  usedToday: number;
+  dailyLimit: number;
+}
+
+export interface OutreachAutomationQueueRow {
+  id: string;
+  customerId: string;
+  customerName: string;
+  company?: string;
+  email?: string;
+  customerStatus: string;
+  status: 'active' | 'paused' | 'blocked' | 'completed' | 'failed';
+  currentStep: number;
+  nextStep: number;
+  nextRunAt: string;
+  lastError?: string;
+  lastSentAt?: string;
+}
+
+export interface OutreachAutomationRecentRow {
+  letterId: string;
+  customerId: string;
+  customerName: string;
+  step: number;
+  sentAt: string;
+  status: LetterStatus;
+}
+
+export interface OutreachAutomationOverview {
+  config: OutreachAutomationConfig;
+  mailbox: OutreachAutomationMailbox | null;
+  stats: {
+    eligible: number;
+    enrolled: number;
+    active: number;
+    paused: number;
+    completed: number;
+    blocked: number;
+    failed: number;
+    sentToday: number;
+    remainingToday: number;
+  };
+  queue: OutreachAutomationQueueRow[];
+  recent: OutreachAutomationRecentRow[];
+}
+
+export interface OutreachAutomationStartResult {
+  enrolled: number;
+  skipped: number;
+  overview: OutreachAutomationOverview;
+}

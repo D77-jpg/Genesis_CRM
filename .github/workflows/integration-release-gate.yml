@@ -49,6 +49,7 @@ jobs:
           npm run test:scratchpad
           npm run test:agent
           npm run test:prospecting
+          npm run test:outreach-automation
           npm run test:security
           npm run test:health
           npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/prospecting-profiles.test.ts tests/prospecting.test.ts tests/security-hardening.test.ts tests/health-readiness.test.ts

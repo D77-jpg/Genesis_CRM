@@ -262,6 +262,59 @@ async function requestKeyForStep(projectId: Types.ObjectId, customerId: string, 
   return existing ? `${base}:retry-${randomUUID()}` : base;
 }
 
+export interface OutreachStepQueueResult {
+  created: boolean;
+  step: OutreachStep;
+  taskId?: string;
+  letterId?: string;
+}
+
+/**
+ * Queue just one sequence step for the autopilot. Manual “补齐三封” still
+ * uses queueOutreachSequence and creates every missing draft up front; the
+ * autopilot generates only the next step so a reply or new information can
+ * stop the sequence before a later draft exists.
+ */
+export async function queueOutreachStep(
+  actor: AuthUser,
+  customerId: string,
+  step: OutreachStep,
+): Promise<OutreachStepQueueResult> {
+  const preview = await previewOutreachSequence(actor, [customerId]);
+  const plan = preview.plans[0];
+  if (!plan) throw ApiError.notFound('客户不存在或无权访问');
+  if (plan.skipReason) throw ApiError.conflict(plan.skipReason);
+
+  const projectId = requireProjectId(actor);
+  const existing = await DevelopmentLetter.findOne({
+    projectId,
+    customerId: new Types.ObjectId(customerId),
+    outreachStep: step,
+    status: { $in: [...OCCUPIED_LETTER_STATUSES, ...SENT_STATUSES] },
+  }).select('_id').lean();
+  if (existing) return { created: false, step, letterId: String(existing._id) };
+  if (!plan.missingSteps.includes(step)) {
+    throw ApiError.conflict(`第 ${step} 封不需要补生成，请先核对当前开发进度`);
+  }
+
+  const project = await Project.findById(projectId)
+    .select('code slug name companyName industry website mailFrom senderName')
+    .lean();
+  const salesProfile = resolveProjectSalesProfile(project);
+  const session = await createAgentSession({
+    context: { type: 'customer', resourceId: customerId },
+    title: `自动开发 · ${plan.name} · 第 ${step} 封`,
+  }, actor);
+  const task = await createAgentTask({
+    sessionId: session.id,
+    goal: outreachStepGoal(salesProfile, step),
+    requestKey: await requestKeyForStep(projectId, customerId, step),
+    customerId,
+    outreachStep: step,
+  }, actor);
+  return { created: true, step, taskId: task.id };
+}
+
 /**
  * Queue only the missing steps. Every task goes through the same draft-only
  * agent workflow as a newly converted prospect; nothing is sent automatically.

@@ -470,6 +470,8 @@ async function persistAndSend(options: {
   references?: string[];
   templateAttribution?: TemplateAttribution;
   agentTaskId?:Types.ObjectId;
+  automationCampaignId?: Types.ObjectId;
+  automationEnrollmentId?: Types.ObjectId;
   knowledgeReview?:KnowledgeReview;
   knowledgeRechecks?:Record<string,unknown>[];
   agentDraftId?:Types.ObjectId;
@@ -540,6 +542,8 @@ async function persistAndSend(options: {
   if (saveAsDraft) {
     const payload = {
       ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
+      ...(options.automationCampaignId?{automationCampaignId:options.automationCampaignId}:{}),
+      ...(options.automationEnrollmentId?{automationEnrollmentId:options.automationEnrollmentId}:{}),
       ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
       ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
       ...(outreachStep ? {outreachStep} : {}),
@@ -629,6 +633,8 @@ async function persistAndSend(options: {
     }, {
       $set: {
         ...(options.agentTaskId ? { agentTaskId: options.agentTaskId } : {}),
+        ...(options.automationCampaignId ? { automationCampaignId: options.automationCampaignId } : {}),
+        ...(options.automationEnrollmentId ? { automationEnrollmentId: options.automationEnrollmentId } : {}),
         ...(options.agentDraftId ? { agentDraftId: options.agentDraftId } : {}),
         ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
         ...(knowledgeReview ? { knowledgeReview } : {}),
@@ -666,6 +672,8 @@ async function persistAndSend(options: {
     try {
       letter = await DevelopmentLetter.findOneAndUpdate({ requestKey, projectId: customer.projectId }, { $setOnInsert: {
         ...(options.agentTaskId?{agentTaskId:options.agentTaskId}:{}),
+        ...(options.automationCampaignId?{automationCampaignId:options.automationCampaignId}:{}),
+        ...(options.automationEnrollmentId?{automationEnrollmentId:options.automationEnrollmentId}:{}),
         ...(options.agentDraftId?{agentDraftId:options.agentDraftId}:{}),
         ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
         ...(knowledgeReview ? {knowledgeReview} : {}),
@@ -807,6 +815,7 @@ export async function resendLetter(
   letterId: string,
   input: ResendLetterInput,
   actor?: AuthUser,
+  automation?: { campaignId: Types.ObjectId; enrollmentId: Types.ObjectId },
 ): Promise<SendLetterResult> {
   if (!Types.ObjectId.isValid(letterId)) throw ApiError.badRequest('开发信 ID 格式不正确');
 
@@ -871,6 +880,8 @@ export async function resendLetter(
     subjectTemplate,
     contentTemplate,
     agentTaskId:original.agentTaskId,
+    automationCampaignId: automation?.campaignId,
+    automationEnrollmentId: automation?.enrollmentId,
     // A draft is promoted in place; a sent record keeps its historical draft
     // association when a new resend row is created.
     agentDraftId:original.agentDraftId??(original.status!=='draft'?original._id:undefined),
@@ -894,6 +905,39 @@ export async function resendLetter(
 /* ------------------------------------------------------------------ */
 /* 草稿审核                                                             */
 /* ------------------------------------------------------------------ */
+
+/**
+ * 自动开发专用：在发送前把通过硬性依据校验的草稿标记为自动批准。
+ *
+ * 这不是伪造人工审核：audit 数值会记录 automation:<campaign>，且只会在
+ * 自动开发活动被显式开启时调用。依据过期、冲突、检索失败等硬拦截仍然
+ * 会在这里拒绝，自动发送只能绕过“需要人工看一眼”的软闸门。
+ */
+export async function approveDraftForAutomation(
+  letterId: string,
+  actor: AuthUser,
+  campaignId: string,
+): Promise<void> {
+  if (!Types.ObjectId.isValid(letterId)) throw ApiError.badRequest('开发信 ID 格式不正确');
+  const letter = await DevelopmentLetter.findOne({ _id: letterId, ...projectScope(actor), status: 'draft' });
+  if (!letter) throw ApiError.conflict('自动发送草稿不存在或状态已变化');
+  if (!letter.knowledgeReview) return;
+  const blocker = knowledgeReviewHardBlocker(letter.knowledgeReview);
+  if (blocker) throw ApiError.conflict(`自动发送已阻止：${blocker}`);
+  if (!letter.knowledgeReview.manualApprovedAt) {
+    const at = new Date().toISOString();
+    await DevelopmentLetter.updateOne(
+      { _id: letter._id, projectId: letter.projectId, status: 'draft' },
+      {
+        $set: {
+          'knowledgeReview.manualApprovedAt': at,
+          'knowledgeReview.manualApprovedBy': `automation:${campaignId}`,
+        },
+        $push: { history: { at: new Date(), status: 'auto_approved', error: '自动开发已通过依据闸门' } },
+      },
+    );
+  }
+}
 
 /**
  * 草稿审核：通过 / 不通过 / 撤销结论。

@@ -49,6 +49,7 @@ export const ROUTES = {
   customers: '/customers',
   customerDetail: '/customers/:id',
   prospecting: '/prospecting',
+  outreachAutomation: '/outreach-automation',
   letters: '/letters',
   templates: '/templates',
   products: '/products',
