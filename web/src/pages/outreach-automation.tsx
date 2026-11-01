@@ -47,25 +47,82 @@ const TIMEZONES = [
   ['America/Los_Angeles', '洛杉矶时间'],
 ] as const;
 
-const QUEUE_STATUS: Record<OutreachAutomationQueueRow['status'], { label: string; variant: 'outline' | 'warning' | 'failed' | 'muted' }> = {
-  active: { label: '自动进行中', variant: 'outline' },
-  paused: { label: '已暂停', variant: 'warning' },
-  blocked: { label: '已停止', variant: 'failed' },
-  completed: { label: '三封已完成', variant: 'muted' },
-  failed: { label: '需要处理', variant: 'failed' },
+const PHASE_META: Record<
+  OutreachAutomationQueueRow['phase'],
+  { label: (step: number) => string; variant: 'outline' | 'warning' | 'failed' | 'muted' | 'developed' }
+> = {
+  waiting: { label: (step) => `等待第 ${step} 封`, variant: 'outline' },
+  generating: { label: (step) => `正在准备第 ${step} 封`, variant: 'warning' },
+  ready: { label: (step) => `待发送第 ${step} 封`, variant: 'warning' },
+  sending: { label: (step) => `正在发送第 ${step} 封`, variant: 'outline' },
+  due: { label: (step) => `等待发送第 ${step} 封`, variant: 'warning' },
+  paused: { label: () => '已暂停', variant: 'warning' },
+  blocked: { label: () => '已停止', variant: 'failed' },
+  completed: { label: () => '三封已完成', variant: 'developed' },
+  failed: { label: () => '需要处理', variant: 'failed' },
 };
 
 function formatWindow(config: OutreachAutomationConfig): string {
   return `${config.windowStart}–${config.windowEnd}`;
 }
 
-function queueNextLabel(row: OutreachAutomationQueueRow): string {
-  if (row.status === 'completed') return '已完成';
-  if (row.status === 'blocked') return '已停止';
-  if (row.status === 'failed') return '等待处理';
-  if (row.status === 'paused') return '等待恢复';
-  return formatRelative(row.nextRunAt);
+function phaseBadge(row: OutreachAutomationQueueRow): { label: string; variant: 'outline' | 'warning' | 'failed' | 'muted' | 'developed' } {
+  const meta = PHASE_META[row.phase];
+  return { label: meta.label(row.nextStep), variant: meta.variant };
 }
+
+function nextActionLabel(row: OutreachAutomationQueueRow): string {
+  switch (row.phase) {
+    case 'waiting':
+      return `${formatRelative(row.nextRunAt)}（${formatDateTime(row.nextRunAt)}）${row.draftReady ? ' · 草稿已准备' : ''}`;
+    case 'generating':
+      return '正在生成草稿，完成后自动发送';
+    case 'ready':
+      return '草稿已就绪，等待发送队列';
+    case 'sending':
+      return '正在通过 SMTP 发送';
+    case 'due':
+      return '已到发送时间，正在排队等待自动处理';
+    case 'paused':
+      return '恢复后继续下一封';
+    case 'failed':
+      return '请查看原因后恢复';
+    case 'blocked':
+      return '已停止营销联系';
+    case 'completed':
+    default:
+      return '—';
+  }
+}
+
+function StepProgress({ row }: { row: OutreachAutomationQueueRow }): React.JSX.Element {
+  const active = ['waiting', 'generating', 'ready', 'sending', 'due'].includes(row.phase);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1" role="img" aria-label={`已发送 ${row.actualStep} 封，共 3 封`}>
+          {[1, 2, 3].map((step) => (
+            <span
+              key={step}
+              className={`h-1.5 w-6 rounded-full ${
+                step <= row.actualStep
+                  ? 'bg-emerald-500'
+                  : active && step === row.nextStep
+                    ? 'bg-amber-400'
+                    : 'bg-muted'
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-xs tabular-nums text-muted-foreground">已发 {row.actualStep}/3 封</span>
+      </div>
+      <p className="text-[11px] leading-4 text-muted-foreground">
+        {row.actualStep >= 3 ? '三封已完成' : `下一封：第 ${row.nextStep} 封`}
+      </p>
+    </div>
+  );
+}
+
 
 export function OutreachAutomationPage(): React.JSX.Element {
   usePageTitle('自动开发');
@@ -449,7 +506,7 @@ export function OutreachAutomationPage(): React.JSX.Element {
                       </TableHeader>
                       <TableBody>
                         {overview.queue.map((row) => {
-                          const status = QUEUE_STATUS[row.status];
+                          const status = phaseBadge(row);
                           const controllable = row.status === 'active' || row.status === 'paused' || row.status === 'failed';
                           return (
                             <TableRow key={row.id}>
@@ -459,16 +516,15 @@ export function OutreachAutomationPage(): React.JSX.Element {
                                 </Link>
                                 <p className="mt-0.5 truncate text-xs text-muted-foreground">{row.company || row.email || '—'}</p>
                               </TableCell>
-                              <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                                {row.currentStep > 0 ? `已发 ${row.currentStep} 封` : '准备第 1 封'}
+                              <TableCell className="min-w-[9.5rem] whitespace-nowrap">
+                                <StepProgress row={row} />
                               </TableCell>
                               <TableCell>
                                 <Badge variant={status.variant}>{status.label}</Badge>
                                 {row.lastError ? <p className="mt-1 max-w-[14rem] text-[11px] leading-4 text-destructive">{row.lastError}</p> : null}
                               </TableCell>
-                              <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                                {queueNextLabel(row)}
-                                {row.status === 'active' ? <span className="mt-1 block text-[11px] text-muted-foreground/80">{formatDateTime(row.nextRunAt)}</span> : null}
+                              <TableCell className="min-w-[12rem] text-xs text-muted-foreground">
+                                {nextActionLabel(row)}
                               </TableCell>
                               <TableCell className="text-right">
                                 {controllable ? (
