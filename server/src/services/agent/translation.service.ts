@@ -36,6 +36,7 @@ interface IndexTranslateResponse {
 function cacheKey(input: { subject?: string; body: string }): string {
   return createHash('sha256')
     .update(JSON.stringify({
+      provider: env.TRANSLATE_PROVIDER,
       baseUrl: env.TRANSLATE_BASE_URL,
       model: env.TRANSLATE_MODEL,
       subject: input.subject ?? '',
@@ -145,9 +146,13 @@ export async function translateLetter(input: { subject?: string; body: string })
   if (hit) return hit;
 
   let result: LetterTranslation;
-  try {
-    result = await translateWithIndex(input);
-  } catch {
+  if (env.TRANSLATE_PROVIDER === 'index') {
+    try {
+      result = await translateWithIndex(input);
+    } catch {
+      result = await translateWithAgent(input);
+    }
+  } else {
     result = await translateWithAgent(input);
   }
   remember(key, result);

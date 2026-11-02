@@ -81,7 +81,8 @@ export const envSchema = z.object({
   AI_DAILY_RUN_LIMIT: z.coerce.number().int().min(1).max(10000).default(100),
   AI_DAILY_TOKEN_LIMIT: z.coerce.number().int().min(1000).max(100000000).default(500000),
   AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(10000).default(3000),
-  /** 开发信中英对照使用独立翻译服务；失败时回退到上面的 AI Provider。 */
+  /** 开发信中英对照使用独立翻译服务；ai = 现有主模型，index = Index-Translate（失败回退 AI）。 */
+  TRANSLATE_PROVIDER: z.enum(['ai', 'index']).default('ai'),
   TRANSLATE_BASE_URL: z.string().url().default('https://index-translate.bilibili.com/v1'),
   TRANSLATE_MODEL: z.string().min(1).default('Index-Translate-35B-A3B'),
   TRANSLATE_API_KEY: z.string().optional(),
