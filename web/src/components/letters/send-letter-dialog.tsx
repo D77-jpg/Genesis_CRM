@@ -268,6 +268,7 @@ export function SendLetterDialog({
   /** 草稿审核结论与「审核时的那份内容」，用于判断通过后又改过东西 */
   const [review, setReview] = React.useState<LetterReview | null>(null);
   const [reviewBaseline, setReviewBaseline] = React.useState<{ subject: string; content: string; recipientEmail: string } | null>(null);
+  const [reviewStale, setReviewStale] = React.useState(false);
   const [reviewBusy, setReviewBusy] = React.useState(false);
   const reviewLock = React.useRef(false);
   /** 当前登录账号：固定结尾第一行取它的姓名（有个人发件邮箱时优先用邮箱显示名） */
@@ -329,6 +330,7 @@ export function SendLetterDialog({
 
     // 审核结论跟着草稿走；基线取打开时的内容，之后一旦改动就视为「需重新审核」
     setReview(letter?.review ?? null);
+    setReviewStale(Boolean(letter?.reviewStale));
     setReviewBaseline(letter ? { subject: values.subject, content: values.content, recipientEmail: values.recipientEmail } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在「打开 / 客户 / 原信」变化时重建表单
   }, [open, customerId, letterId, initialDraft?.analysisId, reply?.id, reset, signature, defaultTemplate]);
@@ -388,19 +390,25 @@ export function SendLetterDialog({
     if (activeTab !== 'bilingual' || !englishBody.trim()) return;
     if (translation && translationSource === translationKey) return;
     let cancelled = false;
-    setTranslating(true);
-    setTranslationError(null);
-    void apiPost<{ subject?: string; body: string }>('/agent/translate', { subject: preview.subject, body: englishBody })
-      .then((result) => {
-        if (cancelled) return;
-        setTranslation(result);
-        setTranslationSource(translationKey);
-      })
-      .catch((error) => {
-        if (!cancelled) setTranslationError(toErrorMessage(error, '翻译失败，请稍后重试'));
-      })
-      .finally(() => { if (!cancelled) setTranslating(false); });
-    return () => { cancelled = true; };
+    // 编辑时不要每个按键都打翻译接口，停顿一下再发请求。
+    const timer = window.setTimeout(() => {
+      setTranslating(true);
+      setTranslationError(null);
+      void apiPost<{ subject?: string; body: string }>('/agent/translate', { subject: preview.subject, body: englishBody })
+        .then((result) => {
+          if (cancelled) return;
+          setTranslation(result);
+          setTranslationSource(translationKey);
+        })
+        .catch((error) => {
+          if (!cancelled) setTranslationError(toErrorMessage(error, '翻译失败，请稍后重试'));
+        })
+        .finally(() => { if (!cancelled) setTranslating(false); });
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [activeTab, englishBody, preview.subject, translationKey, translation, translationSource]);
 
   const missingPlaceholders = React.useMemo(
@@ -419,8 +427,8 @@ export function SendLetterDialog({
   /* ---------------------------- 提交 ---------------------------- */
 
   const isDraftReview = letter?.status === 'draft';
-  /** 审核通过后又被编辑（含未保存的本地改动），旧审核即失效 */
-  const reviewDirty = Boolean(reviewBaseline) && (
+  /** 审核通过后又被编辑（含未保存的本地改动），或服务端发现当前发件人渲染结果已不一致 */
+  const reviewDirty = reviewStale || Boolean(reviewBaseline) && (
     (subject ?? '') !== reviewBaseline?.subject
     || (content ?? '') !== reviewBaseline?.content
     || (recipientEmail ?? '') !== reviewBaseline?.recipientEmail
@@ -484,6 +492,7 @@ export function SendLetterDialog({
           if (asDraft) {
             // 内容落库后审核基线随之更新；后端会清掉失效的通过结论
             setReview(result.letter.review ?? null);
+            setReviewStale(false);
             setReviewBaseline({ subject: result.letter.subject, content: values.content, recipientEmail: values.recipientEmail });
           }
           notifyLetterResult(result, asDraft);
@@ -492,7 +501,10 @@ export function SendLetterDialog({
           onOpenChange(false);
         } catch (error) {
           // store 已把后端错误转成中文提示，这里直接展示
-          setServerError(toErrorMessage(error, asDraft ? '保存草稿失败' : '开发信发送失败'));
+          const message = toErrorMessage(error, asDraft ? '保存草稿失败' : '开发信发送失败');
+          setServerError(message);
+          // 服务端发现审核后渲染内容变化（常见于换了发件人签名）：切到可重新审核的状态。
+          if (!asDraft && /审核后内容已变化|重新审核/.test(message)) setReviewStale(true);
         } finally { submitLock.current = false; }
       })();
     },
@@ -508,6 +520,7 @@ export function SendLetterDialog({
       try {
         const updated = await apiPost<DevelopmentLetter>(`/letters/${id}/review`, { decision: 'clear' });
         setReview(null);
+        setReviewStale(false);
         toast('已撤销标记', { description: '草稿回到待审核。' });
         onReviewed?.(updated);
       } catch (error) {
@@ -568,6 +581,7 @@ export function SendLetterDialog({
             recipientEmail: values.recipientEmail,
           });
           setReview(updated.review ?? null);
+          setReviewStale(false);
           setReviewBaseline({ subject: values.subject, content: values.content, recipientEmail: values.recipientEmail });
           onReviewed?.(updated);
 

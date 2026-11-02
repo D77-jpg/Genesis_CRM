@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { dayIn, isWithinSendWindow, localClock } from '../src/services/outreach-automation.service';
+import { dayIn, isWithinSendWindow, localClock, nextSendWindow } from '../src/services/outreach-automation.service';
 
 const window = { windowStart: '09:30', windowEnd: '17:30', timezone: 'Asia/Shanghai' };
 
@@ -20,4 +20,17 @@ test('automatic outreach computes the local calendar day and clock', () => {
   assert.equal(dayIn('Asia/Shanghai', now), '2026-11-02');
   assert.deepEqual(localClock('Asia/Shanghai', now), { minutes: 600, weekday: 1 });
   assert.equal(dayIn('America/New_York', now), '2026-11-01');
+});
+
+test('weekend and after-hours work rolls forward to the next weekday window', () => {
+  // Sunday 17:46 in Shanghai -> Monday 09:30.
+  assert.equal(
+    nextSendWindow(window, new Date('2026-11-01T09:46:00.000Z')).toISOString(),
+    '2026-11-02T01:30:00.000Z',
+  );
+  // Sunday follow-up due at 15:25 -> Monday 09:30.
+  assert.equal(
+    nextSendWindow(window, new Date('2026-11-08T07:25:00.000Z')).toISOString(),
+    '2026-11-09T01:30:00.000Z',
+  );
 });

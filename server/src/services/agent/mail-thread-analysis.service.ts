@@ -382,7 +382,7 @@ export async function applyMailCustomerStatus(id: string, input: ConfirmAgentAna
     if ((fresh.status === 'won' || fresh.status === 'lost') && locked.statusSuggestion.status !== fresh.status) {
       throw ApiError.conflict('客户终态已变化，禁止旧状态建议覆盖');
     }
-    await updateCustomer(String(locked.customerId), { status: locked.statusSuggestion.status }, actor);
+    await updateCustomer(String(locked.customerId), { status: locked.statusSuggestion.status }, actor, { systemStatus: true });
     const completed = await AgentMailThreadAnalysis.findOneAndUpdate({ _id: locked._id, ...identifiers, statusConfirmationKey: input.idempotencyKey }, { $set: { customerStatusUpdate: 'updated' }, $unset: { lastError: 1 }, $inc: { version: 1 } }, { new: true });
     if (!completed) throw ApiError.conflict('客户状态已更新，但审批状态同步失败，请刷新');
     await AgentAction.updateOne({ _id: action._id, ...identifiers }, { $set: { executionStatus: 'succeeded', resultSummary: `已更新客户状态为 ${locked.statusSuggestion.status}`, executedAt: new Date() } });

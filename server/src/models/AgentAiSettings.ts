@@ -8,6 +8,8 @@ export interface IAgentAiSettings {
   credentialCiphertext?: string;
   credentialIv?: string;
   credentialTag?: string;
+  /** 当前启用的多服务商配置；为空时回退到本单例配置/环境变量。 */
+  activeProviderId?: Schema.Types.ObjectId;
   updatedBy: Schema.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -23,6 +25,7 @@ const schema = new Schema<IAgentAiSettings>({
   credentialCiphertext: { type: String, select: false },
   credentialIv: { type: String, select: false },
   credentialTag: { type: String, select: false },
+  activeProviderId: { type: Schema.Types.ObjectId, ref: 'AgentAiProvider', default: null },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true, versionKey: false });
 

@@ -10,7 +10,7 @@
  * 一旦有回复，跟进停表（nextFollowUpAt 清空），不再提醒。
  *
  * 到期提醒本身不需要落库：列表按 nextFollowUpAt 实时算，
- * 同时复用客户主档的「下次跟进」，今日开发 / 客户管理的跟进视图自动联动。
+ * 同时复用客户主档的「下次跟进」，客户线索池 / 客户管理的跟进视图自动联动。
  */
 import mongoose from 'mongoose';
 import { OUTREACH_ABANDON_TAG, OUTREACH_FOLLOWUP_DAYS, OUTREACH_MAX_STEPS } from '../constants';

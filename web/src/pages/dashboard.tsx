@@ -131,7 +131,7 @@ export function DashboardPage(): React.JSX.Element {
             {!loading ? <RefreshCw className="h-3.5 w-3.5" aria-hidden /> : null}刷新
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link to={ROUTES.prospecting}><Target className="h-4 w-4" aria-hidden />今日开发</Link>
+            <Link to={ROUTES.prospecting}><Target className="h-4 w-4" aria-hidden />客户线索池</Link>
           </Button>
           <Button size="sm" onClick={() => openCustomers()}><Users className="h-4 w-4" aria-hidden />客户管理</Button>
         </>}

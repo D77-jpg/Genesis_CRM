@@ -340,7 +340,7 @@ export async function prospectingToday(
   const order: Record<string, number> = { ready: 0, needs_contact: 1, low: 2, rejected: 3, converted: 4 };
   const OPEN = ['ready', 'needs_contact', 'low'];
   const status = (options.status ?? 'all').trim() || 'all';
-  const limit = Math.min(500, Math.max(20, Number(options.limit) || 200));
+  const limit = Math.min(500, Math.max(10, Number(options.limit) || 200));
   const offset = Math.max(0, Number(options.offset) || 0);
   const actorId = new Types.ObjectId(actor.id);
   const requestedScope = options.scope ?? (actor.role === 'admin' ? 'all' : 'mine');
@@ -374,9 +374,9 @@ export async function prospectingToday(
   if (status !== 'all' && status !== 'converted') openFilter.status = status;
   const carried = status === 'converted'
     ? []
-    : await Prospect.find(openFilter).sort({ day: -1, score: -1 }).skip(offset).limit(limit)
+    : await Prospect.find(openFilter).sort({ day: -1, score: -1, _id: -1 }).skip(offset).limit(limit)
       .populate('ownerId', 'displayName username').lean();
-  const finished = status === 'all' || status === 'converted'
+  const finished = (status === 'all' || status === 'converted') && offset === 0
     ? await Prospect.find({ ...scoped, day, status: { $in: ['converted', 'rejected'] } })
       .populate('ownerId', 'displayName username').lean()
     : [];
@@ -531,7 +531,6 @@ export async function approveProspect(actor: AuthUser, id: string) {
   if (existingOwner && actor.role !== 'admin' && existingOwner !== actor.id) {
     throw ApiError.conflict('这条线索已被其他业务员领取');
   }
-  if (!prospect.emails.length) throw ApiError.badRequest('该候选还没有邮箱，请先人工补联系方式或直接跳过');
   // 转客户前查重：邮箱或网站撞上已有客户就是重复，直接拦下；同公司名的先提示
   const duplicateReport = await findCustomerDuplicates(
     projectId,
@@ -570,42 +569,43 @@ export async function approveProspect(actor: AuthUser, id: string) {
     claimed.customerId = new Types.ObjectId(customer.id);
     claimed.convertedBy = new Types.ObjectId(actor.id);
     await claimed.save();
-    // Queue the full three-email outreach sequence immediately; the agent
-    // worker picks the tasks up in creation order. Drafts only — sends remain manual.
-    // 目标必须从当前项目的销售画像生成，不能复用其他项目的行业话术。
-    const project = await Project.findById(projectId)
-      .select('code slug name companyName industry website mailFrom senderName')
-      .lean();
-    const salesProfile = resolveProjectSalesProfile(project);
+    // 有邮箱才排队三封开发信；没有邮箱也允许先转客户，后续补邮箱再生成。
     const draftTaskIds: string[] = [];
     let draftError: string | undefined;
-    try {
-      const session = await createAgentSession({
-        context: { type: 'customer', resourceId: customer.id },
-        title: `自动开发 · ${customer.name} · 三封`,
-      }, actor);
-      for (const step of [1, 2, 3] as const) {
-        try {
-          const task = await createAgentTask({
-            sessionId: session.id,
-            goal: outreachStepGoal(salesProfile, step),
-            requestKey: `prospect:${String(claimed._id)}:step${step}`,
-            customerId: customer.id,
-            outreachStep: step,
-          }, actor);
-          draftTaskIds.push(task.id);
-        } catch (error) {
-          draftError = `第 ${step} 封任务创建失败：${error instanceof Error ? error.message : '未知错误'}`;
-          logger.warn(`自动开发信序列第 ${step} 封任务创建失败：${String(claimed.domain)}`, draftError);
+    if (claimed.emails.length > 0) {
+      // 目标必须从当前项目的销售画像生成，不能复用其他项目的行业话术。
+      const project = await Project.findById(projectId)
+        .select('code slug name companyName industry website mailFrom senderName')
+        .lean();
+      const salesProfile = resolveProjectSalesProfile(project);
+      try {
+        const session = await createAgentSession({
+          context: { type: 'customer', resourceId: customer.id },
+          title: `自动开发 · ${customer.name} · 三封`,
+        }, actor);
+        for (const step of [1, 2, 3] as const) {
+          try {
+            const task = await createAgentTask({
+              sessionId: session.id,
+              goal: outreachStepGoal(salesProfile, step),
+              requestKey: `prospect:${String(claimed._id)}:step${step}`,
+              customerId: customer.id,
+              outreachStep: step,
+            }, actor);
+            draftTaskIds.push(task.id);
+          } catch (error) {
+            draftError = `第 ${step} 封任务创建失败：${error instanceof Error ? error.message : '未知错误'}`;
+            logger.warn(`自动开发信序列第 ${step} 封任务创建失败：${String(claimed.domain)}`, draftError);
+          }
         }
+        if (draftTaskIds[0]) {
+          claimed.draftTaskId = new Types.ObjectId(draftTaskIds[0]);
+          await claimed.save();
+        }
+      } catch (error) {
+        draftError = error instanceof Error ? error.message : '草稿任务创建失败';
+        logger.warn(`自动开发信序列任务创建失败：${String(claimed.domain)}`, draftError);
       }
-      if (draftTaskIds[0]) {
-        claimed.draftTaskId = new Types.ObjectId(draftTaskIds[0]);
-        await claimed.save();
-      }
-    } catch (error) {
-      draftError = error instanceof Error ? error.message : '草稿任务创建失败';
-      logger.warn(`自动开发信序列任务创建失败：${String(claimed.domain)}`, draftError);
     }
     return {
       prospect: toProspect(claimed.toObject() as unknown as Record<string, unknown>),

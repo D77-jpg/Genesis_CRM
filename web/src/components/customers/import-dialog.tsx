@@ -59,8 +59,7 @@ import {
 } from '@/lib/excel';
 import { useCustomerStore } from '@/store/customer.store';
 import { cn } from '@/lib/utils';
-import { CUSTOMER_STATUS_OPTIONS } from '@/constants';
-import type { CustomerStatus, ImportFailure, ImportResult, ImportWarning } from '@/types';
+import type { ImportFailure, ImportResult, ImportWarning } from '@/types';
 
 type Step = 'file' | 'map' | 'check' | 'done';
 
@@ -73,10 +72,10 @@ export interface ImportDialogProps {
   /**
    * 从哪个页面打开：决定「导入到哪」的默认值与是否让用户改。
    * customers  = 客户管理（默认线索池，可切直接建客户）
-   * prospecting = 今日开发（就是线索池，不显示目标选择）
+   * prospecting = 客户线索池（就是线索池，不显示目标选择）
    */
   entry?: 'customers' | 'prospecting';
-  /** 导入成功后回调（今日开发用它刷新列表） */
+  /** 导入成功后回调（客户线索池用它刷新列表） */
   onImported?: (result: ImportResult) => void;
 }
 
@@ -117,7 +116,7 @@ function StepIndicator({ step }: { step: Step }): React.JSX.Element {
 }
 
 export function ImportDialog({ open, onOpenChange, entry = 'customers', onImported }: ImportDialogProps): React.JSX.Element {
-  // 从今日开发进来：导入的一定是线索，不给切换目标的机会
+  // 从客户线索池进来：导入的一定是线索，不给切换目标的机会
   const lockTarget = entry === 'prospecting';
   const importCustomers = useCustomerStore((state) => state.importCustomers);
   const mutating = useCustomerStore((state) => state.mutating);
@@ -135,7 +134,8 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
   const [target, setTarget] = React.useState<ImportTarget>('prospect');
   const effectiveTarget: ImportTarget = lockTarget ? 'prospect' : target;
   const [onDuplicate, setOnDuplicate] = React.useState<'skip' | 'update'>('skip');
-  const [defaultStatus, setDefaultStatus] = React.useState<CustomerStatus>('pending');
+  // 客户状态由系统根据真实操作推进；导入不再允许指定初始开发状态。
+  const defaultStatus = 'pending' as const;
   const [importResult, setImportResult] = React.useState<ImportResult | null>(null);
   /** 预检结果（dryRun），确认后才真正写入 */
   const [checkResult, setCheckResult] = React.useState<ImportResult | null>(null);
@@ -163,7 +163,6 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
     setCheckResult(null);
     setTarget('prospect');
     setOnDuplicate('skip');
-    setDefaultStatus('pending');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
@@ -471,8 +470,8 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
                     active={target === 'prospect'}
                     onSelect={() => setTarget('prospect')}
                     disabled={mutating}
-                    title="今日开发线索池（先审核再转客户）"
-                    description="导入后进「今日开发」，逐条补齐联系方式、确认是目标客户，再点「转为客户」。Excel 数据不会直接变成客户。"
+                    title="客户线索池（先审核再转客户）"
+                    description="导入后进「客户线索池」，逐条补齐联系方式、确认是目标客户，再点「转为客户」。Excel 数据不会直接变成客户。"
                   />
                   <TargetOption
                     active={target === 'customer'}
@@ -510,31 +509,6 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
                     有邮箱时按邮箱判重，无邮箱时按「姓名 + 公司」判重。
                   </p>
                 </div>
-
-                <div>
-                  <Label htmlFor="import-status" className="text-xs">
-                    默认开发状态
-                  </Label>
-                  <Select
-                    value={defaultStatus}
-                    onValueChange={(value) => setDefaultStatus(value as CustomerStatus)}
-                    disabled={mutating}
-                  >
-                    <SelectTrigger id="import-status" className="mt-1.5 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CUSTOMER_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="text-xs">
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
-                    仅对 Excel 中「状态」列为空或未识别的行生效。
-                  </p>
-                </div>
               </div>
             </div>
           )}
@@ -555,7 +529,7 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
                 </AlertTitle>
                 <AlertDescription>
                   下面是这次导入的预检结果：还没有保存任何数据，你点确认之后才会真正写入
-                  {effectiveTarget === 'prospect' ? '线索池（今日开发）' : '客户库'}。
+                  {effectiveTarget === 'prospect' ? '客户线索池（先审核）' : '客户库'}。
                   {mappingResult && mappingResult.stats.invalidRows > 0 ? (
                     <>
                       {' '}
@@ -611,7 +585,7 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
                   <AlertTitle>全部导入成功</AlertTitle>
                   <AlertDescription>
                     {effectiveTarget === 'prospect'
-                      ? '线索已进入「今日开发」，审核通过后才会转成客户并生成开发信草稿。'
+                      ? '线索已进入「客户线索池」，审核通过后才会转成客户并生成开发信草稿。'
                       : '客户列表已刷新，可以直接开始发送开发信。'}
                   </AlertDescription>
                 </Alert>
@@ -622,9 +596,9 @@ export function ImportDialog({ open, onOpenChange, entry = 'customers', onImport
               {effectiveTarget === 'prospect' && importResult.created > 0 ? (
                 <Alert variant="info">
                   <ShieldCheck aria-hidden />
-                  <AlertTitle>下一步：去今日开发审核</AlertTitle>
+                  <AlertTitle>下一步：去客户线索池审核</AlertTitle>
                   <AlertDescription>
-                    导入的 {importResult.created} 条线索已在「今日开发」里，按等级和优先级排好序；确认无误点「转为客户」，系统会自动建客户并准备三封开发信草稿。
+                    导入的 {importResult.created} 条线索已在「客户线索池」里，按等级和优先级排好序；确认无误点「转为客户」，系统会自动建客户并准备三封开发信草稿。
                   </AlertDescription>
                 </Alert>
               ) : null}

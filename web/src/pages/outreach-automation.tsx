@@ -66,12 +66,21 @@ function formatWindow(config: OutreachAutomationConfig): string {
   return `${config.windowStart}–${config.windowEnd}`;
 }
 
-function phaseBadge(row: OutreachAutomationQueueRow): { label: string; variant: 'outline' | 'warning' | 'failed' | 'muted' | 'developed' } {
+function phaseBadge(
+  row: OutreachAutomationQueueRow,
+  windowOpen: boolean,
+): { label: string; variant: 'outline' | 'warning' | 'failed' | 'muted' | 'developed' } {
+  if (!windowOpen && ['due', 'ready', 'generating', 'sending'].includes(row.phase)) {
+    return { label: '等待发送时段', variant: 'outline' };
+  }
   const meta = PHASE_META[row.phase];
   return { label: meta.label(row.nextStep), variant: meta.variant };
 }
 
-function nextActionLabel(row: OutreachAutomationQueueRow): string {
+function nextActionLabel(row: OutreachAutomationQueueRow, windowOpen: boolean, windowText: string): string {
+  if (!windowOpen && ['due', 'ready', 'generating', 'sending'].includes(row.phase)) {
+    return `当前不在发送时段，等工作日 ${windowText} 后自动继续`;
+  }
   switch (row.phase) {
     case 'waiting':
       return `${formatRelative(row.nextRunAt)}（${formatDateTime(row.nextRunAt)}）${row.draftReady ? ' · 草稿已准备' : ''}`;
@@ -373,6 +382,12 @@ export function OutreachAutomationPage(): React.JSX.Element {
                   : <span className="font-medium">请联系管理员配置并发件邮箱。</span>}
               </p>
             ) : null}
+            {overview.config.enabled && !overview.windowOpen ? (
+              <p className="mt-3 flex items-start gap-2 rounded-md border border-sky-200/70 bg-sky-50/70 p-2.5 text-xs leading-5 text-sky-800 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200">
+                <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                当前不在发送时段（工作日 {formatWindow(overview.config)}，{overview.config.timezone}）。队列会保留，等到下一个工作日自动继续。
+              </p>
+            ) : null}
             {overview.config.enabled && overview.stats.remainingToday === 0 ? (
               <p className="mt-3 rounded-md bg-muted/50 px-2.5 py-2 text-xs text-muted-foreground">
                 今天这个邮箱的 {overview.config.dailyLimit} 封额度已用完，明天发送时段会继续。
@@ -506,7 +521,7 @@ export function OutreachAutomationPage(): React.JSX.Element {
                       </TableHeader>
                       <TableBody>
                         {overview.queue.map((row) => {
-                          const status = phaseBadge(row);
+                          const status = phaseBadge(row, overview.windowOpen);
                           const controllable = row.status === 'active' || row.status === 'paused' || row.status === 'failed';
                           return (
                             <TableRow key={row.id}>
@@ -524,7 +539,7 @@ export function OutreachAutomationPage(): React.JSX.Element {
                                 {row.lastError ? <p className="mt-1 max-w-[14rem] text-[11px] leading-4 text-destructive">{row.lastError}</p> : null}
                               </TableCell>
                               <TableCell className="min-w-[12rem] text-xs text-muted-foreground">
-                                {nextActionLabel(row)}
+                                {nextActionLabel(row, overview.windowOpen, formatWindow(overview.config))}
                               </TableCell>
                               <TableCell className="text-right">
                                 {controllable ? (

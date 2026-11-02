@@ -35,8 +35,7 @@ import { selectHasActiveFilters, useCustomerStore } from '@/store/customer.store
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { downloadFile, stampedFilename } from '@/lib/download';
 import { cn } from '@/lib/utils';
-import { CUSTOMER_STATUS_LABEL } from '@/constants';
-import type { Customer, CustomerStatus, SendLetterResult } from '@/types';
+import type { Customer, SendLetterResult } from '@/types';
 
 export function CustomersPage(): React.JSX.Element {
   usePageTitle('客户管理');
@@ -86,7 +85,6 @@ export function CustomersPage(): React.JSX.Element {
   const clearSelection = useCustomerStore((state) => state.clearSelection);
   const updateCustomer = useCustomerStore((state) => state.updateCustomer);
   const deleteCustomer = useCustomerStore((state) => state.deleteCustomer);
-  const bulkUpdateStatus = useCustomerStore((state) => state.bulkUpdateStatus);
   const bulkDelete = useCustomerStore((state) => state.bulkDelete);
   const bulkAddTags = useCustomerStore((state) => state.bulkAddTags);
   const bulkRemoveTags = useCustomerStore((state) => state.bulkRemoveTags);
@@ -168,7 +166,7 @@ export function CustomersPage(): React.JSX.Element {
     try {
       const saved = await updateCustomer(customer.id, patch);
       if (!saved) throw new Error('保存失败，请重试');
-      toast.success('status' in patch ? '状态已更新' : '负责人已更新');
+      toast.success('负责人已更新');
       // Status/owner changes can move a row out of the current filter or change its sort position.
       await fetchList();
     } finally {
@@ -245,21 +243,6 @@ export function CustomersPage(): React.JSX.Element {
     }
   }, [selectedIds, bulkDelete]);
 
-  const handleBulkStatus = React.useCallback(
-    async (next: CustomerStatus) => {
-      if (selectedIds.length === 0) return;
-      try {
-        const result = await bulkUpdateStatus(selectedIds, next);
-        if (result) {
-          toast.success(`已将 ${result.modified} 位客户标记为「${CUSTOMER_STATUS_LABEL[next]}」`);
-        }
-      } catch (caught) {
-        toast.error('批量修改状态失败', { description: caught instanceof Error ? caught.message : String(caught) });
-      }
-    },
-    [selectedIds, bulkUpdateStatus],
-  );
-
   // 标签 / 负责人 / 跟进时间：统一由 BulkActionDialog 确认后回调到这里
   const handleBulkAction = React.useCallback(
     async (kind: BulkActionKind, payload: BulkActionPayload) => {
@@ -306,7 +289,7 @@ export function CustomersPage(): React.JSX.Element {
               {hasActiveFilters ? '（已应用筛选条件）' : ''}
             </>
           ) : (
-            '导入的名单默认先进「今日开发」审核，通过后再成为客户；已核实过的名单也可以直接建客户'
+            '导入的名单默认先进「客户线索池」审核，通过后再成为客户；已核实过的名单也可以直接建客户'
           )
         }
         actions={
@@ -417,7 +400,6 @@ export function CustomersPage(): React.JSX.Element {
         busy={mutating || quickSaving}
         disabled={loading}
         canAssignOwner={isAdmin}
-        onStatusChange={(next) => void handleBulkStatus(next)}
         onAssignOwner={() => setBulkKind('assignOwner')}
         onManageTags={() => setBulkKind('addTags')}
         onSetFollowUp={() => setBulkKind('setFollowUp')}

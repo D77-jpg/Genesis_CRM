@@ -96,6 +96,8 @@ export interface LetterDto {
   knowledgeRechecks?:Record<string,unknown>[];
   knowledgeFreshness?:KnowledgeFreshness;
   reviewBodyChanged?:boolean;
+  /** 已通过审核，但按当前发件人重新渲染后指纹不一致；需要重新审核 */
+  reviewStale?:boolean;
   /** 人工批准也解决不了的硬拦截原因（模型原稿/依据异常等）；有值时不能审核通过，只能重新生成 */
   sendBlocker?:string;
   id: string;
@@ -417,6 +419,15 @@ export async function getLetter(id: string, actor?: AuthUser): Promise<LetterDto
 
   const result=toLetterDto(doc.toObject({virtuals:false,depopulate:false}) as unknown as Record<string,unknown>);
   if(result.knowledgeReview&&actor){result.knowledgeFreshness=await knowledgeFreshness(result.knowledgeReview,actor);const visible=await redactPrivateReview(result.knowledgeReview,actor);const allowed=new Set(visible.sources.map(s=>s.sourceId));result.knowledgeFreshness.changed=result.knowledgeFreshness.changed.map(c=>c.sourceId.startsWith('knowledge:')&&!allowed.has(c.sourceId)?{...c,title:'受限历史依据'}:c);if(visible.sources.length!==result.knowledgeReview.sources.length)result.knowledgeRechecks=undefined;result.knowledgeReview=visible;result.reviewBodyChanged=draftHash(result.contentText)!==result.knowledgeReview.bodyHash;}
+  // 草稿可能由另一位业务员生成（模板里带旧签名），当前发件人渲染后会与审核指纹不同。
+  // 这里提前标记，前端直接显示“需重新审核”，不要等点发送才报错。
+  if(result.review?.decision==='approved'&&result.status==='draft'){
+    try{
+      const fullCustomer=await getCustomerByIdOrThrow(result.customerId,actor);
+      const rendered=await renderLetter(fullCustomer,result.subject,result.template||result.content,result.recipientEmail,await signerNameFor(fullCustomer,actor?.id));
+      result.reviewStale=result.review.contentHash!==reviewContentHash(rendered.subject,rendered.text);
+    }catch{result.reviewStale=false;}
+  }
   return result;
 }
 

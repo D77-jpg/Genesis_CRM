@@ -26,11 +26,11 @@ router.put('/config', requireRole('admin'), validate({ body: prospectingConfigSc
 router.post('/run', validate({ body: runProspectingSchema }), runHandler);
 // Excel 导入线索：任何业务员都能导，导入的线索落自己的项目池
 router.post('/import', validate({ body: importProspectsSchema }), importHandler);
-// 批量补全联系方式（抓官网 / Hunter 找邮箱 / 搜索补官网）：会消耗外部额度，仅管理员
-router.get('/enrich/preview', requireRole('admin'), validate({ query: enrichPreviewSchema }), enrichPreviewHandler);
-router.post('/enrich', requireRole('admin'), validate({ body: startEnrichSchema }), startEnrichHandler);
-router.get('/enrich/:id', requireRole('admin'), validate({ params: idParamsSchema }), enrichRunHandler);
-router.post('/enrich/:id/cancel', requireRole('admin'), validate({ params: idParamsSchema }), cancelEnrichHandler);
+// 批量补全联系方式（抓官网 / Hunter 找邮箱 / 搜索补官网）：业务员只能补公共线索和自己名下的线索
+router.get('/enrich/preview', validate({ query: enrichPreviewSchema }), enrichPreviewHandler);
+router.post('/enrich', validate({ body: startEnrichSchema }), startEnrichHandler);
+router.get('/enrich/:id', validate({ params: idParamsSchema }), enrichRunHandler);
+router.post('/enrich/:id/cancel', validate({ params: idParamsSchema }), cancelEnrichHandler);
 router.post('/:id/claim', validate({ params: idParamsSchema }), claimHandler);
 router.post('/:id/release', validate({ params: idParamsSchema }), releaseHandler);
 router.post('/:id/approve', validate({ params: idParamsSchema }), approveHandler);

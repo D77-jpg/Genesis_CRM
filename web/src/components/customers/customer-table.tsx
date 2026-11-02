@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import type { CustomerSortField } from '@/store/customer.store';
 import type { Customer, OwnerOption } from '@/types';
 import { CustomerQuickEdit, type CustomerQuickEditPatch } from './customer-quick-edit';
+import { CustomerStatusBadge } from '@/components/common/status-badge';
 
 export interface CustomerTableProps {
   customers: Customer[];
@@ -328,10 +329,12 @@ export function CustomerTable({
                 <CustomerIdentity customer={customer} />
               </Link>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <CustomerQuickEdit customer={customer} field="status" disabled={quickEditDisabled} onSave={onQuickEdit} />
+                <span title="状态由系统根据开发信、客户回复和报价自动维护">
+                  <CustomerStatusBadge status={customer.status} className="font-normal" />
+                </span>
                 {customer.grade ? <Badge variant="secondary">{customer.grade} 级</Badge> : null}
                 {showOwner ? (
-                  <CustomerQuickEdit customer={customer} field="ownerId" owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
+                  <CustomerQuickEdit customer={customer} owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
                 ) : null}
               </div>
               <div className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -479,14 +482,16 @@ export function CustomerTable({
 
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
-                    <CustomerQuickEdit customer={customer} field="status" disabled={quickEditDisabled} onSave={onQuickEdit} />
+                    <span title="状态由系统根据开发信、客户回复和报价自动维护">
+                      <CustomerStatusBadge status={customer.status} className="font-normal" />
+                    </span>
                     {customer.grade ? <Badge variant="secondary">{customer.grade} 级</Badge> : null}
                   </div>
                 </TableCell>
 
                 {showOwner ? (
                   <TableCell className={cn('whitespace-nowrap text-xs', ownerColumnClass)}>
-                    <CustomerQuickEdit customer={customer} field="ownerId" owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
+                    <CustomerQuickEdit customer={customer} owners={owners} disabled={quickEditDisabled} onSave={onQuickEdit} />
                   </TableCell>
                 ) : null}
 

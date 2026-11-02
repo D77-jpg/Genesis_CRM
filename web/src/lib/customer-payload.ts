@@ -36,7 +36,7 @@ export function toCustomerPayload(values: CustomerFormValues): CustomerInput {
     requirementNotes: text(values.requirementNotes),
     leadSource: text(values.leadSource),
     priority: values.priority,
-    status: values.status,
+    // 客户状态由系统根据开发信、回复和报价自动推进，表单不再提交 status。
     // 负责人 / 下次跟进：空值统一传 null（编辑时表示清除，后端会保留 null 而不跳过）
     ownerId: values.ownerId?.trim() ? values.ownerId.trim() : null,
     nextFollowUpAt: values.nextFollowUpAt?.trim() ? values.nextFollowUpAt.trim() : null,

@@ -24,7 +24,7 @@
     "test:prospecting": "node --require ./tests/os-user-info.cjs --import tsx --test tests/prospecting.test.ts tests/prospecting-profiles.test.ts",
     "test:outreach-automation": "node --require ./tests/os-user-info.cjs --import tsx --test tests/outreach-automation.test.ts",
     "test:agent": "node --require ./tests/os-user-info.cjs --import tsx --test tests/agent.test.ts",
-    "test:ai-settings": "node --require ./tests/os-user-info.cjs --import tsx --test tests/ai-settings.test.ts",
+    "test:ai-settings": "node --require ./tests/os-user-info.cjs --import tsx --test tests/ai-settings.test.ts tests/ai-providers.test.ts",
     "test:security": "node --require ./tests/os-user-info.cjs --import tsx --test tests/security-hardening.test.ts",
     "test:health": "node --require ./tests/os-user-info.cjs --import tsx --test tests/health-readiness.test.ts",
     "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts",

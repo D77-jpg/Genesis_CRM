@@ -94,14 +94,12 @@ import {
   CUSTOMER_LEAD_SOURCE_OPTIONS,
   CUSTOMER_PRIORITY_BADGE_CLASS,
   CUSTOMER_PRIORITY_OPTIONS,
-  CUSTOMER_STATUS_BADGE_CLASS,
-  CUSTOMER_STATUS_OPTIONS,
   DEFAULT_PAGE_SIZE,
   EMAIL_PATTERN,
   ROUTES,
   STORAGE_KEYS,
 } from '@/constants';
-import type { Customer, CustomerInput, CustomerPriority, CustomerStatus, DevelopmentLetter } from '@/types';
+import type { Customer, CustomerInput, CustomerPriority, DevelopmentLetter } from '@/types';
 
 /** 负责人 Select 里表示「未分配」的哨兵值（Radix 不允许 value=""） */
 const OWNER_NONE = '__none__';
@@ -447,11 +445,6 @@ export function CustomerDetailPage(): React.JSX.Element {
 
   const saveName = React.useCallback(async (raw: string) => saveField({ name: raw.trim() }), [saveField]);
 
-  const saveStatus = React.useCallback(
-    async (raw: string) => saveField({ status: raw as CustomerStatus }),
-    [saveField],
-  );
-
   const savePriority = React.useCallback(
     async (raw: string) => saveField({ priority: raw as CustomerPriority }),
     [saveField],
@@ -778,15 +771,18 @@ export function CustomerDetailPage(): React.JSX.Element {
             <section aria-labelledby="customer-development-title" className="min-w-0 border-t pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
               <h3 id="customer-development-title" className="mb-4 text-sm font-semibold">开发与跟进</h3>
               <dl className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
-                  <EditableInfoRow
-                    icon={<Activity className="h-3.5 w-3.5" />}
-                    label="开发状态"
-                    kind="select"
-                    value={customer.status}
-                    options={CUSTOMER_STATUS_OPTIONS}
-                    selectClassName={CUSTOMER_STATUS_BADGE_CLASS[customer.status]}
-                    onSave={saveStatus}
-                  />
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Activity className="h-3.5 w-3.5" aria-hidden />
+                      开发状态
+                    </dt>
+                    <dd className="mt-1 flex flex-wrap items-center gap-2">
+                      <CustomerStatusBadge status={customer.status} />
+                      <span className="text-[11px] text-muted-foreground" title="根据开发信发送、客户回复和报价进度自动更新">
+                        系统自动
+                      </span>
+                    </dd>
+                  </div>
                   <EditableInfoRow
                     icon={<Flag className="h-3.5 w-3.5" />}
                     label="优先级"

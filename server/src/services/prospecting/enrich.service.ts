@@ -93,7 +93,11 @@ function brandScore(company: string, domain: string): number {
 }
 
 /** 待补全的线索：没有邮箱、且还在池子里（没被跳过/转过客户） */
-function scopeQuery(projectId: Types.ObjectId, scope: EnrichScopeInput): Record<string, unknown> {
+function scopeQuery(
+  projectId: Types.ObjectId,
+  scope: EnrichScopeInput,
+  actor: AuthUser,
+): Record<string, unknown> {
   const and: Record<string, unknown>[] = [
     { $or: [{ emails: { $size: 0 } }, { emails: { $exists: false } }] },
   ];
@@ -109,6 +113,16 @@ function scopeQuery(projectId: Types.ObjectId, scope: EnrichScopeInput): Record<
   }
   const source = (scope.source ?? '').trim();
   if (source) and.push({ source });
+  // 业务员只能补公共线索和归自己的线索，不能碰其他业务员名下的客户。
+  if (actor.role !== 'admin') {
+    and.push({
+      $or: [
+        { ownerId: new Types.ObjectId(actor.id) },
+        { ownerId: { $exists: false } },
+        { ownerId: null },
+      ],
+    });
+  }
   return { projectId, status: { $in: ['needs_contact', 'ready', 'low'] }, $and: and };
 }
 
@@ -135,12 +149,16 @@ function toDto(doc: IProspectEnrichRun & { _id: unknown }): EnrichRunDto {
 /** 开跑之前的预估：让人知道会花多少次外部调用 */
 export async function previewEnrich(actor: AuthUser, scope: EnrichScopeInput): Promise<EnrichPreviewDto> {
   const projectId = new Types.ObjectId(requireProjectId(actor));
-  const base = scopeQuery(projectId, scope);
+  const base = scopeQuery(projectId, scope, actor);
   const withWebsite = await Prospect.countDocuments({ ...base, website: { $nin: ['', null] } });
   const pending = await Prospect.countDocuments(base);
   const withoutWebsite = Math.max(0, pending - withWebsite);
   const hunterReady = await Prospect.countDocuments({ ...base, domain: { $regex: '\\.' } });
-  const active = await ProspectEnrichRun.findOne({ projectId, status: 'running' })
+  const active = await ProspectEnrichRun.findOne({
+    projectId,
+    status: 'running',
+    ...(actor.role === 'admin' ? {} : { triggeredBy: new Types.ObjectId(actor.id) }),
+  })
     .sort({ createdAt: -1 })
     .lean();
   return {
@@ -158,14 +176,13 @@ export async function startEnrichRun(
   actor: AuthUser,
   input: { modes: EnrichMode[]; scope?: EnrichScopeInput; limit?: number },
 ): Promise<EnrichRunDto> {
-  if (actor.role !== 'admin') throw ApiError.forbidden('仅管理员可批量补全联系方式（会消耗抓取与邮箱查找额度）');
   const modes = [...new Set(input.modes)];
   if (modes.length === 0) throw ApiError.badRequest('至少选择一种补全方式');
   const projectId = new Types.ObjectId(requireProjectId(actor));
   const scope = { grade: input.scope?.grade ?? '', source: input.scope?.source ?? '' };
 
   const limit = Math.min(MAX_QUEUE, Math.max(1, Number(input.limit) || MAX_QUEUE));
-  const queue = await Prospect.find(scopeQuery(projectId, scope))
+  const queue = await Prospect.find(scopeQuery(projectId, scope, actor))
     .sort({ grade: 1, score: -1 })
     .limit(limit)
     .select('_id')
@@ -201,22 +218,26 @@ export async function startEnrichRun(
 export async function getEnrichRun(actor: AuthUser, id: string): Promise<EnrichRunDto> {
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('任务 ID 格式不正确');
   const projectId = requiresProject(actor);
-  const doc = await ProspectEnrichRun.findOne({ _id: id, projectId }).lean();
+  const doc = await ProspectEnrichRun.findOne({
+    _id: id,
+    projectId,
+    ...(actor.role === 'admin' ? {} : { triggeredBy: new Types.ObjectId(actor.id) }),
+  }).lean();
   if (!doc) throw ApiError.notFound('补全任务不存在');
   return toDto(doc as unknown as IProspectEnrichRun & { _id: unknown });
 }
 
 export async function cancelEnrichRun(actor: AuthUser, id: string): Promise<EnrichRunDto> {
-  if (actor.role !== 'admin') throw ApiError.forbidden('仅管理员可停止补全任务');
   if (!Types.ObjectId.isValid(id)) throw ApiError.badRequest('任务 ID 格式不正确');
   const projectId = requiresProject(actor);
+  const ownerFilter = actor.role === 'admin' ? {} : { triggeredBy: new Types.ObjectId(actor.id) };
   const doc = await ProspectEnrichRun.findOneAndUpdate(
-    { _id: id, projectId, status: 'running' },
+    { _id: id, projectId, ...ownerFilter, status: 'running' },
     { $set: { status: 'cancelled', endedAt: new Date() } },
     { new: true },
   ).lean();
   if (!doc) {
-    const existing = await ProspectEnrichRun.findOne({ _id: id, projectId }).lean();
+    const existing = await ProspectEnrichRun.findOne({ _id: id, projectId, ...ownerFilter }).lean();
     if (!existing) throw ApiError.notFound('补全任务不存在');
     return toDto(existing as unknown as IProspectEnrichRun & { _id: unknown });
   }
