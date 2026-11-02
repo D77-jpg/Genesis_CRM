@@ -804,6 +804,51 @@ test('OpenAI adapter uses stateless Responses API with strict server-side tools'
   }
 });
 
+test('OpenAI adapter falls back to Chat Completions for local compatible gateways', async () => {
+  const { OpenAIResponsesProvider } = await import('../src/services/agent/openai-provider');
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+  const bodies: Record<string, unknown>[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    urls.push(url);
+    bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+    if (url.endsWith('/responses')) {
+      return new Response('404 page not found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+    }
+    return new Response(JSON.stringify({
+      choices: [{ message: { role: 'assistant', content: 'OK' } }],
+      usage: { prompt_tokens: 8, completion_tokens: 1, total_tokens: 9 },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const adapter = new OpenAIResponsesProvider({
+      apiKey: 'server-only-test-key',
+      model: 'local-chat-model',
+      baseUrl: 'http://localhost:7863/v1',
+      timeoutMs: 5000,
+    });
+    const turn = await adapter.createTurn({
+      instructions: '只回复 OK。',
+      input: [{ role: 'user', content: 'Ping' }],
+      tools: [],
+      context: { type: 'global' },
+      userPrompt: 'Ping',
+      safetyIdentifier: 'hashed-user',
+    });
+    assert.equal(turn.text, 'OK');
+    assert.equal(turn.usage.totalTokens, 9);
+    assert.deepEqual(urls, [
+      'http://localhost:7863/v1/responses',
+      'http://localhost:7863/v1/chat/completions',
+    ]);
+    assert.equal((bodies[1]?.messages as { role?: string }[])[0]?.role, 'system');
+    assert.match(String((bodies[1]?.messages as { content?: string }[])[1]?.content), /只回复 OK。[\s\S]*Ping/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('OpenAI adapter classifies timeout and unavailable service without changing CRM data', async () => {
   const { Customer } = await import('../src/models');
   const { AgentProviderError } = await import('../src/services/agent/provider');

@@ -74,6 +74,13 @@ export async function guardedModelFetch(url: string, init: RequestInit): Promise
             parsed = JSON.parse(text);
         }
         catch {
+            // Preserve the HTTP status for non-JSON gateway errors (e.g. a 404
+            // from a provider that only implements chat/completions) so callers
+            // can apply a protocol fallback instead of losing the status.
+            if (!response.ok) {
+                failed = true;
+                return new Response(text, { status: response.status, headers: { 'content-type': 'text/plain' } });
+            }
             throw new AgentProviderError('OPENAI_INVALID_RESPONSE');
         }
         if (parsed.usage) {

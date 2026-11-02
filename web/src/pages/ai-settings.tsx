@@ -652,7 +652,7 @@ export function AiSettingsPage(): React.JSX.Element {
           <form className="flex min-h-0 flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void saveDraft(); }} noValidate>
             <DialogHeader>
               <DialogTitle>{editingProvider ? '编辑 AI 服务' : '添加 AI 服务'}</DialogTitle>
-              <DialogDescription>配置一个 OpenAI Responses 兼容的服务商连接。保存前会先验证连通性，避免切换后才发现配置不可用。</DialogDescription>
+              <DialogDescription>配置一个 OpenAI 兼容服务商。自动兼容 Responses API 与 Chat Completions，保存前会先验证连通性。</DialogDescription>
             </DialogHeader>
             <DialogBody className="space-y-4">
               {formError ? (
@@ -700,7 +700,7 @@ export function AiSettingsPage(): React.JSX.Element {
                       演示模式
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">需兼容 OpenAI Responses API；DeepSeek、OpenRouter 等以实际支持为准。</p>
+                  <p className="text-xs text-muted-foreground">自动兼容 Responses / Chat Completions；本地 workbuddy2api、DeepSeek、OpenRouter 等可直接连接。</p>
                 </div>
               </div>
 
