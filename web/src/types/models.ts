@@ -432,6 +432,8 @@ export interface DevelopmentLetter {
   knowledgeReview?:KnowledgeReview;
   knowledgeFreshness?:KnowledgeFreshness;
   reviewBodyChanged?:boolean;
+  /** 已通过审核，但按当前发件人重新渲染后与审核内容不一致 */
+  reviewStale?:boolean;
   /** 人工批准也解决不了的硬拦截原因；有值时不能审核通过，只能重新生成 */
   sendBlocker?:string;
   review?: LetterReview;
