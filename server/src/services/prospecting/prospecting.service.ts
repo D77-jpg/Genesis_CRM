@@ -340,7 +340,7 @@ export async function prospectingToday(
   const order: Record<string, number> = { ready: 0, needs_contact: 1, low: 2, rejected: 3, converted: 4 };
   const OPEN = ['ready', 'needs_contact', 'low'];
   const status = (options.status ?? 'all').trim() || 'all';
-  const limit = Math.min(500, Math.max(20, Number(options.limit) || 200));
+  const limit = Math.min(500, Math.max(10, Number(options.limit) || 200));
   const offset = Math.max(0, Number(options.offset) || 0);
   const actorId = new Types.ObjectId(actor.id);
   const requestedScope = options.scope ?? (actor.role === 'admin' ? 'all' : 'mine');
@@ -374,9 +374,9 @@ export async function prospectingToday(
   if (status !== 'all' && status !== 'converted') openFilter.status = status;
   const carried = status === 'converted'
     ? []
-    : await Prospect.find(openFilter).sort({ day: -1, score: -1 }).skip(offset).limit(limit)
+    : await Prospect.find(openFilter).sort({ day: -1, score: -1, _id: -1 }).skip(offset).limit(limit)
       .populate('ownerId', 'displayName username').lean();
-  const finished = status === 'all' || status === 'converted'
+  const finished = (status === 'all' || status === 'converted') && offset === 0
     ? await Prospect.find({ ...scoped, day, status: { $in: ['converted', 'rejected'] } })
       .populate('ownerId', 'displayName username').lean()
     : [];

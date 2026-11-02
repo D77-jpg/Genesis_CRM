@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/page-header';
+import { DataPagination } from '@/components/common/data-pagination';
+import { DEFAULT_PAGE_SIZE } from '@/constants';
 import { Badge } from '@/components/ui/badge';
 import { CountryFlag } from '@/components/common/country-flag';
 import { countryInfo } from '@/lib/country';
@@ -178,40 +180,64 @@ export function ProspectingPage(): React.JSX.Element {
   const [enrichOpen, setEnrichOpen] = React.useState(false);
   /** 线索池筛选：池子上千条时不可能一次全渲染 */
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'ready' | 'needs_contact' | 'low'>('all');
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE);
+  /** 防止翻页/切换筛选时旧请求覆盖新结果 */
+  const requestId = React.useRef(0);
+  /** 翻页后回到结果顶部，避免停在上一页底部 */
+  const resultsTopRef = React.useRef<HTMLDivElement>(null);
+  const previousPage = React.useRef(page);
   /** 我的 / 公共线索池 / 团队（管理员）；三个范围互斥，不会同一条重复出现 */
   const [scope, setScope] = React.useState<'mine' | 'shared' | 'team'>(isAdmin ? 'shared' : 'mine');
   /** 业务员第一次进来如果个人库是空的，自动带他去公共线索池，避免只看到 0 不知道从哪开始 */
   const openedSharedForEmptyMine = React.useRef(false);
   const load = React.useCallback(
-    async (options: { offset?: number; append?: boolean } = {}) => {
+    async () => {
+      const currentRequest = ++requestId.current;
       try {
-        const offset = options.offset ?? 0;
-        const query = `/prospecting/today?scope=${scope}&status=${statusFilter}${offset > 0 ? `&offset=${offset}` : ''}`;
+        const offset = (page - 1) * pageSize;
+        const query = `/prospecting/today?scope=${scope}&status=${statusFilter}&limit=${pageSize}&offset=${offset}`;
         const [today, summary] = await Promise.all([
           apiGet<ProspectingToday>(query),
           isAdmin ? apiGet<ProspectingReport>('/prospecting/report?days=14').catch(() => null) : Promise.resolve(null),
         ]);
-        setData((previous) =>
-          options.append && previous
-            ? { ...today, prospects: [...previous.prospects, ...today.prospects] }
-            : today,
-        );
-        if (!isAdmin && !options.append && !openedSharedForEmptyMine.current
+        if (currentRequest !== requestId.current) return;
+        setData(today);
+        if (!isAdmin && !openedSharedForEmptyMine.current
           && today.scope === 'mine' && (today.scopeTotals?.mine ?? 0) === 0 && (today.scopeTotals?.shared ?? 0) > 0) {
           openedSharedForEmptyMine.current = true;
           setScope('shared');
         }
         setReport(summary);
       } catch (error) {
+        if (currentRequest !== requestId.current) return;
         toast.error('加载失败', { description: toErrorMessage(error, '请稍后重试') });
       } finally {
-        setLoading(false);
+        if (currentRequest === requestId.current) setLoading(false);
       }
     },
-    [scope, statusFilter, isAdmin],
+    [scope, statusFilter, isAdmin, page, pageSize],
   );
 
   React.useEffect(() => { void load(); }, [load]);
+
+  /** 改筛选或切范围后回到第一页 */
+  React.useEffect(() => { setPage(1); }, [scope, statusFilter]);
+
+  /** 当前页因筛选或数据变化不存在时，自动退到最后一个有数据的页 */
+  React.useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil((data?.openTotal ?? 0) / pageSize));
+    if (!loading && page > totalPages) setPage(totalPages);
+  }, [data?.openTotal, loading, page, pageSize]);
+
+  React.useEffect(() => {
+    if (previousPage.current === page) return;
+    if (data?.offset !== (page - 1) * pageSize) return;
+    previousPage.current = page;
+    requestAnimationFrame(() => {
+      resultsTopRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    });
+  }, [page, data?.offset, pageSize]);
 
   React.useEffect(() => {
     if (data?.run?.status !== 'running') return;
@@ -459,7 +485,7 @@ export function ProspectingPage(): React.JSX.Element {
         ];
         if ((data?.counts.low ?? 0) > 0) tabs.push({ key: 'low', label: '低优先', count: data?.counts.low ?? 0 });
         return (
-          <div className="flex flex-wrap items-center gap-1">
+          <div ref={resultsTopRef} className="scroll-mt-4 flex flex-wrap items-center gap-1">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -477,9 +503,9 @@ export function ProspectingPage(): React.JSX.Element {
                 <span className="tabular-nums text-muted-foreground">{tab.count}</span>
               </button>
             ))}
-            {data?.hasMore ? (
+            {data ? (
               <span className="ml-auto text-[11px] text-muted-foreground">
-                共 {data.openTotal ?? 0} 条，已显示 {data.prospects.length} 条
+                共 {data.openTotal ?? 0} 条
               </span>
             ) : null}
           </div>
@@ -522,7 +548,7 @@ export function ProspectingPage(): React.JSX.Element {
         const convertible = supportsBulk ? group.items.filter(isConvertible) : [];
         const chosen = convertible.filter((item) => selected.has(item.id));
         const allChosen = convertible.length > 0 && chosen.length === convertible.length;
-        // 「全部待处理」只加载第一页（200 条），分组标题必须写「已加载 / 全库」，
+        // 「全部待处理」只加载当前页，分组标题必须写「已加载 / 全库」，
         // 否则会出现「可以发送 2」但顶部卡片是 401 的错觉。
         const totalForGroup = group.key === 'ready' ? counts?.ready : group.key === 'needs_contact' ? counts?.needsContact : group.key === 'low' ? counts?.low : undefined;
         const truncated = statusFilter === 'all' && totalForGroup !== undefined && totalForGroup > group.items.length;
@@ -594,19 +620,16 @@ export function ProspectingPage(): React.JSX.Element {
         </section>
       ) : null}
 
-      {data?.hasMore ? (
-        <div className="flex justify-center">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              const openLoaded = data.prospects.filter((item) => ['ready', 'needs_contact', 'low'].includes(item.status)).length;
-              void load({ offset: (data.offset ?? 0) + openLoaded, append: true });
-            }}
-          >
-            加载更多（还有 {(data.openTotal ?? 0) - data.prospects.length} 条）
-          </Button>
-        </div>
+      {data && (data.openTotal ?? 0) > 0 ? (
+        <DataPagination
+          page={page}
+          limit={pageSize}
+          total={data.openTotal ?? 0}
+          totalPages={Math.max(1, Math.ceil((data.openTotal ?? 0) / pageSize))}
+          onPageChange={setPage}
+          onLimitChange={(next) => { setPageSize(next); setPage(1); }}
+          disabled={loading || Boolean(batch)}
+        />
       ) : null}
 
       {isAdmin && report && report.runs.length ? (
