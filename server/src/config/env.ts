@@ -81,6 +81,11 @@ export const envSchema = z.object({
   AI_DAILY_RUN_LIMIT: z.coerce.number().int().min(1).max(10000).default(100),
   AI_DAILY_TOKEN_LIMIT: z.coerce.number().int().min(1000).max(100000000).default(500000),
   AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(10000).default(3000),
+  /** 开发信中英对照使用独立翻译服务；失败时回退到上面的 AI Provider。 */
+  TRANSLATE_BASE_URL: z.string().url().default('https://index-translate.bilibili.com/v1'),
+  TRANSLATE_MODEL: z.string().min(1).default('Index-Translate-35B-A3B'),
+  TRANSLATE_API_KEY: z.string().optional(),
+  TRANSLATE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(30000),
   /** 按每百万 token 的美元成本估算；默认 0 表示尚未配置价格。 */
   AI_INPUT_USD_PER_1M_TOKENS: z.coerce.number().min(0).default(0),
   AI_OUTPUT_USD_PER_1M_TOKENS: z.coerce.number().min(0).default(0),

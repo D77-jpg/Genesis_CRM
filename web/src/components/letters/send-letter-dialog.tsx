@@ -388,19 +388,25 @@ export function SendLetterDialog({
     if (activeTab !== 'bilingual' || !englishBody.trim()) return;
     if (translation && translationSource === translationKey) return;
     let cancelled = false;
-    setTranslating(true);
-    setTranslationError(null);
-    void apiPost<{ subject?: string; body: string }>('/agent/translate', { subject: preview.subject, body: englishBody })
-      .then((result) => {
-        if (cancelled) return;
-        setTranslation(result);
-        setTranslationSource(translationKey);
-      })
-      .catch((error) => {
-        if (!cancelled) setTranslationError(toErrorMessage(error, '翻译失败，请稍后重试'));
-      })
-      .finally(() => { if (!cancelled) setTranslating(false); });
-    return () => { cancelled = true; };
+    // 编辑时不要每个按键都打翻译接口，停顿一下再发请求。
+    const timer = window.setTimeout(() => {
+      setTranslating(true);
+      setTranslationError(null);
+      void apiPost<{ subject?: string; body: string }>('/agent/translate', { subject: preview.subject, body: englishBody })
+        .then((result) => {
+          if (cancelled) return;
+          setTranslation(result);
+          setTranslationSource(translationKey);
+        })
+        .catch((error) => {
+          if (!cancelled) setTranslationError(toErrorMessage(error, '翻译失败，请稍后重试'));
+        })
+        .finally(() => { if (!cancelled) setTranslating(false); });
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [activeTab, englishBody, preview.subject, translationKey, translation, translationSource]);
 
   const missingPlaceholders = React.useMemo(
