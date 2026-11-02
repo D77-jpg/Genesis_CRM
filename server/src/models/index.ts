@@ -69,6 +69,12 @@ export type {
   AgentQuotaBucketDocument,
 } from './Agent';
 
+export { AgentAiSettings } from './AgentAiSettings';
+export type { IAgentAiSettings, AgentAiSettingsDocument } from './AgentAiSettings';
+
+export { AgentAiProvider } from './AgentAiProvider';
+export type { IAgentAiProvider, AgentAiProviderDocument, AgentAiProviderKind } from './AgentAiProvider';
+
 export { AgentCustomerPreview, AGENT_CUSTOMER_FIELDS } from './AgentCustomerPreview';
 export type {
   IAgentCustomerPreview,

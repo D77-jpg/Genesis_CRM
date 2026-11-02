@@ -11,8 +11,9 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/pagination';
 import { ApiError } from '../utils/ApiError';
 import { requireRole } from '../middleware/auth.middleware';
-import { aiSettingsSchema } from '../validators/ai-settings.validator';
-import { getAiSettings, saveAiSettings, testAiSettings } from '../services/agent/ai-settings.service';
+import { idParamsSchema } from '../validators/common';
+import { aiProviderSchema, aiProviderTestSchema, aiSettingsSchema } from '../validators/ai-settings.validator';
+import { activateAiProvider, createAiProvider, deleteAiProvider, getAiSettings, listAiProviders, saveAiSettings, testAiProvider, testAiSettings, testStoredAiProvider, updateAiProvider } from '../services/agent/ai-settings.service';
 import {
   createAgentSession,
   getAgentStatus,
@@ -165,6 +166,28 @@ router.post('/admin/ai-settings/test', requireRole('admin'), messageLimiter, val
 }));
 router.put('/admin/ai-settings', requireRole('admin'), messageLimiter, validate({ body: aiSettingsSchema }), asyncHandler(async (req, res) => {
   sendSuccess(res, await saveAiSettings(req.body, req.user!));
+}));
+router.get('/admin/ai-providers', requireRole('admin'), asyncHandler(async (req, res) => {
+  sendSuccess(res, await listAiProviders(req.user!));
+}));
+router.post('/admin/ai-providers/test', requireRole('admin'), messageLimiter, validate({ body: aiProviderTestSchema }), asyncHandler(async (req, res) => {
+  const { id, ...input } = req.body;
+  sendSuccess(res, await testAiProvider(input, req.user!, id));
+}));
+router.post('/admin/ai-providers', requireRole('admin'), messageLimiter, validate({ body: aiProviderSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await createAiProvider(req.body, req.user!), 201);
+}));
+router.put('/admin/ai-providers/:id', requireRole('admin'), messageLimiter, validate({ params: idParamsSchema, body: aiProviderSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateAiProvider(req.params.id, req.body, req.user!));
+}));
+router.post('/admin/ai-providers/:id/test', requireRole('admin'), messageLimiter, validate({ params: idParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await testStoredAiProvider(req.params.id, req.user!));
+}));
+router.post('/admin/ai-providers/:id/activate', requireRole('admin'), validate({ params: idParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await activateAiProvider(req.params.id, req.user!));
+}));
+router.delete('/admin/ai-providers/:id', requireRole('admin'), validate({ params: idParamsSchema }), asyncHandler(async (req, res) => {
+  sendSuccess(res, await deleteAiProvider(req.params.id, req.user!));
 }));
 router.get('/admin/evaluations', requireRole('admin'), asyncHandler(async (req, res) => {
   sendSuccess(res, await listAgentEvaluations(req.user!));
