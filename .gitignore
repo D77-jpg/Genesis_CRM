@@ -55,6 +55,8 @@ tmp/
 # ---- Local business / customer data (real customer PII, never commit) ----
 Genesis-*.xlsx
 Monarc Jewellery*.md
+# Local UI evidence can contain customer names, emails, and phone numbers.
+docs/ui-refactor/screenshots/
 
 # Local Python adapters must not commit interpreter caches.
 __pycache__/

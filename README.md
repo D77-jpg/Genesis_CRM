@@ -1,1156 +1,437 @@
-# Customer Dev Letter Manager（客户开发信管理工具）
+# Customer Dev Letter Manager
 
-## V2.6 多项目工作空间
+**外贸客户开发与邮件协作平台**
 
-V2.6 将原先围绕 Genesis Bags 的单项目 CRM 升级为严格隔离的多项目工作空间。一套部署现在可同时管理 **Genesis Bags、IRONHUE** 以及管理员后续创建的其他外贸项目；顶部项目切换器会同步切换客户、邮件收发、邮件线程、追踪数据、模板、跟进、Timeline、附件、报价和 Dashboard 统计，不会混用业务数据或公司品牌。
+| 项目 | 内容 |
+| --- | --- |
+| 当前版本 | 2.6.0 |
+| 文档更新 | 2026-11-04 |
+| 运行环境 | Node.js >= 20.19，MongoDB 7.x 或 8.x |
+| 部署方式 | 本机开发，Docker Compose 单机部署 |
 
-升级启动时会幂等创建 `Genesis Bags`（默认项目）与 `IRONHUE`，并把 V1–V2.5 的历史数据和原有用户安全归入 Genesis Bags。普通业务员只看到管理员分配给自己的项目，并继续只能访问自己负责的客户；系统管理员可进入全部项目。浏览器通过 `X-Project-Id` 传递当前工作空间，后端对每个业务查询再次做项目范围校验，越权访问继续返回 404。
-
-各项目的邮箱密钥不写入数据库或浏览器。管理员可在「项目工作空间 → 编辑资料」中用「真实发送（SMTP）」开关切换项目的发件通道；业务员个人发件邮箱仍需在用户管理中配置并验证。Genesis Bags 兼容现有 `SMTP_* / IMAP_*` 配置；其他项目的发信凭据通过 `PROJECT_MAIL_CONFIGS_JSON` 按 `mailProfileKey` 从服务端环境变量解析，未配置的项目默认使用 Mock 且不启用 IMAP。详细模型、API、迁移、权限和测试结果见 [V2.6 验收报告](docs/V2.6-多项目工作空间-验收报告.md)。
-
-当前本机已开启受限的局域网访问：同一局域网设备可打开 `http://192.168.1.16:5173`。后端监听全部网卡，但跨域只接受显式白名单，或在 `CORS_ALLOW_PRIVATE_NETWORK=true` 时接受 `CORS_LAN_PORTS` 指定端口上的本机/私有网段来源；公网来源和非预期端口仍会拒绝。该地址可能随路由器 DHCP 分配变化，且不应通过路由器端口转发直接暴露到公网。
-
-## V2.5 邮件行为追踪
-
-V2.5 在 V2.1 邮件队列上增加 Open Tracking 与 Link Click Tracking。只有成功投递的 HTML 邮件会激活追踪；纯文本邮件和追踪准备失败都会正常发送。重试始终复用同一组随机 token，打开/点击仅更新固定大小的计数和时间字段。
-
-部署时请将 `TRACKING_BASE_URL` 设为收件人可访问的 CRM HTTPS 公网地址。公开追踪端点不需要 JWT，但只接收 256-bit 随机 token，token 在数据库中仅保存 SHA-256 摘要；邮件或跳转 URL 不包含客户 ID、邮箱或 JWT。系统不记录 IP/User-Agent。邮件客户端代理与隐私保护会影响打开数准确性，页面已明确标注数据仅作互动参考。
-
-详细验收结果见 [V2.5 验收报告](docs/V2.5-验收报告.md)。
-
-## V2.1 邮件中心
-
-新增 `/mail` 统一入口：收件箱、发件记录、定时任务、客户邮件会话、回复、已读/未读与管理员未关联邮件处理。继续使用 Node + Express + MongoDB + Nodemailer；没有增加 Redis 或消息中间件。
-
-**运行环境要求更新为 Node 20.19+**（新增邮件库及安全更新的最低要求；验收环境 Node 24.19）。旧客户、开发信、用户、跟进、报价数据无需重建。更新前备份 MongoDB 和上传目录，安装依赖后重启后端；发送任务与收件游标持久化到 MongoDB，不依赖浏览器在线。
-
-配置继续放在被 Git 忽略的 `server/.env`。使用 `server/.env.example` 中的新增字段：
-
-- 首次配置必须填写 `JWT_SECRET`（至少 32 个字符）和 `ADMIN_PASSWORD`（至少 6 个字符）；代码和示例文件不提供默认密钥。
-- 本地开发：`MAIL_TRANSPORT=mock`、`IMAP_ENABLED=false`，无需真实邮箱即可验证发送队列和界面。
-- 真实发件：保留 `SMTP_HOST / SMTP_PORT / SMTP_SECURE / SMTP_USER / SMTP_PASS / MAIL_FROM`；`MAIL_TRANSPORT=smtp` 配置不完整时明确失败，不会伪装为 Mock 成功。`SMTP_REQUIRE_TLS=true` 默认要求加密。
-- 阿里外贸邮收件参考：`IMAP_HOST=imap.alibaba.com`、`IMAP_PORT=993`、`IMAP_SECURE=true`。143 仅在服务器明确提供 STARTTLS 时使用；本次实测该服务器的 143 未声明 STARTTLS。填写 `IMAP_USER / IMAP_PASSWORD` 后设置 `IMAP_ENABLED=true`。密码只从环境变量读取，不自动从 SMTP 配置复制或写入数据库。
-- `IMAP_MAILBOX=INBOX`，`IMAP_SYNC_INTERVAL_MS=60000`；后台每分钟同步。首次从当前 INBOX 开始分批导入，之后按 UID 游标增量同步；不修改服务器邮件或已读标志。
-- `MAIL_WORKER_INTERVAL_MS=2000`，`MAIL_MAX_ATTEMPTS=3`，`MAIL_RETRY_DELAY_MS=30000`；定时任务恢复后按到期时间执行，明确未投递的临时错误按指数间隔重试。
-- 附件保存在现有 `UPLOAD_DIR` 的 `mail/` 子目录；默认单附件 15 MiB、整封原始邮件 25 MiB。允许 PDF、TXT、PNG、JPEG（检查类型与文件签名）；其他类型保留被拦截说明。附件只通过 JWT 鉴权接口下载，不开放静态 URL。
-
-SMTP 无法在“服务器可能已经接收，但确认丢失”时提供可证明的 exactly-once 投递。V2.1 会将此类任务标为“待核实”，不会自动重发；管理员在邮箱/服务器记录核实后，可在邮件中心确认“已投递”或“未投递”，再决定是否重新发送。
-
-测试请使用独立环境，**不要对真实业务库运行 smoke**：先运行 `npm run test:fixture --prefix server`，再在另一终端执行 `./scripts/smoke-test.ps1` 和 `npm run test:mail --prefix server`。夹具自动启动临时 MongoDB 并强制 Mock；首次需下载 MongoDB 测试二进制。原有脚本共 112 组场景（包含 1–93），新增邮件测试独立维护。
-
-更多设计、API、限制和验证结果见 [V2.1 验收报告](docs/V2.1-验收报告.md)。
-
-## 本轮交付与本机运行状态（2026-09-10）
-
-本轮从已验收的 V2.0 继续完成并验证了以下内容：
-
-- **V2.1 邮件中心已完成**：持久化发送队列、立即/定时发送、取消、失败重试、防重复、IMAP 后台收件、客户邮箱自动匹配、未知邮件、线程、回复、附件、已读/未读、Timeline 与管理员/销售权限隔离均已落地。
-- **本机运行环境已就绪**：MongoDB Community Server 8.3.7 已安装为 Windows 自动启动服务；本机验收时前端运行于 `http://127.0.0.1:5173`，后端 API 运行于 `http://127.0.0.1:5000/api`。
-- **阿里外贸邮连通性已验证**：SMTP 使用 `smtp.alibaba.com:25` + STARTTLS，IMAP 使用 `imap.alibaba.com:993` + SSL/TLS；验证过程只做认证与只读打开 INBOX，没有发送真实邮件或读取正文。
-- **客户数据已试导入**：从外部工作簿 `Genesis-目标客户主表1.xlsx` 的“本次导入”工作表整理并导入前 10 条有效客户，10 条新增、0 条失败；其中 6 条有邮箱、4 条暂无邮箱。加上原有 1 条，本机 `cdlm` 数据库当前共有 11 位客户。
-- **模板中心已初始化 8 个业务模板**：首次开发覆盖珠宝、香水香氛、美妆护肤，另含低 MOQ 试单、两种跟进、报价规格收集和样品包邀请；正文使用 `{{firstName}}`、`{{company}}`、`{{industry}}`、`{{moq}}`、`{{senderName}}` 等占位符。
-- **登录页已清理**：移除演示账号、明文示例密码、“一键填入”以及 MongoDB/seed 启动提示；正常登录、密码显隐、记住用户名和错误提示保持不变。
-- **验证结果**：原有 smoke 脚本 112 个场景组全部完成（含用户指定的 1–93 项），V2.1 邮件测试 52/52 通过；前后端 TypeScript、build 和 `git diff --check` 通过，前端 lint 为 0 error、6 条既有 warning。
-
-以上“11 位客户”和“8 个模板”描述的是本机当前数据库状态，不会随 Git 克隆自动出现。账号密码、SMTP/IMAP 密码、授权码与 `JWT_SECRET` 仅保存在被 Git 忽略的 `server/.env`，README、源码、数据库和日志均不记录真实值。
-
-面向外贸 / B2B 销售团队的**客户 CRM、开发信与邮件中心**：Excel 批量导入客户 → 客户分级 / 优先级 / 销售状态 / 标签 / 负责人 / 来源 → 记录客户需求与多渠道联系方式 → 从模板生成富文本开发信 → 通过持久化任务发送 → IMAP 后台收取客户回复并自动关联客户与会话 → 继续回复和跟进 → Timeline 统一归档 → 客户附件与报价单管理 → Dashboard 提醒今日任务，覆盖「导入 → 开发 → 收发邮件 → 跟进 → 报价 → 谈判 → 成交 / 流失」的完整销售闭环。
-
-邮件发送默认为 **mock 模式**（不真实投递，但完整落库），设置 MAIL_TRANSPORT=smtp 并配置完整 SMTP 环境变量后切换为真实发送，无需改动任何代码。
-
----
+Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。系统以项目为数据边界，支持管理员与业务员分权协作，并提供本地开发和容器化部署方式。
 
 ## 目录
 
-- [V2.6 多项目工作空间](#v26-多项目工作空间)
-- [V2.5 邮件行为追踪](#v25-邮件行为追踪)
-- [V2.1 邮件中心](#v21-邮件中心)
-- [本轮交付与本机运行状态（2026-09-10）](#本轮交付与本机运行状态2026-09-10)
-- [技术栈](#技术栈)
-- [功能清单](#功能清单)
-- [项目结构](#项目结构)
-- [快速开始](#快速开始)
-  - [1. 环境要求](#1-环境要求)
-  - [2. 安装依赖](#2-安装依赖)
-  - [3. 配置环境变量](#3-配置环境变量)
-  - [4. 启动 MongoDB](#4-启动-mongodb)
-  - [5. 初始化演示数据](#5-初始化演示数据)
-  - [6. 启动前后端](#6-启动前后端)
-- [生产构建与部署](#生产构建与部署)
-- [脚本速查](#脚本速查)
-- [用户与数据权限](#用户与数据权限)
-- [API 参考](#api-参考)
-- [开发信占位符](#开发信占位符)
-- [Excel 导入说明](#excel-导入说明)
-- [配置真实 SMTP 与 IMAP](#配置真实-smtp-与-imap)
-- [常见问题排查](#常见问题排查)
+- [1. 项目定位](#1-项目定位)
+- [2. 核心能力](#2-核心能力)
+- [3. 技术架构](#3-技术架构)
+- [4. 目录结构](#4-目录结构)
+- [5. 快速开始](#5-快速开始)
+- [6. 配置说明](#6-配置说明)
+- [7. 常用命令](#7-常用命令)
+- [8. API 概览](#8-api-概览)
+- [9. 生产部署](#9-生产部署)
+- [10. 安全与数据边界](#10-安全与数据边界)
+- [11. 术语](#11-术语)
+- [12. 相关文档](#12-相关文档)
+- [13. 许可](#13-许可)
 
----
+## 1. 项目定位
 
-## 技术栈
+本系统用于外贸团队的日常客户开发与跟进。它把客户资料、开发信、邮件线程、报价和知识依据放在同一个项目工作空间中，减少在表格、邮箱和多个 AI 工具之间来回切换。
 
-| 层 | 选型 |
+系统不替代邮件服务商，也不绕过客户许可。自动发送受审核结论、发送额度、客户状态和停止信号约束。
+
+## 2. 核心能力
+
+### 多项目工作空间
+
+- 一套部署可管理多个外贸项目。
+- 项目切换会同步切换客户、邮件、模板、跟进、附件、报价和 Dashboard 数据。
+- 业务员只能访问被分配的项目和本人负责的客户；管理员可查看全部项目。
+- 浏览器通过 `X-Project-Id` 传递当前项目，后端对业务查询再次校验项目范围。
+
+### 客户与开发过程
+
+- 客户档案、联系人、来源、优先级、标签和自定义业务字段。
+- Excel 导入支持列名自动识别和手动映射。
+- 客户详情包含跟进记录、附件、时间线、开发信、报价和待审核草稿。
+- 支持客户状态流转、跟进提醒和重复客户检查。
+
+### 今日开发与潜客池
+
+- 按项目维护搜索方案、关键词和补全数量。
+- 支持候选池、公共池、领取、放回和转为客户。
+- 可通过公开官网资料补全公司、职位、国家、社交账号等字段。
+- 候选转为客户前可预览将写入的客户资料。
+
+### 开发信与审核
+
+- 富文本开发信编辑器，支持模板、占位符和固定签名。
+- 模板中心按首次开发、产品推荐、报价、跟进、节日等分类管理。
+- 发送前支持编辑、预览和中英对照。
+- 草稿审核保存审核结论和内容指纹。内容被修改后必须重新审核。
+- 支持 AI 生成草稿、引用知识依据、检查占位符和发送前校验。
+
+### 邮件中心
+
+- 统一查看收件箱、发件记录、定时任务和客户邮件线程。
+- 支持立即发送、定时发送、取消、失败重试和待核实状态。
+- 支持 IMAP 增量收件、客户邮箱匹配、未知邮件处理、回复和附件。
+- 支持 SMTP 真实发件和 Mock 模拟发件。
+- HTML 邮件支持打开追踪和链接点击追踪。追踪数据只作互动参考。
+
+### 产品与报价
+
+- 按项目维护产品目录、SKU、规格、MOQ、交期和阶梯价。
+- 支持产品 Excel 模板批量导入。
+- 报价单支持多币种、状态流转和历史比较。
+- 报价核对会对照产品目录、数量档位和历史报价，不调用模型编造价格。
+
+### 知识库与 AI
+
+- 项目知识文档上传、解析、索引和检索。
+- 开发信可引用知识依据，并展示引用来源和风险提示。
+- 支持关键词检索和本地语义检索。
+- AI 配置、用量、诊断和每日额度由管理员管理。
+- 支持 OpenAI 兼容的模型服务，可在管理界面覆盖服务端默认配置。
+
+### 团队协作
+
+- 管理员和业务员两级角色。
+- 用户管理、项目分配、客户归属和邮箱绑定。
+- Dashboard 展示客户漏斗、待跟进、开发信和邮件活动。
+- 个人随手记按用户和项目隔离，并同步到服务端。
+
+## 3. 技术架构
+
+```mermaid
+flowchart LR
+  U[浏览器<br/>React SPA] -->|HTTPS /api| A[Express API]
+  A --> M[(MongoDB)]
+  A --> F[本地附件目录]
+  A --> S[SMTP / IMAP]
+  A --> K[知识索引与本地模型]
+  A --> L[OpenAI 兼容模型服务]
+```
+
+| 层次 | 技术 |
 | --- | --- |
-| 前端框架 | **Vite 6 + React 18.3 + TypeScript 5.7** |
-| UI | **Tailwind CSS 3.4 + shadcn/ui**（基于 Radix UI 手工封装，含暗黑模式） |
-| 状态管理 | **Zustand 5**（分域 store：auth / customer / letter / meta / ui / followup / attachment / quotation / template / user） |
-| 富文本 | **React Quill 2** |
-| Excel | **xlsx（SheetJS）** 前端解析 + 后端导出 |
-| 路由 / 表单 / 校验 | React Router 6 · react-hook-form · zod |
-| 后端 | **Node.js + Express 4.21 + TypeScript** |
-| 数据库 | **MongoDB + Mongoose 8** |
-| 鉴权 | JWT（jsonwebtoken）+ bcryptjs；`requireAuth`（每请求查库校验启用态 + 实时角色，停用 / 删除即时失效）/ `requireRole` 双守卫 + 严格分配制数据隔离 |
-| 邮件 | Nodemailer 10（mock / smtp 双通道）+ ImapFlow + MailParser + sanitize-html |
-| 其他 | helmet · cors · compression · express-rate-limit · morgan · sonner · date-fns |
+| 前端 | React 18、TypeScript、Vite 6、Tailwind CSS、Radix UI、Zustand、React Router、React Quill |
+| 后端 | Node.js >= 20.19、Express 4、TypeScript、Mongoose 8、Zod |
+| 数据库 | MongoDB 7.x 或 8.x |
+| 邮件 | Nodemailer、ImapFlow、MailParser |
+| 文档处理 | SheetJS、Mammoth、PDF Parse、PDFKit |
+| AI | OpenAI 兼容 Chat Completions 服务，服务端密钥与项目级配置 |
+| 部署 | Docker Compose、Nginx、PowerShell 运维脚本 |
 
-> **关于 Next.js 15**：原始需求提到 Next.js 15 App Router，但 App Router 强制要求 React 19，与「React 18 + React Quill」不兼容（React Quill 2 依赖 React 18 的 `findDOMNode` 生态，在 19 下会崩溃）。因此前端改用 **Vite + React 18**，其余技术栈完全按需求实现。
+## 4. 目录结构
 
----
-
-## 功能清单
-
-### 个人随手记
-
-- ✅ 顶部栏全局入口，在仪表盘、客户、邮件、开发信等任意登录后页面都可打开；桌面端为右侧非模态面板，打开时仍可查看并操作原页面
-- ✅ 每名用户在每个项目中拥有独立草稿纸，严格按 `userId + projectId` 隔离；管理员也不能通过业务接口读取他人的随手记
-- ✅ 纯文本输入，支持复制粘贴、复制全部、二次确认清空、字符计数及 `Ctrl/Cmd + Shift + M` 快捷开关
-- ✅ 停止输入约 1 秒后自动保存，面板持续显示加载 / 待保存 / 保存中 / 已保存 / 离线 / 冲突状态；刷新或更换设备后可继续使用
-- ✅ 服务端版本号提供乐观并发保护，多页面或多设备出现旧版本时返回 `409`，不会静默覆盖较新的内容
-- ✅ 网络异常时把未同步内容暂存在当前浏览器，恢复联网后自动重试；成功同步或退出登录后清理本机临时副本
-
-### 客户管理
-
-- ✅ Excel 批量导入：**自动识别中英文表头 + 可视化列映射 + 逐行校验 + 重复邮箱策略（跳过 / 覆盖更新）**
-- ✅ 响应式列表：桌面端语义化表格（可排序多列）+ 移动端卡片列表
-- ✅ 搜索（姓名 / 公司 / 邮箱 / 手机 / 行业，防抖）
-- ✅ 多维筛选：**销售状态（8 种）** · 行业 · 等级 · **来源（leadSource）** · **优先级（High / Medium / Low）** · 有无邮箱 · **标签** · **负责人（含「未分配」）** · **跟进时间（今天 / 已逾期 / 未来）**
-- ✅ **8 种销售流程状态**：待开发 → 已联系 → 已回复 → 有意向 → 报价中 → 谈判中 → 已成交 / 已流失；每种状态用不同色徽章做「明显但简洁」的区分（石板灰 / 蓝 / 青 / 琥珀 / 橙 / 紫 / 翠绿 / 玫红）
-- ✅ **批量操作（均带确认弹窗）**：批量改状态 · 批量加 / 删标签 · 批量分配 / 清除负责人 · 批量设置 / 清除下一次跟进时间 · 批量删除
-- ✅ 导出 Excel（服务端忽略分页，导出当前筛选条件下的全部结果）、下载导入模板
-- ✅ 单条删除（含开发信级联删除提示）
-
-### 客户详情
-
-- ✅ 完整档案（公司 / 邮箱 / 手机 / 职位 / 行业 / 国家 / 官网 / 地址 / 等级 / **优先级** / **来源** / 备注）+ 就地编辑**状态 / 标签 / 负责人 / 下一次跟进时间**（跟进逾期时顶部红字告警）
-- ✅ **联系方式区**：Email（`mailto`）· 电话（`tel:`）· WhatsApp（`https://wa.me/`）· Skype · LinkedIn · Facebook · Instagram；存完整 URL 才可点击打开，仅用户名 / ID 时显示纯文本、不强行拼接错误链接
-- ✅ **客户需求区**：感兴趣产品 / 产品型号 / 产品分类 / 预计采购数量 / 目标价格 / MOQ / 需求备注，直接内嵌在客户档案（第一版不建独立产品表）
-- ✅ **客户附件区**：上传 / 图片预览 / 下载 / 删除，展示文件名 · 类型 · 大小 · 上传时间（详见「客户附件」小节）
-- ✅ **客户动态**双页签：
-  - **跟进记录**：新增 / **编辑** / 查看历史 / 删除错误记录，最新记录置顶高亮
-  - **客户动态（Timeline）**：客户创建 → 发送开发信 → 状态变化 → 跟进 → 修改下次跟进时间 → 报价单创建 / 状态变化，按时间倒序聚合，一眼看清「之前发生过什么、最近一次联系、下一步做什么」
-- ✅ **报价单区（V2）**：为该客户创建 / 编辑 / 查看 / 改状态 / 删除报价单，产品明细动态增删、行金额与总额即时核算（后端二次核算为准），报价事件汇入上方 Timeline（详见「报价管理」小节）
-- ✅ 开发信历史表格（主题 / 状态 / 通道 / 时间），支持**查看（渲染 HTML）· 复制（主题 + 纯文本正文）· 删除 · 重新发送**
-- ✅ 支持 `#letters` 锚点，从列表页的开发信徽章点进来会自动滚动定位
-
-### 跟进记录
-
-- ✅ 每条记录含：跟进时间 · 跟进方式 · 跟进内容 · 跟进结果 · 下一次跟进时间
-- ✅ 跟进方式：邮件 / WhatsApp / 电话 / 在线聊天 / 其他
-- ✅ 跟进结果：无回复 / 已回复 / 有兴趣 / 报价 / 谈判 / 成交 / 暂无需求 / 其他
-- ✅ 新增跟进时可同步回写客户的「下一次跟进时间」，并在 Timeline 留痕
-- ✅ 跟进记录支持**编辑**（复用新增表单，编辑后立即刷新列表）；修改「下一次跟进时间」同样同步回写客户主档，编辑 / 删除受数据隔离约束（越权 404）
-
-### 客户来源与优先级
-
-- ✅ **来源（leadSource）** 规范化：客户表单改为下拉选择，内置 `Excel Import / Website / Alibaba / Made-in-China / Google / Facebook / LinkedIn / WhatsApp / Exhibition / Referral / Existing Customer / Other`
-- ✅ 客户列表支持按**来源**筛选；Excel 导入遇到未知来源值（如 `Dubai Exhibition`）**原样保留、不报错**，兼容历史自定义数据
-- ✅ **优先级（Priority）**：`High / Medium / Low`，新建客户默认 `Medium`，列表支持按优先级筛选
-- ✅ 优先级与**客户等级（Grade A / B / C）是两个独立维度**，可任意组合（如 A 级 + Low Priority）：Grade 表示客户价值，Priority 表示当前跟进紧急程度
-- ℹ️ 数据溯源字段 `source`（manual / excel / seed）保持不变，业务「来源」由新字段 `leadSource` 承载，二者互不干扰
-
-### 客户需求与联系方式
-
-- ✅ **需求信息**（内嵌客户档案，第一版不建独立产品表）：感兴趣产品 · 产品型号 · 产品分类 · 预计采购数量 · 目标价格 · MOQ · 需求备注（多行文本）
-- ✅ **多渠道联系方式**：WhatsApp · Skype · LinkedIn · Facebook · Instagram（Email / 电话沿用原有字段）
-- ✅ 以上字段在**创建 / 编辑客户表单、客户详情页、Excel 导入导出**全链路支持，且全部 optional——旧客户没有这些字段也能正常读取与编辑
-
-### 客户附件
-
-- ✅ 每个客户可上传附件集中存档：产品图片 · 需求 PDF · 报价单 · PI · PO · 合同 · 公司资料等
-- ✅ 展示**文件名 · 类型 · 大小 · 上传时间**；图片可**直接预览**，PDF / Excel / Word 等至少支持**下载**；支持删除（同时清理磁盘文件）
-- ✅ 上传走 **base64 JSON**（复用现有 `express.json` 通道，未引入 multer / 对象存储），单文件默认上限 **15 MB**（`MAX_ATTACHMENT_SIZE`），请求体上限已提到 **25 MB**
-- ✅ 文件落盘到本地 `server/uploads/`（`UPLOAD_DIR`，已在 `.gitignore` 忽略）；下载经**鉴权接口**并按客户归属校验，业务员只能操作自己客户的附件，越权一律 404
-
-### 报价管理（V2）
-
-- ✅ **客户详情页报价单区**：从当前客户直接创建报价（无需再选客户），列表展示**编号 / 标题 / 总金额 / 币种 / 状态 / 有效期 / 创建时间**，支持新增 / 编辑 / 查看详情 / 改状态 / 删除，含 loading / empty / error 态
-- ✅ **产品明细动态行**：可增删多个产品行（产品名称 / 型号 / 数量 / 单价），**每行金额与报价总额前端即时计算显示**，提交后**后端再核算一次为准**（前端传入的金额字段会被后端剥离重算，杜绝篡改）
-- ✅ **完整报价字段**：编号 / 标题 / 产品明细 / 币种（12 种）/ MOQ / 付款方式 / 交期 / 有效期 / 备注 / 状态
-- ✅ **6 种报价状态**：草稿 / 已发送 / 谈判中 / 已接受 / 已拒绝 / 已过期（`draft / sent / negotiating / accepted / rejected / expired`），各用不同色徽章区分
-- ✅ **编号唯一防重**：`quotationNo` 留空由后端按 `QT-YYYYMMDD-NNN` 规则自动生成，用户自定义编号统一大写归一，重复返回 `409` 并在表单字段级提示（不引入任何额外编号依赖）
-- ✅ **显式客户状态联动（不擅自改状态）**：仅在「新增报价」与「改状态」时提供「同时把客户标记为报价中」开关，且后端只在语义可升级时推进（不降级已报价中 / 谈判中 / 成交 / 流失的客户）；**普通编辑报价绝不改动客户销售状态**
-- ✅ **汇入客户 Timeline**：报价创建与状态变化派生为客户动态事件（`type: 'quotation'`，沿用现有 Timeline 结构，不另建一套）
-- ✅ **随客户隔离 + 级联清理**：业务员只能操作自己名下客户的报价，越权一律 404；删除客户会级联删除其全部报价单
-- ℹ️ 报价单为全新独立集合（`quotations`），不改动任何既有客户 / 开发信 / 跟进 / 附件数据结构，旧库无需迁移即可直接使用；本期不含 PDF / PI / 合同导出（V3 规划）
-
-### 开发信模板中心
-
-- ✅ 模板 CRUD + **一键复制**，按分类管理：首次开发 / 产品推荐 / 报价 / 跟进 / 节日 / 其他
-- ✅ 每个模板含：名称 · 主题 · 正文（富文本）· 分类
-- ✅ **复用现有发送编辑器**（React Quill + 16 个占位符 + 所见即所得预览），发送开发信时可从模板一键带入主题与正文，不另造一套编辑器
-- ✅ 本机当前话术库：`首次开发 · 珠宝首饰包装`、`首次开发 · 香水香氛礼盒`、`首次开发 · 美妆护肤包装`、`产品推荐 · 低 MOQ 试单`、`跟进 · 温和提醒`、`跟进 · 提供两种方案`、`报价 · 收集规格`、`其他 · 样品包邀请`
-
-### 发送开发信
-
-- ✅ 模态框内含客户信息预览卡
-- ✅ React Quill 富文本 + **一键插入 16 个占位符**
-- ✅ 邮件主题（同样支持占位符）
-- ✅ **可从模板中心选择模板带入**，再按客户微调（连续发信时会记住上次用过的模板）
-- ✅ **所见即所得预览**：调用后端 `/letters/preview` 渲染真实结果，占位符缺字段时前后端使用同一套 fallback
-- ✅ 收件人可覆盖（客户无邮箱时手动填写）
-- ✅ 可选「发送后标记为已联系」（待开发客户默认开启）
-- ✅ 提交后先进入 MongoDB 持久化发送队列；成功发送后再幂等更新客户 `lastContactAt` / `letterCount` / `status`，并就地刷新详情页
-
-### 邮件中心（V2.1）
-
-- ✅ 统一 `/mail` 页面：收件箱、发件记录、定时任务、管理员未知邮件、邮件详情与连续会话
-- ✅ 立即发送、定时发送、发送中、成功、失败、取消、指数退避重试、服务重启恢复与投递结果待核实
-- ✅ IMAP 后台同步，不依赖用户打开网页；按 UID 游标增量抓取，以 Message-ID 或原始 MIME 哈希幂等去重，单封异常不阻断整轮
-- ✅ 收件保存主题、From/To/Cc、HTML/Text、日期、Message-ID、In-Reply-To、References 与安全附件元数据；HTML 白名单清洗后在 sandbox iframe 中展示
-- ✅ 发件人邮箱与 `Customer.email` 规范化精确匹配，唯一命中时自动关联客户并写入既有 Timeline；未命中或歧义邮件仅管理员可见，不自动创建客户
-- ✅ 线程优先使用 Message-ID / In-Reply-To / References，保守回退到同客户、同发件人与 30 天主题窗口；回复继续经过同一发送队列
-- ✅ 销售只能访问自己客户关联的邮件；管理员可访问全部并处理未知邮件。无权资源继续返回 404
-
-### Dashboard 销售工作区
-
-- ✅ 顶部 8 张统计卡：客户总数 / 待开发 / 已开发 / 开发率 / 开发信总数 / 近 7 天发送 / 发送失败 / 当前通道
-- ✅ **销售工作区**：5 个可点击指标（今日待跟进 / 已逾期 / 即将跟进 / 今日发送开发信 / 今日新增客户）+ 3 张清单（待跟进客户·逾期优先红字 / 最近跟进 / 最近开发客户），点进去直达对应客户或自动套用列表筛选
-- ✅ **销售漏斗**：8 种销售状态各自的客户数量与占比
-- ✅ 行业分布 / 等级分布 / 近 14 天发送趋势（纯 CSS 图表，零图表库依赖）+ 最近开发信
-
-### 用户管理与数据权限（严格分配制）
-
-- ✅ **两种角色**：管理员（admin）与业务员（user）；管理员在「用户管理」页管理账号（列表 + 新建 + 编辑资料 + 重置密码 + 停用 / 启用 + 删除）
-- ✅ **严格分配制数据隔离**：业务员登录后**只能看到并操作「负责人 = 自己」的客户**；未分配客户（无负责人）**仅管理员可见**，需由管理员分配后才进入业务员视野
-- ✅ **业务员可自建客户，自动归属本人**：手工新建或 Excel 导入的客户 `ownerId` 自动设为自己；管理员可建档并分配给任意人
-- ✅ **越权一律 404**：业务员访问他人客户（详情 / 编辑 / 删除 / 发信 / 跟进 / **附件** / **报价单**）返回 404，不泄露客户是否存在
-- ✅ **从属资源随客户隔离**：开发信、收件与回复线程、邮件附件、跟进记录、客户附件、报价单、Timeline、Dashboard 统计与销售工作区都按可见客户范围收敛
-- ✅ **管理员专属接口双重防护**：用户管理（`/api/users`）、负责人名单（`/api/customers/owners`）、批量分配负责人（`/api/customers/bulk/owner`）均 `requireRole('admin')`；前端对应 UI（负责人筛选 / 列 / 批量分配 / 用户管理入口）也按角色隐藏
-- ✅ **模板全局共享**：开发信模板对所有登录用户可读写（团队共用话术库）
-- ✅ **账号启用状态**：每个账号有 `active`（启用）/ `disabled`（停用）状态；停用后无法登录，且**已签发的 token 立即失效**（`requireAuth` 每次请求查库校验，返回 `401` 触发前端自动登出）
-- ✅ **删除转未分配**：删除账号会先把它名下客户的 `ownerId` 置空（转为「未分配」回到管理员池）再删除账号，不产生悬空归属
-- ✅ **自我保护**：管理员不能停用 / 删除 / 降级「自己」，也不能移除「最后一个启用中的管理员」，避免把自己锁在系统外
-
-### 其他
-
-- ✅ 开发信记录页（跨客户全量检索 + 状态 / 通道筛选 + 批量删除 + 导出）
-- ✅ **旧数据兼容迁移**：升级前的「待开发 / 已开发」两态在服务启动时自动映射到新的 8 态；标签 / 负责人 / 跟进时间 / **来源 / 优先级 / 需求信息 / 联系渠道 / 附件**等新增字段对旧数据一律 optional（优先级缺省为 `Medium`），不破坏既有客户与邮件历史、无需重新导入
-- ✅ 深色模式（跟随系统 / 手动切换，带防 FOUC 内联脚本）
-- ✅ 完整响应式（390px → 4K）
-- ✅ 表单校验（必填、邮箱格式、URL 格式）
-- ✅ 登录：首次启动按 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 创建管理员；登录页不显示演示账号、密码或环境初始化提示；业务员账号由管理员在「用户管理」页创建
-- ✅ 全局错误边界、请求竞态处理、乐观 UI 回滚、Toast 友好提示
-
----
-
-## 项目结构
-
-```
-Genesis/
-├── README.md                       # 本文件
-├── package.json                    # 根：一键安装 / 一键启动（concurrently）
-├── .gitignore
-├── scripts/
-│   ├── smoke-test.ps1              # 112 组后端 API 冒烟测试（含原有 1–93 + 报价管理回归，PowerShell）
-│   └── verify-smoke-output.cjs     # 校验 smoke 输出中的 97 个关键期望值
-│
-├── server/                         # ── 后端：Express + MongoDB ──
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── .env.example                # 环境变量样例（复制为 .env）
-│   ├── .env                        # 本机私密配置（Git 忽略，禁止提交）
-│   ├── tests/
-│   │   ├── mail-center.test.ts      # V2.1 邮件中心 52 项测试
-│   │   ├── start-fixture.cjs        # 临时 MongoDB + 强制 Mock 的回归夹具
-│   │   └── verify-mail-config.cjs   # SMTP verify + IMAP 只读连通性检查（不输出凭据）
-│   └── src/
-│       ├── index.ts                # 进程入口：连库 → 启动 → 优雅关闭
-│       ├── app.ts                  # Express 应用装配（安全 / 压缩 / 日志 / 路由 / 404 / 错误处理）
-│       ├── config/
-│       │   ├── env.ts              # 环境变量解析 + zod 校验（含上传、SMTP、IMAP 与邮件任务配置）
-│       │   ├── db.ts               # Mongoose 连接（含重试与事件日志）
-│       │   └── logger.ts           # 分级日志（info / warn / error / debug）
-│       ├── constants/
-│       │   └── index.ts            # 枚举（8 销售状态 / 跟进方式 / 跟进结果 / 模板分类 / 活动类型 / 客户来源 /
-│       │                           #   优先级 / 6 报价状态 / 12 报价币种）、状态标签与配色、16 个开发信占位符、Excel 状态别名映射
-│       ├── models/
-│       │   ├── Customer.ts         # 客户模型（partial unique 邮箱索引、letterCount 反范式、tags / ownerId /
-│       │   │                       #   nextFollowUpAt、leadSource / priority、需求信息、联系渠道等 CRM 字段）
-│       │   ├── CustomerAttachment.ts # 客户附件（customerId / originalName / filename / mimeType / size / path / uploadedBy）
-│       │   ├── DevelopmentLetter.ts# 开发信 + 持久化发送任务（调度 / 重试 / 幂等 / Message-ID / 线程）
-│       │   ├── MailMessage.ts      # 收件、同步状态、线程、已读与安全附件元数据
-│       │   ├── FollowUp.ts         # 跟进记录模型（method / result / content / followUpAt / nextFollowUpAt）
-│       │   ├── CustomerEvent.ts    # 客户活动事件（状态变化 / 跟进时间变化，供 Timeline 聚合）
-│       │   ├── Quotation.ts        # 报价单（V2）：quotationNo 唯一 / customerId / items 嵌入明细 / currency /
-│       │   │                       #   totalAmount / validityDate / status / createdBy；pre('validate') 钩子重算金额
-│       │   ├── LetterTemplate.ts   # 开发信模板（name / subject / content / category）
-│       │   ├── User.ts             # 用户模型（bcrypt 哈希、role: admin / user）
-│       │   └── index.ts
-│       ├── middleware/
-│       │   ├── auth.middleware.ts  # JWT 校验（requireAuth，查库校验启用态 + 实时角色）+ 角色守卫（requireRole）
-│       │   ├── validate.middleware.ts # zod 校验（body / query / params，错误自动去重）
-│       │   └── error.middleware.ts # 404 + 统一错误出口（含 Mongoose / JWT 错误翻译）
-│       ├── validators/
-│       │   ├── common.ts           # 分页、ObjectId、排序等公共 schema
-│       │   ├── auth.validator.ts
-│       │   ├── customer.validator.ts # 含 8 状态 / 标签 / 负责人 / 跟进时间 / 来源 / 优先级筛选 + 批量操作 schema
-│       │   ├── letter.validator.ts
-│       │   ├── followup.validator.ts # 跟进记录创建 / 编辑（partial）/ 列表 / 参数校验
-│       │   ├── attachment.validator.ts # 附件上传（base64）/ 参数校验
-│       │   ├── quotation.validator.ts # 报价单（V2）创建 / 编辑 / 改状态 / 列表筛选 / 参数校验（金额字段不入 schema）
-│       │   ├── template.validator.ts # 模板 CRUD 校验
-│       │   └── user.validator.ts    # 用户创建校验（用户名 / 密码 / 角色）
-│       ├── services/
-│       │   ├── customer.service.ts # 列表 / 增删改 / 批量 / 导入 / 导出（可见范围 + 自动归属 + 越权校验 + 级联清理）
-│       │   ├── letter.service.ts   # 入队 / 重发 / 预览 / 历史 / 删除
-│       │   ├── followup.service.ts # 跟进记录 CRUD（含编辑）+ 回写客户 nextFollowUpAt
-│       │   ├── attachment.service.ts # 附件 base64 落盘 / 列表 / 鉴权下载 / 删除（含磁盘文件清理）
-│       │   ├── quotation.service.ts # 报价单（V2）CRUD + 编号唯一生成 + 金额后端核算 + 状态联动 + 越权隔离
-│       │   ├── timeline.service.ts # 聚合客户创建 / 发件 / 收件 / 回复 / 跟进 / 报价为同一 Timeline
-│       │   ├── template.service.ts # 开发信模板 CRUD + 复制
-│       │   ├── stats.service.ts    # 仪表盘聚合（含销售漏斗 byStatus + 销售工作区 workspace）
-│       │   ├── mailer.service.ts   # mock / smtp 双通道，固定 Message-ID 与错误分类
-│       │   ├── mail-queue.service.ts # MongoDB 发送队列：领取 / 调度 / 重试 / 恢复 / 防重复
-│       │   ├── mail-sync.service.ts  # IMAP 后台增量同步、去重、客户匹配与线程关联
-│       │   ├── mail-security.ts      # HTML 清洗、附件白名单、哈希与错误脱敏
-│       │   ├── mail-cleanup.service.ts # 客户删除后的邮件墓碑与附件清理
-│       │   ├── excel.service.ts    # xlsx 导出（客户含来源/优先级/需求/联系渠道列 / 开发信 / 导入模板）
-│       │   ├── auth.service.ts
-│       │   └── user.service.ts     # 用户列表 / 创建（管理员专属，不含 passwordHash）
-│       ├── controllers/
-│       │   ├── customer.controller.ts # 含标签词汇表 / 负责人列表 / 批量操作
-│       │   ├── letter.controller.ts
-│       │   ├── followup.controller.ts # 跟进记录（含编辑）+ 客户 Timeline
-│       │   ├── attachment.controller.ts # 附件列表 / 上传 / 鉴权下载 / 删除
-│       │   ├── quotation.controller.ts # 报价单（V2）列表 / 详情 / 创建 / 编辑 / 改状态 / 删除
-│       │   ├── template.controller.ts
-│       │   ├── stats.controller.ts # 健康检查 + 仪表盘聚合
-│       │   ├── auth.controller.ts
-│       │   └── user.controller.ts  # 用户列表 / 创建 / 编辑 / 重置密码 / 停用启用 / 删除（管理员专属）
-│       ├── routes/
-│       │   ├── index.ts            # /health、/meta（下发枚举与占位符）并挂载客户、用户、报价、邮件等资源路由
-│       │   ├── customer.routes.ts  # 客户 + 批量 + 标签/负责人 + 嵌套跟进（含 PUT 编辑）/ Timeline / 附件 / 报价单（owners、bulk/owner 限管理员）
-│       │   ├── letter.routes.ts
-│       │   ├── mail.routes.ts      # 邮件中心列表 / 详情 / 同步 / 回复 / 已读 / 关联 / 附件
-│       │   ├── quotation.routes.ts # 报价单（V2）顶层：列表（多条件筛选）/ 创建 / 详情
-│       │   ├── template.routes.ts  # 开发信模板 CRUD + 复制
-│       │   ├── user.routes.ts      # 用户管理：列表 / 创建 / 编辑 / 重置密码 / 停用启用 / 删除（整体 requireRole('admin')）
-│       │   └── auth.routes.ts      # 登录带限流（防暴力破解）
-│       ├── utils/
-│       │   ├── ApiError.ts         # 带 HTTP 状态码与业务码的错误类
-│       │   ├── access.ts           # 数据访问控制（customerScope / assertCustomerAccess / customerRefScope）
-│       │   ├── asyncHandler.ts     # 异步路由包装，免写 try/catch
-│       │   ├── pagination.ts       # 分页元数据与统一响应体
-│       │   └── text.ts             # HTML → 纯文本、占位符渲染
-│       ├── types/
-│       │   ├── api.ts              # 响应 / 分页 / 导入结果等共享类型
-│       │   └── express.d.ts        # 扩展 Request.user
-│       └── scripts/
-│           └── seed.ts             # 演示数据：8 客户覆盖全 8 状态 + 跟进 + Timeline + 6 模板（--reset 先清空）
-│
-└── web/                            # ── 前端：Vite + React 18 ──
-    ├── package.json
-    ├── vite.config.ts              # /api 代理到 :5000、路径别名 @/*、分包策略
-    ├── tsconfig.json
-    ├── tailwind.config.ts          # 暗黑模式、语义色（status-pending / developed / failed）
-    ├── postcss.config.js
-    ├── components.json             # shadcn 配置
-    ├── eslint.config.js            # ESLint 9 flat config
-    ├── index.html                  # 含防 FOUC 主题内联脚本
-    ├── .env.example
-    ├── .env
-    └── src/
-        ├── main.tsx                # 挂载入口
-        ├── App.tsx                 # TooltipProvider + RouterProvider + Toaster
-        ├── index.css               # Tailwind 层 + CSS 变量主题 + 滚动条 / 富文本样式
-        ├── vite-env.d.ts
-        ├── router/
-        │   ├── index.tsx           # createBrowserRouter（含邮件中心，页面全部懒加载）
-        │   └── guards.tsx          # ScrollToTop / ProtectedRoute / GuestRoute / AdminRoute
-        ├── pages/
-        │   ├── login.tsx           # 登录页
-        │   ├── dashboard.tsx       # 数据看板 + 销售工作区 + 销售漏斗
-        │   ├── customers.tsx       # 客户管理（多维筛选 + 批量操作）
-        │   ├── customer-detail.tsx # 客户详情（基础信息 / 联系方式 / 客户需求 / 报价单 / 附件）+ 跟进 / Timeline / 开发信历史
-        │   ├── templates.tsx       # 开发信模板中心
-        │   ├── letters.tsx         # 开发信记录
-        │   ├── mail.tsx            # V2.1 邮件中心（收件 / 发件 / 定时 / 未知 / 会话 / 回复）
-        │   ├── users.tsx           # 用户管理（仅管理员：列表 + 状态徽章 + 行操作菜单）
-        │   └── not-found.tsx       # 404
-        ├── components/
-        │   ├── ui/                 # shadcn/ui 基础件（button / dialog / table / select /
-        │   │                       #   checkbox / dropdown-menu / popover(含 Tooltip) / tabs /
-        │   │                       #   switch / textarea / input / label / card(含 StatCard) /
-        │   │                       #   badge / alert / alert-dialog / separator(含 Skeleton) / sonner）
-        │   ├── layout/             # app-shell / sidebar / header / theme-toggle / user-menu
-        │   ├── common/             # page-header / search-input / data-pagination / confirm-dialog /
-        │   │                       #   empty-state(含 Error/NoResult) / status-badge / page-loader
-        │   ├── customers/          # customer-table / customer-filters / customer-form-dialog /
-        │   │                       #   bulk-actions-bar / bulk-action-dialog（批量确认）/
-        │   │                       #   customer-activity（跟进 + Timeline 页签）/ customer-timeline /
-        │   │                       #   follow-up-dialog（新增 / 编辑双模式）/ follow-up-list /
-        │   │                       #   customer-attachments（上传 / 预览 / 下载 / 删除）/
-        │   │                       #   customer-quotations（报价单区）/ quotation-list /
-        │   │                       #   quotation-form-dialog（动态明细 + 即时金额）/ quotation-view-dialog（详情 / 改状态）/
-        │   │                       #   import-dialog / column-mapper
-        │   ├── dashboard/          # sales-funnel（销售漏斗）/ sales-workspace（销售工作区）
-        │   ├── templates/          # template-list / template-form-dialog
-        │   ├── letters/            # send-letter-dialog / letter-editor(Quill) / placeholder-bar /
-        │                           #   letter-view-dialog / letter-history-table / letter-table
-        │   └── users/              # user-form-dialog（新建 / 编辑双模式）+ reset-password-dialog（重置密码），仅管理员
-        ├── store/                  # Zustand：auth / customer / letter / meta / ui / followup / attachment / quotation / template / user
-        ├── hooks/                  # use-async（竞态 + 卸载安全）/ use-queries（数据订阅）/
-        │                           #   use-debounce / use-ui（页面标题、主题）
-        ├── lib/                    # api（axios 拦截器）/ excel（解析 + 列映射）/ placeholder /
-        │                           #   download（Blob 下载）/ format（日期、首字母）/ validators / utils
-        ├── constants/index.ts      # 路由、分页、状态标签、占位符（与后端 /meta 对齐）
-        └── types/                  # models.ts / api.ts / index.ts
+```text
+.
+├── server/                  后端 API
+│   ├── src/
+│   │   ├── config/          环境变量、数据库和日志配置
+│   │   ├── controllers/     HTTP 控制器
+│   │   ├── middleware/      鉴权、校验、错误处理
+│   │   ├── models/          Mongoose 数据模型
+│   │   ├── routes/          REST 路由
+│   │   ├── services/        客户、邮件、AI、知识库等业务逻辑
+│   │   └── scripts/         管理员初始化和数据脚本
+│   ├── tests/               服务端测试
+│   ├── evaluation/          知识库评测
+│   ├── parsers/             文档解析适配
+│   ├── semantic/            本地语义检索适配
+│   ├── uploads/             运行期附件，不提交 Git
+│   └── .env.example         后端配置模板
+├── web/                     前端 SPA
+│   ├── src/components/      通用组件和业务组件
+│   ├── src/pages/           页面
+│   ├── src/router/          路由和权限守卫
+│   ├── src/store/           Zustand 状态
+│   ├── public/              静态资源
+│   └── vite.config.ts       Vite 配置和 API 代理
+├── docs/                    设计、验收和运维文档
+├── scripts/                 备份、冒烟测试和审计脚本
+├── compose.yaml             Docker Compose 单机编排
+├── production.env.example   生产环境变量模板
+└── package.json             根目录脚本
 ```
 
----
+## 5. 快速开始
 
-## 快速开始
+### 5.1 环境要求
 
-### 1. 环境要求
+- Node.js 20.19 或更高版本。
+- npm，随 Node.js 安装。
+- MongoDB 7.x 或 8.x，默认监听 `127.0.0.1:27017`。
+- 可选：Docker Engine 和 Docker Compose v2，用于容器化部署。
+- 可选：Python 环境和本地模型，用于知识库语义检索。
+- 可选：SMTP 和 IMAP 账号，用于真实收发邮件。默认使用 Mock 发件。
 
-| 依赖 | 版本 | 检查命令 |
-| --- | --- | --- |
-| Node.js | **>= 20.19**（V2.1 邮件依赖要求；验收使用 Node 24.19） | `node -v` |
-| npm | >= 9 | `npm -v` |
-| MongoDB | >= 6.0（Community 或 Atlas） | `mongod --version` |
+### 5.2 安装依赖
 
-### 2. 安装依赖
-
-在**项目根目录**执行：
+在仓库根目录执行：
 
 ```bash
-# 安装根依赖（concurrently，用于一键并行启动前后端）
 npm install
-
-# 安装 server 与 web 的依赖
 npm run install:all
 ```
 
-也可以分别安装：
+`npm install` 安装根目录的 `concurrently`，`npm run install:all` 安装 `server` 和 `web` 的依赖。
 
-```bash
-cd server && npm install
-cd ../web && npm install
-```
+### 5.3 配置后端
 
-### 3. 配置环境变量
-
-**后端**（必需）：
-
-```bash
-cd server
-copy .env.example .env      # Windows PowerShell / CMD
-# cp .env.example .env      # macOS / Linux
-```
-
-`server/.env` 关键项：
-
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `PORT` | `5000` | 后端端口 |
-| `HOST` | `0.0.0.0` | 后端监听地址；允许局域网访问时监听全部网卡 |
-| `MONGODB_URI` | `mongodb://127.0.0.1:27017/cdlm` | MongoDB 连接串 |
-| `CORS_ORIGIN` | `http://localhost:5173,...` | 允许的前端来源，逗号分隔 |
-| `CORS_ALLOW_PRIVATE_NETWORK` | `false` | 是否额外允许受限的本机与私有网段前端来源；当前本机环境已开启 |
-| `CORS_LAN_PORTS` | `5173,4173` | 私有网段来源允许使用的前端端口，逗号分隔 |
-| `JWT_SECRET` | 必填、无默认值 | 至少 32 个字符的长随机串 |
-| `JWT_EXPIRES_IN` | `7d` | Token 有效期 |
-| `ADMIN_USERNAME` | `admin` | 首次启动自动创建的管理员 |
-| `ADMIN_PASSWORD` | 必填、无默认值 | 首次启动自动创建管理员，至少 6 个字符 |
-| `MAIL_TRANSPORT` | `mock` | `mock` = 模拟发送；`smtp` = 真实发送 |
-| `MAIL_FROM` | `Genesis ... <sales@...>` | 发件人 |
-| `SMTP_HOST/PORT/SECURE/USER/PASS` | 空 | 仅 `MAIL_TRANSPORT=smtp` 时需要 |
-| `SMTP_REQUIRE_TLS` | `true` | 非隐式 TLS 端口强制升级为 STARTTLS，禁止明文提交凭据 |
-| `IMAP_ENABLED` | `false` | 是否启用后台收件同步 |
-| `IMAP_HOST/PORT/SECURE/USER/PASSWORD` | 空 | IMAP 服务器、端口、TLS 模式与独立凭据；不自动复制 SMTP 密码 |
-| `IMAP_MAILBOX` | `INBOX` | 后台同步的邮箱目录 |
-| `IMAP_SYNC_INTERVAL_MS` | `60000` | 收件同步间隔（毫秒） |
-| `IMAP_MAX_MESSAGE_SIZE` | `26214400`（25 MiB） | 单封原始邮件最大尺寸 |
-| `MAIL_WORKER_INTERVAL_MS` | `2000` | MongoDB 发送任务扫描间隔（毫秒） |
-| `MAIL_MAX_ATTEMPTS` | `3` | 明确未投递的临时错误最大尝试次数 |
-| `MAIL_RETRY_DELAY_MS` | `30000` | 首次重试基础间隔（毫秒，后续指数退避） |
-| `COMPANY_NAME` | `Genesis (Xiamen) Bags Co., Ltd.` | 占位符 `{{companyName}}` |
-| `COMPANY_WEBSITE` | `https://www.genesisbags.com` | 占位符 `{{companyWebsite}}` |
-| `COMPANY_MOQ` | `100 pcs` | 占位符 `{{moq}}` |
-| `SENDER_NAME` | `Genesis Sales Team` | 占位符 `{{senderName}}` |
-| `UPLOAD_DIR` | `server/uploads` | 客户附件本地存储目录（可选，有默认值；已在 `.gitignore` 忽略） |
-| `MAX_ATTACHMENT_SIZE` | `15728640`（15 MB） | 单个客户附件大小上限（字节，可选）；请求体上限固定 25 MB |
-
-**前端**（可选）：
-
-```bash
-cd web
-copy .env.example .env
-```
-
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `VITE_API_BASE_URL` | `/api` | 走 Vite 代理，通常无需修改；跨域部署时改成完整地址，如 `http://localhost:5000/api` |
-| `VITE_API_PROXY_TARGET` | `http://127.0.0.1:5000` | 开发 / 预览代理目标，后端换端口时改这里 |
-| `VITE_APP_TITLE` | `客户开发信管理工具` | 侧边栏顶部与浏览器标签标题 |
-| `VITE_TOKEN_STORAGE_KEY` | `cdlm-token` | JWT 在 localStorage 中的键名 |
-
-### 4. 启动 MongoDB
-
-#### Windows
-
-**方式 A：已装为系统服务（最常见）**
+复制配置模板：
 
 ```powershell
-# 查看服务状态
+# Windows PowerShell
+Copy-Item server\.env.example server\.env
+```
+
+```bash
+# macOS / Linux
+cp server/.env.example server/.env
+```
+
+开发环境至少确认以下配置：
+
+```dotenv
+MONGODB_URI=mongodb://127.0.0.1:27017/cdlm
+JWT_SECRET=请替换为至少32个字符的随机字符串
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=请替换为安全的初始密码
+MAIL_TRANSPORT=mock
+IMAP_ENABLED=false
+```
+
+`server/.env` 已被 Git 忽略。不要提交真实密钥、客户邮箱授权码或生产数据库地址。
+
+### 5.4 启动 MongoDB
+
+Windows 服务方式：
+
+```powershell
 Get-Service MongoDB
-
-# 启动 / 停止
-net start MongoDB
-net stop MongoDB
+Start-Service MongoDB
 ```
 
-**方式 B：手动启动（绿色版 / 未注册服务）**
+也可以使用本机 `mongod`，或使用 `compose.yaml` 启动 MongoDB。数据库未启动时，API 会启动失败或健康检查返回 503。
 
-```powershell
-# 先创建数据目录（只需一次）
-mkdir C:\data\db
-
-# 启动
-mongod --dbpath C:\data\db --port 27017
-
-# 若 mongod 不在 PATH，用绝对路径，例如：
-& "D:\env\MongoDB\bin\mongod.exe" --dbpath "D:\env\MongoDB\data" --port 27017
-```
-
-**方式 C：注册为服务（一次性）**
-
-```powershell
-# 需要管理员权限的 PowerShell
-mongod --config C:\mongodb\mongod.cfg --install
-net start MongoDB
-```
-
-`C:\mongodb\mongod.cfg` 最小内容：
-
-```yaml
-systemLog:
-  destination: file
-  path: C:\mongodb\log\mongod.log
-storage:
-  dbPath: C:\mongodb\data
-net:
-  port: 27017
-```
-
-#### macOS
-
-```bash
-# Homebrew 安装（若尚未安装）
-brew tap mongodb/brew
-brew install mongodb-community
-
-# 启动 / 停止
-brew services start mongodb-community
-brew services stop mongodb-community
-
-# 或前台临时启动
-mongod --dbpath /usr/local/var/mongodb
-```
-
-#### Linux (Ubuntu / Debian)
-
-```bash
-sudo systemctl start mongod
-sudo systemctl enable mongod      # 开机自启
-sudo systemctl status mongod
-```
-
-#### Docker（不想本地装 MongoDB 时）
-
-```bash
-docker run -d --name cdlm-mongo \
-  -p 27017:27017 \
-  -v cdlm-mongo-data:/data/db \
-  mongo:7
-```
-
-**验证是否启动成功：**
-
-```bash
-mongosh --eval "db.runCommand({ ping: 1 })"
-# 返回 { ok: 1 } 即正常
-```
-
-### 5. 初始化演示数据
-
-```bash
-# 在项目根目录
-npm run seed
-```
-
-输出示例（日志格式为 `[时间] [级别] [作用域] 消息`）：
-
-```
-[2026-09-08T13:47:23.535Z] [INFO] [seed] 已创建客户: Ella Drake (Monarc Jewellery)
-[2026-09-08T13:47:23.562Z] [INFO] [seed] 已创建客户: Marcus Chen (Lumen Fine Jewellery)
-[2026-09-08T13:47:23.577Z] [INFO] [seed] 已创建客户: Amelia Hart (Wildflower Adornments)
-[2026-09-08T13:47:23.591Z] [INFO] [seed] 已创建客户: Sarah Lindqvist (Nordic Silver Studio)
-[2026-09-08T13:47:23.603Z] [INFO] [seed] 已创建客户: Tomás Ferreira (Aurum Atelier)
-[2026-09-08T13:47:23.613Z] [INFO] [seed] 已创建客户: Priya Nair (Saffron Gems)
-[2026-09-08T13:47:23.627Z] [INFO] [seed] 已创建客户: David Okafor (Lagos Luxe)
-[2026-09-08T13:47:23.636Z] [INFO] [seed] 已创建客户: Hana Yamamoto (Sakura Pearl)
-[2026-09-08T13:47:23.649Z] [INFO] [seed] ----------------------------------------------
-[2026-09-08T13:47:23.649Z] [INFO] [seed] Seed 完成：新增客户 8（跳过 0），开发信 7，跟进记录 9，活动事件 11，模板 6
-[2026-09-08T13:47:23.649Z] [INFO] [seed] 登录账号使用环境变量配置（不输出凭据）
-[2026-09-08T13:47:23.649Z] [INFO] [seed] ----------------------------------------------
-```
-
-演示数据覆盖完整 CRM 闭环：**8 位客户恰好覆盖 8 种销售状态**（待开发 / 已联系 / 已回复 / 有意向 / 报价中 / 谈判中 / 已成交 / 已流失），并带有标签、负责人、相对今天的下一次跟进时间（今天 / 已逾期 / 未来各有样本）、7 封开发信、9 条跟进记录、11 条 Timeline 活动事件，以及 6 个覆盖全部分类的开发信模板。登录后可直接在 Dashboard 销售工作区 / 销售漏斗、客户列表筛选、客户详情 Timeline 里看到效果。
-
-脚本是**幂等**的（客户按邮箱、开发信按「客户 + 主题」、跟进按「客户 + 跟进时间」、事件按「客户 + 类型 + 时间」、模板按名称判重），重复执行只会补建缺失的数据。
-
-如需**清空后重建**：
-
-```bash
-cd server
-npm run reset          # 等价于 tsx src/scripts/seed.ts --reset
-```
-
-> `reset` 会删除 `customers` / `developmentletters` / `followups` / `customerevents` / `customerattachments` / `quotations` / `lettertemplates` 七个集合的全部数据，请谨慎使用。
-
-### 6. 启动前后端
-
-**一键并行启动（推荐）**——在项目根目录：
+### 5.5 启动前后端
 
 ```bash
 npm run dev
 ```
 
-终端会显示两路带颜色前缀的日志（`SERVER` 青色 / `WEB` 品红）：
+启动后访问：
 
-```
-[SERVER] [2026-09-08T07:07:27.172Z] [INFO] [mongodb] 已连接到 MongoDB: mongodb://127.0.0.1:27017/cdlm
-[SERVER] [2026-09-08T07:07:27.204Z] [WARN] [mailer] 邮件通道为 MOCK 模式：开发信只入库、不真实发送。配置 SMTP_* 后重启即可切换为真实发送。
-[SERVER] [2026-09-08T07:07:27.210Z] [INFO] [bootstrap] ==============================================
-[SERVER] [2026-09-08T07:07:27.210Z] [INFO] [bootstrap]   Customer Dev Letter Manager API 已启动
-[SERVER] [2026-09-08T07:07:27.210Z] [INFO] [bootstrap]   环境      : development
-[SERVER] [2026-09-08T07:07:27.211Z] [INFO] [bootstrap]   地址      : http://localhost:5000
-[SERVER] [2026-09-08T07:07:27.211Z] [INFO] [bootstrap]   健康检查  : http://localhost:5000/api/health
-[SERVER] [2026-09-08T07:07:27.211Z] [INFO] [bootstrap]   元数据    : http://localhost:5000/api/meta
-[SERVER] [2026-09-08T07:07:27.211Z] [INFO] [bootstrap]   邮件通道  : mock（模拟发送）
-[SERVER] [2026-09-08T07:07:27.211Z] [INFO] [bootstrap] ==============================================
-[WEB]    VITE v6.0.7  ready in 543 ms
-[WEB]    ➜  Local:   http://localhost:5173/
-```
+- 前端：`http://localhost:5173/`
+- 后端 API：`http://127.0.0.1:5000/api`
+- 健康检查：`http://127.0.0.1:5000/api/health`
 
-> 开发环境下日志级别为 `debug`（生产为 `info`）；访问日志用 morgan 的 `dev` 彩色简短格式（生产为 `combined`），且 `/api/health` 的探活请求不会刷日志。
+首次启动会根据 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员。登录后可在用户管理页面创建业务员账号。
 
-**分别启动**（需要单独看某一端日志时）：
+### 5.6 局域网访问
 
-```bash
-# 终端 1 —— 后端（tsx watch，改代码自动重启）
-npm run dev:server
-# 或直接：cd server && npm run dev
+Vite 已配置 `host: true`，后端默认监听 `0.0.0.0`。需要允许局域网前端访问时，确认 `server/.env` 包含：
 
-# 终端 2 —— 前端（Vite HMR）
-npm run dev:web
-# 或直接：cd web && npm run dev
+```dotenv
+HOST=0.0.0.0
+CORS_ALLOW_PRIVATE_NETWORK=true
+CORS_LAN_PORTS=5173,4173
 ```
 
-**打开浏览器访问：**
+其他设备使用 `http://<本机局域网IP>:5173/` 访问。局域网地址会随 DHCP 变化，且不要把开发端口直接暴露到公网。
 
-| 地址 | 说明 |
-| --- | --- |
-| **http://localhost:5173** | 前端应用 |
-| http://localhost:5000/api/health | 后端健康检查 |
+## 6. 配置说明
 
-首次启动会根据 `server/.env` 中的 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 创建管理员。登录页不会显示或自动填入账号密码；业务员账号需由管理员在左侧「用户管理」中创建并分配客户，业务员登录后只能看到自己名下的客户。
+完整配置项见 [server/.env.example](server/.env.example)。常用配置如下。
 
----
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `NODE_ENV` | `development` | `development`、`test` 或 `production` |
+| `HOST` | `0.0.0.0` | API 监听地址 |
+| `PORT` | `5000` | API 端口 |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017/cdlm` | MongoDB 连接地址 |
+| `JWT_SECRET` | 无 | 登录令牌签名密钥，至少 32 个字符 |
+| `JWT_EXPIRES_IN` | `7d` | 登录令牌有效期 |
+| `ADMIN_USERNAME` | `admin` | 首次启动创建的管理员账号 |
+| `ADMIN_PASSWORD` | 无 | 管理员初始密码 |
+| `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个值用英文逗号分隔 |
+| `CORS_ALLOW_PRIVATE_NETWORK` | `false` | 是否允许私有网段前端访问 |
+| `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp` |
+| `SMTP_HOST` / `SMTP_PORT` | 空 / `587` | SMTP 服务地址和端口 |
+| `SMTP_USER` / `SMTP_PASS` | 空 | SMTP 账号和授权码 |
+| `SMTP_REQUIRE_TLS` | `true` | 是否要求 STARTTLS |
+| `IMAP_ENABLED` | `false` | 是否启用后台收件 |
+| `IMAP_HOST` / `IMAP_PORT` | 空 / `993` | IMAP 服务地址和端口 |
+| `MAIL_CREDENTIAL_ENCRYPTION_KEY` | 空 | 邮箱凭据加密密钥，生产环境必须单独配置 |
+| `TRACKING_BASE_URL` | `http://localhost:5000` | 邮件追踪使用的公网根地址 |
+| `PUBLIC_BASE_URL` | 空 | 邮件品牌图片的公网根地址，留空时复用追踪地址 |
+| `UPLOAD_DIR` | `server/uploads` | 客户附件和邮件附件的本地目录 |
+| `MAX_ATTACHMENT_SIZE` | `15728640` | 单个附件大小上限，单位为字节 |
+| `AI_PROVIDER` | `mock` | `mock` 或 `openai` |
+| `OPENAI_API_KEY` | 空 | AI 服务密钥，仅保存在服务端 |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容服务地址 |
+| `OPENAI_MODEL` | 服务端模板中的默认模型 | 主 Agent 模型名称 |
+| `TRANSLATE_PROVIDER` | `ai` | 中英对照翻译使用 `ai` 或 `index` |
+| `COMPANY_NAME` | Genesis 默认值 | 我方公司名称 |
+| `COMPANY_WEBSITE` | Genesis 默认值 | 我方公司网站 |
+| `COMPANY_MOQ` | `100 pcs` | 默认 MOQ 文案 |
+| `SENDER_NAME` | `Genesis Sales Team` | 默认发件人签名 |
 
-## 生产构建与部署
+生产环境启动时，服务端会校验密钥强度。`JWT_SECRET` 必须至少 32 个字符，`ADMIN_PASSWORD` 至少 16 个字符，`MAIL_CREDENTIAL_ENCRYPTION_KEY` 必须单独生成且至少 32 个字符。
 
-```bash
-# 在项目根目录，一次性构建前后端
-npm run build
-```
+前端配置见 [web/.env.example](web/.env.example)：
 
-产物：
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | `/api` | 浏览器请求 API 的基础路径 |
+| `VITE_API_PROXY_TARGET` | `http://127.0.0.1:5000` | Vite 开发代理目标 |
+| `VITE_APP_TITLE` | 客户开发信管理工具 | 页面标题 |
 
-- `server/dist/` —— 编译后的 Node 代码
-- `web/dist/` —— 静态资源（HTML / JS / CSS）
+`VITE_API_BASE_URL` 和 `VITE_APP_TITLE` 是构建期变量。修改后需要重新构建前端。
 
-启动后端生产服务：
-
-```bash
-npm start              # 等价于 cd server && node dist/index.js
-```
-
-前端静态资源部署（任选其一）：
-
-```bash
-# 方式 1：Vite 内置预览服务器（快速验证）
-cd web && npm run preview
-
-# 方式 2：Nginx —— 把 web/dist 作为根目录，并把 /api 反代到后端
-```
-
-Nginx 参考配置：
-
-```nginx
-server {
-  listen 80;
-  server_name your-domain.com;
-
-  root /var/www/cdlm/web/dist;
-  index index.html;
-
-  # SPA 前端路由回退
-  location / {
-    try_files $uri $uri/ /index.html;
-  }
-
-  # API 反向代理
-  location /api/ {
-    proxy_pass http://127.0.0.1:5000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-}
-```
-
-> 生产环境上线前请务必：修改 `JWT_SECRET`、修改 `ADMIN_PASSWORD`、把 `NODE_ENV` 设为 `production`、把 `CORS_ORIGIN` 改成真实域名。
-
----
-
-## 脚本速查
+## 7. 常用命令
 
 ### 根目录
 
-| 命令 | 作用 |
+| 命令 | 说明 |
 | --- | --- |
-| `npm run install:all` | 安装 server + web 依赖 |
-| `npm run dev` | 并行启动前后端（开发） |
-| `npm run dev:server` | 只启动后端 |
-| `npm run dev:web` | 只启动前端 |
-| `npm run build` | 构建前后端 |
-| `npm start` | 启动后端生产服务 |
-| `npm run typecheck` | 双端 TypeScript 类型检查 |
-| `npm run lint` | 前端 ESLint |
-| `npm run seed` | 写入演示数据 |
+| `npm run dev` | 同时启动后端和前端开发服务 |
+| `npm run dev:server` | 仅启动后端 |
+| `npm run dev:web` | 仅启动前端 |
+| `npm run build` | 构建后端和前端 |
+| `npm start` | 启动已构建的后端 |
+| `npm run typecheck` | 前后端 TypeScript 类型检查 |
+| `npm run lint` | 前端 ESLint 检查 |
+| `npm run seed` | 写入开发种子数据，仅在隔离数据库使用 |
+| `npm run install:all` | 安装 server 和 web 依赖 |
 
-### server/
+### 服务端测试
 
-| 命令 | 作用 |
-| --- | --- |
-| `npm run dev` | `tsx watch` 热重载开发 |
-| `npm run build` | `rimraf dist && tsc` |
-| `npm start` | `node dist/index.js` |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run seed` | 写入演示数据 |
-| `npm run reset` | 清空并重建演示数据 |
-| `npm run test:fixture` | 启动临时 MongoDB、播种测试数据并在 5000 端口运行强制 Mock 后端 |
-| `npm run test:mail` | 运行 V2.1 邮件中心 52 项自动化测试 |
+```bash
+npm run typecheck --prefix server
+npm run test:mail --prefix server
+npm run test:agent --prefix server
+npm run test:ai-settings --prefix server
+npm run test:security --prefix server
+npm run test:health --prefix server
+```
 
-### web/
+完整测试脚本见 [server/package.json](server/package.json)。
 
-| 命令 | 作用 |
-| --- | --- |
-| `npm run dev` | Vite 开发服务器（HMR） |
-| `npm run build` | `tsc --noEmit && vite build` |
-| `npm run preview` | 预览构建产物 |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` / `lint:fix` | ESLint 检查 / 自动修复 |
+需要运行需要独立 MongoDB 的冒烟测试时，先启动测试夹具：
 
-### 冒烟测试
-
-不要让 smoke 连接真实业务库。先停止占用 5000 端口的常规后端，在终端 1 启动隔离夹具：
-
-```powershell
+```bash
 npm run test:fixture --prefix server
 ```
 
-夹具使用临时 MongoDB、随机 JWT 密钥、测试管理员和强制 Mock 邮件通道，不读取真实邮箱配置。看到 `Isolated V2.1 fixture: http://localhost:5000` 后，在终端 2 执行：
+然后在另一个终端执行 `./scripts/smoke-test.ps1` 或对应的服务端测试。不要对真实业务数据库运行种子、重置或冒烟脚本。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1 | Tee-Object -FilePath server\tmp\v21-smoke.log
+## 8. API 概览
+
+除公开接口外，API 使用 JWT 鉴权：
+
+```http
+Authorization: Bearer <token>
+X-Project-Id: <projectId>
 ```
 
-校验输出并运行邮件中心测试：
-
-```powershell
-node scripts\verify-smoke-output.cjs server\tmp\v21-smoke.log
-npm run test:mail --prefix server
-```
-
-覆盖 112 组场景：健康检查、登录、元数据、客户列表 / 筛选 / 搜索、发送开发信（含占位符渲染断言）、开发信历史与全量列表、预览（含无邮箱客户的 400 与手动收件人）、重发、统计聚合、行业聚合、三个 Excel 导出（校验 `Content-Type` 与 RFC 5987 文件名）、创建 → 批量改状态 → 删除级联、导入（混合行 / `onDuplicate=update` / `dryRun`）、开发信删除后 `letterCount` 递减、错误契约（401 / 404 / 422 / 登录失败）；以及 CRM 升级回归（25–42）：标签 / 负责人词汇表、批量加 / 删标签（自动去重）、按标签 / 负责人（含未分配）/ 跟进时间（今天 / 逾期 / 未来）筛选、批量分配 / 清除负责人、批量设置 / 清除下一次跟进时间、跟进记录增删并同步客户主档、客户 Timeline 聚合、开发信模板 CRUD + 复制 + 分类过滤、批量入参校验（空标签 / 非法负责人返回 422）——全部围绕一个临时客户与临时模板进行并在结尾自动清理；以及**数据隔离回归（43–56）**：管理员创建业务员账号 → 业务员登录 → 断言初始可见客户为 0、访问用户管理 / 负责人名单返回 403、自建客户自动归属本人、管理员未分配客户对业务员不可见、管理员分配后业务员立即可见、业务员调用批量分配负责人返回 403、越权读写他人客户返回 404——临时客户在结尾清理，业务员账号在数据隔离段创建后不会被删除（用户名固定为 `smoke.sales`，重复运行返回 409 并自动跳过）；以及**账号管理回归（57–72）**：管理员创建一次性账号 `smoke.temp` → 编辑资料（显示名 + 角色）→ 重置密码（旧密码登录 `401`、新密码可登录）→ 该账号自建客户 → 自我保护（停用 / 删除 / 降级「自己」均 `403`）→ 停用后**已签发 token 立即 `401`** 且新登录 `403` → 重新启用后可登录 → 删除账号（名下客户转为「未分配」、`reassignedCustomers=1`）→ 删除后其 token `401`、登录 `401` → 清理临时客户并确认账号已从列表移除（`smoke.temp` 结尾自动删除，保证重复运行干净）；以及 **CRM 基础功能回归（73–93）**：创建含来源 / 优先级 / 需求信息 / 联系渠道的客户并校验字段往返 → 优先级省略时默认 `medium` → PUT 编辑需求与优先级（未改字段保留）→ 按 `leadSource` / `priority` 筛选 → 跟进创建 → **编辑**（method / result / 下次跟进时间，且客户 `nextFollowUpAt` 同步）→ 列表反映编辑 → 业务员越权增改他人客户跟进返回 404 → 删除跟进 → 附件 **base64 上传 / 列表 / 鉴权下载（内容逐字节校验）/ 删除**、业务员越权访问附件 404、下载已删除附件 404 → Excel 导入新列（自定义来源 `Dubai Exhibition` 原样保留、`High→high` / `l→low` 归一化）→ 导出含新列 token 校验 → 结尾清理全部临时客户；以及 **报价管理回归（94–112）**：建临时客户 → 自动生成编号（`QT-YYYYMMDD-NNN`）+ 两行明细金额核算（数量 × 单价、总额）+ 有效期 → 详情 / 列表 → 自定义小写编号大写归一 + EUR + 空有效期不误存为 1970 → 重复编号 `409` → 编辑时篡改金额被后端重算忽略 → 改状态（`sent` 不联动、`negotiating` + `markCustomerAsQuoting` 把客户推进为「报价中」）→ 顶层列表按 `customerId` / `status` 筛选 → Timeline 派生报价事件 → 非法 `customerId` / 空明细 / 缺标题 / 数量为 0 返回 `422`、缺失客户 `404` → 业务员越权访问他人客户报价 7 条路由全 `404` → 业务员自建客户 + 报价且管理员可读 → 删除报价 → 已删报价 `404` → 清理临时客户并确认报价随客户级联删除（`quotations=0`）。
-
-> ⚠️ **该脚本会修改所连接的数据库**：它会新建和删除客户、附件、报价、开发信与测试账号，并改写部分记录。务必使用上面的隔离夹具；夹具退出后临时 MongoDB 会自动销毁。只有在明确连接一次性演示库时，才可运行 `npm run reset --prefix server` 清空并重新播种，禁止对真实业务库使用该命令。
-
----
-
-## 用户与数据权限
-
-系统采用**严格分配制**的多用户模型，区分两种角色：
-
-| 角色 | `role` | 能做什么 |
-| --- | --- | --- |
-| **管理员** | `admin` | 看到并操作**全部客户**（含未分配）；创建账号；把客户分配给任意业务员；调整任意客户的负责人 |
-| **业务员** | `user` | **只能看到并操作「负责人 = 自己」的客户**；可自建客户（自动归属本人）；看不到未分配 / 他人客户，不能转移归属，不能访问用户管理 |
-
-### 隔离规则
-
-1. **可见范围**：业务员登录后，客户列表 / 详情 / 开发信 / 收发邮件与线程 / 跟进 / **附件** / **报价单** / Timeline / Dashboard 统计与销售工作区，全部自动收敛到「自己名下」的客户。未分配客户（无负责人）**仅管理员可见**，需管理员分配后才进入业务员视野。
-2. **自动归属**：业务员手工新建或 Excel 导入的客户，`ownerId` 强制设为本人（忽略传入值）；管理员建档时默认不分配（未分配），可随后指派给任意人。
-3. **越权即 404**：业务员访问非自己名下的客户（详情 / 编辑 / 删除 / 发信 / 收件 / 回复 / 邮件线程 / 跟进增改删 / **附件上传下载删除** / **报价单增改删**）统一返回 **404** 而非 403——避免通过状态码差异探测他人客户是否存在。
-4. **归属不可自转**：业务员更新客户时 `ownerId` 字段被忽略；批量分配负责人是管理员专属。
-5. **模板全局共享**：开发信模板对所有登录用户可读写（团队共用话术库），不做隔离。
-
-### 管理员专属能力（前后端双重防护）
-
-| 能力 | 后端守卫 | 前端表现 |
-| --- | --- | --- |
-| 用户管理（列表 / 新建 / 编辑 / 重置密码 / 停用启用 / 删除） | `/api/users` 整体 `requireRole('admin')` | 侧边栏「用户管理」入口、`/users` 路由（`AdminRoute`）仅管理员可见；非管理员访问自动跳回 Dashboard |
-| 负责人名单 | `GET /api/customers/owners` `requireRole('admin')` | 业务员不拉取该名单（本质是用户花名册） |
-| 批量分配 / 清除负责人 | `POST /api/customers/bulk/owner` `requireRole('admin')` | 客户列表的「负责人」筛选、表格「负责人」列、批量「分配负责人」按钮、客户表单 / 详情的负责人字段，业务员一律隐藏 |
-| 未知邮件、同步状态与手动同步 | `/api/mail?folder=unknown`、`/api/mail/status`、`/api/mail/sync`、未知邮件关联/核实均限制管理员 | 普通销售不显示未知邮件入口，也不能枚举或关联未归属邮件 |
-
-> **账号能力范围**：用户列表 + 新建 + 编辑资料（显示名 / 角色，用户名不可改）+ 重置密码 + 停用 / 启用 + 删除（名下客户转「未分配」）。停用 / 删除对已签发 token **即时生效**；管理员不能停用 / 删除 / 降级自己，也不能移除最后一个启用中的管理员。
-
-### 创建一个业务员并分配客户（管理员操作）
-
-1. 用 `admin` 登录 → 左侧「用户管理」→「新建用户」→ 填用户名 / 初始密码 / 显示名，角色选「业务员」→ 保存。
-2. 到「客户管理」→ 勾选客户 → 批量「分配负责人」→ 选择刚建的业务员；或在客户详情 / 编辑弹窗里指定负责人。
-3. 该业务员用自己的账号登录后，就只能看到刚分配给自己的客户；其新建 / 导入的客户会自动归到自己名下。
-4. **管理账号**：在「用户管理」列表每行右侧的「⋯」菜单里可编辑资料（显示名 / 角色）、重置密码、停用 / 启用或删除账号。停用 / 删除会让该账号**已签发的登录立即失效**；删除还会把它名下客户转为「未分配」回收到管理员池。（不能对自己执行停用 / 删除 / 降级，也不能移除最后一个启用中的管理员。）
-
----
-
-## API 参考
-
-统一响应体：
-
-```jsonc
-// 成功
-{ "success": true, "data": { ... }, "meta": { "page": 1, "limit": 20, "total": 57, "totalPages": 3 } }
-
-// 失败
-{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "…", "details": [ … ] } }
-```
-
-除 `/api/health` 与 `/api/meta` 外，所有接口都需要请求头 `Authorization: Bearer <token>`。**客户相关接口按登录角色自动隔离**：管理员见全部，业务员仅见「负责人 = 自己」的客户（详见[用户与数据权限](#用户与数据权限)）。
-
-### 公开
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/health` | 健康检查（含数据库状态、邮件通道、运行时长） |
-| GET | `/api/meta` | 枚举（含报价状态 / 币种）、占位符定义、公司信息、邮件通道 |
-
-### 认证
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| POST | `/api/auth/login` | 登录（带限流），返回 `{ user, token }` |
-| GET | `/api/auth/me` | 当前用户 |
-
-### 用户管理（管理员专属，整体 `requireRole('admin')`）
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/users` | 用户列表（`data` 直接是用户数组：id / username / displayName / role / status / lastLoginAt / createdAt；不含 passwordHash） |
-| POST | `/api/users` | 创建用户（`username` / `password` / `displayName?` / `role`），返回 `201`；用户名重复返回 `409` |
-| PUT | `/api/users/:id` | 编辑资料（`displayName?` / `role?`，至少一项；用户名不可改），返回最新用户 |
-| PUT | `/api/users/:id/password` | 重置密码（`password`，6–72 位），返回 `{ id }` |
-| PUT | `/api/users/:id/status` | 停用 / 启用（`status`：`active` \| `disabled`），返回最新用户 |
-| DELETE | `/api/users/:id` | 删除账号；名下客户 `ownerId` 置空转为「未分配」，返回 `{ id, reassignedCustomers }` |
-
-> 业务员调用以上接口一律 `403`。**自我保护**：管理员不能停用 / 删除 / 降级「自己」，也不能移除「最后一个启用中的管理员」，否则返回 `403`。**即时失效**：账号被停用或删除后，其已签发的 token 会在下一次请求时被 `requireAuth` 拒绝（`401`），前端自动登出；角色调整同样即时生效，无需等 token 过期。
-
-### 客户
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/customers` | 列表（搜索 / 状态 / 行业 / 等级 / **来源 `leadSource`** / **优先级 `priority`** / 有无邮箱 / 标签 / 负责人 / 跟进时间 / 排序 / 分页） |
-| POST | `/api/customers` | 新建 |
-| GET | `/api/customers/:id` | 详情（含 tags / owner / nextFollowUpAt / leadSource / priority / 需求信息 / 联系渠道） |
-| PUT | `/api/customers/:id` | 更新（状态 / 下次跟进时间变化写入 Timeline；支持来源 / 优先级 / 需求信息 / 联系渠道等字段） |
-| DELETE | `/api/customers/:id` | 删除（级联删除其开发信 / 跟进 / 活动事件 / **附件（含磁盘文件）** / **报价单**） |
-| POST | `/api/customers/import` | 批量导入，返回 `{ created, updated, skipped, failures[] }` |
-| POST | `/api/customers/bulk/status` | 批量改状态 |
-| POST | `/api/customers/bulk/delete` | 批量删除 |
-| POST | `/api/customers/bulk/tags/add` | 批量加标签（`$addToSet` 去重） |
-| POST | `/api/customers/bulk/tags/remove` | 批量删标签 |
-| POST | `/api/customers/bulk/owner` | 批量分配 / 清除负责人（`ownerId` 传 null 清除）——**管理员专属** |
-| POST | `/api/customers/bulk/follow-up` | 批量设置 / 清除下一次跟进时间 |
-| GET | `/api/customers/industries` | 行业去重列表（筛选下拉用） |
-| GET | `/api/customers/tags` | 标签词汇表（去重，供筛选 / 批量复用） |
-| GET | `/api/customers/owners` | 负责人列表（供筛选 / 分配下拉用）——**管理员专属** |
-| GET | `/api/customers/export` | 导出 Excel（忽略分页） |
-| GET | `/api/customers/template` | 下载导入模板 |
-| GET | `/api/customers/:id/letters` | 该客户的开发信历史 |
-| POST | `/api/customers/:id/letters` | **提交开发信发送任务**（支持 `scheduledAt` / `requestKey`），返回兼容旧前端的结果结构 |
-| GET | `/api/customers/:id/timeline` | 客户 Timeline（创建 / 发件 / 收件 / 回复 / 跟进 / 状态变化 / 跟进时间变化 / 报价单，倒序） |
-| GET | `/api/customers/:id/follow-ups` | 该客户的跟进记录列表 |
-| POST | `/api/customers/:id/follow-ups` | 新增跟进记录（可同步回写 nextFollowUpAt） |
-| PUT | `/api/customers/:id/follow-ups/:followUpId` | **编辑跟进记录**（至少改一个字段；改 nextFollowUpAt 会同步回写客户主档） |
-| DELETE | `/api/customers/:id/follow-ups/:followUpId` | 删除某条跟进记录 |
-| GET | `/api/customers/:id/attachments` | 该客户的附件列表 |
-| POST | `/api/customers/:id/attachments` | **上传附件**（base64 JSON：`originalName` / `mimeType?` / `dataBase64`），返回 `201` |
-| GET | `/api/customers/:id/attachments/:attachmentId/download` | **下载附件**（鉴权；`Content-Disposition` 用 RFC 5987 兼容中文名） |
-| DELETE | `/api/customers/:id/attachments/:attachmentId` | 删除附件（同时删除本地磁盘文件） |
-
-> **附件约束**：上传为 base64 JSON（复用 `express.json` 通道，无 multipart），单文件默认 ≤ 15 MB（`MAX_ATTACHMENT_SIZE`），请求体上限 25 MB；文件落盘本地 `server/uploads/`（`UPLOAD_DIR`，已 gitignore）。所有附件接口都先校验客户归属，业务员越权访问他人客户附件一律 **404**；删除客户会级联清理其附件（含磁盘文件）。
-
-### 报价单（V2 报价管理）
-
-顶层 `/api/quotations`（跨客户列表 / 筛选 / 详情）+ 嵌套 `/api/customers/:id/quotations`（客户详情页主用），全部 `requireAuth` 并按客户归属隔离（业务员越权一律 404）。
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/quotations` | 报价单分页列表（`customerId` / `status` / `currency` / `search` 筛选，`data` 为分页结构、`customerId` 已 populate 客户名） |
-| POST | `/api/quotations` | 创建（body 带 `customerId`），先校验客户存在且当前用户有权访问 |
-| GET | `/api/quotations/:id` | 报价单详情 |
-| GET | `/api/customers/:id/quotations` | 该客户的报价单列表（按创建时间倒序） |
-| POST | `/api/customers/:id/quotations` | 从当前客户创建报价单（无需再传 `customerId`） |
-| GET | `/api/customers/:id/quotations/:quotationId` | 报价单详情 |
-| PUT | `/api/customers/:id/quotations/:quotationId` | 编辑（金额后端重算；普通编辑不改客户销售状态） |
-| PUT | `/api/customers/:id/quotations/:quotationId/status` | 更新状态（`status`；可带 `markCustomerAsQuoting` 显式把客户推进为「报价中」） |
-| DELETE | `/api/customers/:id/quotations/:quotationId` | 删除，返回 `{ id, deleted }` |
-
-> **金额可信性**：`items[].amount` 与 `totalAmount` 一律由后端计算——入参 schema 不含金额字段（前端传值被 zod 剥离），service 层与模型 `pre('validate')` 钩子各重算一次，前端展示值仅作即时预览。
-> **编号唯一**：`quotationNo` 唯一（大写归一），留空由后端按 `QT-YYYYMMDD-NNN` 生成；重复返回 `409`。
-> **枚举**：`status` = `draft / sent / negotiating / accepted / rejected / expired`；`currency` = USD / EUR / GBP / CNY / JPY / HKD / AUD / CAD / CHF / SGD / AED / NZD（默认 USD）；均可从 `GET /api/meta` 获取（含中文标签）。
-> **客户状态联动**：仅创建 / 改状态接口接收 `markCustomerAsQuoting`，且只在语义可升级时把客户推进为「报价中」（不降级已报价中 / 谈判中 / 成交 / 流失）；普通编辑不携带、后端也不接收该字段。
-> **Timeline**：报价创建与状态变化派生为客户 Timeline 事件（`type: 'quotation'`），沿用现有事件结构；删除客户会级联删除其全部报价单。
-
-### 开发信
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/letters` | 全量列表（关键词 / 状态 / 通道 / 排序 / 分页） |
-| POST | `/api/letters` | 提交发送任务（body 内指定 `customerId`，支持立即 / 定时与幂等键） |
-| GET | `/api/letters/:id` | 详情 |
-| POST | `/api/letters/:id/resend` | 重新发送（生成新记录） |
-| DELETE | `/api/letters/:id` | 删除 |
-| POST | `/api/letters/bulk/delete` | 批量删除 |
-| POST | `/api/letters/preview` | 占位符渲染预览，返回 `{ subject, html, text, recipientEmail, recipientName }` |
-| GET | `/api/letters/export` | 导出 Excel（最多 5000 条） |
-
-### 邮件中心（V2.1）
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/mail?folder=inbox\|sent\|tasks\|unknown` | 邮件中心分页列表；`unknown` 仅管理员 |
-| GET | `/api/mail/status` | SMTP/IMAP 配置与同步状态，仅管理员；不返回账号密码 |
-| POST | `/api/mail/sync` | 手动触发一次 IMAP 同步，仅管理员 |
-| GET | `/api/mail/:id?direction=inbound\|outbound` | 收件或发件详情、关联客户和同线程消息 |
-| POST | `/api/mail/:id/read` | 标记收件为已读或未读 |
-| POST | `/api/mail/:id/link` | 把未知邮件关联到已有客户，仅管理员 |
-| POST | `/api/mail/:id/reply` | 回复已关联邮件，继续走统一发送队列 |
-| POST | `/api/mail/:id/cancel` | 取消未开始的定时或重试任务 |
-| POST | `/api/mail/:id/resolve` | 管理员核实不确定投递结果 |
-| GET | `/api/mail/:id/attachments/:attachmentId` | 鉴权下载收件附件，并按客户归属隔离 |
-
-### 开发信模板
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/templates` | 模板列表（分类 / 关键词筛选），`data` 直接是模板数组 |
-| POST | `/api/templates` | 新建模板（name / subject / content / category） |
-| GET | `/api/templates/:id` | 模板详情 |
-| PUT | `/api/templates/:id` | 更新模板 |
-| POST | `/api/templates/:id/duplicate` | 复制模板（名称追加「副本」，与源模板彼此独立） |
-| DELETE | `/api/templates/:id` | 删除模板 |
-
-### 统计
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/stats/overview` | 客户总数 / 待开发 / 已开发 / 开发率 / 行业分布 / 等级分布 / **各销售状态数量（byStatus，供销售漏斗）** / 开发信总数 / 近 7 天 / 失败数 / 每日趋势 / 最近记录 / **销售工作区（workspace：今日待跟进 / 已逾期 / 即将跟进 / 今日发送 / 今日新增，及待跟进·最近跟进·最近开发客户清单）** |
-
----
-
-## 开发信占位符
-
-在发送弹窗的编辑器上方点击按钮即可插入，语法为 `{{key}}`。客户字段缺失时按 `fallback` 渲染（**前后端使用同一套 fallback，保证预览所见即实际所发**）。
-
-| 占位符 | 含义 | 缺失时 |
-| --- | --- | --- |
-| `{{name}}` | 客户姓名 | `there` |
-| `{{firstName}}` | 名字（First Name） | `there` |
-| `{{company}}` | 客户公司 | `your company` |
-| `{{email}}` | 客户邮箱 | 空 |
-| `{{phone}}` | 客户手机 | 空 |
-| `{{title}}` | 客户职位 | 空 |
-| `{{industry}}` | 客户行业 | 空 |
-| `{{country}}` | 客户国家 / 地区 | 空 |
-| `{{address}}` | 客户地址 | 空 |
-| `{{customerWebsite}}` | 客户官网 | 空 |
-| `{{grade}}` | 客户等级 | 空 |
-| `{{notes}}` | 备注 | 空 |
-| `{{companyName}}` | 我方公司名 | 空 |
-| `{{companyWebsite}}` | 我方官网 | 空 |
-| `{{moq}}` | 最小起订量 | 空 |
-| `{{senderName}}` | 发件人署名 | 空 |
-
-> `{{customerWebsite}}` 与 `{{companyWebsite}}` 刻意分开命名，避免「客户官网」和「我方官网」写混。
-> 我方相关的 4 个占位符取值来自 `server/.env`，可在不重启前端的情况下通过后端热重载生效。
-
----
-
-## Excel 导入说明
-
-### 模板列
-
-点击客户列表页的「导入 Excel」→「下载模板」即可获得标准模板，共两个工作表：
-
-**工作表「客户导入模板」**（含 2 行示例数据，列顺序可任意）：
-
-`姓名` · `公司` · `邮箱` · `手机号` · `WhatsApp` · `Skype` · `LinkedIn` · `Facebook` · `Instagram` · `职位` · `行业` · `国家` · `官网` · `地址` · `等级` · `来源` · `优先级` · `感兴趣产品` · `产品型号` · `产品分类` · `预计采购数量` · `目标价格` · `MOQ` · `需求备注` · `备注` · `状态`
-
-**工作表「填写说明」**：逐列说明取值要求（如 `状态` 可填 `待开发` / `已联系` / `已回复` / `有意向` / `报价中` / `谈判中` / `已成交` / `已流失`，旧值 `已开发` 会自动归为 `已联系`；`等级` 可填 `A` / `B` / `C`；`优先级` 可填 `高 / 中 / 低` 或 `High / Medium / Low`，无法识别的值忽略并落为默认 `Medium`；`来源` 建议填 `Alibaba` / `Google` / `Exhibition` 等，**未知来源值原样保留、不报错**）。
-
-> 模板未包含的字段（如 `标签` / `负责人` / `下一次跟进时间`）仍可在导入向导的列映射步骤手动指定，或直接调用导入接口传入。
-
-### 自动识别 + 手动映射
-
-导入向导分三步（弹窗顶部有步骤指示器）：
-
-1. **选择文件** —— 支持 `.xlsx` / `.xlsm` / `.xls` / `.csv` / `.ods`，导入文件前端上限 **10 MB**（`MAX_IMPORT_FILE_SIZE`，浏览器本地解析、不上传原始文件）；后端 `express.json` 请求体总上限为 **25 MB**（为客户附件的 base64 上传预留）。前端用 xlsx 解析，可选择工作表，并在此步提供「下载模板」。解析器目前把所选工作表的**第一行非空内容**当作表头，界面不能另选表头行。
-2. **列映射与检查** —— 系统按中英文别名自动匹配（例如 `姓名` / `name` / `客户名称` / `联系人` 都会映射到 `name`），未识别的列可手动在下拉里指定；界面实时预览前 **8** 行映射结果，并在前端先跑一轮校验（姓名必填、邮箱格式），问题行标红并给出原因。此步还可设置：
-   - **重复邮箱策略**：`跳过`（默认）或 `覆盖更新`
-   - **默认状态**：表格没有「状态」列时，新客户按此状态入库
-   - 单次最多导入 **5000** 行，超出部分会被截断并明确提示
-3. **导入结果** —— 四块统计（提交行数 / 新增 / 更新 / 跳过或失败），并逐行表格展示失败明细（Excel 真实行号 / 姓名 / 邮箱 / 原因）。可选择「继续导入下一批」或关闭。
-
-> 后端 `POST /api/customers/import` 还支持 `dryRun: true`（只校验不落库，用于导入前预检），当前 UI 未暴露该开关，需要时可直接调接口。
-
-### 导入带标题或说明行的现有工作簿
-
-复杂工作簿经常在正式表头上方放标题、说明或合并单元格。此时导入器会把第一行非空内容当成表头，表现为“已自动识别 0 / 27 个字段”。建议按以下方式处理：
-
-1. 复制需要导入的工作表，不修改原文件。
-2. 删除正式表头上方的标题、空行和合并单元格，让 `姓名 / 公司 / 邮箱 / …` 成为第一行非空内容。
-3. 姓名为唯一必填字段；只有公司名而没有联系人时，可把公司名同时填入“姓名”和“公司”。
-4. 一格里混有邮箱、WhatsApp 或社交账号时，先拆到对应字段；无法结构化的信息放入“备注”。
-5. 使用 `待开发` 作为初始状态；`未联系` 不是导入状态枚举，会按下方选择的默认状态处理并显示提醒。
-6. 上传整理后的副本，确认“错误 = 0”和可导入数量后，再选择“跳过已存在”或“覆盖更新”。
-
-本轮已按上述规则处理外部文件 `Genesis-目标客户主表1.xlsx` 的“本次导入”工作表，并只导入前 10 条有效客户。原工作簿未修改。
-
----
-
-## 配置真实 SMTP 与 IMAP
-
-默认 `MAIL_TRANSPORT=mock`：**不会真实投递邮件**，但开发信记录、客户状态、统计全部照常写入，方便本地演示与开发。前端在仪表盘和开发信记录页会常驻一条琥珀色提示，明确当前处于模拟通道。
-
-切换步骤：
-
-```ini
-# server/.env
-MAIL_TRANSPORT=smtp
-MAIL_FROM=Your Name <you@yourdomain.com>
-SMTP_HOST=smtp.yourprovider.com
-SMTP_PORT=587
-SMTP_SECURE=false          # 465 端口时改为 true
-SMTP_USER=you@yourdomain.com
-SMTP_PASS=your-app-password
-SMTP_REQUIRE_TLS=true
-```
-
-保存后后端（`tsx watch`）会自动重启，日志中出现：
-
-```
-[INFO] [mailer] SMTP transporter 已初始化: smtp.yourprovider.com:587
-[INFO] [mailer] SMTP 连接自检通过
-[INFO] [bootstrap]   邮件通道  : smtp（真实发送）
-```
-
-若自检失败，服务仍会正常启动，仅在日志里给出警告，实际发送时该封信会以 `failed` 状态落库：
-
-```
-[WARN] [mailer] SMTP 连接自检失败（服务仍会启动，发送时将返回失败状态）: …
-```
-
-常见服务商参数：
-
-| 服务商 | HOST | PORT | 备注 |
-| --- | --- | --- | --- |
-| Gmail | `smtp.gmail.com` | 587 | 需开启两步验证并生成「应用专用密码」 |
-| Outlook / 365 | `smtp.office365.com` | 587 | 需开启 SMTP 认证 |
-| QQ 邮箱 | `smtp.qq.com` | 465（`SMTP_SECURE=true`） | 需开启 SMTP 并使用授权码 |
-| 163 邮箱 | `smtp.163.com` | 465（`SMTP_SECURE=true`） | 需授权码 |
-| 阿里外贸邮（本轮实测） | `smtp.alibaba.com` | 25（`SMTP_SECURE=false`） | 必须设置 `SMTP_REQUIRE_TLS=true`，通过 STARTTLS 加密 |
-
-阿里外贸邮本轮通过的收发配置如下，账号和密码按实际邮箱填写：
-
-```ini
-MAIL_TRANSPORT=smtp
-SMTP_HOST=smtp.alibaba.com
-SMTP_PORT=25
-SMTP_SECURE=false
-SMTP_REQUIRE_TLS=true
-SMTP_USER=your-mailbox@example.com
-SMTP_PASS=your-mailbox-password-or-app-code
-
-IMAP_ENABLED=true
-IMAP_HOST=imap.alibaba.com
-IMAP_PORT=993
-IMAP_SECURE=true
-IMAP_USER=your-mailbox@example.com
-IMAP_PASSWORD=your-mailbox-password-or-app-code
-IMAP_MAILBOX=INBOX
-```
-
-本轮实测 143 端口虽然能建立 TCP，但该服务器未声明 STARTTLS，因此没有使用 143，也没有关闭证书校验或降级为明文认证。SMTP/IMAP 密码必须只写入 `server/.env`。
-
-发送失败会保留任务状态与脱敏错误。明确未投递的临时错误按配置自动重试；永久错误进入 `failed`；服务器可能已接收但客户端未拿到确认的情况进入“待核实”，不会自动重发。收件同步失败会记录到同步状态，下一轮继续执行，单封异常不会中断整批。
-
----
-
-## 常见问题排查
-
-**Q: 启动后端报 `MongoNetworkError` / `connect ECONNREFUSED 127.0.0.1:27017`**
-MongoDB 没启动。按 [4. 启动 MongoDB](#4-启动-mongodb) 检查服务状态；Windows 下先 `Get-Service MongoDB`。
-
-**Q: 端口 5000 被占用**
-改 `server/.env` 的 `PORT`，同时把 `web/.env` 的 `VITE_API_PROXY_TARGET` 改成同样的端口。
-
-**Q: 前端能打开但列表一直转圈 / 报 401**
-- 后端没启动：看 `npm run dev` 的 `SERVER` 那一路日志
-- Token 过期：退出重新登录（默认 7 天有效期）
-
-**Q: 前端页面报 CORS 错误**
-`server/.env` 的 `CORS_ORIGIN` 没包含当前前端地址。开发时用 Vite 代理不会触发 CORS；若直连后端则需把 `http://localhost:5173` 加进去。
-
-**Q: 登录后立刻被踢回登录页**
-`JWT_SECRET` 在两次启动之间变了（例如重新生成了 `.env`），旧 token 校验失败。重新登录即可。
-
-**Q: 导入 Excel 提示「无法识别任何列」**
-导入器把所选工作表的第一行非空内容当成表头。若第一行是标题、说明或合并单元格，先复制该工作表并删除正式表头上方的内容，再重新上传；只有在正确表头已被识别出来时，列映射下拉才能手动调整字段。
-
-**Q: 富文本编辑器粘贴后样式错乱**
-Quill 会保留来源样式。建议用「粘贴为纯文本」（Ctrl+Shift+V）后再排版，或在预览标签页确认实际渲染效果。
-
-**Q: 想彻底清空数据库重来**
+主要路由分组：
+
+| 前缀 | 用途 |
+| --- | --- |
+| `/api/health` | 健康检查，包含 `/live` 和 `/ready` |
+| `/api/meta` | 枚举、占位符和公司元数据 |
+| `/api/auth` | 登录和当前用户 |
+| `/api/projects` | 项目工作空间 |
+| `/api/customers` | 客户、跟进、附件和时间线 |
+| `/api/website-research` | 客户官网资料研究 |
+| `/api/letters` | 开发信、审核和发送 |
+| `/api/templates` | 开发信模板 |
+| `/api/mail` | 邮件、线程、附件和定时任务 |
+| `/api/mail-accounts` | 用户发件邮箱 |
+| `/api/products` | 产品目录 |
+| `/api/quotations` | 报价单和报价核对 |
+| `/api/prospecting` | 今日开发和潜客池 |
+| `/api/outreach-automation` | 自动开发配置和执行 |
+| `/api/knowledge-documents` | 知识文档 |
+| `/api/knowledge-index` | 知识索引和检索 |
+| `/api/agent` | AI Agent、翻译和诊断 |
+| `/api/scratchpad` | 个人随手记 |
+| `/api/users` | 用户管理，管理员专属 |
+| `/api/tracking` | 邮件打开和点击追踪，公开 token |
+| `/api/integrations/v1` | 外部系统集成，独立服务凭证 |
+
+业务接口统一返回 JSON；邮件追踪接口返回重定向或透明图片。错误响应包含 HTTP 状态码和错误信息。生产环境不要直接暴露 `/api`，应由同源反向代理转发。
+
+## 9. 生产部署
+
+### 9.1 直接构建
 
 ```bash
-cd server
-npm run reset
+npm run build
+npm start
 ```
 
-或手动：
+构建产物：
+
+- `server/dist/`：编译后的 Node 服务。
+- `web/dist/`：静态前端资源。
+
+使用 Nginx 托管 `web/dist`，并把 `/api` 反向代理到后端。前端路由需要回退到 `index.html`。
+
+### 9.2 Docker Compose
+
+Docker Compose 适合单机预演和内部部署。先准备独立的生产环境文件：
+
+```powershell
+Copy-Item production.env.example .env.production
+```
+
+填写所有占位值后执行：
 
 ```bash
-mongosh cdlm --eval "db.customers.drop(); db.developmentletters.drop(); db.followups.drop(); db.customerevents.drop(); db.customerattachments.drop(); db.quotations.drop(); db.lettertemplates.drop();"
+docker compose --env-file .env.production config --quiet
+docker compose --env-file .env.production build
+docker compose --env-file .env.production up -d --wait
 ```
 
----
+默认只把 Web 发布到 `127.0.0.1:8080`。公网访问必须由独立的 HTTPS 反向代理终止 TLS，不要把 API 或 MongoDB 端口直接发布到公网。
 
-## 许可
+详细要求见 [Docker 运行说明](docs/operations/docker-runtime.md)。
 
-本项目为内部业务工具，未附加开源许可证。
+### 9.3 备份
+
+数据库备份和恢复演练见 [MongoDB 备份与恢复](docs/operations/mongo-backup.md)。备份 MongoDB、上传目录和加密密钥时必须分开保存。不要只备份数据库卷而遗漏附件和密钥。
+
+## 10. 安全与数据边界
+
+- 所有业务数据按项目隔离，业务员只能访问分配给自己的项目和客户。
+- 管理员专属功能同时在前端路由和后端接口校验。
+- 邮箱授权码使用服务端密钥加密，API 不返回明文密钥。
+- JWT、管理员密码和邮箱加密密钥不得写入代码、镜像或浏览器变量。
+- 上传附件只通过鉴权接口下载，不开放静态目录。
+- 邮件追踪 token 只保存摘要，不记录客户邮箱、IP 或 User-Agent。
+- `.env`、`server/uploads/`、数据库备份、客户表格和含客户信息的截图都不得提交 Git。
+- 生产日志可能包含客户信息，访问权限应限制在运维人员范围内。
+
+## 11. 术语
+
+| 术语 | 含义 |
+| --- | --- |
+| 项目 | 一套客户、邮件、模板和知识库的隔离边界 |
+| 潜客 | 尚未转为正式客户的候选公司或联系人 |
+| 开发信 | 面向客户发送的首次或后续商务邮件 |
+| 模板 | 含占位符的可复用开发信内容 |
+| 知识依据 | 开发信可引用的产品、公司和业务资料 |
+| 审核结论 | 业务员对草稿标记的通过或不通过状态 |
+| 发件通道 | Mock 模拟通道或真实 SMTP 通道 |
+
+## 12. 相关文档
+
+- [V2.6 多项目工作空间验收报告](docs/V2.6-多项目工作空间-验收报告.md)
+- [自动开发设计](docs/outreach-autopilot.md)
+- [客户草稿审核](docs/customer-draft-review.md)
+- [开发信中英对照](docs/letter-bilingual-review.md)
+- [产品目录与报价核对](docs/product-quote-playbook.md)
+- [今日开发与潜客导入](docs/prospecting-profiles-and-import.md)
+- [Docker 运行说明](docs/operations/docker-runtime.md)
+- [MongoDB 备份与恢复](docs/operations/mongo-backup.md)
+
+## 13. 许可
+
+本仓库为内部业务工具，未附加开源许可证。
