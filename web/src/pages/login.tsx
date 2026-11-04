@@ -7,7 +7,7 @@
  * 右侧只保留登录所需动作，避免把登录页做成营销落地页。
  */
 import * as React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -18,11 +18,11 @@ import {
   EyeOff,
   FileText,
   Factory,
-  Globe,
   Handshake,
   Inbox,
   LockKeyhole,
   Mail,
+  MailCheck,
   ShieldCheck,
   Truck,
   UserRound,
@@ -32,6 +32,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label, FieldMessage } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { LanguageToggle } from '@/components/layout/language-toggle';
+import { useI18n } from '@/i18n';
+import { ForgotPasswordDialog } from '@/components/auth/forgot-password-dialog';
 import { loginSchema, type LoginFormValues } from '@/lib/validators';
 import { useAuthStore } from '@/store/auth.store';
 import { useMetaStore } from '@/store/meta.store';
@@ -97,17 +100,26 @@ function FlowStep({
 }
 
 export function LoginPage(): React.JSX.Element {
-  usePageTitle('登录');
+  const { t, language } = useI18n();
+  usePageTitle(t('auth.login'));
   const navigate = useNavigate();
   const location = useLocation();
 
   const login = useAuthStore((state) => state.login);
   const loggingIn = useAuthStore((state) => state.loggingIn);
   const loginError = useAuthStore((state) => state.loginError);
+  const twoFactorChallenge = useAuthStore((state) => state.twoFactorChallenge);
+  const verifyingTwoFactor = useAuthStore((state) => state.verifyingTwoFactor);
+  const twoFactorError = useAuthStore((state) => state.twoFactorError);
+  const verifyTwoFactor = useAuthStore((state) => state.verifyTwoFactor);
+  const clearTwoFactor = useAuthStore((state) => state.clearTwoFactor);
   const status = useAuthStore((state) => state.status);
   const fetchMeta = useMetaStore((state) => state.fetchMeta);
 
   const [showPassword, setShowPassword] = React.useState(false);
+  const [otp, setOtp] = React.useState('');
+  const [otpError, setOtpError] = React.useState<string | null>(null);
+  const [forgotOpen, setForgotOpen] = React.useState(false);
 
   const {
     register,
@@ -140,8 +152,9 @@ export function LoginPage(): React.JSX.Element {
   const onSubmit = React.useCallback(
     async (values: LoginFormValues) => {
       clearErrors();
-      const ok = await login(values.username, values.password);
-      if (!ok) {
+      setOtpError(null);
+      const result = await login(values.username, values.password);
+      if (result === 'failed') {
         // store 里已把中文错误写进 loginError，这里补一个字段级提示便于定位
         setError('password', { message: '用户名或密码不正确' });
         return;
@@ -150,6 +163,12 @@ export function LoginPage(): React.JSX.Element {
       if (values.remember) writeStorage(REMEMBER_KEY, values.username);
       else writeStorage(REMEMBER_KEY, '');
 
+      if (result === 'twoFactor') {
+        setOtp('');
+        toast.info('验证码已发送', { description: '请查看账号绑定邮箱中的 6 位验证码' });
+        return;
+      }
+
       // 登录成功后拉一次元数据（占位符 / 公司信息 / 邮件通道）
       await fetchMeta({ force: true });
       toast.success('登录成功', { description: '欢迎回来' });
@@ -157,6 +176,29 @@ export function LoginPage(): React.JSX.Element {
     },
     [login, setError, clearErrors, fetchMeta, navigate, from],
   );
+
+  const onVerify = React.useCallback(
+    async (event: React.FormEvent) => {
+      event.preventDefault();
+      if (otp.length !== 6) {
+        setOtpError('请输入 6 位数字验证码');
+        return;
+      }
+      setOtpError(null);
+      const ok = await verifyTwoFactor(otp);
+      if (!ok) return;
+      await fetchMeta({ force: true });
+      toast.success('登录成功', { description: '双重验证已通过' });
+      navigate(from, { replace: true });
+    },
+    [otp, verifyTwoFactor, fetchMeta, navigate, from],
+  );
+
+  const handleBackToPassword = (): void => {
+    setOtp('');
+    setOtpError(null);
+    clearTwoFactor();
+  };
 
   // Radix Checkbox 不是原生 input，走 watch + setValue 而不是 register，避免事件形状不匹配
   const remember = watch('remember');
@@ -176,10 +218,7 @@ export function LoginPage(): React.JSX.Element {
         <div className="mx-auto flex h-[84px] max-w-[1600px] items-center justify-between px-5 sm:px-8 lg:px-12 xl:px-20">
           <BrandLockup />
           <div className="flex items-center gap-2">
-            <span className="hidden items-center gap-2 rounded-full border border-white/45 bg-white/25 px-3.5 py-2 text-xs font-medium text-slate-700 backdrop-blur-md sm:inline-flex dark:border-white/15 dark:bg-white/10 dark:text-slate-200">
-              <Globe className="h-3.5 w-3.5" aria-hidden />
-              简体中文
-            </span>
+            <LanguageToggle />
             <ThemeToggle className="text-slate-800 hover:bg-white/45 hover:text-slate-950 dark:text-white dark:hover:bg-white/15 dark:hover:text-white" />
           </div>
         </div>
@@ -197,7 +236,9 @@ export function LoginPage(): React.JSX.Element {
               <span className="text-slate-500 dark:text-slate-300">All in One CRM.</span>
             </h1>
             <p className="mt-6 max-w-[570px] text-[15px] leading-7 text-slate-700 dark:text-slate-200">
-              从询盘、客户、报价到订单与出货，把外贸业务的每个关键节点放进同一个工作台，让团队少一点来回确认，多一点成交推进。
+              {language === 'zh'
+                ? '从询盘、客户、报价到订单与出货，把外贸业务的每个关键节点放进同一个工作台，让团队少一点来回确认，多一点成交推进。'
+                : 'From inquiry and customer management to quotations, orders and shipping, keep every export milestone in one workspace and spend less time chasing updates.'}
             </p>
 
             <div className="mt-10 flex max-w-[650px] items-start justify-between gap-1.5 xl:mt-12 xl:max-w-[690px]">
@@ -216,11 +257,71 @@ export function LoginPage(): React.JSX.Element {
         <section className="mx-auto w-full max-w-[32rem] lg:mx-0 lg:justify-self-end" aria-label="登录">
           <div className="rounded-[1.75rem] border border-white/75 bg-white/95 p-6 text-slate-950 shadow-[0_28px_80px_-36px_rgba(15,23,42,0.48),0_2px_12px_rgba(15,23,42,0.06)] backdrop-blur-2xl sm:p-10 dark:border-white/10 dark:bg-slate-950/90 dark:text-white">
             <div>
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-[#7658f6] dark:text-[#b7a6ff]">WELCOME BACK</p>
-              <h2 className="mt-2 text-[2.15rem] font-semibold leading-tight tracking-[-0.045em] text-slate-950 dark:text-white">欢迎回来</h2>
-              <p className="mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400">登录你的 GLOBAL CRM 工作空间</p>
+              <p className="text-[10px] font-semibold tracking-[0.22em] text-[#7658f6] dark:text-[#b7a6ff]">
+                {twoFactorChallenge ? 'TWO-FACTOR VERIFICATION' : 'WELCOME BACK'}
+              </p>
+              <h2 className="mt-2 text-[2.15rem] font-semibold leading-tight tracking-[-0.045em] text-slate-950 dark:text-white">
+                {twoFactorChallenge ? t('auth.twoFactor') : t('auth.welcome')}
+              </h2>
+              <p className="mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                {twoFactorChallenge
+                  ? `${t('auth.twoFactorHint')} · ${twoFactorChallenge.emailHint}`
+                  : t('auth.subtitle')}
+              </p>
             </div>
 
+            {twoFactorChallenge ? (
+              <form className="mt-8 space-y-5" noValidate onSubmit={(event) => void onVerify(event)}>
+                {twoFactorError || otpError ? (
+                  <div role="alert" className="flex gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm leading-5 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <div>
+                      <p className="font-medium">验证失败</p>
+                      <p className="mt-0.5 text-rose-600/90 dark:text-rose-200/80">{otpError || twoFactorError}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div>
+                  <Label htmlFor="login-otp">{t('auth.twoFactor')}</Label>
+                  <div className="relative mt-1.5">
+                    <MailCheck className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" aria-hidden />
+                    <Input
+                      id="login-otp"
+                      className="h-[52px] rounded-xl border-slate-200 bg-white pl-12 pr-4 text-center text-[20px] tracking-[0.45em] text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.03)] focus-visible:border-[#8a70ff] focus-visible:ring-[#8a70ff]/15 dark:border-white/10 dark:bg-slate-900 dark:text-white"
+                      placeholder="000000"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      autoFocus
+                      value={otp}
+                      onChange={(event) => {
+                        setOtp(event.target.value.replace(/\D/g, '').slice(0, 6));
+                        setOtpError(null);
+                      }}
+                    />
+                  </div>
+                  <FieldMessage hint={t('auth.twoFactorHint')} className="pl-1" />
+                </div>
+
+                <Button type="submit" className="login-submit h-[52px] w-full rounded-xl text-[15px] font-semibold" size="lg" loading={verifyingTwoFactor} disabled={verifyingTwoFactor || otp.length !== 6}>
+                  {verifyingTwoFactor ? t('common.loading') : (
+                    <>
+                      {t('auth.verify')}
+                      <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
+                    </>
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={handleBackToPassword}
+                  className="w-full text-center text-[13px] font-medium text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/30 dark:text-slate-400 dark:hover:text-white"
+                >
+                  {t('auth.backLogin')}
+                </button>
+              </form>
+            ) : (
             <form
               className="mt-8 space-y-5"
               noValidate
@@ -241,14 +342,14 @@ export function LoginPage(): React.JSX.Element {
 
               <div>
                 <Label htmlFor="login-username" className="sr-only">
-                  用户名
+                  {t('auth.username')}
                 </Label>
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" aria-hidden />
                   <Input
                     id="login-username"
                     className="h-[52px] rounded-xl border-slate-200 bg-white pl-12 pr-4 text-[15px] text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.03)] placeholder:text-slate-400 focus-visible:border-[#8a70ff] focus-visible:ring-[#8a70ff]/15 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
-                    placeholder="请输入用户名"
+                    placeholder={t('auth.username')}
                     autoComplete="username"
                     autoFocus
                     invalid={Boolean(errors.username)}
@@ -260,7 +361,7 @@ export function LoginPage(): React.JSX.Element {
 
               <div>
                 <Label htmlFor="login-password" className="sr-only">
-                  密码
+                  {t('auth.password')}
                 </Label>
                 <div className="relative">
                   <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" aria-hidden />
@@ -268,7 +369,7 @@ export function LoginPage(): React.JSX.Element {
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     className="h-[52px] rounded-xl border-slate-200 bg-white pl-12 pr-12 text-[15px] text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.03)] placeholder:text-slate-400 focus-visible:border-[#8a70ff] focus-visible:ring-[#8a70ff]/15 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
-                    placeholder="请输入密码"
+                    placeholder={t('auth.password')}
                     autoComplete="current-password"
                     invalid={Boolean(errors.password)}
                     {...register('password')}
@@ -293,49 +394,61 @@ export function LoginPage(): React.JSX.Element {
                     onCheckedChange={(checked) => setValue('remember', checked === true)}
                     className="border-slate-300 bg-white data-[state=checked]:border-[#7658f6] data-[state=checked]:bg-[#7658f6] dark:border-white/20 dark:bg-slate-900"
                   />
-                  记住用户名
+                  {language === 'zh' ? '记住用户名' : 'Remember username'}
                 </label>
                 <button
                   type="button"
-                  onClick={() => toast.info('请联系系统管理员重置密码')}
+                  onClick={() => setForgotOpen(true)}
                   className="text-[13px] font-medium text-[#6547ee] transition-colors hover:text-[#4c2fd1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/30 dark:text-[#b7a6ff] dark:hover:text-[#d4c9ff]"
                 >
-                  忘记密码？
+                  {t('auth.forgot')}
                 </button>
               </div>
 
               <Button type="submit" className="login-submit mt-2 h-[52px] w-full rounded-xl text-[15px] font-semibold" size="lg" loading={loggingIn} disabled={loggingIn}>
-                {loggingIn ? '正在登录…' : (
+                {loggingIn ? t('auth.loggingIn') : (
                   <>
-                    登录
+                    {t('auth.login')}
                     <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
                   </>
                 )}
               </Button>
             </form>
+            )}
 
             <div className="my-6 flex items-center gap-3">
               <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" aria-hidden />
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">或</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">{language === 'zh' ? '或' : 'or'}</span>
               <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" aria-hidden />
             </div>
 
             <button
               type="button"
-              onClick={() => toast.info('请联系系统管理员开通账号')}
+              onClick={() => toast.info(language === 'zh' ? '请联系系统管理员开通账号' : 'Contact your system administrator to request an account')}
               className="flex h-[50px] w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[14px] font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/25 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/5"
             >
               <Mail className="h-[18px] w-[18px] text-slate-500 dark:text-slate-400" aria-hidden />
-              联系管理员开通账号
+              {language === 'zh' ? '联系管理员开通账号' : 'Request an account'}
             </button>
 
             <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-[11px] leading-5 text-slate-400 dark:text-slate-500">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
               仅限授权成员使用 · 登录信息加密传输
             </p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={ROUTES.pricing}>{language === 'zh' ? '价格与套餐' : 'Pricing'}</Link>
+              <span aria-hidden>·</span>
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={ROUTES.help}>{language === 'zh' ? '帮助中心' : 'Help center'}</Link>
+              <span aria-hidden>·</span>
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={`${ROUTES.legal}/terms`}>{language === 'zh' ? '服务条款' : 'Terms'}</Link>
+              <span aria-hidden>·</span>
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={`${ROUTES.legal}/privacy`}>{language === 'zh' ? '隐私政策' : 'Privacy'}</Link>
+            </div>
           </div>
         </section>
       </main>
+
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </div>
   );
 }

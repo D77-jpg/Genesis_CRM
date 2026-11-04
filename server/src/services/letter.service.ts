@@ -54,6 +54,7 @@ import { ensureSignature } from './letter-signature';
 import { resolveProjectSalesProfile } from './project-profile';
 import { resolveSignerName } from './signer.service';
 import { getActiveChannel, getProjectActiveChannel } from './mailer.service';
+import { appendUnsubscribeFooter, getProjectComplianceSettings, isEmailSuppressed } from './mail-compliance.service';
 import { assertCustomerAccess, customerRefScope, customerScope, projectScope, requireProjectId } from '../utils/access';
 import type { AuthUser } from '../types/express';
 import type {
@@ -187,16 +188,28 @@ export async function renderLetter(
   }
 
   const project = customer.projectId
-    ? await Project.findById(customer.projectId).select('code slug name companyName industry website mailFrom senderName').lean()
+    ? await Project.findById(customer.projectId).select('code slug name companyName industry website mailFrom senderName brandProfile').lean()
     : null;
   const signature = resolveProjectSalesProfile(project).signature;
   const withSignature = ensureSignature(content, values.senderName, signature, true);
+  const renderedHtml = safeMailHtml(renderTemplate(withSignature, values, { escape: true }));
+  const renderedText = htmlToPlainText(renderTemplate(withSignature, values, { escape: false }));
+  // A plain-text composer output must stay text-only. Its visible opt-out is
+  // carried in the text part and in the List-Unsubscribe header.
+  const isHtmlContent = /<[a-z][\s\S]*>/i.test(content);
+  const withCompliance = appendUnsubscribeFooter(
+    renderedHtml,
+    renderedText,
+    String(project?._id ?? customer.projectId ?? ''),
+    recipientEmail,
+    isHtmlContent,
+  );
 
   return {
     // 主题走纯文本渲染（不转义），正文走 HTML 渲染（转义，防存储型 XSS）
     subject: renderTemplate(subject, values, { escape: false }),
-    html: safeMailHtml(renderTemplate(withSignature, values, { escape: true })),
-    text: htmlToPlainText(renderTemplate(withSignature, values, { escape: false })),
+    html: withCompliance.html,
+    text: withCompliance.text,
     recipientEmail,
     recipientName: customer.name ?? '',
   };
@@ -465,6 +478,16 @@ export interface SendLetterResult {
   message: string;
 }
 
+/**
+ * Tenant key for a letter write. The customer schema is intentionally typed
+ * without the plugin-added field in this service, so read the owning project
+ * (the migration/backfill guarantees every project has an organization).
+ */
+async function organizationIdForCustomer(customer: CustomerDocument): Promise<Types.ObjectId | undefined> {
+  const project = await Project.findById(customer.projectId).select('organizationId').lean() as { organizationId?: Types.ObjectId } | null;
+  return project?.organizationId;
+}
+
 async function persistAndSend(options: {
   customer: CustomerDocument;
   subjectTemplate: string;
@@ -514,6 +537,10 @@ async function persistAndSend(options: {
       ? (customer.outreachAbandonedAt ? 1 : Math.min(currentStep + 1, OUTREACH_MAX_STEPS))
       : undefined;
 
+  // Background automation writes through findOneAndUpdate(upsert), which does
+  // not run the tenant plugin's save hook. Carry the project tenant key
+  // explicitly so the resulting letter is visible in tenant-scoped mail lists.
+  const organizationId = await organizationIdForCustomer(customer);
   const rendered = await renderLetter(
     customer,
     subjectTemplate,
@@ -560,6 +587,7 @@ async function persistAndSend(options: {
       ...(outreachStep ? {outreachStep} : {}),
       ...(knowledgeReview ? {knowledgeReview} : {}),
       ...(knowledgeReview ? {aiSnapshot:{subject:rendered.subject,contentText:rendered.text,at:new Date()}} : {}),
+      ...(organizationId ? { organizationId } : {}),
       projectId: customer.projectId,
       customerId: customer._id,
       recipientName: rendered.recipientName,
@@ -616,12 +644,18 @@ async function persistAndSend(options: {
     };
   }
 
+  const suppression = await isEmailSuppressed(String(customer.projectId), rendered.recipientEmail);
+  if (suppression) {
+    throw ApiError.conflict(`该收件人已进入不再发送名单（${suppression.reason}），不能继续发送`);
+  }
+
   const requestKey = createHash('sha256').update(JSON.stringify([userId, options.requestKey || [customer.id, rendered, options.scheduledAt, Math.floor(Date.now() / 60000)]])).digest('hex');
   if (options.scheduledAt && options.scheduledAt.getTime() <= Date.now() && !await DevelopmentLetter.exists({ requestKey, projectId: customer.projectId })) throw ApiError.badRequest('定时时间必须晚于当前时间');
   const due = options.scheduledAt ?? new Date();
   let prepared: ReturnType<typeof prepareTrackedHtml> = { deliveryHtml: rendered.html };
   try {
-    prepared = prepareTrackedHtml(rendered.html);
+    const compliance = await getProjectComplianceSettings(String(customer.projectId));
+    if (compliance.trackingEnabled) prepared = prepareTrackedHtml(rendered.html);
   } catch {
     // Tracking is optional telemetry. A malformed configuration or unexpected
     // HTML must never prevent the durable send task from being created.
@@ -650,6 +684,7 @@ async function persistAndSend(options: {
         ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
         ...(knowledgeReview ? { knowledgeReview } : {}),
         ...(knowledgeReview ? { aiSnapshot: { subject: rendered.subject, contentText: rendered.text, at: new Date() } } : {}),
+        ...(organizationId ? { organizationId } : {}),
         recipientName: rendered.recipientName,
         recipientEmail: rendered.recipientEmail,
         subject: rendered.subject,
@@ -689,6 +724,7 @@ async function persistAndSend(options: {
         ...(options.agentOutreachId ? { agentOutreachId: options.agentOutreachId } : {}),
         ...(knowledgeReview ? {knowledgeReview} : {}),
         ...(knowledgeReview ? {aiSnapshot:{subject:rendered.subject,contentText:rendered.text,at:new Date()}} : {}),
+        ...(organizationId ? { organizationId } : {}),
         projectId: customer.projectId, customerId: customer._id, recipientName: rendered.recipientName,
         recipientEmail: rendered.recipientEmail, subject: rendered.subject,
         senderAddress: sender.senderAddress,
@@ -846,11 +882,13 @@ export async function resendLetter(
 
   if (input.saveAsDraft) {
     if (original.status !== 'draft') throw ApiError.conflict('只有草稿可以继续保存');
+    const organizationId = await organizationIdForCustomer(customer);
     const rendered = await renderLetter(customer, subjectTemplate, contentTemplate, input.recipientEmail ?? original.recipientEmail, signerName);
     // 保存草稿等于换了一份待审内容：无论之前是通过还是不通过，结论都失效，重新审核。
     const update: Record<string, unknown> = {$set:{
       subject:rendered.subject, content:rendered.html, contentText:rendered.text, template:contentTemplate,
       recipientEmail:rendered.recipientEmail, recipientName:rendered.recipientName,
+      ...(organizationId ? { organizationId } : {}),
     },$unset:{review:1,'knowledgeReview.manualApprovedAt':1,'knowledgeReview.manualApprovedBy':1}};
     const saved = await DevelopmentLetter.findOneAndUpdate({_id: original._id, projectId: customer.projectId, status:'draft'}, update, {new:true});
     if (!saved) throw ApiError.conflict('草稿状态已变化，请刷新后重试');

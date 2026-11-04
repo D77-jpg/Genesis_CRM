@@ -2,7 +2,7 @@
  * 用户菜单：显示当前登录用户，提供退出登录
  */
 import type * as React from 'react';
-import { LogOut, UserRound } from 'lucide-react';
+import { LogOut, LifeBuoy, UserRound } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,10 @@ export function UserMenu({ className }: { className?: string }): React.JSX.Eleme
         <DropdownMenuItem disabled>
           <UserRound aria-hidden />
           个人设置（暂未开放）
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => window.open('/help', '_blank', 'noopener,noreferrer')}>
+          <LifeBuoy aria-hidden />
+          帮助中心
         </DropdownMenuItem>
         <DropdownMenuDangerItem onSelect={() => logout({ silent: true })}>
           <LogOut aria-hidden />

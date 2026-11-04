@@ -9,7 +9,7 @@
 | 运行环境 | Node.js >= 20.19，MongoDB 7.x 或 8.x |
 | 部署方式 | 本机开发，Docker Compose 单机部署 |
 
-Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。系统以项目为数据边界，支持管理员与业务员分权协作，并提供本地开发和容器化部署方式。
+Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。P2 起系统以「组织 → 项目」两层划分数据边界，支持组织级套餐、计量与平台运营；P3 补齐公开价格/帮助/法律页面、上市主流程 E2E、版本化数据库迁移、三套环境与压力/安全基线。
 
 ## 目录
 
@@ -39,8 +39,27 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 
 - 一套部署可管理多个外贸项目。
 - 项目切换会同步切换客户、邮件、模板、跟进、附件、报价和 Dashboard 数据。
-- 业务员只能访问被分配的项目和本人负责的客户；管理员可查看全部项目。
+- 组织管理员可查看本组织全部项目；项目管理员和只读账号可查看被分配项目的全部数据；销售只能访问被分配项目下本人负责的客户。
 - 浏览器通过 `X-Project-Id` 传递当前项目，后端对业务查询再次校验项目范围。
+- 新建项目后可进入「新手引导」，按品牌、产品、行业卡、发件邮箱、团队和 AI 清单完成初始化。
+
+### 组织、套餐与平台运营（P2）
+
+- 组织（Organization）是项目之上的租户边界：用户、项目、客户、邮件、模板、附件、知识库等业务集合都带 `organizationId`。
+- 租户上下文通过 AsyncLocalStorage 注入，Mongoose 全局插件统一为查询、聚合、更新和删除追加组织过滤；平台运营接口显式绕过。
+- 组织管理员可维护组织资料、账单邮箱、税号和套餐；套餐包含用户数、项目数、月邮件量、AI Token 和存储空间限额。
+- 每月按组织记录邮件发送、AI Token 和附件存储用量，超额时发送/上传前失败关闭；账单页可按当月用量生成草稿估算单。
+- 平台控制台仅供 `isPlatformAdmin` 使用，可创建组织及组织管理员、暂停/恢复组织、查看跨组织用量并生成账单。
+- 旧版单租户数据通过版本化迁移显式迁移到默认组织；应用和 worker 启动时只校验迁移状态，不执行迁移。
+
+### 上市准备（P3）
+
+- **公开产品页**：`/pricing` 展示三档套餐、年付优惠、额度对比和 FAQ；`/help` 提供 10 篇中英双语操作文档；`/legal/terms|privacy|dpa|sla` 提供服务条款、隐私政策、DPA 和 SLA。
+- **E2E 主流程**：`npm run test:e2e --prefix server` 用真实 HTTP 接口验证「登录 → 导入客户 → 发信 → 收回复 → 报价」；测试使用内存 Mongo，不依赖外部邮箱。
+- **版本化迁移**：`server/src/migrations/` 前向、追加式迁移；`schema_migrations` 记录校验和，应用启动 fail closed 检查，Compose 用一次性 `migrate` 服务先于 API/worker 完成。
+- **三套环境**：开发使用 `server/.env.example`，预发布使用 `staging.env.example`，生产使用 `production.env.example`；三者独立数据库、密钥、卷和域名。
+- **压力与稳定性**：`npm run load --prefix server` 提供可配置并发/时长的只读压测与 p50/p95/p99、错误率、进程内存报告；默认限流为 600 次/分钟，压测需在隔离环境临时提高。
+- **安全基线**：`npm run test:security --prefix server` 覆盖鉴权、CSRF、租户隔离、安全头、公共接口最小暴露；外部渗透测试仍需在上线前由独立第三方执行，清单见 `docs/P3-安全测试与外部渗透测试清单.md`。
 
 ### 客户与开发过程
 
@@ -72,6 +91,16 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 - 支持 SMTP 真实发件和 Mock 模拟发件。
 - HTML 邮件支持打开追踪和链接点击追踪。追踪数据只作互动参考。
 
+### 邮件合规与送达
+
+- 每封开发信自动附带可见退订链接，并发送 `List-Unsubscribe` / `List-Unsubscribe-Post` 邮件头，支持 RFC 8058 一键退订。
+- 退订、硬退信、投诉和人工地址进入项目级或全局「不再发送名单」；后续队列任务会直接取消。
+- 收件箱同步会识别退信报告和退订请求；SMTP 永久退信也会自动写入抑制名单。
+- 管理端可检查发件域名的 SPF、DKIM（可选 selector）和 DMARC DNS 记录。
+- 项目可关闭打开/点击追踪；关闭后不再插入像素或改写链接，已产生的统计仍保留。启用追踪时应在隐私政策中告知收件人。
+- 支持邮箱预热：按起始上限、每日增量和最高上限逐日提升，并与邮箱自身额度、项目每日上限取最小值。
+- 项目设置中可维护品牌身份、供应内容、开发信重点、主题偏好和签名，替换代码内置话术。
+
 ### 产品与报价
 
 - 按项目维护产品目录、SKU、规格、MOQ、交期和阶梯价。
@@ -87,11 +116,14 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 - AI 配置、用量、诊断和每日额度由管理员管理。
 - 支持 OpenAI 兼容的模型服务，可在管理界面覆盖服务端默认配置。
 
-### 团队协作
+### 团队协作与界面
 
-- 管理员和业务员两级角色。
+- 四级业务角色：组织管理员（`admin`）、项目管理员、销售、只读。只读账号在前端隐藏写操作，后端也会拒绝所有非 GET 写请求。
+- 组织管理员管理本组织账号和全部项目；项目管理员管理被分配项目的资料、品牌与邮件合规；销售只看本人客户；只读账号可查看项目全量数据。
+- 平台运营使用独立的 `isPlatformAdmin` 标记，不占用业务角色；平台控制台可跨组织查看和运营。
 - 用户管理、项目分配、客户归属和邮箱绑定。
-- Dashboard 展示客户漏斗、待跟进、开发信和邮件活动。
+- 中英文界面切换在右上角，偏好保存在浏览器；导航、登录、项目、引导、客户、邮件、知识库、表单弹窗和系统设置等界面文案均已英文化，客户资料、邮件正文等业务数据保持原文。
+- Dashboard 展示客户漏斗、待跟进、开发信和邮件活动，并显示初始化进度卡片。
 - 个人随手记按用户和项目隔离，并同步到服务端。
 
 ## 3. 技术架构
@@ -100,10 +132,15 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 flowchart LR
   U[浏览器<br/>React SPA] -->|HTTPS /api| A[Express API]
   A --> M[(MongoDB)]
-  A --> F[本地附件目录]
+  A --> F[本地附件目录或 S3]
   A --> S[SMTP / IMAP]
   A --> K[知识索引与本地模型]
   A --> L[OpenAI 兼容模型服务]
+  A -. 指标 / 错误 .-> O[Prometheus / 日志]
+  W[独立 Worker] --> M
+  W --> S
+  W --> K
+  W --> L
 ```
 
 | 层次 | 技术 |
@@ -114,7 +151,8 @@ flowchart LR
 | 邮件 | Nodemailer、ImapFlow、MailParser |
 | 文档处理 | SheetJS、Mammoth、PDF Parse、PDFKit |
 | AI | OpenAI 兼容 Chat Completions 服务，服务端密钥与项目级配置 |
-| 部署 | Docker Compose、Nginx、PowerShell 运维脚本 |
+| 部署 | Docker Compose、Nginx、PowerShell 运维脚本；API 与后台 Worker 可独立扩缩容 |
+| 可观测性 | Prometheus 文本指标、结构化日志、进程内错误环形缓冲 |
 
 ## 4. 目录结构
 
@@ -122,12 +160,14 @@ flowchart LR
 .
 ├── server/                  后端 API
 │   ├── src/
+│   │   ├── background/      后台任务运行时（API 或独立 Worker 共用）
 │   │   ├── config/          环境变量、数据库和日志配置
 │   │   ├── controllers/     HTTP 控制器
-│   │   ├── middleware/      鉴权、校验、错误处理
-│   │   ├── models/          Mongoose 数据模型
+│   │   ├── middleware/      鉴权、租户上下文、校验、错误处理
+│   │   ├── models/          Mongoose 数据模型与租户插件
 │   │   ├── routes/          REST 路由
-│   │   ├── services/        客户、邮件、AI、知识库等业务逻辑
+│   │   ├── services/        客户、邮件、AI、知识库、存储、计量等业务逻辑
+│   │   ├── worker.ts        独立后台 Worker 入口
 │   │   └── scripts/         管理员初始化和数据脚本
 │   ├── tests/               服务端测试
 │   ├── evaluation/          知识库评测
@@ -192,7 +232,11 @@ MONGODB_URI=mongodb://127.0.0.1:27017/cdlm
 JWT_SECRET=请替换为至少32个字符的随机字符串
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=请替换为安全的初始密码
+# 可选：给默认管理员绑定邮箱，用于忘记密码和邮件 2FA
+ADMIN_EMAIL=
+# mock 模式不会真实发信；本地测试时验证码/重置链接会打印到服务端控制台
 MAIL_TRANSPORT=mock
+APP_BASE_URL=http://localhost:5173
 IMAP_ENABLED=false
 ```
 
@@ -221,7 +265,13 @@ npm run dev
 - 后端 API：`http://127.0.0.1:5000/api`
 - 健康检查：`http://127.0.0.1:5000/api/health`
 
-首次启动会根据 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员。登录后可在用户管理页面创建业务员账号。
+首次启动前先执行 `npm run migrate --prefix server`。迁移会按 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员，并把旧版数据迁移到默认组织；应用启动时只校验迁移是否已完成，不会隐式改库。登录后可在用户管理页面创建业务员账号；建议同时为管理员绑定邮箱并开启邮件 2FA。忘记密码只对已绑定邮箱的账号发送重置链接。
+
+开发环境默认由 API 进程同时运行后台任务。需要模拟生产拆分时，在 API 设置 `RUN_BACKGROUND_JOBS=false`，另开终端执行：
+
+```bash
+npm run dev:worker --prefix server
+```
 
 ### 5.6 局域网访问
 
@@ -242,16 +292,23 @@ CORS_LAN_PORTS=5173,4173
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `NODE_ENV` | `development` | `development`、`test` 或 `production` |
+| `APP_ENV` | `development` | 环境标识：`development`、`staging` 或 `production`；staging 也可使用 `NODE_ENV=production` |
+| `API_RATE_LIMIT_WINDOW_MS` | `60000` | API 限流窗口（毫秒） |
+| `API_RATE_LIMIT_MAX` | `600` | 每个 IP、每个窗口的最大请求数；隔离压测时临时提高 |
 | `HOST` | `0.0.0.0` | API 监听地址 |
 | `PORT` | `5000` | API 端口 |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/cdlm` | MongoDB 连接地址 |
 | `JWT_SECRET` | 无 | 登录令牌签名密钥，至少 32 个字符 |
-| `JWT_EXPIRES_IN` | `7d` | 登录令牌有效期 |
+| `JWT_ACCESS_EXPIRES_IN` | `15m` | 浏览器访问令牌有效期（HttpOnly cookie） |
+| `JWT_REFRESH_EXPIRES_DAYS` | `30` | 刷新会话有效期，单位为天 |
+| `COOKIE_SECURE` | `false` | HTTPS 部署时设为 `true`；生产环境默认自动启用 Secure cookie |
 | `ADMIN_USERNAME` | `admin` | 首次启动创建的管理员账号 |
 | `ADMIN_PASSWORD` | 无 | 管理员初始密码（至少 10 位；生产环境至少 16 位） |
+| `ADMIN_EMAIL` | 空 | 可选，默认管理员邮箱；也可登录后在用户管理中设置 |
 | `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个值用英文逗号分隔 |
+| `APP_BASE_URL` | 空 | 密码重置邮件中的前端地址，留空时取 `CORS_ORIGIN` 第一项 |
 | `CORS_ALLOW_PRIVATE_NETWORK` | `false` | 是否允许私有网段前端访问 |
-| `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp` |
+| `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp`；邮件 2FA 和忘记密码在生产环境需设为 `smtp` |
 | `SMTP_HOST` / `SMTP_PORT` | 空 / `587` | SMTP 服务地址和端口 |
 | `SMTP_USER` / `SMTP_PASS` | 空 | SMTP 账号和授权码 |
 | `SMTP_REQUIRE_TLS` | `true` | 是否要求 STARTTLS |
@@ -259,7 +316,7 @@ CORS_LAN_PORTS=5173,4173
 | `IMAP_HOST` / `IMAP_PORT` | 空 / `993` | IMAP 服务地址和端口 |
 | `MAIL_CREDENTIAL_ENCRYPTION_KEY` | 空 | 邮箱凭据加密密钥，生产环境必须单独配置 |
 | `TRACKING_BASE_URL` | `http://localhost:5000` | 邮件追踪使用的公网根地址 |
-| `PUBLIC_BASE_URL` | 空 | 邮件品牌图片的公网根地址，留空时复用追踪地址 |
+| `PUBLIC_BASE_URL` | 空 | 邮件品牌图片和退订链接的公网根地址，留空时复用追踪地址；生产环境必须设为 HTTPS |
 | `UPLOAD_DIR` | `server/uploads` | 客户附件和邮件附件的本地目录 |
 | `MAX_ATTACHMENT_SIZE` | `15728640` | 单个附件大小上限，单位为字节 |
 | `AI_PROVIDER` | `mock` | `mock` 或 `openai` |
@@ -271,6 +328,17 @@ CORS_LAN_PORTS=5173,4173
 | `COMPANY_WEBSITE` | Genesis 默认值 | 我方公司网站 |
 | `COMPANY_MOQ` | `100 pcs` | 默认 MOQ 文案 |
 | `SENDER_NAME` | `Genesis Sales Team` | 默认发件人签名 |
+| `DEFAULT_ORGANIZATION_NAME` | `Default Organization` | 旧数据迁移使用的默认组织名称 |
+| `DEFAULT_ORGANIZATION_SLUG` | `default` | 默认组织 slug，只能包含小写字母、数字和连字符 |
+| `RUN_BACKGROUND_JOBS` | `true` | API 是否内嵌后台任务；生产拆分 Worker 时设为 `false` |
+| `WORKER_HEALTH_PORT` | `5100` | 独立 Worker 健康检查端口 |
+| `STORAGE_PROVIDER` | `local` | 附件存储：`local` 或 `s3` |
+| `S3_ENDPOINT` | 空 | S3/MinIO 自定义端点，留空使用 AWS 默认端点 |
+| `S3_REGION` | `us-east-1` | S3 区域 |
+| `S3_BUCKET` | 空 | 附件桶名；`s3` 模式必填 |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | 空 | S3 凭据，只放服务端环境变量 |
+| `S3_FORCE_PATH_STYLE` | `true` | MinIO 等路径风格桶设为 `true` |
+| `METRICS_ENABLED` | `true` | 是否启用 `GET /api/metrics` Prometheus 指标 |
 
 生产环境启动时，服务端会校验密钥强度。`JWT_SECRET` 必须至少 32 个字符，`ADMIN_PASSWORD` 至少 16 个字符，`MAIL_CREDENTIAL_ENCRYPTION_KEY` 必须单独生成且至少 32 个字符。
 
@@ -293,6 +361,8 @@ CORS_LAN_PORTS=5173,4173
 | `npm run dev` | 同时启动后端和前端开发服务 |
 | `npm run dev:server` | 仅启动后端 |
 | `npm run dev:web` | 仅启动前端 |
+| `npm run dev:worker --prefix server` | 启动独立后台 Worker（开发） |
+| `npm run start:worker --prefix server` | 启动已构建的独立后台 Worker |
 | `npm run build` | 构建后端和前端 |
 | `npm start` | 启动已构建的后端 |
 | `npm run typecheck` | 前后端 TypeScript 类型检查 |
@@ -308,7 +378,24 @@ npm run test:mail --prefix server
 npm run test:agent --prefix server
 npm run test:ai-settings --prefix server
 npm run test:security --prefix server
+npm run test:p1 --prefix server
+npm run test:p2 --prefix server
+npm run test:p3 --prefix server
+npm run test:e2e --prefix server
 npm run test:health --prefix server
+npm run migrate:status --prefix server
+npm run migrate --prefix server
+```
+
+压测（在隔离的 staging 环境执行，先临时提高 `API_RATE_LIMIT_MAX`）：
+
+```powershell
+$env:LOAD_BASE_URL='http://127.0.0.1:5002/api'
+$env:LOAD_USERNAME='admin'
+$env:LOAD_PASSWORD='<staging password>'
+$env:LOAD_DURATION_SECONDS='60'
+$env:LOAD_CONCURRENCY='20'
+npm run load --prefix server
 ```
 
 完整测试脚本见 [server/package.json](server/package.json)。
@@ -323,12 +410,34 @@ npm run test:fixture --prefix server
 
 ## 8. API 概览
 
-除公开接口外，API 使用 JWT 鉴权：
+除公开接口外，API 使用登录鉴权。浏览器通过 `POST /api/auth/login` 获得两个 HttpOnly cookie：
+
+- `cdlm_access`：短期访问令牌，默认 15 分钟。
+- `cdlm_refresh`：刷新令牌，默认 30 天；服务端只保存其摘要，可随时撤销。
+
+浏览器端的 `cdlm_access` 不会暴露给 JavaScript；写操作还需要从可读的 `cdlm_csrf` cookie 读取值，并在请求头回传：
+
+```http
+X-CSRF-Token: <csrf-token>
+X-Project-Id: <projectId>
+```
+
+服务端在迁移期仍兼容已有 Bearer token（不经过 cookie，也不要求 CSRF 头）；新脚本建议使用 cookie jar，或改用 `/api/integrations/v1` 的独立服务凭证：
 
 ```http
 Authorization: Bearer <token>
 X-Project-Id: <projectId>
 ```
+
+浏览器访问令牌过期时，前端会自动调用 `POST /api/auth/refresh` 轮换刷新令牌；可用 `POST /api/auth/logout` 注销当前会话。
+
+账号可在「用户管理」中绑定邮箱并开启邮件 2FA。开启后，`POST /api/auth/login` 在密码正确时返回 `twoFactorRequired`、`challengeId` 和脱敏邮箱，不会签发 cookie；前端调用 `POST /api/auth/login/verify-2fa` 提交 6 位验证码后才创建会话。验证码 10 分钟有效，同一挑战最多尝试 5 次。
+
+忘记密码流程：
+
+1. `POST /api/auth/forgot-password` 提交用户名。无论账号是否存在都返回相同结果，避免账号枚举。
+2. 账号有邮箱时会收到 30 分钟有效的重置链接；邮件由系统 `MAIL_*`/`SMTP_*` 通道发送，`mock` 模式会打印到服务端控制台。
+3. `POST /api/auth/reset-password` 提交 `token` 和新密码；成功后撤销该账号的所有会话和未完成挑战。
 
 主要路由分组：
 
@@ -336,14 +445,16 @@ X-Project-Id: <projectId>
 | --- | --- |
 | `/api/health` | 健康检查，包含 `/live` 和 `/ready` |
 | `/api/meta` | 枚举、占位符和公司元数据 |
-| `/api/auth` | 登录和当前用户 |
-| `/api/projects` | 项目工作空间 |
+| `/api/auth` | 登录、邮件 2FA、忘记/重置密码、刷新、注销和当前用户 |
+| `/api/projects` | 项目工作空间、品牌配置和新手引导状态 |
 | `/api/customers` | 客户、跟进、附件和时间线 |
 | `/api/website-research` | 客户官网资料研究 |
 | `/api/letters` | 开发信、审核和发送 |
 | `/api/templates` | 开发信模板 |
 | `/api/mail` | 邮件、线程、附件和定时任务 |
 | `/api/mail-accounts` | 用户发件邮箱 |
+| `/api/mail-compliance` | 抑制名单、SPF/DKIM/DMARC 检查和预热策略 |
+| `/api/unsubscribe/:token` | 公开的签名一键退订链接 |
 | `/api/products` | 产品目录 |
 | `/api/quotations` | 报价单和报价核对 |
 | `/api/prospecting` | 今日开发和潜客池 |
@@ -355,9 +466,14 @@ X-Project-Id: <projectId>
 | `/api/users` | 用户管理，管理员专属 |
 | `/api/audit-logs` | 登录与关键操作审计，管理员专属 |
 | `/api/tracking` | 邮件打开和点击追踪，公开 token |
+| `/api/unsubscribe` | 签名退订确认页和 RFC 8058 一键退订，公开 |
 | `/api/integrations/v1` | 外部系统集成，独立服务凭证 |
+| `/api/organizations` | 当前组织资料、用量、套餐和账单草稿，管理员专属 |
+| `/api/platform` | 平台运营：跨组织概览、组织创建、暂停/恢复、用量、账单和最近错误，`isPlatformAdmin` 专属 |
+| `/api/metrics` | Prometheus 文本指标，公开只读；只在 `METRICS_ENABLED=true` 时注册 |
+| `/api/public/plans` | 公开套餐目录，供价格页使用，不包含任何组织或密钥数据 |
 
-业务接口统一返回 JSON；邮件追踪接口返回重定向或透明图片。错误响应包含 HTTP 状态码和错误信息。生产环境不要直接暴露 `/api`，应由同源反向代理转发。
+业务接口统一返回 JSON；邮件追踪接口返回重定向或透明图片，退订接口返回确认页。错误响应包含 HTTP 状态码和错误信息。生产环境不要直接暴露 `/api`，应由同源反向代理转发，并把 `PUBLIC_BASE_URL` 设为邮件收件人可访问的 HTTPS 地址，否则退订链接会指向本地地址。
 
 ## 9. 生产部署
 
@@ -366,7 +482,11 @@ X-Project-Id: <projectId>
 ```bash
 npm run build
 npm start
+# 另开一个进程运行后台任务（推荐）
+npm run start:worker --prefix server
 ```
+
+单进程临时部署也可以设置 `RUN_BACKGROUND_JOBS=true` 后只运行 `npm start`，但生产环境建议 API 与 Worker 分离，避免长任务占用 HTTP 进程。
 
 构建产物：
 
@@ -393,6 +513,14 @@ docker compose --env-file .env.production up -d --wait
 
 默认只把 Web 发布到 `127.0.0.1:8080`。公网访问必须由独立的 HTTPS 反向代理终止 TLS，不要把 API 或 MongoDB 端口直接发布到公网。
 
+P3 的 Compose 会先运行一次性 `migrate`，成功后再启动两个 Node 服务：
+
+- `migrate`：执行 `node dist/scripts/migrate.js`，失败则 API/worker 不会启动。
+- `server`：只处理 HTTP API，`RUN_BACKGROUND_JOBS=false`。
+- `worker`：独立消费邮件队列、收件箱同步、获客、自动开发、Agent 和知识库任务，健康检查为容器内 `:5100/health`。
+
+两者共享 MongoDB、上传卷和相同的 `MAIL_CREDENTIAL_ENCRYPTION_KEY`。生产建议使用 `STORAGE_PROVIDER=s3` 并配置 S3/MinIO，避免多副本 API 依赖本地附件卷。Prometheus 可抓取 `GET /api/metrics`；如不希望公开，应在反向代理层限制来源。
+
 详细要求见 [Docker 运行说明](docs/operations/docker-runtime.md)。
 
 ### 9.3 备份
@@ -401,10 +529,16 @@ docker compose --env-file .env.production up -d --wait
 
 ## 10. 安全与数据边界
 
-- 所有业务数据按项目隔离，业务员只能访问分配给自己的项目和客户。
+- 所有业务数据按「组织 → 项目」隔离：Mongoose 租户插件统一追加 `organizationId` 过滤，业务员只能访问分配给自己的项目和客户。
+- 平台运营接口要求 `isPlatformAdmin`，并在独立的 bypass 租户上下文运行；普通管理员只能管理本组织。
+- 组织用量在每月发送/上传前校验，超额失败关闭；账单草稿只做估算，实际收款仍由外部财务流程处理。
+- 数据库迁移版本化、只追加、带校验和与 advisory lock；应用启动只校验，不允许通过启动流程隐式改库。
+- 公共价格/帮助/法律页无需登录，但公开接口只返回套餐目录，不暴露组织、用户或用量数据。
 - 新建用户默认是业务员（`user`），管理员角色必须由管理员显式授予。
 - 新建/重置密码要求 10–72 位，并至少包含大小写字母、数字、符号中的三类；连续 5 次登录失败会锁定账号 15 分钟。
-- 登录成功/失败、用户管理和客户删除/导入/导出会写入审计日志；审计接口仅管理员可访问。
+- 浏览器登录使用 HttpOnly access/refresh cookie，刷新令牌在服务端保存摘要并支持轮换、注销撤销；写操作使用 double-submit CSRF 校验。
+- 可选的邮件 2FA 使用 6 位一次性验证码，验证码只保存带密钥的哈希摘要；忘记密码使用一次性重置令牌，均有时效和尝试次数限制。
+- 登录成功/失败/注销、2FA 挑战、密码重置、用户管理和客户删除/导入/导出会写入审计日志；审计接口仅管理员可访问。
 - 管理员专属功能同时在前端路由和后端接口校验。
 - 邮箱授权码使用服务端密钥加密，API 不返回明文密钥。
 - JWT、管理员密码和邮箱加密密钥不得写入代码、镜像或浏览器变量。
@@ -428,6 +562,13 @@ docker compose --env-file .env.production up -d --wait
 ## 12. 相关文档
 
 - [V2.6 多项目工作空间验收报告](docs/V2.6-多项目工作空间-验收报告.md)
+- [P2 多租户与运营验收报告](docs/P2-多租户与运营-验收报告.md)
+- [P3 环境、迁移与发布](docs/P3-环境与发布.md)
+- [P3 帮助中心与新手文档](docs/P3-帮助中心与新手文档.md)
+- [P3 法律文件与价格页](docs/P3-法律文件与价格页.md)
+- [P3 安全测试与外部渗透测试清单](docs/P3-安全测试与外部渗透测试清单.md)
+- [P3 压力与稳定性测试报告](docs/P3-压力与稳定性测试报告.md)
+- [P3 上市准备验收报告](docs/P3-上市准备-验收报告.md)
 - [自动开发设计](docs/outreach-autopilot.md)
 - [客户草稿审核](docs/customer-draft-review.md)
 - [开发信中英对照](docs/letter-bilingual-review.md)

@@ -1,3 +1,4 @@
+import './tenant-setup';
 import {Schema,model} from 'mongoose';
 const rule=new Schema({projectId:{type:Schema.Types.ObjectId,required:true},userId:{type:Schema.Types.ObjectId,required:true},actorRole:{type:String,enum:['admin','user'],required:true},enabled:{type:Boolean,default:false},inbound:{type:Boolean,default:true},due:{type:Boolean,default:true},sent:{type:Boolean,default:true},dailyLimit:{type:Number,default:5},tokenBudget:{type:Number,default:30000},version:{type:Number,default:1},enabledAt:Date,mailCursorAt:Date,mailCursorId:Schema.Types.ObjectId},{timestamps:true,versionKey:false});
 rule.index({projectId:1,userId:1},{unique:true});export const AgentAutomationRule=model('AgentAutomationRule',rule);

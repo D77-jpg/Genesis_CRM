@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, model, Types } from 'mongoose';
 export interface IndexIdentity { id:string; model:string; revision:string; weightHash:string; dimension:number; adapter:string; maxTokens:number }
 export interface IndexState { projectId:Types.ObjectId; requestedBy?:Types.ObjectId; enabled:boolean; activeGeneration?:Types.ObjectId; pendingGeneration?:Types.ObjectId; revision:number; switchToken?:string; switchUntil?:Date; updatedAt:Date }

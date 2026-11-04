@@ -9,6 +9,7 @@
  */
 import type { LetterSignature } from './letter-signature';
 import { IRONHUE_LOGO_PATH } from '../constants/ironhue-logo';
+import type { ProjectBrandProfile } from '../models/Project';
 
 export interface ProjectLike {
   code?: string;
@@ -19,6 +20,7 @@ export interface ProjectLike {
   website?: string;
   mailFrom?: string;
   senderName?: string;
+  brandProfile?: ProjectBrandProfile;
 }
 
 export interface ProjectSalesProfile {
@@ -178,14 +180,43 @@ function generalProfile(project: ProjectLike): ProjectSalesProfile {
   };
 }
 
+function mergedProfile(base: ProjectSalesProfile, project: ProjectLike): ProjectSalesProfile {
+  const custom = project.brandProfile;
+  if (!custom) return base;
+  const text = (value: string | undefined, fallback: string): string => value?.trim() || fallback;
+  const signatureLines = (custom.signatureLines ?? []).map((line) => line.trim()).filter(Boolean);
+  return {
+    ...base,
+    label: text(custom.label, base.label),
+    identity: text(custom.identity, base.identity),
+    offerSummary: text(custom.offerSummary, base.offerSummary),
+    outreachFocus: text(custom.outreachFocus, base.outreachFocus),
+    avoidTopics: text(custom.avoidTopics, base.avoidTopics),
+    insightLabel: text(custom.insightLabel, base.insightLabel),
+    insightExamples: text(custom.insightExamples, base.insightExamples),
+    proofExamples: text(custom.proofExamples, base.proofExamples),
+    ctaExamples: text(custom.ctaExamples, base.ctaExamples),
+    subjectFocus: text(custom.subjectFocus, base.subjectFocus),
+    signature: {
+      ...base.signature,
+      title: text(custom.signatureTitle, base.signature.title),
+      lines: signatureLines.length ? signatureLines : base.signature.lines,
+    },
+  };
+}
+
 export function resolveProjectSalesProfile(project?: ProjectLike | null): ProjectSalesProfile {
   const p = project ?? {};
   // 只按项目标识匹配已知项目；不要按行业猜测，否则未来同行业项目会误继承 Genesis/IronHue 话术。
   const identity = `${p.code ?? ''} ${p.slug ?? ''} ${p.name ?? ''}`.toLowerCase();
-  if (identity.includes('velaturo')) return VELATURO_PROFILE;
-  if (identity.includes('ironhue')) return IRONHUE_PROFILE;
-  if (identity.includes('genesis')) return GENESIS_PROFILE;
-  return generalProfile(p);
+  const base = identity.includes('velaturo')
+    ? VELATURO_PROFILE
+    : identity.includes('ironhue')
+      ? IRONHUE_PROFILE
+      : identity.includes('genesis')
+        ? GENESIS_PROFILE
+        : generalProfile(p);
+  return mergedProfile(base, p);
 }
 
 export function projectPromptContext(profile: ProjectSalesProfile): ProjectPromptContext {

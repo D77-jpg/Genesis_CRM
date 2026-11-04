@@ -90,7 +90,10 @@ export function shouldTrackLink(value: string): boolean {
  * 纯文本、无标签内容直接返回，追踪失败也由上层降级为原始 HTML。
  */
 export function prepareTrackedHtml(html: string): PreparedTracking {
-  if (!/<[a-z][\s\S]*>/i.test(html)) return { deliveryHtml: html };
+  // A plain-text letter only gained our compliance footer at render time; it
+  // is still plain text and must not silently turn into a tracked HTML mail.
+  const contentWithoutCompliance = html.replace(/<div\b[^>]*data-compliance=["']unsubscribe["'][\s\S]*?<\/div>/i, '');
+  if (!/<[a-z][\s\S]*>/i.test(contentWithoutCompliance)) return { deliveryHtml: html };
 
   const links: PreparedTrackingLink[] = [];
   const delivery = html.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (anchor, attributes: string, innerHtml: string) => {

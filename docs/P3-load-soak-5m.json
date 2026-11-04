@@ -1,0 +1,40 @@
+{
+  "base": "http://127.0.0.1:5002/api",
+  "mode": "mixed-readonly",
+  "durationSeconds": 300,
+  "concurrency": 15,
+  "totalRequests": 150939,
+  "requestsPerSecond": 508.17,
+  "errorRate": 0,
+  "latencyMs": {
+    "p50": 17.5,
+    "p95": 71.5,
+    "p99": 86.6,
+    "max": 127.1
+  },
+  "statuses": {
+    "200": 150939
+  },
+  "server": {
+    "healthBefore": {
+      "uptimeSeconds": 179,
+      "rssMiB": 339.1,
+      "heapUsedMiB": 107.7
+    },
+    "healthAfter": {
+      "uptimeSeconds": 479,
+      "rssMiB": 339,
+      "heapUsedMiB": 140.4
+    },
+    "memory": {
+      "uptimeSeconds": 479,
+      "rssMiB": 339,
+      "heapUsedMiB": 140.4
+    }
+  },
+  "thresholds": {
+    "p95BudgetMs": 1500,
+    "errorBudget": 0.01
+  },
+  "passed": true
+}

@@ -43,11 +43,11 @@ import { useUserStore } from '@/store/user.store';
 import { useAuthStore } from '@/store/auth.store';
 import {
   USER_ROLE_BADGE_CLASS,
-  USER_ROLE_LABEL,
   USER_STATUS_BADGE_CLASS,
   USER_STATUS_LABEL,
 } from '@/constants';
 import { formatDateTime, formatRelative, initials } from '@/lib/format';
+import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
 import type { UserDto } from '@/types';
 
@@ -119,6 +119,12 @@ function UserRow({
   isSelf,
   ...handlers
 }: { user: UserDto; isSelf: boolean } & RowActionHandlers): React.JSX.Element {
+  const { t } = useI18n();
+  const roleLabel = user.role === 'admin'
+    ? t('users.role.admin')
+    : user.role === 'project_admin'
+      ? t('users.role.project_admin')
+      : user.role === 'viewer' ? t('users.role.viewer') : t('users.role.user');
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-2.5">
       <span
@@ -132,8 +138,11 @@ function UserRow({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{user.displayName || user.username}</span>
           {isSelf ? <Badge variant="muted">当前登录</Badge> : null}
+          {user.twoFactorEnabled ? <Badge variant="outline">2FA</Badge> : null}
         </div>
-        <span className="block truncate text-xs text-muted-foreground">@{user.username}</span>
+        <span className="block truncate text-xs text-muted-foreground">
+          @{user.username}{user.email ? ` · ${user.email}` : ' · 未绑定邮箱'}
+        </span>
       </div>
 
       <Badge variant="outline" className={cn('gap-1 font-normal', USER_ROLE_BADGE_CLASS[user.role])}>
@@ -142,7 +151,7 @@ function UserRow({
         ) : (
           <UserCog className="h-3 w-3" aria-hidden />
         )}
-        {USER_ROLE_LABEL[user.role]}
+        {roleLabel}
       </Badge>
 
       <Badge variant="outline" className={cn('gap-1 font-normal', USER_STATUS_BADGE_CLASS[user.status])}>

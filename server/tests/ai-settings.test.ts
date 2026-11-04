@@ -1,4 +1,5 @@
-import { after, before, test } from 'node:test';
+import { after, before, test, type TestContext } from 'node:test';
+import { runWithTenant } from '../src/models/tenant-context';
 import assert from 'node:assert/strict';
 import { Types } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
@@ -19,6 +20,10 @@ let crypto: typeof import('../src/services/credential-crypto');
 const admin: AuthUser = { id: new Types.ObjectId().toString(), username: 'admin', displayName: 'Admin', role: 'admin', projectId: new Types.ObjectId().toString() };
 const salesperson: AuthUser = { ...admin, id: new Types.ObjectId().toString(), role: 'user' };
 const baseUrl = 'https://124.222.23.70/v1';
+const tenantContext = { organizationId: new Types.ObjectId().toString(), source: 'ai-settings-test' };
+function tenantTest(name: string, fn: (context: TestContext) => Promise<void> | void): void {
+  test(name, (context) => runWithTenant(tenantContext, () => fn(context)));
+}
 
 before(async () => {
   memory = await MongoMemoryServer.create();
@@ -35,7 +40,7 @@ after(async () => {
   await memory.stop();
 });
 
-test('only admin can inspect, test or save global AI settings', async () => {
+tenantTest('only admin can inspect, test or save global AI settings', async () => {
   const input = { provider: 'mock' as const, model: 'mock', baseUrl: 'https://api.example.com/v1' };
   await assert.rejects(settings.getAiSettings(salesperson), { statusCode: 403 });
   await assert.rejects(settings.testAiSettings(input, salesperson), { statusCode: 403 });
@@ -43,7 +48,7 @@ test('only admin can inspect, test or save global AI settings', async () => {
   assert.equal((await settings.getAiSettings(admin)).source, 'environment');
 });
 
-test('rejects private and credential-bearing endpoints before any network call', async () => {
+tenantTest('rejects private and credential-bearing endpoints before any network call', async () => {
   for (const url of ['http://169.254.169.254/v1', 'http://10.0.0.1/v1', 'https://user:pass@example.com/v1', 'https://example.com/v1?key=x', 'file:///etc/passwd']) {
     await assert.rejects(settings.validateAiBaseUrl(url), { statusCode: 400 });
   }
@@ -51,7 +56,7 @@ test('rejects private and credential-bearing endpoints before any network call',
   await assert.rejects(settings.validateAiBaseUrl('http://124.222.23.70/v1', true), { statusCode: 400 });
 });
 
-test('verified save encrypts key; read API and provider status never return it', async () => {
+tenantTest('verified save encrypts key; read API and provider status never return it', async () => {
   const originalFetch = global.fetch;
   let probes = 0;
   global.fetch = (async (_url, options) => {
@@ -86,7 +91,7 @@ test('verified save encrypts key; read API and provider status never return it',
   } finally { global.fetch = originalFetch; }
 });
 
-test('failed provider test never overwrites the working configuration', async () => {
+tenantTest('failed provider test never overwrites the working configuration', async () => {
   const originalFetch = global.fetch;
   global.fetch = (async () => new Response(JSON.stringify({ error: { code: 'unauthorized' } }), { status: 401 })) as typeof fetch;
   try {
@@ -96,7 +101,7 @@ test('failed provider test never overwrites the working configuration', async ()
   } finally { global.fetch = originalFetch; }
 });
 
-test('mock mode switches without a network call and preserves encrypted key for later use', async () => {
+tenantTest('mock mode switches without a network call and preserves encrypted key for later use', async () => {
   const originalFetch = global.fetch;
   global.fetch = (async () => { throw new Error('mock mode must not fetch'); }) as typeof fetch;
   try {
@@ -107,7 +112,7 @@ test('mock mode switches without a network call and preserves encrypted key for 
   } finally { global.fetch = originalFetch; }
 });
 
-test('admin can replace an unreadable stored key without exposing it', async () => {
+tenantTest('admin can replace an unreadable stored key without exposing it', async () => {
   await model.AgentAiSettings.updateOne({ key: 'global' }, { $set: { provider: 'openai', credentialTag: 'corrupt' } });
   const current = await settings.getAiSettings(admin);
   assert.equal(current.keyConfigured, true);

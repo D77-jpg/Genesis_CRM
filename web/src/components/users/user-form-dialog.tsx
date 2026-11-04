@@ -33,7 +33,8 @@ import {
   userFormSchema,
   type UserFormValues,
 } from '@/lib/validators';
-import { USER_ROLE_LABEL, USER_ROLE_OPTIONS } from '@/constants';
+import { USER_ROLE_OPTIONS } from '@/constants';
+import { useI18n } from '@/i18n';
 import { useUserStore } from '@/store/user.store';
 import { useSaveShortcut } from '@/hooks/use-ui';
 import type { CreateUserInput, UpdateUserInput, UserDto, UserRole } from '@/types';
@@ -53,18 +54,27 @@ export interface UserFormDialogProps {
 /** 新建：表单值 → 创建载荷（显示名留空则不带，交给后端回退为用户名） */
 function toCreatePayload(values: UserFormValues): CreateUserInput {
   const displayName = values.displayName?.trim();
+  const email = values.email?.trim().toLowerCase();
   return {
     username: values.username.trim().toLowerCase(),
     password: values.password,
     role: values.role,
     projectIds: values.projectIds,
+    twoFactorEnabled: values.twoFactorEnabled,
     ...(displayName ? { displayName } : {}),
+    ...(email ? { email } : {}),
   };
 }
 
-/** 编辑：表单值 → 更新载荷（只提交显示名 + 角色） */
+/** 编辑：表单值 → 更新载荷（显示名 / 邮箱 / 2FA / 角色 / 项目） */
 function toUpdatePayload(values: UserFormValues): UpdateUserInput {
-  return { displayName: values.displayName?.trim() ?? '', role: values.role, projectIds: values.projectIds };
+  return {
+    displayName: values.displayName?.trim() ?? '',
+    email: values.email?.trim().toLowerCase() ?? '',
+    twoFactorEnabled: Boolean(values.twoFactorEnabled),
+    role: values.role,
+    projectIds: values.projectIds,
+  };
 }
 
 export function UserFormDialog({
@@ -74,6 +84,12 @@ export function UserFormDialog({
   onCreated,
   onSaved,
 }: UserFormDialogProps): React.JSX.Element {
+  const { t } = useI18n();
+  const roleLabel = (role: UserRole): string => role === 'admin'
+    ? t('users.role.admin')
+    : role === 'project_admin'
+      ? t('users.role.project_admin')
+      : role === 'viewer' ? t('users.role.viewer') : t('users.role.user');
   const isEdit = Boolean(user);
   const createUser = useUserStore((state) => state.createUser);
   const updateUser = useUserStore((state) => state.updateUser);
@@ -86,7 +102,15 @@ export function UserFormDialog({
   const initial = React.useMemo<UserFormValues>(
     () =>
       user
-        ? { username: user.username, password: '', displayName: user.displayName, role: user.role, projectIds: user.projectIds ?? [] }
+        ? {
+            username: user.username,
+            password: '',
+            displayName: user.displayName,
+            email: user.email ?? '',
+            twoFactorEnabled: Boolean(user.twoFactorEnabled),
+            role: user.role,
+            projectIds: user.projectIds ?? [],
+          }
         : { ...defaultUserFormValues, projectIds: activeProject ? [activeProject.id] : [] },
     [user, activeProject],
   );
@@ -115,6 +139,7 @@ export function UserFormDialog({
 
   const roleValue = watch('role');
   const selectedProjects = watch('projectIds');
+  const twoFactorEnabled = watch('twoFactorEnabled');
 
   const submit = React.useCallback(async () => {
     await handleSubmit(async (values) => {
@@ -124,14 +149,14 @@ export function UserFormDialog({
         if (isEdit && user) {
           const saved = await updateUser(user.id, toUpdatePayload(values));
           toast.success('用户已更新', {
-            description: `${saved?.displayName ?? user.displayName}（${USER_ROLE_LABEL[values.role]}）`,
+            description: `${saved?.displayName ?? user.displayName}（${roleLabel(values.role)}）`,
           });
           if (saved) onSaved?.(saved);
         } else {
           const payload = toCreatePayload(values);
           const created = await createUser(payload);
           toast.success('用户已创建', {
-            description: `${created?.displayName ?? payload.username}（${USER_ROLE_LABEL[payload.role]}）`,
+            description: `${created?.displayName ?? payload.username}（${roleLabel(payload.role)}）`,
           });
           if (created) onCreated?.(created);
         }
@@ -253,6 +278,37 @@ export function UserFormDialog({
             </div>
 
             <div>
+              <Label htmlFor="user-email" invalid={Boolean(errors.email)}>
+                邮箱
+              </Label>
+              <Input
+                id="user-email"
+                type="email"
+                className="mt-1.5"
+                placeholder="用于忘记密码和邮件验证码登录"
+                autoComplete="email"
+                invalid={Boolean(errors.email)}
+                {...register('email')}
+              />
+              <FieldMessage error={fieldError('email')} hint="选填；开启邮件 2FA 时必须填写，且不能与其他账号重复" />
+            </div>
+
+            <label htmlFor="user-two-factor" className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm">
+              <Checkbox
+                id="user-two-factor"
+                className="mt-0.5"
+                checked={Boolean(twoFactorEnabled)}
+                onCheckedChange={(checked) => setValue('twoFactorEnabled', checked === true, { shouldValidate: true })}
+              />
+              <span>
+                <span className="block font-medium">启用邮件 2FA</span>
+                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                  登录密码通过后，再向邮箱发送 6 位验证码；建议管理员和远程账号开启。
+                </span>
+              </span>
+            </label>
+
+            <div>
               <Label htmlFor="user-role" invalid={Boolean(errors.role)}>
                 角色
                 <RequiredMark />
@@ -267,18 +323,18 @@ export function UserFormDialog({
                 <SelectContent>
                   {USER_ROLE_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                      {roleLabel(option.value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <FieldMessage
                 error={fieldError('role')}
-                hint="业务员只看自己名下客户；管理员可分配客户、管理用户"
+                hint="系统管理员管理全部项目；项目管理员管理所属项目；销售只看自己名下客户；只读账号可查看所属项目但不能修改"
               />
             </div>
 
-            {roleValue === 'user' ? (
+            {roleValue !== 'admin' ? (
               <fieldset className="min-w-0">
                 <legend className="text-sm font-medium">可访问项目 <span className="text-destructive">*</span></legend>
                 <div className="mt-2 space-y-2 rounded-md border p-3">

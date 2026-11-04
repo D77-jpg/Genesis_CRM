@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * Application audit trail.
  *
@@ -11,6 +12,10 @@ export const AUDIT_ACTIONS = [
   'auth.login.success',
   'auth.login.failed',
   'auth.login.locked',
+  'auth.login.2fa_required',
+  'auth.logout',
+  'auth.password_reset.requested',
+  'auth.password_reset.success',
   'user.create',
   'user.update',
   'user.password_reset',
@@ -20,6 +25,10 @@ export const AUDIT_ACTIONS = [
   'customer.export',
   'customer.delete',
   'customer.bulk_delete',
+  'project.onboarding.completed',
+  'mail.suppression.add',
+  'mail.suppression.remove',
+  'mail.compliance.settings',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -27,7 +36,7 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 export interface IAuditLog {
   actorId?: Types.ObjectId;
   actorUsername?: string;
-  actorRole?: 'admin' | 'user';
+  actorRole?: 'admin' | 'project_admin' | 'user' | 'viewer';
   projectId?: Types.ObjectId;
   action: AuditAction;
   targetType?: string;
@@ -46,7 +55,7 @@ const AuditLogSchema = new Schema<IAuditLog>(
   {
     actorId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     actorUsername: { type: String, trim: true, maxlength: 80 },
-    actorRole: { type: String, enum: ['admin', 'user'] },
+    actorRole: { type: String, enum: ['admin', 'project_admin', 'user', 'viewer'] },
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', index: true },
     action: { type: String, enum: AUDIT_ACTIONS, required: true, index: true },
     targetType: { type: String, trim: true, maxlength: 40 },

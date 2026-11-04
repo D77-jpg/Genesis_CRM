@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, model, type HydratedDocument } from 'mongoose';
 
 export interface IAgentAiSettings {
@@ -18,7 +19,7 @@ export interface IAgentAiSettings {
 export type AgentAiSettingsDocument = HydratedDocument<IAgentAiSettings>;
 
 const schema = new Schema<IAgentAiSettings>({
-  key: { type: String, required: true, unique: true, immutable: true },
+  key: { type: String, required: true, immutable: true },
   provider: { type: String, enum: ['mock', 'openai'], required: true },
   modelName: { type: String, required: true, maxlength: 120 },
   baseUrl: { type: String, required: true, maxlength: 500 },
@@ -28,5 +29,8 @@ const schema = new Schema<IAgentAiSettings>({
   activeProviderId: { type: Schema.Types.ObjectId, ref: 'AgentAiProvider', default: null },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true, versionKey: false });
+
+// The singleton key is unique per tenant, not globally.
+schema.index({ organizationId: 1, key: 1 }, { unique: true });
 
 export const AgentAiSettings = model<IAgentAiSettings>('AgentAiSettings', schema);

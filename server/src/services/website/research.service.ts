@@ -132,3 +132,4 @@ export async function processWebsiteResearch(id?:string,fetcher:WebsiteFetcher=f
 }
 let timer:ReturnType<typeof setInterval>|undefined,busy=false;
 export function startWebsiteResearchWorker(){if(timer||process.env.NODE_ENV==='test'||process.env.NODE_TEST_CONTEXT)return;timer=setInterval(()=>{if(busy||mongoose.connection.readyState!==1)return;busy=true;void processWebsiteResearch().catch(()=>undefined).finally(()=>{busy=false;});},2000);timer.unref();}
+export function stopWebsiteResearchWorker(){if(!timer)return;clearInterval(timer);timer=undefined;}

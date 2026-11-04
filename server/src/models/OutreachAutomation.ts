@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, Types, model, type HydratedDocument } from 'mongoose';
 
 /**
@@ -12,7 +13,7 @@ export type OutreachAutomationEnrollmentStatus = 'active' | 'paused' | 'blocked'
 export interface IOutreachAutomationConfig {
   projectId: Types.ObjectId;
   userId: Types.ObjectId;
-  actorRole: 'admin' | 'user';
+  actorRole: 'admin' | 'project_admin' | 'user' | 'viewer';
   enabled: boolean;
   pausedReason?: string;
   dailyLimit: number;
@@ -52,7 +53,7 @@ const configSchema = new Schema<IOutreachAutomationConfig>(
   {
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    actorRole: { type: String, enum: ['admin', 'user'], required: true },
+    actorRole: { type: String, enum: ['admin', 'project_admin', 'user', 'viewer'], required: true },
     enabled: { type: Boolean, default: false },
     pausedReason: { type: String, maxlength: 300 },
     dailyLimit: { type: Number, default: 20, min: 1, max: 20 },

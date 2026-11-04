@@ -34,6 +34,8 @@ export interface SendMailPayload {
   messageId?: string;
   inReplyTo?: string;
   references?: string[];
+  /** RFC 2369 / RFC 8058 compliance headers, set server-side only. */
+  headers?: Record<string, string>;
 }
 
 export interface SendMailResult {
@@ -49,6 +51,8 @@ export interface SendMailResult {
   durationMs: number;
   retryable?: boolean;
   uncertain?: boolean;
+  /** SMTP permanently rejected the recipient; safe to add to suppression. */
+  hardBounce?: boolean;
 }
 
 const transporters = new Map<string, Transporter>();
@@ -133,6 +137,7 @@ async function sendViaSmtp(payload: SendMailPayload, config: ProjectMailConfig):
       messageId: payload.messageId,
       inReplyTo: payload.inReplyTo,
       references: payload.references,
+      headers: payload.headers,
     });
 
     logger.info(`[smtp] 开发信发送成功 -> ${payload.to} | messageId=${info.messageId}`);
@@ -154,6 +159,7 @@ async function sendViaSmtp(payload: SendMailPayload, config: ProjectMailConfig):
       error: message,
       retryable: rejected ? detail.responseCode! < 500 : beforeData && detail.code !== 'EAUTH',
       uncertain: !rejected && !beforeData,
+      hardBounce: Boolean(rejected && detail.responseCode! >= 500 && (detail.command === 'RCPT TO' || detail.command === 'MAIL FROM')),
       durationMs: Date.now() - started,
     };
   }

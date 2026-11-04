@@ -13,6 +13,7 @@ import type { RequestHandler } from 'express';
 import { ApiError } from '../utils/ApiError';
 import { verifyToken } from '../services/integration-credential.service';
 import { IntegrationRequestLog, Project } from '../models';
+import { runWithTenant } from '../models/tenant-context';
 
 function extractBearerToken(header?: string): string | null {
   if (!header) return null;
@@ -85,7 +86,11 @@ export const requireIntegrationProject: RequestHandler = async (req, res, next) 
 
     req.project = { id: String(project._id), slug: project.slug, code: project.code, name: project.name };
     res.setHeader('X-Project-Id', String(project._id));
-    next();
+    return runWithTenant({
+      organizationId: project.organizationId ? String(project.organizationId) : undefined,
+      bypass: false,
+      source: 'integration',
+    }, () => next());
   } catch (error) {
     next(error);
   }

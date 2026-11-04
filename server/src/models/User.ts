@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * User 模型（mock 登录用）
  * ------------------------------------------------------------------
@@ -7,15 +8,28 @@
 import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export type UserRole = 'admin' | 'user';
+/**
+ * admin        系统管理员：全部项目与账号管理
+ * project_admin 项目管理员：仅被分配项目的全部数据、品牌与发信设置
+ * user          销售：仅自己名下客户
+ * viewer        只读：被分配项目的全部数据，但禁止任何写操作
+ */
+export type UserRole = 'admin' | 'project_admin' | 'user' | 'viewer';
 
 /** 账号启用状态：active 启用 / disabled 停用（停用后无法登录，且已签发 token 立即失效） */
 export type UserStatus = 'active' | 'disabled';
 
 export interface IUser {
+  organizationId?: Types.ObjectId;
+  /** Platform operators may inspect all organizations; ordinary admins are organization admins. */
+  isPlatformAdmin: boolean;
   username: string;
   passwordHash: string;
   displayName: string;
+  /** Optional account email used for password reset and email OTP 2FA. */
+  email?: string;
+  /** Require an email OTP after the password step. */
+  twoFactorEnabled: boolean;
   role: UserRole;
   status: UserStatus;
   /** 可访问的项目。系统管理员不受此列表限制，普通用户严格按此列表授权。 */
@@ -41,6 +55,7 @@ const SALT_ROUNDS = 10;
 
 const UserSchema = new Schema<IUser, {}, IUserMethods>(
   {
+    isPlatformAdmin: { type: Boolean, default: false, index: true },
     username: {
       type: String,
       required: [true, '用户名为必填项'],
@@ -52,7 +67,9 @@ const UserSchema = new Schema<IUser, {}, IUserMethods>(
     },
     passwordHash: { type: String, required: true, select: false },
     displayName: { type: String, trim: true, default: '', maxlength: 80 },
-    role: { type: String, enum: ['admin', 'user'], default: 'user' },
+    email: { type: String, trim: true, lowercase: true, maxlength: 200, unique: true, sparse: true },
+    twoFactorEnabled: { type: Boolean, default: false },
+    role: { type: String, enum: ['admin', 'project_admin', 'user', 'viewer'], default: 'user' },
     // 旧数据无此字段时按「启用」处理（查询逻辑用 status !== 'disabled' 判断），无需迁移
     status: { type: String, enum: ['active', 'disabled'], default: 'active' },
     projectIds: { type: [Schema.Types.ObjectId], ref: 'Project', default: [] },

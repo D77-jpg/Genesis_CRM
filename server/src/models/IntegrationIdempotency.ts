@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * IntegrationIdempotency 模型（Integration API v1 请求幂等）
  * ------------------------------------------------------------------

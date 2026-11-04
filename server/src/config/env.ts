@@ -17,20 +17,63 @@ const booleanish = z
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  /** Deployment environment. NODE_ENV controls Node/runtime behavior; APP_ENV names dev/staging/prod. */
+  APP_ENV: z.enum(['development', 'staging', 'production']).optional(),
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(5000),
+  /** Per-IP API rate limit; load/soak tests may raise this in an isolated environment. */
+  API_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60_000),
+  API_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  /** Public frontend URL used in password-reset emails; falls back to CORS_ORIGIN. */
+  APP_BASE_URL: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().url('APP_BASE_URL 格式不正确').optional(),
+  ),
   CORS_ALLOW_PRIVATE_NETWORK: booleanish.default(false),
   CORS_LAN_PORTS: z.string().default('5173,4173'),
 
   MONGODB_URI: z.string().min(1).default('mongodb://127.0.0.1:27017/cdlm'),
 
   JWT_SECRET: z.string().min(32, 'JWT_SECRET 至少需要 32 个字符'),
+  /** @deprecated 仅保留旧环境文件兼容；新部署请使用 JWT_ACCESS_EXPIRES_IN。 */
   JWT_EXPIRES_IN: z.string().default('7d'),
+  /** Browser access cookie lifetime; refresh sessions cover the longer-lived login. */
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+  /** Set true when the CRM is served over HTTPS; production defaults to secure cookies below. */
+  COOKIE_SECURE: booleanish.default(false),
 
   ADMIN_USERNAME: z.string().min(1).default('admin'),
   ADMIN_PASSWORD: z.string().min(10, 'ADMIN_PASSWORD 至少需要 10 个字符'),
   ADMIN_DISPLAY_NAME: z.string().default('Genesis Admin'),
+  /** Optional email address assigned to the bootstrap administrator. */
+  ADMIN_EMAIL: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().email('ADMIN_EMAIL 格式不正确').optional(),
+  ),
+  /** Default organization created for a single-tenant / first deployment. */
+  DEFAULT_ORGANIZATION_NAME: z.string().default('Default Organization'),
+  DEFAULT_ORGANIZATION_SLUG: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).default('default'),
+
+  /** API and worker are separate processes in production; keep API loops off there. */
+  RUN_BACKGROUND_JOBS: booleanish.default(true),
+  WORKER_HEALTH_PORT: z.coerce.number().int().positive().default(5100),
+
+  /** Attachment storage: local disk for development or S3-compatible object storage. */
+  STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
+  S3_ENDPOINT: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().url().optional(),
+  ),
+  S3_REGION: z.string().default('us-east-1'),
+  S3_BUCKET: z.string().default(''),
+  S3_ACCESS_KEY_ID: z.string().default(''),
+  S3_SECRET_ACCESS_KEY: z.string().default(''),
+  S3_FORCE_PATH_STYLE: booleanish.default(true),
+
+  /** Prometheus-style metrics endpoint is disabled only when explicitly turned off. */
+  METRICS_ENABLED: booleanish.default(true),
 
   MAIL_TRANSPORT: z.enum(['mock', 'smtp']).default('mock'),
   MAIL_FROM: z.string().default('Genesis (Xiamen) Bags Co., Ltd. <sales@genesisgroup.cn>'),
@@ -39,7 +82,10 @@ export const envSchema = z.object({
   /** 收件人可访问的 CRM 公网地址，仅用于生成邮件追踪 URL。 */
   TRACKING_BASE_URL: z.string().url().default('http://localhost:5000'),
   /** 邮件里引用的静态资源（品牌 logo）使用的公网地址；留空则复用 TRACKING_BASE_URL。 */
-  PUBLIC_BASE_URL: z.string().url().optional(),
+  PUBLIC_BASE_URL: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().url().optional(),
+  ),
   /** 关闭后开发信结尾只输出文字签名，不引用 logo 图片。 */
   SIGNATURE_LOGO: booleanish.default(true),
   /** 官网被 WAF 拦截时，是否用无头浏览器兜底抓取（需要安装 playwright）。 */
@@ -154,8 +200,11 @@ if (productionErrors.length) {
   process.exit(1);
 }
 
+const appEnv = raw.APP_ENV ?? (raw.NODE_ENV === 'production' ? 'production' : 'development');
+
 export const env = {
   ...raw,
+  appEnv,
   isProd: raw.NODE_ENV === 'production',
   isDev: raw.NODE_ENV === 'development',
   /** CORS 白名单数组 */

@@ -1,14 +1,8 @@
-import {stopKnowledgeDocumentWorker} from './services/knowledge/document.service';
-import {stopKnowledgeIndexWorker} from './services/knowledge/index.service';
-import {stopAgentTaskWorker} from './services/agent/task.service';
-import {semanticPool} from './services/knowledge/embedding';
-import {startProspectingScheduler, stopProspectingScheduler} from './services/prospecting/scheduler';
-import {startOutreachFollowUpWorker} from './services/outreach-followup.service';
-import {startOutreachAutomationWorker, stopOutreachAutomationWorker} from './services/outreach-automation.service';
+import { startBackgroundJobs, stopBackgroundJobs } from './background/runtime';
 /**
  * 服务启动入口
  * ------------------------------------------------------------------
- * 启动顺序：环境变量校验（import 时完成）→ 连接 MongoDB → 初始化管理员
+ * 启动顺序：环境变量校验（import 时完成）→ 连接 MongoDB → 校验版本化迁移
  *          → 邮件通道自检 → 监听端口
  * 退出顺序：停止接收新连接 → 关闭 HTTP → 关闭数据库连接 → 退出进程
  */
@@ -16,55 +10,30 @@ import http from 'node:http';
 import env from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/db';
 import { createLogger } from './config/logger';
-import { bootstrapAdminUser } from './services/auth.service';
-import { bootstrapProjects } from './services/project.service';
-import { migrateLegacyCustomerStatus, migrateMailCustomerLastContact } from './services/customer.service';
-import { migrateLegacyQuotationVersion } from './services/quotation.service';
 import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
 import { beginShutdown } from './services/runtime-state';
-import { runMailQueue } from './services/mail-queue.service';
-import { syncInbox } from './services/mail-sync.service';
-import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, OutreachAutomationConfig, OutreachAutomationDay, OutreachAutomationEnrollment, Product, Project, ProjectPlaybook, Quotation, Scratchpad, User, UserMailAccount } from './models';
-import { MailMessage, MailSyncState } from './models/MailMessage';
-
-const mailTimers: NodeJS.Timeout[] = [];
+import { assertMigrationsApplied } from './migrations';
 
 const logger = createLogger('bootstrap');
 
 async function bootstrap(): Promise<void> {
   try {
     await connectDatabase();
-    await bootstrapProjects();
-    await bootstrapAdminUser();
-    await bootstrapProjects();
-    await migrateLegacyCustomerStatus();
-    await migrateMailCustomerLastContact();
-    await migrateLegacyQuotationVersion();
-    await Promise.all([Project.init(), User.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
-      FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Product.init(), ProjectPlaybook.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),
-      AgentSession.init(), AgentMessage.init(), AgentRun.init(), AgentAction.init(), AgentCustomerPreview.init(),
-      KnowledgeFeedback.init(), KnowledgeTrainingState.init(),
-      UserMailAccount.init(), MailQuotaBucket.init(), MailAccountAudit.init(),
-      OutreachAutomationConfig.init(), OutreachAutomationEnrollment.init(), OutreachAutomationDay.init()]);
+    await assertMigrationsApplied();
     const app = createApp();
     const server = http.createServer(app);
     // 邮箱连通性检查可能受网络、防火墙或上游超时影响，不能阻塞 CRM 登录与启动。
     void verifyMailer().catch((error) => {
       logger.warn('邮件通道启动自检异常（不影响 CRM 使用）', error instanceof Error ? error.message : String(error));
     });
-    void runMailQueue();
-    void syncInbox();
-    mailTimers.push(setInterval(() => void runMailQueue(), env.MAIL_WORKER_INTERVAL_MS));
-    mailTimers.push(setInterval(() => void syncInbox(), env.IMAP_SYNC_INTERVAL_MS));
-    startProspectingScheduler();
-    startOutreachFollowUpWorker();
-    startOutreachAutomationWorker();
+    if (env.RUN_BACKGROUND_JOBS) startBackgroundJobs();
+    else logger.info('RUN_BACKGROUND_JOBS=false：API 进程不启动后台任务，请运行独立 worker');
 
     server.listen(env.PORT, env.HOST, () => {
       logger.info('==============================================');
       logger.info(`  Multi-project CRM API 已启动`);
-      logger.info(`  环境      : ${env.NODE_ENV}`);
+      logger.info(`  环境      : ${env.appEnv} (NODE_ENV=${env.NODE_ENV})`);
       logger.info(`  监听地址  : ${env.HOST}:${env.PORT}`);
       logger.info(`  健康检查  : http://localhost:${env.PORT}/api/health`);
       logger.info(`  元数据    : http://localhost:${env.PORT}/api/meta`);
@@ -101,10 +70,7 @@ function registerShutdown(server: http.Server): void {
     if (shuttingDown) return;
     shuttingDown = true;
     beginShutdown();
-    mailTimers.forEach(clearInterval);
-    stopProspectingScheduler();
-    stopOutreachAutomationWorker();
-    stopAgentTaskWorker();stopKnowledgeDocumentWorker();stopKnowledgeIndexWorker();semanticPool.close();
+    stopBackgroundJobs();
     logger.info(`收到 ${signal}，开始优雅停机...`);
 
     // 给正在处理的请求 10 秒收尾时间

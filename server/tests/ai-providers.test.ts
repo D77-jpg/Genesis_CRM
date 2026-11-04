@@ -1,4 +1,5 @@
-import { after, before, test } from 'node:test';
+import { after, before, test, type TestContext } from 'node:test';
+import { runWithTenant } from '../src/models/tenant-context';
 import assert from 'node:assert/strict';
 import { Types } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
@@ -18,6 +19,10 @@ let providerModel: typeof import('../src/models/AgentAiProvider');
 const admin: AuthUser = { id: new Types.ObjectId().toString(), username: 'admin', displayName: 'Admin', role: 'admin', projectId: new Types.ObjectId().toString() };
 const salesperson: AuthUser = { ...admin, id: new Types.ObjectId().toString(), role: 'user' };
 const baseUrl = 'https://124.222.23.70/v1';
+const tenantContext = { organizationId: new Types.ObjectId().toString(), source: 'ai-settings-test' };
+function tenantTest(name: string, fn: (context: TestContext) => Promise<void> | void): void {
+  test(name, (context) => runWithTenant(tenantContext, () => fn(context)));
+}
 
 before(async () => {
   memory = await MongoMemoryServer.create();
@@ -33,7 +38,7 @@ after(async () => {
   await memory.stop();
 });
 
-test('admin can manage multiple providers, and active provider follows activation', async () => {
+tenantTest('admin can manage multiple providers, and active provider follows activation', async () => {
   await assert.rejects(service.listAiProviders(salesperson), { statusCode: 403 });
 
   const first = await service.createAiProvider({ name: '演示 A', kind: 'mock', model: '', baseUrl: '' }, admin);
@@ -60,7 +65,7 @@ test('admin can manage multiple providers, and active provider follows activatio
   assert.equal((await service.resolveAgentProvider()).name, 'mock');
 });
 
-test('live provider keys stay encrypted and edits keep the existing key', async () => {
+tenantTest('live provider keys stay encrypted and edits keep the existing key', async () => {
   const originalFetch = global.fetch;
   let probes = 0;
   global.fetch = (async (url, options) => {

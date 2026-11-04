@@ -297,7 +297,7 @@ export type LetterStatus = 'draft' | 'sent' | 'opened' | 'failed' | 'queued' | '
 /** 发送通道 */
 export type MailChannel = 'mock' | 'smtp';
 /** 用户角色 */
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'project_admin' | 'user' | 'viewer';
 /** 用户账号启用状态：active 启用 / disabled 停用 */
 export type UserStatus = 'active' | 'disabled';
 export type ProjectStatus = 'active' | 'archived';
@@ -936,13 +936,24 @@ export interface AuthUser {
   username: string;
   displayName: string;
   role: UserRole;
+  organizationId?: string;
+  isPlatformAdmin?: boolean;
 }
 
 export interface LoginResult {
-  token: string;
   expiresAt: string;
   user: AuthUser;
 }
+
+/** Login can pause after the password step while the email OTP is checked. */
+export interface TwoFactorChallenge {
+  twoFactorRequired: true;
+  challengeId: string;
+  emailHint: string;
+  expiresAt: string;
+}
+
+export type LoginResponse = LoginResult | TwoFactorChallenge;
 
 /* ---------------------------- 用户管理 ---------------------------- */
 
@@ -954,7 +965,13 @@ export interface UserDto {
   id: string;
   username: string;
   displayName: string;
+  /** Account email used for password reset and email OTP 2FA. */
+  email?: string;
+  /** Require an email OTP after the password step. */
+  twoFactorEnabled: boolean;
   role: UserRole;
+  organizationId?: string;
+  isPlatformAdmin?: boolean;
   /** 账号启用状态：active 启用 / disabled 停用 */
   status: UserStatus;
   projectIds: string[];
@@ -1040,21 +1057,52 @@ export interface CreateUserInput {
   password: string;
   /** 显示名，留空时后端回退为用户名 */
   displayName?: string;
+  /** 账号邮箱，用于忘记密码和邮件 OTP 2FA */
+  email?: string;
+  twoFactorEnabled?: boolean;
   role: UserRole;
   projectIds?: string[];
 }
 
-/** 编辑用户资料（PUT /api/users/:id）：显示名 / 角色，至少一项 */
+/** 编辑用户资料（PUT /api/users/:id）：显示名 / 邮箱 / 2FA / 角色，至少一项 */
 export interface UpdateUserInput {
   displayName?: string;
+  email?: string;
+  twoFactorEnabled?: boolean;
   role?: UserRole;
   projectIds?: string[];
 }
 
 /* ---------------------------- 多项目工作空间 ---------------------------- */
 
+export interface ProjectBrandProfile {
+  label?: string;
+  identity?: string;
+  offerSummary?: string;
+  outreachFocus?: string;
+  avoidTopics?: string;
+  insightLabel?: string;
+  insightExamples?: string;
+  proofExamples?: string;
+  ctaExamples?: string;
+  subjectFocus?: string;
+  signatureTitle?: string;
+  signatureLines?: string[];
+}
+
+export interface ProjectMailCompliance {
+  warmupEnabled: boolean;
+  warmupStartedAt?: string;
+  warmupStartLimit: number;
+  warmupDailyIncrement: number;
+  warmupMaxLimit: number;
+  dailySendLimit: number;
+  trackingEnabled: boolean;
+}
+
 export interface Project {
   id: string;
+  organizationId?: string;
   name: string;
   slug: string;
   code: string;
@@ -1065,6 +1113,9 @@ export interface Project {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  brandProfile?: ProjectBrandProfile;
+  mailCompliance?: ProjectMailCompliance;
+  onboardingCompletedAt?: string;
   /** 项目级真实发送开关；未设置时沿用服务端配置 */
   mailTransport?: MailChannel;
   /** 项目 Logo（压缩 data URL 或 HTTPS 地址） */
@@ -1073,6 +1124,73 @@ export interface Project {
   mailChannel?: MailChannel;
   status: ProjectStatus;
   isDefault: boolean;
+}
+
+/* ---------------------------- Organization / billing ---------------------------- */
+
+export type OrganizationPlan = 'starter' | 'growth' | 'enterprise';
+export type OrganizationStatus = 'active' | 'trialing' | 'suspended';
+
+export interface OrganizationLimits {
+  users: number;
+  projects: number;
+  monthlyEmails: number;
+  monthlyAiTokens: number;
+  storageBytes: number;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  status: OrganizationStatus;
+  plan: OrganizationPlan;
+  limits: OrganizationLimits;
+  billingEmail?: string;
+  billingAddress?: string;
+  taxId?: string;
+  currency: string;
+  locale: 'zh' | 'en';
+  subscriptionStatus: 'trialing' | 'active' | 'past_due' | 'cancelled';
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  trialEndsAt?: string;
+  createdAt: string;
+}
+
+export interface PlanDefinition {
+  id: OrganizationPlan;
+  monthlyPriceUsd: number;
+  annualPriceUsd?: number;
+  limits: OrganizationLimits;
+  overage: { emailUsdPer1000: number; aiTokensUsdPer1M: number; storageUsdPerGb: number };
+  label: { zh: string; en: string };
+}
+
+export interface UsageSummary {
+  period: string;
+  usage: { emails: number; ai_tokens: number; storage_bytes: number };
+  limits: OrganizationLimits;
+  percentages: { emails: number; ai_tokens: number; storage_bytes: number };
+  plan: OrganizationPlan;
+  planLabel: string;
+  estimatedInvoiceUsd: number;
+  currency: 'USD';
+  periodEnd?: string;
+}
+
+export interface BillingInvoice {
+  _id: string;
+  number: string;
+  period: string;
+  status: 'draft' | 'open' | 'paid' | 'void';
+  currency: string;
+  lines: Array<{ key: string; description: string; quantity: number; unitAmountUsd: number; amountUsd: number }>;
+  subtotalUsd: number;
+  totalUsd: number;
+  dueAt: string;
+  paidAt?: string;
 }
 
 export type ProspectStatus = 'ready' | 'low' | 'needs_contact' | 'rejected' | 'converted';
@@ -1189,7 +1307,7 @@ export interface UpdateScratchpadInput {
   expectedVersion: number;
 }
 
-export type CreateProjectInput = Omit<Project, 'id' | 'status' | 'isDefault' | 'mailChannel'>;
+export type CreateProjectInput = Omit<Project, 'id' | 'status' | 'isDefault' | 'mailChannel' | 'onboardingCompletedAt'>;
 export type UpdateProjectInput = Partial<Omit<CreateProjectInput, 'slug' | 'code'>> & { status?: ProjectStatus };
 
 /** 重置密码（PUT /api/users/:id/password） */

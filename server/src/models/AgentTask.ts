@@ -1,10 +1,11 @@
+import './tenant-setup';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 export const taskStepKeys = ['locate_customer', 'research_customer', 'analyze_customer', 'save_draft', 'verify_draft'] as const;
 export type TaskStep = typeof taskStepKeys[number];
 export type TaskStatus = 'queued'|'running'|'waiting_input'|'paused'|'awaiting_review'|'completed'|'failed'|'cancelled';
 export interface WorkflowRecord {key:string;epoch:number;inputHash:string;state:'running'|'completed'|'failed';startedAt:string;durationMs?:number;completedAt?:string;attempts:number;reused:number;payload?:unknown;tool?:string;error?:string}
 export interface IAgentTask {
- projectId: Types.ObjectId; userId: Types.ObjectId; sessionId: Types.ObjectId; actorRole: 'admin'|'user';
+ projectId: Types.ObjectId; userId: Types.ObjectId; sessionId: Types.ObjectId; actorRole: 'admin'|'project_admin'|'user'|'viewer';
  kind:'first_outreach'|'inquiry_reply'|'followup_review'|'quotation_explanation'|'sample_reply';sourceMailId?:Types.ObjectId;sourceDueAt?:Date;automationRuleId?:Types.ObjectId;ruleVersion?:number;mailAnalysisId?:Types.ObjectId;
  workflowEpoch:number; workflowCalls:number; workflowActiveMs:number; workflowStamp?:string; workflowRecords:WorkflowRecord[]; previousArtifacts:{analysisId?:string;mailAnalysisId?:string;draftId?:string;at:string}[];
  parentBatchId?:Types.ObjectId; skillVersion?:number; knowledgeIds:Types.ObjectId[]; tokenBudget:number; budgetCharged:number; contextSummary?:string;
@@ -20,7 +21,7 @@ export interface IAgentTask {
 }
 const schema = new Schema<IAgentTask>({
  projectId: {type: Schema.Types.ObjectId, required: true}, userId: {type: Schema.Types.ObjectId, required: true},
- sessionId: {type: Schema.Types.ObjectId, required: true}, actorRole: {type: String, enum: ['admin','user'], required: true},
+ sessionId: {type: Schema.Types.ObjectId, required: true}, actorRole: {type: String, enum: ['admin','project_admin','user','viewer'], required: true},
  kind:{type:String,enum:['first_outreach','inquiry_reply','followup_review','quotation_explanation','sample_reply'],default:'first_outreach'},sourceMailId:Schema.Types.ObjectId,sourceDueAt:Date,automationRuleId:Schema.Types.ObjectId,ruleVersion:Number,mailAnalysisId:Schema.Types.ObjectId,
  workflowEpoch:{type:Number,default:0},workflowCalls:{type:Number,default:0},workflowActiveMs:{type:Number,default:0},workflowStamp:String,workflowRecords:[Schema.Types.Mixed],previousArtifacts:[Schema.Types.Mixed],
  parentBatchId:Schema.Types.ObjectId,skillVersion:{type:Number,default:2},knowledgeIds:[Schema.Types.ObjectId],tokenBudget:{type:Number,default:60000},budgetCharged:{type:Number,default:0},contextSummary:{type:String,maxlength:2000},

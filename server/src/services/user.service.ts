@@ -6,9 +6,10 @@
  * 涉及「让管理员失去权限」的操作（停用 / 删除 / 降级）受自我保护与「最后一个启用管理员」约束。
  */
 import { Types } from 'mongoose';
-import { Customer, MailQuotaBucket, Project, Scratchpad, User, UserMailAccount, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
+import { AuthChallenge, AuthSession, Customer, MailQuotaBucket, Project, Scratchpad, User, UserMailAccount, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
+import { assertOrganizationCapacity } from './organization.service';
 import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator';
 
 const logger = createLogger('user-service');
@@ -18,7 +19,11 @@ export interface UserDto {
   id: string;
   username: string;
   displayName: string;
+  email?: string;
+  twoFactorEnabled: boolean;
   role: UserRole;
+  organizationId?: string;
+  isPlatformAdmin: boolean;
   status: UserStatus;
   projectIds: string[];
   defaultProjectId?: string;
@@ -35,6 +40,10 @@ function toUserDto(doc: Record<string, unknown>): UserDto {
   const { _id, ...rest } = doc as Record<string, unknown> & { _id: Types.ObjectId };
   // 旧数据可能没有 status 字段，统一回退为 active
   return { ...rest, id: _id.toString(), status: (rest.status as UserStatus) ?? 'active',
+    email: (rest.email as string | undefined) || undefined,
+    organizationId: rest.organizationId ? String(rest.organizationId) : undefined,
+    isPlatformAdmin: Boolean(rest.isPlatformAdmin),
+    twoFactorEnabled: Boolean(rest.twoFactorEnabled),
     projectIds: ((rest.projectIds as unknown[]) ?? []).map(String),
     defaultProjectId: rest.defaultProjectId ? String(rest.defaultProjectId) : undefined } as unknown as UserDto;
 }
@@ -57,20 +66,29 @@ export async function listUsers(): Promise<UserDto[]> {
 }
 
 /** 创建用户：用户名查重 → bcrypt 加密 → 落库 */
-export async function createUser(input: CreateUserInput): Promise<UserDto> {
+export async function createUser(input: CreateUserInput, actor?: { organizationId?: string }): Promise<UserDto> {
   const username = input.username; // validator 已 trim + lowercase
   const existing = await User.findOne({ username });
   if (existing) {
     throw ApiError.conflict(`用户名「${username}」已存在`);
   }
 
+  await assertOrganizationCapacity('users');
   const passwordHash = await hashPassword(input.password);
   const projectIds = await resolveProjectIds(input.projectIds);
-  if (input.role === 'user' && projectIds.length === 0) throw ApiError.badRequest('业务员至少需要加入一个项目');
+  if (input.role !== 'admin' && projectIds.length === 0) throw ApiError.badRequest('该角色至少需要加入一个项目');
+  const email = input.email?.trim().toLowerCase() || undefined;
+  if (email) {
+    const emailOwner = await User.findOne({ email }).select('_id');
+    if (emailOwner) throw ApiError.conflict('该邮箱已被其他账号使用');
+  }
   const user = await User.create({
+    ...(actor?.organizationId ? { organizationId: new Types.ObjectId(actor.organizationId) } : {}),
     username,
     passwordHash,
     displayName: input.displayName?.trim() || username,
+    email,
+    twoFactorEnabled: Boolean(input.twoFactorEnabled && email),
     role: input.role,
     projectIds,
     defaultProjectId: projectIds[0],
@@ -123,13 +141,27 @@ async function toFreshDto(id: Types.ObjectId): Promise<UserDto> {
 export async function updateUser(actorId: string, targetId: string, input: UpdateUserInput): Promise<UserDto> {
   const target = await findUserOrThrow(targetId);
 
-  // admin → user 属于「降级」，会让其失去管理权限，套用与停用 / 删除相同的保护
-  if (input.role === 'user' && target.role === 'admin') {
-    await assertCanRevokeAdmin(actorId, target, '降级为业务员');
+  // 任何 admin → 非 admin 都属于「降级」，会让其失去管理权限，套用与停用 / 删除相同的保护
+  if (input.role !== undefined && input.role !== 'admin' && target.role === 'admin') {
+    await assertCanRevokeAdmin(actorId, target, '降级为非管理员');
   }
 
   if (input.displayName !== undefined) {
     target.displayName = input.displayName.trim() || target.username;
+  }
+  if (input.email !== undefined) {
+    const email = input.email.trim().toLowerCase() || undefined;
+    if (email) {
+      const emailOwner = await User.findOne({ email, _id: { $ne: target._id } }).select('_id');
+      if (emailOwner) throw ApiError.conflict('该邮箱已被其他账号使用');
+    }
+    target.email = email;
+  }
+  if (input.twoFactorEnabled !== undefined) {
+    target.twoFactorEnabled = input.twoFactorEnabled;
+  }
+  if (target.twoFactorEnabled && !target.email) {
+    throw ApiError.badRequest('开启 2FA 前请先填写邮箱');
   }
   if (input.role !== undefined) {
     target.role = input.role;
@@ -137,7 +169,7 @@ export async function updateUser(actorId: string, targetId: string, input: Updat
   if (input.projectIds !== undefined) {
     const previous = target.projectIds.map(String);
     const next = await resolveProjectIds(input.projectIds);
-    if ((input.role ?? target.role) === 'user' && next.length === 0) throw ApiError.badRequest('业务员至少需要加入一个项目');
+    if ((input.role ?? target.role) !== 'admin' && next.length === 0) throw ApiError.badRequest('该角色至少需要加入一个项目');
     target.projectIds = next;
     if (!target.defaultProjectId || !next.some((id) => String(id) === String(target.defaultProjectId))) {
       target.defaultProjectId = next[0];
@@ -154,8 +186,14 @@ export async function updateUser(actorId: string, targetId: string, input: Updat
 /** 重置指定账号的密码（管理员操作，可含自己）：bcrypt 重新哈希后原子写入 */
 export async function resetPassword(targetId: string, password: string): Promise<{ id: string }> {
   const passwordHash = await hashPassword(password);
-  const result = await User.updateOne({ _id: targetId }, { $set: { passwordHash } });
+  const result = await User.updateOne(
+    { _id: targetId },
+    { $set: { passwordHash, failedLoginAttempts: 0 }, $unset: { lockedUntil: 1 } },
+  );
   if (result.matchedCount === 0) throw ApiError.notFound('用户不存在');
+  // A password reset must invalidate every existing browser session and pending auth challenge.
+  await AuthSession.updateMany({ userId: targetId }, { $set: { revokedAt: new Date() } });
+  await AuthChallenge.updateMany({ userId: targetId }, { $set: { consumedAt: new Date() } });
   logger.info(`重置密码: userId=${targetId}`);
   return { id: targetId };
 }
@@ -170,6 +208,10 @@ export async function setUserStatus(actorId: string, targetId: string, status: U
 
   target.status = status;
   await target.save({ validateBeforeSave: false });
+  if (status === 'disabled') {
+    await AuthSession.updateMany({ userId: target._id }, { $set: { revokedAt: new Date() } });
+    await AuthChallenge.updateMany({ userId: target._id }, { $set: { consumedAt: new Date() } });
+  }
   logger.info(`${status === 'disabled' ? '停用' : '启用'}用户: ${target.username}`);
 
   return toFreshDto(target._id);
@@ -190,6 +232,8 @@ export async function deleteUser(
   const mailAccounts = await UserMailAccount.find({ userId: target._id }).select('_id');
   await Promise.all([
     Scratchpad.deleteMany({ userId: target._id }),
+    AuthSession.deleteMany({ userId: target._id }),
+    AuthChallenge.deleteMany({ userId: target._id }),
     MailQuotaBucket.deleteMany({ mailAccountId: { $in: mailAccounts.map((account) => account._id) } }),
     UserMailAccount.deleteMany({ userId: target._id }),
   ]);

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { apiDelete, apiGet, apiPost, apiPut, toErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
+import { usePageTitle } from '@/hooks/use-ui';
 import { PRODUCT_IMPORT_TEMPLATE_URL, parseProductWorkbook } from '@/lib/product-excel';
 import { useAuthStore, selectIsAdmin } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
@@ -87,6 +88,7 @@ function priceSummary(product: Product): string {
 }
 
 export function ProductsPage(): React.JSX.Element {
+  usePageTitle('产品价格');
   const isAdmin = useAuthStore(selectIsAdmin);
   const project = useProjectStore((state) => state.activeProject);
   const [products, setProducts] = React.useState<Product[]>([]);

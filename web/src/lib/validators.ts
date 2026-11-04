@@ -304,7 +304,7 @@ function passwordPolicyIssues(password: string): string[] {
   return issues;
 }
 
-const passwordSchema = z.string().superRefine((value, ctx) => {
+export const passwordSchema = z.string().superRefine((value, ctx) => {
   for (const message of passwordPolicyIssues(value)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message });
   }
@@ -323,10 +323,19 @@ export const userFormSchema = z.object({
     .regex(/^[a-zA-Z0-9._-]+$/, '用户名只能包含字母、数字、点、下划线、连字符'),
   password: passwordSchema,
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional().or(z.literal('')),
+  email: z
+    .string()
+    .trim()
+    .max(200, '邮箱最多 200 个字符')
+    .refine((value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), { message: '邮箱格式不正确' })
+    .optional()
+    .or(z.literal('')),
+  twoFactorEnabled: z.boolean().default(false),
   role: z.enum(USER_ROLE_VALUES, { error: '请选择角色' }),
   projectIds: z.array(z.string()).default([]),
 }).superRefine((value, ctx) => {
-  if (value.role === 'user' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '业务员至少需要加入一个项目' });
+  if (value.role !== 'admin' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '该角色至少需要加入一个项目' });
+  if (value.twoFactorEnabled && !value.email?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['email'], message: '开启 2FA 前请填写邮箱' });
 });
 export type UserFormValues = z.infer<typeof userFormSchema>;
 
@@ -334,20 +343,33 @@ export const defaultUserFormValues: UserFormValues = {
   username: '',
   password: '',
   displayName: '',
+  email: '',
+  twoFactorEnabled: false,
   role: 'user',
   projectIds: [],
 };
 
 /**
- * 编辑用户表单：仅显示名 + 角色（用户名只读、密码走「重置密码」）。
+ * 编辑用户表单：仅显示名 / 邮箱 / 2FA / 角色（用户名只读、密码走「重置密码」）。
  * 保留 username / password 字段以复用 UserFormValues 类型，但不对其做校验。
  */
 export const editUserFormSchema = z.object({
   username: z.string(),
   password: z.string(),
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional().or(z.literal('')),
+  email: z
+    .string()
+    .trim()
+    .max(200, '邮箱最多 200 个字符')
+    .refine((value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), { message: '邮箱格式不正确' })
+    .optional()
+    .or(z.literal('')),
+  twoFactorEnabled: z.boolean().default(false),
   role: z.enum(USER_ROLE_VALUES, { error: '请选择角色' }),
   projectIds: z.array(z.string()).default([]),
+}).superRefine((value, ctx) => {
+  if (value.role !== 'admin' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '该角色至少需要加入一个项目' });
+  if (value.twoFactorEnabled && !value.email?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['email'], message: '开启 2FA 前请填写邮箱' });
 });
 
 /** 重置密码表单：仅一个新密码字段 */

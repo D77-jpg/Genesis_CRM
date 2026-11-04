@@ -1,3 +1,4 @@
+import './tenant-setup';
 import {Schema,model,Types,type HydratedDocument,type Model} from 'mongoose';
 import type {PlaybookCardData} from '../services/agent/genesis-playbook.data';
 

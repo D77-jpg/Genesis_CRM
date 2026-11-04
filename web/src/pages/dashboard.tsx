@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, RefreshCw, Target, Users } from 'lucide-react';
+import { ChevronDown, RefreshCw, Sparkles, Target, Users } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
 import { ErrorState, InlineLoader } from '@/components/common/empty-state';
 import { SalesFunnel } from '@/components/dashboard/sales-funnel';
@@ -13,7 +13,10 @@ import { usePageTitle } from '@/hooks/use-ui';
 import { useMetaStore } from '@/store/meta.store';
 import { useProjectStore } from '@/store/project.store';
 import { MAIL_CHANNEL_LABEL, ROUTES } from '@/constants';
+import { selectCanManageProjects, useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
+import { apiGet } from '@/lib/api';
+import { useI18n } from '@/i18n';
 import '@/components/dashboard/dashboard.css';
 
 type MetricTone = 'mint' | 'violet' | 'amber' | 'rose';
@@ -82,12 +85,24 @@ function TrendChart({ data }: { data: { _id: string; count: number }[] }): React
 }
 
 export function DashboardPage(): React.JSX.Element {
-  usePageTitle('仪表盘');
+  const { t, language } = useI18n();
+  usePageTitle(t('dashboard.title'));
   const { data, loading, error, run } = useOverviewStats();
   const mailChannel = useMetaStore(state => state.mailChannel);
   const project = useProjectStore(state => state.activeProject);
+  const canManage = useAuthStore(selectCanManageProjects);
+  const [onboarding, setOnboarding] = React.useState<{ completedAt?: string; doneCount: number; totalCount: number } | null>(null);
+  React.useEffect(() => {
+    if (!canManage) {
+      setOnboarding(null);
+      return;
+    }
+    void apiGet<{ completedAt?: string; doneCount: number; totalCount: number }>('/projects/onboarding')
+      .then(setOnboarding)
+      .catch(() => undefined);
+  }, [canManage, project?.id]);
   const { openCustomers, openLetters } = useDashboardNavigation();
-  const date = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
+  const date = new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
   const metrics = data ? [
     {
       label: '客户总数',
@@ -125,7 +140,7 @@ export function DashboardPage(): React.JSX.Element {
 
   return (
     <div className="workspace-page dashboard-page">
-      <PageHeader title="销售工作台" description={`${project?.name || '当前项目'} · ${date}`}
+      <PageHeader title={t('dashboard.title')} description={`${project?.name || (language === 'zh' ? '当前项目' : 'Current project')} · ${date}`}
         actions={<>
           <Button variant="ghost" size="sm" onClick={() => void run()} loading={loading}>
             {!loading ? <RefreshCw className="h-3.5 w-3.5" aria-hidden /> : null}刷新
@@ -136,6 +151,18 @@ export function DashboardPage(): React.JSX.Element {
           <Button size="sm" onClick={() => openCustomers()}><Users className="h-4 w-4" aria-hidden />客户管理</Button>
         </>}
       />
+      {canManage && onboarding && !onboarding.completedAt ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <div>
+              <p className="text-sm font-medium">{t('dashboard.onboardingTitle')}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t('dashboard.onboardingDesc')}</p>
+            </div>
+          </div>
+          <Button size="sm" asChild><Link to={ROUTES.onboarding}>{t('dashboard.onboardingCta')} · {onboarding.doneCount}/{onboarding.totalCount}</Link></Button>
+        </div>
+      ) : null}
       {mailChannel === 'mock' ? <Alert variant="warning"><AlertDescription>当前为「{MAIL_CHANNEL_LABEL.mock}」：开发信会完整记录并计入统计，不会真实投递。</AlertDescription></Alert> : null}
       {error ? <Alert variant="warning"><AlertDescription>{data ? '刷新失败，以下保留上次加载的数据。' : '统计数据暂时无法加载。'}</AlertDescription></Alert> : null}
 

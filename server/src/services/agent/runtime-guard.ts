@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
 import { Types } from 'mongoose';
 import env from '../../config/env';
-import { AgentQuotaBucket } from '../../models';
+import { AgentQuotaBucket, Project } from '../../models';
 import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
 import { requireProjectId } from '../../utils/access';
+import { addUsage, assertUsageAvailable } from '../usage.service';
 
 export interface AgentUsageValues {
   inputTokens: number;
@@ -23,6 +24,7 @@ export interface AgentQuotaReservation {
   userId: Types.ObjectId;
   day: string;
   reservedTokens: number;
+  organizationId?: Types.ObjectId;
 }
 
 export interface LimitedItems<T> {
@@ -82,6 +84,8 @@ export async function reserveAgentQuota(
   const estimatedInputTokens = Math.max(1, Math.ceil(Math.max(0, inputCharacters) / 4));
   const reservedTokens = estimatedInputTokens + limits.maxOutputTokens;
   if (reservedTokens > limits.dailyTokens) throw quotaError(limits);
+  const project = await Project.findById(identifiers.projectId).select('organizationId').lean();
+  await assertUsageAvailable('monthlyAiTokens', reservedTokens, project?.organizationId ? String(project.organizationId) : undefined);
 
   const guarded = {
     ...identifiers,
@@ -99,7 +103,7 @@ export async function reserveAgentQuota(
     }
   }
   if (!updated) throw quotaError(limits);
-  return { ...identifiers, reservedTokens };
+  return { ...identifiers, reservedTokens, ...(project?.organizationId ? { organizationId: project.organizationId } : {}) };
 }
 
 export async function settleAgentQuota(
@@ -119,6 +123,7 @@ export async function settleAgentQuota(
       },
     },
   );
+  await addUsage('ai_tokens', Math.max(0, safe.totalTokens), reservation.organizationId?.toString());
 }
 
 /** 优先保留最新数据；若单条内容超预算，则只截断正文而保留该条记录的身份字段。 */

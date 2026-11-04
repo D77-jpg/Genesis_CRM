@@ -15,9 +15,24 @@ import { Customer } from '../models';
 import type { AuthUser } from '../types/express';
 import { ApiError } from './ApiError';
 
-/** 是否管理员；无 actor（理论上 requireAuth 后不会发生）按受限处理 */
+/** 是否系统管理员；无 actor（理论上 requireAuth 后不会发生）按受限处理 */
 export function isAdmin(user?: AuthUser | null): boolean {
   return user?.role === 'admin';
+}
+
+/** 项目管理员或系统管理员：可管理项目设置。 */
+export function isProjectManager(user?: AuthUser | null): boolean {
+  return user?.role === 'admin' || user?.role === 'project_admin';
+}
+
+/** 可查看整个项目数据，而不是只看自己名下客户。 */
+export function hasProjectWideScope(user?: AuthUser | null): boolean {
+  return user?.role === 'admin' || user?.role === 'project_admin' || user?.role === 'viewer';
+}
+
+/** 只读账号：后端 requireAuth 已兜底拦截写请求。 */
+export function isReadOnly(user?: AuthUser | null): boolean {
+  return user?.role === 'viewer';
 }
 
 /** 当前业务请求的项目范围。没有项目上下文时返回永不命中的条件，默认拒绝。 */
@@ -51,7 +66,7 @@ function ownerIdToString(ownerId: unknown): string {
  */
 export function customerScope(user?: AuthUser | null): Record<string, unknown> {
   const scope = projectScope(user);
-  if (!user || isAdmin(user)) return scope;
+  if (!user || hasProjectWideScope(user)) return scope;
   return { ...scope, ownerId: new Types.ObjectId(user.id) };
 }
 
@@ -63,7 +78,7 @@ export function assertCustomerAccess(user: AuthUser | undefined | null, ownerId:
   if (!user?.projectId || (projectId && String(projectId) !== user.projectId)) {
     throw ApiError.notFound('客户不存在或无权访问');
   }
-  if (isAdmin(user)) return;
+  if (hasProjectWideScope(user)) return;
   if (ownerIdToString(ownerId) !== user.id) {
     throw ApiError.notFound('客户不存在或无权访问');
   }
@@ -75,7 +90,7 @@ export function assertCustomerAccess(user: AuthUser | undefined | null, ownerId:
  */
 export async function visibleCustomerIds(user?: AuthUser | null): Promise<Types.ObjectId[] | null> {
   if (!user?.projectId) return [];
-  if (isAdmin(user)) return null;
+  if (hasProjectWideScope(user)) return null;
   const docs = await Customer.find({ ...projectScope(user), ownerId: new Types.ObjectId(user.id) }).select('_id').lean();
   return (docs as unknown as { _id: Types.ObjectId }[]).map((d) => d._id);
 }

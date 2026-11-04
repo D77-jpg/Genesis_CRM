@@ -12,6 +12,8 @@ import { useAuthStore } from '@/store/auth.store';
 import { useMetaStore } from '@/store/meta.store';
 import { ROUTES } from '@/constants';
 import { useProjectStore } from '@/store/project.store';
+import { useI18n } from '@/i18n';
+import type { UserRole } from '@/types/models';
 
 /** 路由切换后回到顶部（详情页的 #letters 锚点由页面自己处理） */
 export function ScrollToTop(): null {
@@ -26,6 +28,7 @@ export function ScrollToTop(): null {
 
 /** 需要登录才能访问的区域：校验通过则渲染 AppShell（子路由由其 Outlet 承接） */
 export function ProtectedRoute(): React.JSX.Element {
+  const { t } = useI18n();
   const status = useAuthStore((state) => state.status);
   const initialized = useAuthStore((state) => state.initialized);
   const bootstrap = useAuthStore((state) => state.bootstrap);
@@ -37,7 +40,7 @@ export function ProtectedRoute(): React.JSX.Element {
   const initializeProjects = useProjectStore((state) => state.initialize);
   const location = useLocation();
 
-  // 首屏：有 token 就校验，没有就直接进入未登录态
+  // 首屏：通过 HttpOnly cookie 恢复会话
   React.useEffect(() => {
     if (!initialized) void bootstrap();
   }, [initialized, bootstrap]);
@@ -52,7 +55,7 @@ export function ProtectedRoute(): React.JSX.Element {
   }, [status, projectInitialized, activeProject, fetchMeta]);
 
   if (!initialized) {
-    return <PageLoader label="正在恢复登录状态…" />;
+    return <PageLoader label={t('common.loading')} />;
   }
 
   if (status !== 'authenticated') {
@@ -61,14 +64,18 @@ export function ProtectedRoute(): React.JSX.Element {
     return <Navigate to={ROUTES.login} replace state={{ from }} />;
   }
 
-  if (projectLoading || !projectInitialized) return <PageLoader label="正在加载项目工作空间…" />;
-  if (!activeProject) return <PageLoader label={projectError || '当前账号没有可访问的项目'} />;
+  // Organization/billing/platform screens must work before the first project
+  // exists (a freshly provisioned tenant has no project yet).
+  const projectOptional = [ROUTES.organization, ROUTES.billing, ROUTES.platform].includes(location.pathname as typeof ROUTES.organization);
+  if (projectLoading || !projectInitialized) return <PageLoader label={t('common.loading')} />;
+  if (!activeProject && !projectOptional) return <PageLoader label={projectError || t('errors.forbidden')} />;
 
   return <AppShell />;
 }
 
 /** 已登录时不再显示登录页 */
 export function GuestRoute({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { t } = useI18n();
   const status = useAuthStore((state) => state.status);
   const initialized = useAuthStore((state) => state.initialized);
   const bootstrap = useAuthStore((state) => state.bootstrap);
@@ -77,7 +84,7 @@ export function GuestRoute({ children }: { children: React.ReactNode }): React.J
     if (!initialized) void bootstrap();
   }, [initialized, bootstrap]);
 
-  if (!initialized) return <PageLoader label="正在校验登录状态…" />;
+  if (!initialized) return <PageLoader label={t('common.loading')} />;
   if (status === 'authenticated') return <Navigate to={ROUTES.dashboard} replace />;
   return <>{children}</>;
 }
@@ -87,8 +94,21 @@ export function GuestRoute({ children }: { children: React.ReactNode }): React.J
  * 入口在侧边栏已按角色隐藏，这里是直接敲 URL 时的兜底：非管理员一律回仪表盘。
  * 必须嵌在 ProtectedRoute 之内使用，此时登录态与 user 已就绪。
  */
-export function AdminRoute({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function PlatformRoute({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const isPlatformAdmin = useAuthStore((state) => state.user?.isPlatformAdmin);
+  if (!isPlatformAdmin) return <Navigate to={ROUTES.dashboard} replace />;
+  return <>{children}</>;
+}
+
+export function AdminRoute({
+  children,
+  roles = ['admin'],
+}: {
+  children: React.ReactNode;
+  /** Default is system-admin only; project settings pass admin + project_admin. */
+  roles?: UserRole[];
+}): React.JSX.Element {
   const role = useAuthStore((state) => state.user?.role);
-  if (role !== 'admin') return <Navigate to={ROUTES.dashboard} replace />;
+  if (!role || !roles.includes(role)) return <Navigate to={ROUTES.dashboard} replace />;
   return <>{children}</>;
 }

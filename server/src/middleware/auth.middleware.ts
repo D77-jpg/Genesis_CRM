@@ -4,12 +4,14 @@
  * requireAuth  —— 必须携带合法 Bearer Token
  * requireRole  —— 在 requireAuth 之后校验角色
  */
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import { ApiError } from '../utils/ApiError';
-import { verifyToken } from '../services/auth.service';
-import { Project, User, type UserRole } from '../models';
+import { isAuthSessionActive, safeTokenEqual, verifyToken } from '../services/auth.service';
+import { AUTH_COOKIE_NAMES, getCookie } from '../utils/auth-cookies';
+import { Organization, Project, User, type UserRole } from '../models';
+import { runWithTenant } from '../models/tenant-context';
 
-/** 从 Authorization 头中提取 token */
+/** 从 Authorization 头中提取 token（兼容脚本 / 集成客户端） */
 function extractBearerToken(header?: string): string | null {
   if (!header) return null;
   const [scheme, token] = header.split(' ');
@@ -17,13 +19,37 @@ function extractBearerToken(header?: string): string | null {
   return token.trim();
 }
 
+/** Cookie 是浏览器的主要登录方式；Bearer 保留给自动化与旧客户端迁移。 */
+function extractAuthToken(req: Request): { token: string; fromCookie: boolean } | null {
+  const bearer = extractBearerToken(req.headers.authorization);
+  if (bearer) return { token: bearer, fromCookie: false };
+  const cookieToken = getCookie(req, AUTH_COOKIE_NAMES.access);
+  return cookieToken ? { token: cookieToken, fromCookie: true } : null;
+}
+
+function assertCookieCsrf(req: Request): void {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase())) return;
+  const header = req.headers['x-csrf-token'];
+  const expected = getCookie(req, AUTH_COOKIE_NAMES.csrf);
+  if (!safeTokenEqual(typeof header === 'string' ? header : undefined, expected)) {
+    throw ApiError.forbidden('CSRF 校验失败，请刷新页面后重试');
+  }
+}
+
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
-    const token = extractBearerToken(req.headers.authorization);
-    if (!token) {
+    const credential = extractAuthToken(req);
+    if (!credential) {
       throw ApiError.unauthorized('缺少登录凭证，请先登录');
     }
-    const payload = verifyToken(token);
+    const payload = verifyToken(credential.token);
+
+    // New browser sessions are revocable; legacy Bearer tokens without sid
+    // remain supported until they expire during the migration window.
+    if (payload.sid && !(await isAuthSessionActive(payload.sid, payload.sub))) {
+      throw ApiError.unauthorized('登录会话已失效，请重新登录');
+    }
+    if (credential.fromCookie) assertCookieCsrf(req);
 
     // 查库校验账号是否仍存在且启用：停用 / 删除后，已签发的 token 立即失效（返回 401 触发前端登出）
     const current = await User.findById(payload.sub);
@@ -33,6 +59,20 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
     if (current.status === 'disabled') {
       throw ApiError.unauthorized('账号已停用，请联系管理员');
     }
+    if (!current.isPlatformAdmin && current.organizationId) {
+      const organization = await Organization.findById(current.organizationId).select('status');
+      if (!organization || organization.status === 'suspended') {
+        throw ApiError.forbidden('组织已暂停，请联系平台管理员');
+      }
+    }
+
+    // Read-only accounts may use GET/HEAD/OPTIONS only. Authentication routes
+    // stay exempt so a viewer can still refresh or sign out.
+    if (current.role === 'viewer'
+      && !['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase())
+      && !req.baseUrl.includes('/auth')) {
+      throw ApiError.forbidden('当前账号为只读账号，不能执行写操作');
+    }
 
     // 以库中最新的角色 / 显示名为准：角色被调整后即时生效，无需等 token 过期
     req.user = {
@@ -40,10 +80,17 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
       username: current.username,
       displayName: current.displayName || current.username,
       role: current.role,
+      ...(current.organizationId ? { organizationId: current.organizationId.toString() } : {}),
+      isPlatformAdmin: Boolean(current.isPlatformAdmin),
       // 部分旧版子路由仍会重复执行 requireAuth；保留父路由已经解析出的项目上下文。
       projectId: req.user?.projectId,
     };
-    next();
+    // All downstream service and Mongoose calls inherit this tenant boundary.
+    return runWithTenant({
+      organizationId: current.organizationId ? current.organizationId.toString() : undefined,
+      bypass: false,
+      source: 'http',
+    }, () => next());
   } catch (error) {
     next(error);
   }
@@ -64,6 +111,19 @@ export const requireRole =
     next();
   };
 
+/** Platform console guard. Runs downstream queries with tenant filtering disabled. */
+export const requirePlatformAdmin: RequestHandler = (req, _res, next) => {
+  if (!req.user?.isPlatformAdmin) {
+    next(ApiError.forbidden('只有平台管理员可以访问平台控制台'));
+    return;
+  }
+  return runWithTenant({
+    organizationId: req.user.organizationId,
+    bypass: true,
+    source: 'platform',
+  }, () => next());
+};
+
 export default requireAuth;
 
 /**
@@ -73,7 +133,7 @@ export default requireAuth;
 export const requireProject: RequestHandler = async (req, res, next) => {
   try {
     if (!req.user) throw ApiError.unauthorized();
-    const current = await User.findById(req.user.id).select('role projectIds defaultProjectId');
+    const current = await User.findById(req.user.id).select('role projectIds defaultProjectId organizationId');
     if (!current) throw ApiError.unauthorized();
 
     const requested = String(req.headers['x-project-id'] ?? '').trim();

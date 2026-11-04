@@ -11,6 +11,11 @@ export interface AuthUser {
   username: string;
   displayName: string;
   role: UserRole;
+  organizationId?: string;
+  organizationName?: string;
+  organizationSlug?: string;
+  /** Platform operators may manage every organization. */
+  isPlatformAdmin?: boolean;
   /** requireProject 解析后的当前项目；业务接口必须存在。 */
   projectId?: string;
 }
@@ -28,6 +33,10 @@ export interface JwtPayload {
   username: string;
   displayName: string;
   role: UserRole;
+  org?: string;
+  platform?: boolean;
+  /** Server-side refresh session id; absent on legacy/test bearer tokens. */
+  sid?: string;
   iat?: number;
   exp?: number;
 }

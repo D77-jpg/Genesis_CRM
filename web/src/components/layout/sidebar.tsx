@@ -9,8 +9,11 @@ import { Link, NavLink } from 'react-router-dom';
 import {
   BookOpen,
   Bot,
+  Building2,
+  CreditCard,
   FileText,
   FolderKanban,
+  Globe2,
   LayoutDashboard,
   Mail,
   Package,
@@ -23,35 +26,45 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useMetaStore } from '@/store/meta.store';
-import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
+import { selectCanManageProjects, selectIsAdmin, selectIsPlatformAdmin, useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
 import { useProjectStore } from '@/store/project.store';
 import { ProjectLogo, projectLogoSrc } from '@/components/projects/project-logo';
+import { useI18n, type TranslationKey } from '@/i18n';
 
 export interface NavItem {
   to: string;
-  label: string;
+  labelKey: TranslationKey;
   icon: React.ComponentType<{ className?: string }>;
   /** 精确匹配（根路径必须为 true，否则任何页面都会高亮） */
   end?: boolean;
-  /** 仅管理员可见（业务员看不到入口，路由层还有 AdminRoute 兜底） */
+  /** Only system admins can see this entry. */
   adminOnly?: boolean;
+  /** Admins and project admins can see this entry. */
+  managerOnly?: boolean;
+  /** Only platform operators can see this entry. */
+  platformOnly?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: ROUTES.dashboard, label: '仪表盘', icon: LayoutDashboard, end: true },
-  { to: ROUTES.customers, label: '客户管理', icon: Users, end: false },
-  { to: ROUTES.prospecting, label: '客户线索池', icon: Target, end: false },
-  { to: ROUTES.outreachAutomation, label: '自动开发', icon: Bot, end: false },
-  { to: '/mail', label: '邮件中心', icon: Mail, end: false },
-  { to: ROUTES.letters, label: '开发信记录', icon: Mail, end: false },
-  { to: '/knowledge', label: '知识库', icon: BookOpen, end: false },
-  { to: ROUTES.products, label: '产品价格', icon: Package, end: false },
-  { to: ROUTES.templates, label: '模板中心', icon: FileText, end: false },
-  { to: ROUTES.users, label: '用户管理', icon: UserCog, end: false, adminOnly: true },
-  { to: ROUTES.projects, label: '项目工作空间', icon: FolderKanban, end: false, adminOnly: true },
-  { to: ROUTES.agentDiagnostics, label: 'AI 使用情况', icon: ShieldCheck, end: false, adminOnly: true },
-  { to: ROUTES.aiSettings, label: 'AI 配置', icon: Settings2, end: false, adminOnly: true },
+  { to: ROUTES.dashboard, labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
+  { to: ROUTES.customers, labelKey: 'nav.customers', icon: Users, end: false },
+  { to: ROUTES.prospecting, labelKey: 'nav.prospecting', icon: Target, end: false },
+  { to: ROUTES.outreachAutomation, labelKey: 'nav.outreach', icon: Bot, end: false },
+  { to: '/mail', labelKey: 'nav.mail', icon: Mail, end: false },
+  { to: ROUTES.letters, labelKey: 'nav.letters', icon: Mail, end: false },
+  { to: '/knowledge', labelKey: 'nav.knowledge', icon: BookOpen, end: false },
+  { to: ROUTES.products, labelKey: 'nav.products', icon: Package, end: false },
+  { to: ROUTES.templates, labelKey: 'nav.templates', icon: FileText, end: false },
+  { to: ROUTES.onboarding, labelKey: 'nav.onboarding', icon: ShieldCheck, end: false, managerOnly: true },
+  { to: ROUTES.users, labelKey: 'nav.users', icon: UserCog, end: false, adminOnly: true },
+  { to: ROUTES.projects, labelKey: 'nav.projects', icon: FolderKanban, end: false, managerOnly: true },
+  { to: ROUTES.mailCompliance, labelKey: 'nav.compliance', icon: ShieldCheck, end: false, managerOnly: true },
+  { to: ROUTES.agentDiagnostics, labelKey: 'nav.agentDiagnostics', icon: ShieldCheck, end: false, adminOnly: true },
+  { to: ROUTES.aiSettings, labelKey: 'nav.aiSettings', icon: Settings2, end: false, adminOnly: true },
+  { to: ROUTES.organization, labelKey: 'nav.organization', icon: Building2, end: false, managerOnly: true },
+  { to: ROUTES.billing, labelKey: 'nav.billing', icon: CreditCard, end: false, adminOnly: true },
+  { to: ROUTES.platform, labelKey: 'nav.platform', icon: Globe2, end: false, platformOnly: true },
 ];
 
 interface SidebarProps {
@@ -73,6 +86,7 @@ function BrandMark(): React.JSX.Element {
 }
 
 function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
+  const { t } = useI18n();
   const fallbackCompanyName = useMetaStore((state) => state.meta?.company?.name);
   const project = useProjectStore((state) => state.activeProject);
   const subtitle = project?.companyName || fallbackCompanyName || 'Customer Development CRM';
@@ -80,12 +94,12 @@ function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
 
   return (
     <div className={cn('flex h-12 shrink-0 items-center gap-2.5 border-b border-border px-3', collapsed && 'justify-center px-0')}>
-      <Link to={ROUTES.dashboard} className="flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40" aria-label="返回仪表盘">
+      <Link to={ROUTES.dashboard} className="flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40" aria-label={t('nav.backDashboard')}>
         {project ? <ProjectLogo project={project} size={collapsed ? 'sm' : 'md'} compact={collapsed} className={collapsed ? undefined : 'dark:rounded dark:bg-white dark:px-1 dark:py-0.5'} /> : <BrandMark />}
         {!collapsed && !hasLogo ? (
           <span className="min-w-0">
             <span className="block truncate text-[0.8125rem] font-semibold leading-tight tracking-[-0.01em]">
-              {project?.name || '外贸 CRM'}
+              {project?.name || 'Genesis CRM'}
             </span>
             <span className="mt-0.5 block truncate text-[10px] leading-tight text-muted-foreground" title={subtitle}>
               {subtitle}
@@ -98,15 +112,21 @@ function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
 }
 
 function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }): React.JSX.Element {
+  const { t } = useI18n();
   const isAdmin = useAuthStore(selectIsAdmin);
-  // 按角色过滤导航：带 adminOnly 的项仅管理员可见
-  const items = React.useMemo(() => NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin), [isAdmin]);
+  const isPlatformAdmin = useAuthStore(selectIsPlatformAdmin);
+  const canManageProjects = useAuthStore(selectCanManageProjects);
+  // 按角色过滤导航：管理员入口和项目管理员入口分别控制
+  const items = React.useMemo(
+    () => NAV_ITEMS.filter((item) => (!item.adminOnly || isAdmin) && (!item.managerOnly || canManageProjects) && (!item.platformOnly || isPlatformAdmin)),
+    [isAdmin, isPlatformAdmin, canManageProjects],
+  );
 
   return (
-    <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3" aria-label="主导航">
+    <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3" aria-label={t('nav.main')}>
       {[
-        { label: '工作台', items: items.filter((item) => !item.adminOnly) },
-        { label: '管理', items: items.filter((item) => item.adminOnly) },
+        { label: t('nav.workspace'), items: items.filter((item) => !item.adminOnly && !item.managerOnly && !item.platformOnly) },
+        { label: t('nav.manage'), items: items.filter((item) => item.adminOnly || item.managerOnly || item.platformOnly) },
       ]
         .filter((group) => group.items.length > 0)
         .map((group) => (
@@ -118,11 +138,11 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
             )}
             {group.items.map((item) => (
               <NavLink
-                key={item.to}
+                key={`${group.label}-${item.labelKey}-${item.to}`}
                 to={item.to}
                 end={item.end}
                 onClick={onNavigate}
-                title={collapsed ? item.label : undefined}
+                title={collapsed ? t(item.labelKey) : undefined}
                 className={({ isActive }) =>
                   cn(
                     'group flex min-h-8 items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] font-medium transition-colors',
@@ -135,7 +155,7 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
                 }
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden />
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
               </NavLink>
             ))}
           </div>
@@ -146,6 +166,7 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
 
 /** The project rail keeps multi-project context visible without a second dropdown. */
 function ProjectRail({ collapsed }: { collapsed: boolean }): React.JSX.Element | null {
+  const { t } = useI18n();
   const items = useProjectStore((state) => state.items).filter((item) => item.status === 'active');
   const active = useProjectStore((state) => state.activeProject);
   const switchProject = useProjectStore((state) => state.switchProject);
@@ -163,14 +184,14 @@ function ProjectRail({ collapsed }: { collapsed: boolean }): React.JSX.Element |
     <div className="shrink-0 border-t border-border px-2 py-2">
       {!collapsed ? (
         <div className="mb-1 flex items-center justify-between px-2">
-          <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/65">项目</p>
-          <span className="text-[10px] tabular-nums text-muted-foreground/45" aria-label={`共 ${items.length} 个项目`}>{items.length}</span>
+          <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/65">{t('nav.projectsRail')}</p>
+          <span className="text-[10px] tabular-nums text-muted-foreground/45">{items.length}</span>
         </div>
       ) : null}
       <div
         className={cn('sidebar-project-list max-h-[10rem] space-y-0.5 overflow-y-auto overscroll-contain pr-0.5', collapsed && 'max-h-[12rem]')}
         role="list"
-        aria-label="项目列表"
+        aria-label={t('nav.projectList')}
       >
         {items.map((project) => {
           const isActive = project.id === active?.id;
@@ -191,7 +212,7 @@ function ProjectRail({ collapsed }: { collapsed: boolean }): React.JSX.Element |
             >
               <ProjectLogo project={project} size="sm" compact />
               {!collapsed ? <span className="min-w-0 flex-1 truncate">{project.name}</span> : null}
-              {!collapsed && isActive ? <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-label="当前项目" /> : null}
+              {!collapsed && isActive ? <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-label={t('nav.currentProject')} /> : null}
             </button>
           );
         })}
@@ -201,6 +222,7 @@ function ProjectRail({ collapsed }: { collapsed: boolean }): React.JSX.Element |
 }
 
 export function Sidebar({ collapsed, mobile = false, onNavigate }: SidebarProps): React.JSX.Element {
+  const { t } = useI18n();
   // 移动端抽屉始终展开显示文字
   const isCollapsed = collapsed && !mobile;
 
@@ -214,7 +236,7 @@ export function Sidebar({ collapsed, mobile = false, onNavigate }: SidebarProps)
           <button
             type="button"
             onClick={onNavigate}
-            aria-label="关闭导航"
+            aria-label={t('nav.close')}
             className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="h-4 w-4" />

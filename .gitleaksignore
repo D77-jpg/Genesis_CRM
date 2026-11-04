@@ -7,6 +7,9 @@ e4f08faf1b5eb3db07907033b5cae50170b213d6:scripts/smoke-test.ps1:generic-api-key:
 # S0 report contains a verified source-file SHA-256, not a credential.
 73e8289cc32693454df9820652e5a598f90b1d30:docs/knowledge-s0-results/baseline.json:generic-api-key:36
 
+# P3 E2E fixture: synthetic test JWT secret, not a credential (reviewed 2026-11-04, PR #79).
+1fb23c985804b451b1711c062fe55dc145986e25:server/tests/p3-main-flow.test.ts:generic-api-key:18
+
 # S2 fixed public model vocabulary file SHA-256 values; see H11_AUDIT.md.
 8ff0e335cf25bbfce7f46b586de2bb161de1f79d:server/semantic/model.json:generic-api-key:13
 8ff0e335cf25bbfce7f46b586de2bb161de1f79d:server/semantic/model.json:generic-api-key:14

@@ -30,9 +30,12 @@ import type { AuthUser } from '../types/express';
 import { ApiError } from '../utils/ApiError';
 import type { CreateProjectInput, UpdateProjectInput } from '../validators/project.validator';
 import { getProjectActiveChannel } from './mailer.service';
+import { assertOrganizationCapacity, ensureDefaultOrganization } from './organization.service';
+import type { ProjectBrandProfile, ProjectMailCompliance } from '../models/Project';
 
 export interface ProjectDto {
   id: string;
+  organizationId?: string;
   name: string;
   slug: string;
   code: string;
@@ -45,19 +48,25 @@ export interface ProjectDto {
   mailProfileKey: string;
   logoImage?: string;
   coverImage?: string;
+  brandProfile?: ProjectBrandProfile;
+  mailCompliance?: ProjectMailCompliance;
+  onboardingCompletedAt?: Date;
   status: 'active' | 'archived';
   isDefault: boolean;
   mailChannel?: 'mock' | 'smtp';
 }
 
 const dto = (raw: Record<string, unknown>): ProjectDto => ({
-  id: String(raw._id), name: String(raw.name), slug: String(raw.slug), code: String(raw.code),
+  id: String(raw._id), organizationId: raw.organizationId ? String(raw.organizationId) : undefined, name: String(raw.name), slug: String(raw.slug), code: String(raw.code),
   industry: raw.industry ? String(raw.industry) : undefined,
   companyName: String(raw.companyName), website: raw.website ? String(raw.website) : undefined,
   moq: raw.moq ? String(raw.moq) : undefined, senderName: raw.senderName ? String(raw.senderName) : undefined,
   mailFrom: raw.mailFrom ? String(raw.mailFrom) : undefined, mailProfileKey: String(raw.mailProfileKey),
   logoImage: raw.logoImage ? String(raw.logoImage) : undefined,
   coverImage: raw.coverImage ? String(raw.coverImage) : undefined,
+  brandProfile: raw.brandProfile as ProjectBrandProfile | undefined,
+  mailCompliance: raw.mailCompliance as ProjectMailCompliance | undefined,
+  onboardingCompletedAt: raw.onboardingCompletedAt as Date | undefined,
   status: raw.status as 'active' | 'archived', isDefault: Boolean(raw.isDefault),
 });
 
@@ -74,7 +83,13 @@ export async function listProjects(actor: AuthUser): Promise<ProjectDto[]> {
 
 export async function createProject(input: CreateProjectInput, actor: AuthUser): Promise<ProjectDto> {
   try {
-    const project = await Project.create({ ...input, isDefault: false, createdBy: new Types.ObjectId(actor.id) });
+    await assertOrganizationCapacity('projects');
+    const project = await Project.create({
+      ...input,
+      ...(actor.organizationId ? { organizationId: new Types.ObjectId(actor.organizationId) } : {}),
+      isDefault: false,
+      createdBy: new Types.ObjectId(actor.id),
+    });
     return {
       ...dto(project.toObject() as unknown as Record<string, unknown>),
       mailChannel: await getProjectActiveChannel(String(project._id)),
@@ -85,8 +100,15 @@ export async function createProject(input: CreateProjectInput, actor: AuthUser):
   }
 }
 
-export async function updateProject(id: string, input: UpdateProjectInput): Promise<ProjectDto> {
+export async function updateProject(id: string, input: UpdateProjectInput, actor?: AuthUser): Promise<ProjectDto> {
   if (!Types.ObjectId.isValid(id)) throw ApiError.notFound('项目不存在');
+  if (actor && actor.role === 'project_admin') {
+    const allowed = await User.exists({ _id: actor.id, projectIds: new Types.ObjectId(id) });
+    if (!allowed) throw ApiError.notFound('项目不存在或无权修改');
+  }
+  if (actor && actor.role !== 'admin' && actor.role !== 'project_admin') {
+    throw ApiError.forbidden('只有管理员可以修改项目资料');
+  }
   if (input.status === 'archived') {
     const existing = await Project.findById(id).select('isDefault');
     if (!existing) throw ApiError.notFound('项目不存在');
@@ -159,22 +181,23 @@ async function dropLegacyRequestKeyIndex(): Promise<void> {
 
 /** 幂等启动迁移：创建三个初始空间，并把 V1-V2.5 历史数据完整归入 Genesis Bags。 */
 export async function bootstrapProjects(): Promise<void> {
+  const organization = await ensureDefaultOrganization();
   const genesis = await Project.findOneAndUpdate(
     { slug: 'genesis-bags' },
-    { $setOnInsert: { name: 'Genesis Bags', code: 'GENESIS', industry: '箱包外贸', companyName: env.COMPANY_NAME,
+    { $setOnInsert: { organizationId: organization._id, name: 'Genesis Bags', code: 'GENESIS', industry: '箱包外贸', companyName: env.COMPANY_NAME,
       website: env.COMPANY_WEBSITE, moq: env.COMPANY_MOQ, senderName: env.SENDER_NAME, mailFrom: env.MAIL_FROM,
       mailProfileKey: 'genesis-bags', status: 'active', isDefault: true } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   await Project.findOneAndUpdate(
     { slug: 'ironhue' },
-    { $setOnInsert: { name: 'IRONHUE', code: 'IRONHUE', industry: '运动器材外贸', companyName: 'IRONHUE',
+    { $setOnInsert: { organizationId: organization._id, name: 'IRONHUE', code: 'IRONHUE', industry: '运动器材外贸', companyName: 'IRONHUE',
       mailProfileKey: 'ironhue', status: 'active', isDefault: false } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   await Project.findOneAndUpdate(
     { slug: 'velaturo' },
-    { $setOnInsert: { name: 'VELATURO', code: 'VELATURO', industry: '手绘艺术与商业空间配画', companyName: 'VELATURO',
+    { $setOnInsert: { organizationId: organization._id, name: 'VELATURO', code: 'VELATURO', industry: '手绘艺术与商业空间配画', companyName: 'VELATURO',
       website: 'https://velaturo.com', mailProfileKey: 'velaturo', mailTransport: 'mock', status: 'active', isDefault: false } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );

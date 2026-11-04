@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Archive, ArrowRight, Building2, CircleHelp, Mail, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Archive, ArrowRight, Building2, CircleHelp, Mail, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
@@ -8,19 +8,58 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePageTitle } from '@/hooks/use-ui';
 import { ProjectLogo } from '@/components/projects/project-logo';
 import { useProjectStore } from '@/store/project.store';
 import { useMetaStore } from '@/store/meta.store';
-import type { Project } from '@/types';
+import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
+import { STORAGE_KEYS } from '@/constants';
+import { useI18n } from '@/i18n';
+import type { Project, ProjectBrandProfile } from '@/types';
 
 const slugify = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 type ProjectForm = Record<'name' | 'code' | 'slug' | 'industry' | 'companyName' | 'website' | 'moq' | 'senderName' | 'mailFrom' | 'mailProfileKey', string> & { logoImage: string; coverImage: string; mailTransport: 'mock' | 'smtp' };
 const EMPTY_FORM: ProjectForm = { name: '', code: '', slug: '', industry: '', companyName: '', website: '', moq: '', senderName: '', mailFrom: '', mailProfileKey: '', logoImage: '', coverImage: '', mailTransport: 'mock' };
 
+type BrandForm = Required<Pick<ProjectBrandProfile,
+  'label' | 'identity' | 'offerSummary' | 'outreachFocus' | 'avoidTopics' | 'insightLabel' | 'insightExamples'
+  | 'proofExamples' | 'ctaExamples' | 'subjectFocus' | 'signatureTitle'>> & { signatureLines: string };
+const EMPTY_BRAND: BrandForm = {
+  label: '', identity: '', offerSummary: '', outreachFocus: '', avoidTopics: '', insightLabel: '',
+  insightExamples: '', proofExamples: '', ctaExamples: '', subjectFocus: '', signatureTitle: '', signatureLines: '',
+};
+function brandFormFrom(project: Project): BrandForm {
+  const brand = project.brandProfile ?? {};
+  return {
+    label: brand.label ?? '', identity: brand.identity ?? '', offerSummary: brand.offerSummary ?? '',
+    outreachFocus: brand.outreachFocus ?? '', avoidTopics: brand.avoidTopics ?? '',
+    insightLabel: brand.insightLabel ?? '', insightExamples: brand.insightExamples ?? '',
+    proofExamples: brand.proofExamples ?? '', ctaExamples: brand.ctaExamples ?? '',
+    subjectFocus: brand.subjectFocus ?? '', signatureTitle: brand.signatureTitle ?? '',
+    signatureLines: (brand.signatureLines ?? []).join('\n'),
+  };
+}
+
+function BrandTextArea({
+  id, label, value, onChange, rows = 2,
+}: {
+  id: string; label: string; value: string; rows?: number;
+  onChange: (value: string) => void;
+}): React.JSX.Element {
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea id={id} className="mt-1.5" rows={rows} value={value} onChange={(event) => onChange(event.target.value)} />
+    </div>
+  );
+}
+
 export function ProjectsPage(): React.JSX.Element {
-  usePageTitle('项目工作空间');
+  const { t } = useI18n();
+  usePageTitle(t('projects.title'));
+  const isAdmin = useAuthStore(selectIsAdmin);
   const items = useProjectStore((state) => state.items);
   const activeProject = useProjectStore((state) => state.activeProject);
   const createProject = useProjectStore((state) => state.createProject);
@@ -34,6 +73,9 @@ export function ProjectsPage(): React.JSX.Element {
   const [deleteTarget, setDeleteTarget] = React.useState<Project | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState('');
   const [deleting, setDeleting] = React.useState(false);
+  const [brandTarget, setBrandTarget] = React.useState<Project | null>(null);
+  const [brandForm, setBrandForm] = React.useState<BrandForm>(EMPTY_BRAND);
+  const [brandSaving, setBrandSaving] = React.useState(false);
 
   const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setOpen(true); };
   const openEdit = (project: Project) => {
@@ -81,6 +123,27 @@ export function ProjectsPage(): React.JSX.Element {
     }
   };
 
+  const openBrand = (project: Project) => {
+    setBrandTarget(project);
+    setBrandForm(brandFormFrom(project));
+  };
+
+  const saveBrand = async () => {
+    if (!brandTarget) return;
+    setBrandSaving(true);
+    try {
+      const brandProfile: ProjectBrandProfile = Object.fromEntries(
+        Object.entries(brandForm).map(([key, value]) => [key, value.trim()]).filter(([, value]) => Boolean(value)),
+      ) as ProjectBrandProfile;
+      brandProfile.signatureLines = brandForm.signatureLines.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 8);
+      await updateProject(brandTarget.id, { brandProfile });
+      toast.success(t('projects.brandSaved'));
+      setBrandTarget(null);
+    } catch (error) {
+      toast.error(t('errors.generic'), { description: error instanceof Error ? error.message : '' });
+    } finally { setBrandSaving(false); }
+  };
+
   const submit = async () => {
     const slug = slugify(form.slug || form.name);
     if (!form.name.trim() || !form.companyName.trim() || (!editingId && (!form.code.trim() || !slug))) return;
@@ -93,11 +156,14 @@ export function ProjectsPage(): React.JSX.Element {
         if (editingId === activeProject?.id) useMetaStore.getState().setMailChannel(form.mailTransport);
         toast.success('项目资料已更新');
       } else {
-        await createProject({ name: form.name.trim(), code: form.code.trim().toUpperCase(), slug,
+        const created = await createProject({ name: form.name.trim(), code: form.code.trim().toUpperCase(), slug,
           industry: form.industry.trim(), companyName: form.companyName.trim(), website: form.website.trim(), moq: form.moq.trim(),
           senderName: form.senderName.trim(), mailFrom: form.mailFrom.trim(), mailProfileKey: slugify(form.mailProfileKey || slug),
           mailTransport: form.mailTransport, logoImage: form.logoImage, coverImage: form.coverImage });
         toast.success('项目工作空间已创建', { description: `${form.name} 已与其他项目严格隔离` });
+        localStorage.setItem(STORAGE_KEYS.activeProject, created.id);
+        window.location.assign('/onboarding');
+        return;
       }
       setForm(EMPTY_FORM);
       setEditingId(null);
@@ -131,8 +197,8 @@ export function ProjectsPage(): React.JSX.Element {
 
   return (
     <div className="workspace-page">
-      <PageHeader title="项目工作空间" description="每个项目各自一套客户、邮件、模板和报价，互不影响。"
-        actions={<Button type="button" size="sm" onClick={openCreate}><Plus className="h-4 w-4" aria-hidden />新建项目</Button>} />
+      <PageHeader title={t('projects.title')} description={t('projects.subtitle')}
+        actions={isAdmin ? <Button type="button" size="sm" onClick={openCreate}><Plus className="h-4 w-4" aria-hidden />{t('projects.new')}</Button> : undefined} />
 
       <p role="note" className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
         <CircleHelp className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -168,7 +234,8 @@ export function ProjectsPage(): React.JSX.Element {
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden />切换
                   </Button>
                 ) : null}
-                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(project)}><Pencil className="h-3.5 w-3.5" aria-hidden />编辑</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => openBrand(project)}><Sparkles className="h-3.5 w-3.5" aria-hidden />{t('projects.brandTitle')}</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(project)}><Pencil className="h-3.5 w-3.5" aria-hidden />{t('common.edit')}</Button>
                 <Button type="button" variant="ghost" size="sm"
                   disabled={project.isDefault || (isCurrent && project.status === 'active')}
                   aria-describedby={`project-archive-help-${project.id}`}
@@ -176,7 +243,7 @@ export function ProjectsPage(): React.JSX.Element {
                   {project.status === 'archived' ? <RotateCcw className="h-3.5 w-3.5" aria-hidden /> : <Archive className="h-3.5 w-3.5" aria-hidden />}
                   {project.status === 'archived' ? '恢复' : '归档'}
                 </Button>
-                {!project.isDefault ? <Button type="button" variant="ghost" size="sm" className="ml-auto text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                {!project.isDefault && isAdmin ? <Button type="button" variant="ghost" size="sm" className="ml-auto text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => { setDeleteTarget(project); setDeleteConfirm(''); }} aria-label={`删除项目 ${project.name}`}>
                   <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 </Button> : null}
@@ -247,6 +314,33 @@ export function ProjectsPage(): React.JSX.Element {
             <p className="sm:col-span-2 -mt-2 text-xs text-muted-foreground">项目标识创建后不能改。邮箱配置代码用来对应项目邮箱，改之前先和管理员确认。</p>
           </DialogBody>
           <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>取消</Button><Button type="button" loading={saving} disabled={!form.name.trim() || !form.companyName.trim() || (!editingId && !form.code.trim())} onClick={() => void submit()}>{editingId ? '保存修改' : '创建项目'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(brandTarget)} onOpenChange={(next) => { if (!brandSaving && !next) setBrandTarget(null); }}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" aria-hidden />{t('projects.brandTitle')}{brandTarget ? ` · ${brandTarget.name}` : ''}</DialogTitle>
+            <DialogDescription>{t('projects.brandHint')}</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="grid gap-3 sm:grid-cols-2">
+            <BrandTextArea id="brand-label" label="行业称谓 / Label" value={brandForm.label} onChange={(v) => setBrandForm((f) => ({ ...f, label: v }))} />
+            <BrandTextArea id="brand-signature-title" label={t('projects.signatureTitle')} value={brandForm.signatureTitle} onChange={(v) => setBrandForm((f) => ({ ...f, signatureTitle: v }))} />
+            <BrandTextArea id="brand-identity" label={t('projects.brandIdentity')} value={brandForm.identity} onChange={(v) => setBrandForm((f) => ({ ...f, identity: v }))} rows={3} />
+            <BrandTextArea id="brand-offer" label={t('projects.brandOffer')} value={brandForm.offerSummary} onChange={(v) => setBrandForm((f) => ({ ...f, offerSummary: v }))} rows={3} />
+            <BrandTextArea id="brand-outreach" label={t('projects.brandOutreach')} value={brandForm.outreachFocus} onChange={(v) => setBrandForm((f) => ({ ...f, outreachFocus: v }))} rows={3} />
+            <BrandTextArea id="brand-avoid" label={t('projects.brandAvoid')} value={brandForm.avoidTopics} onChange={(v) => setBrandForm((f) => ({ ...f, avoidTopics: v }))} rows={3} />
+            <BrandTextArea id="brand-insight-label" label="洞察标题 / Insight label" value={brandForm.insightLabel} onChange={(v) => setBrandForm((f) => ({ ...f, insightLabel: v }))} />
+            <BrandTextArea id="brand-subject" label={t('projects.brandSubject')} value={brandForm.subjectFocus} onChange={(v) => setBrandForm((f) => ({ ...f, subjectFocus: v }))} />
+            <BrandTextArea id="brand-insights" label="洞察示例 / Insight examples" value={brandForm.insightExamples} onChange={(v) => setBrandForm((f) => ({ ...f, insightExamples: v }))} rows={3} />
+            <BrandTextArea id="brand-proof" label={t('projects.brandProof')} value={brandForm.proofExamples} onChange={(v) => setBrandForm((f) => ({ ...f, proofExamples: v }))} rows={3} />
+            <BrandTextArea id="brand-cta" label={t('projects.brandCta')} value={brandForm.ctaExamples} onChange={(v) => setBrandForm((f) => ({ ...f, ctaExamples: v }))} rows={3} />
+            <BrandTextArea id="brand-signature-lines" label={t('projects.signatureLines')} value={brandForm.signatureLines} onChange={(v) => setBrandForm((f) => ({ ...f, signatureLines: v }))} rows={3} />
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setBrandTarget(null)} disabled={brandSaving}>{t('common.cancel')}</Button>
+            <Button type="button" loading={brandSaving} onClick={() => void saveBrand()}>{t('projects.saveBrand')}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

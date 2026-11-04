@@ -1,8 +1,18 @@
+import './tenant-setup';
 /**
  * 模型统一出口
  * ------------------------------------------------------------------
  * 业务代码只从 '../models' 引入，方便后续替换持久层实现。
  */
+export { Organization } from './Organization';
+export type { IOrganization, OrganizationDocument, OrganizationModel, OrganizationStatus } from './Organization';
+
+export { UsageRecord, USAGE_METRICS } from './UsageRecord';
+export type { IUsageRecord, UsageRecordDocument, UsageRecordModel, UsageMetric } from './UsageRecord';
+
+export { BillingInvoice } from './BillingInvoice';
+export type { IBillingInvoice, BillingInvoiceDocument, BillingInvoiceModel, IInvoiceLine, InvoiceStatus } from './BillingInvoice';
+
 export { Customer } from './Customer';
 export type { ICustomer, ICustomerMethods, CustomerDocument, CustomerModel } from './Customer';
 
@@ -39,8 +49,17 @@ export type {
 export { User, hashPassword } from './User';
 export type { IUser, IUserMethods, UserDocument, UserModel, UserRole, UserStatus } from './User';
 
+export { AuthSession } from './AuthSession';
+export type { IAuthSession, AuthSessionDocument } from './AuthSession';
+
+export { AuthChallenge } from './AuthChallenge';
+export type { IAuthChallenge, AuthChallengeDocument, AuthChallengePurpose } from './AuthChallenge';
+
 export { AuditLog, AUDIT_ACTIONS } from './AuditLog';
 export type { AuditAction, IAuditLog, AuditLogDocument } from './AuditLog';
+
+export { EmailSuppression, SUPPRESSION_REASONS } from './EmailSuppression';
+export type { IEmailSuppression, EmailSuppressionDocument, SuppressionReason } from './EmailSuppression';
 
 export { UserMailAccount, MailQuotaBucket, MailAccountAudit } from './UserMailAccount';
 export type {
@@ -51,7 +70,7 @@ export type {
 } from './UserMailAccount';
 
 export { Project } from './Project';
-export type { IProject, ProjectDocument, ProjectModel, ProjectStatus } from './Project';
+export type { IProject, ProjectDocument, ProjectModel, ProjectStatus, ProjectBrandProfile, ProjectMailCompliance } from './Project';
 
 export { Scratchpad } from './Scratchpad';
 export type { IScratchpad, ScratchpadDocument, ScratchpadModel } from './Scratchpad';

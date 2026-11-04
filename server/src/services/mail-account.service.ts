@@ -3,12 +3,14 @@ import { ImapFlow } from 'imapflow';
 import { Pop3Client } from './pop3-client';
 import env from '../config/env';
 import { Types } from 'mongoose';
-import { MailAccountAudit, MailQuotaBucket, User, UserMailAccount, type UserMailAccountDocument } from '../models';
+import { MailAccountAudit, MailQuotaBucket, Project, User, UserMailAccount, type UserMailAccountDocument } from '../models';
 import { MailMessage } from '../models/MailMessage';
 import { ApiError } from '../utils/ApiError';
 import { decryptCredential, encryptCredential } from './credential-crypto';
 import { getProjectMailConfig, type ProjectMailConfig } from './project-mail-config.service';
 import { mailError } from './mail-security';
+import { effectiveDailyLimit } from './mail-compliance.service';
+import { addUsage, assertUsageAvailable } from './usage.service';
 import type { UpsertMailAccountInput } from '../validators/mail-account.validator';
 
 export interface MailAccountDto {
@@ -515,18 +517,24 @@ export async function getMailAccountDeliveryConfig(
 }
 
 export async function reserveMailAttempt(accountId: string, projectId: string, userId: string): Promise<void> {
-  const account = await UserMailAccount.findOne({ _id: accountId, projectId, userId }).select('dailyLimit');
+  const [account, project] = await Promise.all([
+    UserMailAccount.findOne({ _id: accountId, projectId, userId }).select('dailyLimit'),
+    Project.findById(projectId).select('mailCompliance organizationId').lean(),
+  ]);
   if (!account) throw ApiError.conflict('个人发件邮箱不存在或无权使用');
+  await assertUsageAvailable('monthlyEmails', 1, project?.organizationId ? String(project.organizationId) : undefined);
+  const cap = effectiveDailyLimit(project, account.dailyLimit);
   const filter = { mailAccountId: account._id, day: utcDay() };
   await MailQuotaBucket.updateOne(filter, {
     $setOnInsert: { projectId: account.projectId, userId: account.userId, mailAccountId: account._id, day: utcDay(), attempts: 0 },
   }, { upsert: true });
-  const reserved = await MailQuotaBucket.findOneAndUpdate({ ...filter, attempts: { $lt: account.dailyLimit } }, { $inc: { attempts: 1 } }, { new: true });
+  const reserved = await MailQuotaBucket.findOneAndUpdate({ ...filter, attempts: { $lt: cap.limit } }, { $inc: { attempts: 1 } }, { new: true });
   if (!reserved) {
-    await audit({ projectId, accountId, actorId: userId, targetUserId: userId, action: 'quota_blocked', detail: { dailyLimit: account.dailyLimit } });
-    throw ApiError.tooManyRequests(`该邮箱今日发送额度已用完（${account.dailyLimit} 封）`);
+    await audit({ projectId, accountId, actorId: userId, targetUserId: userId, action: 'quota_blocked', detail: { dailyLimit: cap.limit, warmup: cap.warmup } });
+    throw ApiError.tooManyRequests(`该邮箱今日发送额度已用完（${cap.limit} 封${cap.warmup ? '，邮箱预热中' : ''}）`);
   }
-  await audit({ projectId, accountId, actorId: userId, targetUserId: userId, action: 'send_attempt', detail: { used: reserved.attempts, dailyLimit: account.dailyLimit } });
+  await addUsage('emails', 1, project?.organizationId ? String(project.organizationId) : undefined);
+  await audit({ projectId, accountId, actorId: userId, targetUserId: userId, action: 'send_attempt', detail: { used: reserved.attempts, dailyLimit: cap.limit, warmup: cap.warmup } });
 }
 
 export async function auditMailResult(accountId: string, projectId: string, userId: string, accepted: boolean, _error?: string): Promise<void> {

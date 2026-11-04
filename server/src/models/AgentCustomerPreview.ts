@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 import { CUSTOMER_PRIORITY, type CustomerPriority } from '../constants';
 

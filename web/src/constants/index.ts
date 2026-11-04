@@ -24,6 +24,7 @@ import type {
 /* ---------------------------- 存储键 ---------------------------- */
 
 export const STORAGE_KEYS = {
+  /** 旧版本地 token；仅用于升级时清理，不再写入 */
   token: 'cdlm-token',
   theme: 'cdlm-theme',
   sidebar: 'cdlm-sidebar-collapsed',
@@ -33,6 +34,8 @@ export const STORAGE_KEYS = {
   activeProject: 'cdlm-active-project',
   /** 客户详情页「客户信息」是否展开全部字段（业务员常看的字段默认收起其余部分） */
   customerInfoExpanded: 'cdlm-customer-info-expanded',
+  /** UI language: zh (default) or en. */
+  language: 'cdlm-language',
 } as const;
 
 /** 仅保存尚未同步到服务端的随手记；后缀为 userId:projectId。 */
@@ -45,6 +48,10 @@ export const SCRATCHPAD_MAX_LENGTH = 50_000;
 
 export const ROUTES = {
   login: '/login',
+  resetPassword: '/reset-password',
+  pricing: '/pricing',
+  help: '/help',
+  legal: '/legal',
   dashboard: '/',
   customers: '/customers',
   customerDetail: '/customers/:id',
@@ -55,8 +62,13 @@ export const ROUTES = {
   products: '/products',
   users: '/users',
   projects: '/projects',
+  onboarding: '/onboarding',
+  mailCompliance: '/mail-compliance',
   agentDiagnostics: '/agent-diagnostics',
   aiSettings: '/ai-settings',
+  organization: '/organization',
+  billing: '/billing',
+  platform: '/platform',
 } as const;
 
 /** 生成客户详情页路径 */
@@ -396,11 +408,13 @@ export const PRIORITY_TEXT_MAP: Record<string, CustomerPriority> = {
 /* ---------------------------- 用户角色 ---------------------------- */
 
 /** 角色取值顺序（与后端 UserRole 一致） */
-export const USER_ROLE_VALUES = ['admin', 'user'] as const;
+export const USER_ROLE_VALUES = ['admin', 'project_admin', 'user', 'viewer'] as const;
 
 export const USER_ROLE_LABEL: Record<UserRole, string> = {
-  admin: '管理员',
-  user: '业务员',
+  admin: '系统管理员',
+  project_admin: '项目管理员',
+  user: '销售',
+  viewer: '只读',
 };
 
 export const USER_ROLE_OPTIONS: { value: UserRole; label: string }[] =
@@ -409,7 +423,9 @@ export const USER_ROLE_OPTIONS: { value: UserRole; label: string }[] =
 /** 角色徽章：管理员用深色文字强调，业务员保持中性。 */
 export const USER_ROLE_BADGE_CLASS: Record<UserRole, string> = {
   admin: 'border-border bg-muted text-foreground',
+  project_admin: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300',
   user: 'border-border bg-card text-muted-foreground',
+  viewer: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300',
 };
 
 /* ---------------------------- 用户账号状态 ---------------------------- */
