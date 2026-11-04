@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * Short-lived authentication challenges.
  *
@@ -31,7 +32,7 @@ const AuthChallengeSchema = new Schema<IAuthChallenge>(
     attempts: { type: Number, default: 0, min: 0 },
     consumedAt: { type: Date },
   },
-  { timestamps: true, versionKey: false },
+  { timestamps: true, versionKey: false, skipTenant: true } as never,
 );
 
 AuthChallengeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

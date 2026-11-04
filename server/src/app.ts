@@ -3,11 +3,8 @@
  * ------------------------------------------------------------------
  * 只负责「中间件 + 路由」的组合，不监听端口（便于测试时直接 import app）。
  */
-import {startWebsiteResearchWorker} from './services/website/research.service';
-import {startKnowledgeIndexWorker} from './services/knowledge/index.service';
-import { startKnowledgeDocumentWorker } from './services/knowledge/document.service';
-import { startAgentTaskWorker } from './services/agent/task.service';
 import express, { type Application } from 'express';
+import { httpMetricsMiddleware, renderMetrics } from './services/metrics.service';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -89,6 +86,7 @@ export function createApp(): Application {
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
   app.use(requestIdMiddleware);
+  if (env.METRICS_ENABLED) app.use(httpMetricsMiddleware);
 
   /* ---------- 安全与基础中间件 ---------- */
   app.use(
@@ -122,6 +120,11 @@ export function createApp(): Application {
 
   /* ---------- 路由 ---------- */
   app.use('/api', apiLimiter, apiRoutes);
+  if (env.METRICS_ENABLED) {
+    app.get('/api/metrics', (_req, res) => {
+      res.type('text/plain; version=0.0.4; charset=utf-8').send(renderMetrics());
+    });
+  }
 
   // 根路径给个友好提示，避免打开 http://localhost:5000 看到 404 一头雾水
   app.get('/', (_req, res) => {
@@ -140,10 +143,6 @@ export function createApp(): Application {
   app.use(notFoundHandler);
   app.use(errorHandler);
 
-  startAgentTaskWorker();
-  startWebsiteResearchWorker();
-  startKnowledgeDocumentWorker();
-  startKnowledgeIndexWorker();
   return app;
 }
 

@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * User 模型（mock 登录用）
  * ------------------------------------------------------------------
@@ -19,6 +20,9 @@ export type UserRole = 'admin' | 'project_admin' | 'user' | 'viewer';
 export type UserStatus = 'active' | 'disabled';
 
 export interface IUser {
+  organizationId?: Types.ObjectId;
+  /** Platform operators may inspect all organizations; ordinary admins are organization admins. */
+  isPlatformAdmin: boolean;
   username: string;
   passwordHash: string;
   displayName: string;
@@ -51,6 +55,7 @@ const SALT_ROUNDS = 10;
 
 const UserSchema = new Schema<IUser, {}, IUserMethods>(
   {
+    isPlatformAdmin: { type: Boolean, default: false, index: true },
     username: {
       type: String,
       required: [true, '用户名为必填项'],

@@ -9,6 +9,7 @@ import dns from 'node:dns/promises';
 import { Types } from 'mongoose';
 import { Customer, DevelopmentLetter, EmailSuppression, Project, type SuppressionReason } from '../models';
 import { ApiError } from '../utils/ApiError';
+import { currentOrganizationId } from '../models/tenant-context';
 
 const TOKEN_VERSION = 1;
 const GLOBAL_SCOPE = 'global';
@@ -83,11 +84,21 @@ export function appendUnsubscribeFooter(html: string, text: string, projectId: s
   return { html: `${html}${footerHtml}`, text: `${text}${footerText}` };
 }
 
+async function organizationForProject(projectId?: string): Promise<Types.ObjectId | undefined> {
+  const fromContext = currentOrganizationId();
+  if (fromContext) return fromContext;
+  if (!projectId || !Types.ObjectId.isValid(projectId)) return undefined;
+  const project = await Project.findById(projectId).select('organizationId').lean();
+  return project?.organizationId as Types.ObjectId | undefined;
+}
+
 export async function isEmailSuppressed(projectId: string, email: string): Promise<EmailSuppressionDocumentLike | null> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return null;
+  const organizationId = await organizationForProject(projectId);
   return EmailSuppression.findOne({
     email: normalized,
+    ...(organizationId ? { organizationId } : { organizationId: { $exists: false } }),
     $or: [{ scopeKey: scopeKey(projectId) }, { scopeKey: GLOBAL_SCOPE }],
   }).lean() as Promise<EmailSuppressionDocumentLike | null>;
 }
@@ -116,11 +127,13 @@ export async function suppressEmail(input: {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
   if (!input.global && (!input.projectId || !Types.ObjectId.isValid(input.projectId))) return;
   const key = input.global ? GLOBAL_SCOPE : scopeKey(input.projectId);
+  const organizationId = await organizationForProject(input.projectId);
   await EmailSuppression.updateOne(
-    { scopeKey: key, email },
+    { scopeKey: key, email, ...(organizationId ? { organizationId } : { organizationId: { $exists: false } }) },
     {
       $setOnInsert: {
         scopeKey: key,
+        ...(organizationId ? { organizationId } : {}),
         ...(input.global ? {} : { projectId: new Types.ObjectId(input.projectId) }),
         email,
         reason: input.reason,

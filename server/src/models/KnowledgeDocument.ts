@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, model } from 'mongoose';
 
 // Raw data is private, immutable, and distinct from knowledge publication.

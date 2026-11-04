@@ -63,6 +63,9 @@ export const ROUTES = {
   mailCompliance: '/mail-compliance',
   agentDiagnostics: '/agent-diagnostics',
   aiSettings: '/ai-settings',
+  organization: '/organization',
+  billing: '/billing',
+  platform: '/platform',
 } as const;
 
 /** 生成客户详情页路径 */

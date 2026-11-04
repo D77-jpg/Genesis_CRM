@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * IntegrationCredential 模型（Integration API v1）
  * ------------------------------------------------------------------

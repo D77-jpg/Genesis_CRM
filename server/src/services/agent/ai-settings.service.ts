@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import env from '../../config/env';
 import { AgentAiProvider, type AgentAiProviderDocument } from '../../models/AgentAiProvider';
 import { AgentAiSettings, type AgentAiSettingsDocument } from '../../models/AgentAiSettings';
+import { getTenantContext } from '../../models/tenant-context';
 import { decryptAiCredential, encryptAiCredential } from '../credential-crypto';
 import type { AuthUser } from '../../types/express';
 import { ApiError } from '../../utils/ApiError';
@@ -534,6 +535,15 @@ export async function deleteAiProvider(id: string, actor: AuthUser) {
 }
 
 export async function resolveAgentProvider(): Promise<AgentProvider> {
+  // Background workers deliberately bypass tenant filters. Without an
+  // organization scope they must use environment defaults rather than reading
+  // another tenant's stored provider and credential.
+  if (!getTenantContext()?.organizationId) {
+    const fallbackConfig = resolved(null);
+    if (fallbackConfig.provider === 'mock') return new MockAgentProvider();
+    const fallbackUrl = await validateAiBaseUrl(fallbackConfig.baseUrl);
+    return new OpenAIResponsesProvider({ apiKey: fallbackConfig.apiKey, model: fallbackConfig.model, baseUrl: fallbackUrl, timeoutMs: env.AI_REQUEST_TIMEOUT_MS });
+  }
   const profile = await activeProviderDoc();
   if (profile) {
     const config = resolvedProvider(profile);

@@ -1,3 +1,4 @@
+import './tenant-setup';
 import {Schema,model,Types} from 'mongoose';
 import type {KnowledgeTerm} from '../services/agent/knowledge-types';
 export interface AgreementRevision {version:number;title:string;source:string;content:string;terms:KnowledgeTerm[];validFrom:Date;validUntil:Date;approved:boolean;reviewedBy:Types.ObjectId;reviewedAt:Date}

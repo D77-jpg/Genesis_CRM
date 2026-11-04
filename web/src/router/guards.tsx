@@ -64,8 +64,11 @@ export function ProtectedRoute(): React.JSX.Element {
     return <Navigate to={ROUTES.login} replace state={{ from }} />;
   }
 
-  if (projectLoading || !projectInitialized) return <PageLoader label="正在加载项目工作空间…" />;
-  if (!activeProject) return <PageLoader label={projectError || t('errors.forbidden')} />;
+  // Organization/billing/platform screens must work before the first project
+  // exists (a freshly provisioned tenant has no project yet).
+  const projectOptional = [ROUTES.organization, ROUTES.billing, ROUTES.platform].includes(location.pathname as typeof ROUTES.organization);
+  if (projectLoading || !projectInitialized) return <PageLoader label={t('common.loading')} />;
+  if (!activeProject && !projectOptional) return <PageLoader label={projectError || t('errors.forbidden')} />;
 
   return <AppShell />;
 }
@@ -91,6 +94,12 @@ export function GuestRoute({ children }: { children: React.ReactNode }): React.J
  * 入口在侧边栏已按角色隐藏，这里是直接敲 URL 时的兜底：非管理员一律回仪表盘。
  * 必须嵌在 ProtectedRoute 之内使用，此时登录态与 user 已就绪。
  */
+export function PlatformRoute({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const isPlatformAdmin = useAuthStore((state) => state.user?.isPlatformAdmin);
+  if (!isPlatformAdmin) return <Navigate to={ROUTES.dashboard} replace />;
+  return <>{children}</>;
+}
+
 export function AdminRoute({
   children,
   roles = ['admin'],

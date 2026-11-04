@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * Server-side refresh session.
  *
@@ -30,7 +31,9 @@ const AuthSessionSchema = new Schema<IAuthSession>(
     userAgent: { type: String, trim: true, maxlength: 512 },
     ip: { type: String, trim: true, maxlength: 64 },
   },
-  { timestamps: true, versionKey: false },
+  // Refresh sessions are global security records keyed by user; they must not
+  // disappear when requireAuth later runs the request inside a tenant scope.
+  { timestamps: true, versionKey: false, skipTenant: true } as never,
 );
 
 AuthSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

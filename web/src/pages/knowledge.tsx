@@ -3,11 +3,13 @@ import {KnowledgeSalesLibrary} from '@/components/agent/knowledge-sales-library'
 import {KnowledgeTraining} from '@/components/agent/knowledge-training';
 import {PlaybookAdmin} from '@/components/agent/playbook-admin';
 import {PageHeader} from '@/components/common/page-header';
+import {usePageTitle} from '@/hooks/use-ui';
 import {useAuthStore} from '@/store/auth.store';
 import {useProjectStore} from '@/store/project.store';
 import {useSearchParams} from 'react-router-dom';
 
 export function KnowledgePage(){
+ usePageTitle('知识库');
  const user=useAuthStore(s=>s.user),admin=user?.role==='admin';
  const project=useProjectStore(s=>s.activeProject);
  const [params,setParams]=useSearchParams();

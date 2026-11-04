@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, model } from 'mongoose';
 
 // Only inbound mail is stored here. Outbound mail keeps the V1 DevelopmentLetter model.

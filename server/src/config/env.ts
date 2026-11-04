@@ -47,6 +47,28 @@ export const envSchema = z.object({
     (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
     z.string().email('ADMIN_EMAIL 格式不正确').optional(),
   ),
+  /** Default organization created for a single-tenant / first deployment. */
+  DEFAULT_ORGANIZATION_NAME: z.string().default('Default Organization'),
+  DEFAULT_ORGANIZATION_SLUG: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).default('default'),
+
+  /** API and worker are separate processes in production; keep API loops off there. */
+  RUN_BACKGROUND_JOBS: booleanish.default(true),
+  WORKER_HEALTH_PORT: z.coerce.number().int().positive().default(5100),
+
+  /** Attachment storage: local disk for development or S3-compatible object storage. */
+  STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
+  S3_ENDPOINT: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().url().optional(),
+  ),
+  S3_REGION: z.string().default('us-east-1'),
+  S3_BUCKET: z.string().default(''),
+  S3_ACCESS_KEY_ID: z.string().default(''),
+  S3_SECRET_ACCESS_KEY: z.string().default(''),
+  S3_FORCE_PATH_STYLE: booleanish.default(true),
+
+  /** Prometheus-style metrics endpoint is disabled only when explicitly turned off. */
+  METRICS_ENABLED: booleanish.default(true),
 
   MAIL_TRANSPORT: z.enum(['mock', 'smtp']).default('mock'),
   MAIL_FROM: z.string().default('Genesis (Xiamen) Bags Co., Ltd. <sales@genesisgroup.cn>'),

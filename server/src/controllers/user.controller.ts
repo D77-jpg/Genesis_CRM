@@ -27,7 +27,7 @@ export const listUsersHandler = asyncHandler(async (_req: Request, res: Response
 
 export const createUserHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as CreateUserInput;
-  const data = await createUser(input);
+  const data = await createUser(input, req.user);
   await recordAudit({
     actor: req.user,
     action: 'user.create',

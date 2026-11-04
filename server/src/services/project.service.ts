@@ -30,10 +30,12 @@ import type { AuthUser } from '../types/express';
 import { ApiError } from '../utils/ApiError';
 import type { CreateProjectInput, UpdateProjectInput } from '../validators/project.validator';
 import { getProjectActiveChannel } from './mailer.service';
+import { assertOrganizationCapacity, ensureDefaultOrganization } from './organization.service';
 import type { ProjectBrandProfile, ProjectMailCompliance } from '../models/Project';
 
 export interface ProjectDto {
   id: string;
+  organizationId?: string;
   name: string;
   slug: string;
   code: string;
@@ -55,7 +57,7 @@ export interface ProjectDto {
 }
 
 const dto = (raw: Record<string, unknown>): ProjectDto => ({
-  id: String(raw._id), name: String(raw.name), slug: String(raw.slug), code: String(raw.code),
+  id: String(raw._id), organizationId: raw.organizationId ? String(raw.organizationId) : undefined, name: String(raw.name), slug: String(raw.slug), code: String(raw.code),
   industry: raw.industry ? String(raw.industry) : undefined,
   companyName: String(raw.companyName), website: raw.website ? String(raw.website) : undefined,
   moq: raw.moq ? String(raw.moq) : undefined, senderName: raw.senderName ? String(raw.senderName) : undefined,
@@ -81,7 +83,13 @@ export async function listProjects(actor: AuthUser): Promise<ProjectDto[]> {
 
 export async function createProject(input: CreateProjectInput, actor: AuthUser): Promise<ProjectDto> {
   try {
-    const project = await Project.create({ ...input, isDefault: false, createdBy: new Types.ObjectId(actor.id) });
+    await assertOrganizationCapacity('projects');
+    const project = await Project.create({
+      ...input,
+      ...(actor.organizationId ? { organizationId: new Types.ObjectId(actor.organizationId) } : {}),
+      isDefault: false,
+      createdBy: new Types.ObjectId(actor.id),
+    });
     return {
       ...dto(project.toObject() as unknown as Record<string, unknown>),
       mailChannel: await getProjectActiveChannel(String(project._id)),
@@ -173,22 +181,23 @@ async function dropLegacyRequestKeyIndex(): Promise<void> {
 
 /** 幂等启动迁移：创建三个初始空间，并把 V1-V2.5 历史数据完整归入 Genesis Bags。 */
 export async function bootstrapProjects(): Promise<void> {
+  const organization = await ensureDefaultOrganization();
   const genesis = await Project.findOneAndUpdate(
     { slug: 'genesis-bags' },
-    { $setOnInsert: { name: 'Genesis Bags', code: 'GENESIS', industry: '箱包外贸', companyName: env.COMPANY_NAME,
+    { $setOnInsert: { organizationId: organization._id, name: 'Genesis Bags', code: 'GENESIS', industry: '箱包外贸', companyName: env.COMPANY_NAME,
       website: env.COMPANY_WEBSITE, moq: env.COMPANY_MOQ, senderName: env.SENDER_NAME, mailFrom: env.MAIL_FROM,
       mailProfileKey: 'genesis-bags', status: 'active', isDefault: true } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   await Project.findOneAndUpdate(
     { slug: 'ironhue' },
-    { $setOnInsert: { name: 'IRONHUE', code: 'IRONHUE', industry: '运动器材外贸', companyName: 'IRONHUE',
+    { $setOnInsert: { organizationId: organization._id, name: 'IRONHUE', code: 'IRONHUE', industry: '运动器材外贸', companyName: 'IRONHUE',
       mailProfileKey: 'ironhue', status: 'active', isDefault: false } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   await Project.findOneAndUpdate(
     { slug: 'velaturo' },
-    { $setOnInsert: { name: 'VELATURO', code: 'VELATURO', industry: '手绘艺术与商业空间配画', companyName: 'VELATURO',
+    { $setOnInsert: { organizationId: organization._id, name: 'VELATURO', code: 'VELATURO', industry: '手绘艺术与商业空间配画', companyName: 'VELATURO',
       website: 'https://velaturo.com', mailProfileKey: 'velaturo', mailTransport: 'mock', status: 'active', isDefault: false } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );

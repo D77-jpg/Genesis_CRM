@@ -8,8 +8,9 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { Types } from 'mongoose';
-import { Customer, DevelopmentLetter } from '../models';
+import { Customer, DevelopmentLetter, Project } from '../models';
 import { parseUnsubscribeToken, suppressEmail } from '../services/mail-compliance.service';
+import { runWithTenant } from '../models/tenant-context';
 
 const router = Router();
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
@@ -21,26 +22,34 @@ function escapeHtml(value: string): string {
 async function applyUnsubscribe(token: string): Promise<{ email: string; projectId: string } | null> {
   const target = parseUnsubscribeToken(token);
   if (!target) return null;
-  await suppressEmail({
-    projectId: target.projectId,
-    email: target.email,
-    reason: 'unsubscribe',
-    source: 'link',
-    note: 'One-click unsubscribe',
-    global: true,
+  const project = await Project.findById(target.projectId).select('organizationId').lean();
+  if (!project) return null;
+  return runWithTenant({
+    organizationId: project.organizationId ? String(project.organizationId) : undefined,
+    bypass: false,
+    source: 'public-unsubscribe',
+  }, async () => {
+    await suppressEmail({
+      projectId: target.projectId,
+      email: target.email,
+      reason: 'unsubscribe',
+      source: 'link',
+      note: 'One-click unsubscribe',
+      global: true,
+    });
+    const projectId = new Types.ObjectId(target.projectId);
+    await Promise.all([
+      Customer.updateOne(
+        { projectId, email: target.email },
+        { $set: { outreachAbandonedAt: new Date(), nextFollowUpAt: null } },
+      ),
+      DevelopmentLetter.updateMany(
+        { projectId, recipientEmail: target.email, status: { $in: ['queued', 'scheduled', 'retrying'] } },
+        { $set: { status: 'cancelled', error: '收件人已退订，取消待发送邮件' } },
+      ),
+    ]);
+    return target;
   });
-  const projectId = new Types.ObjectId(target.projectId);
-  await Promise.all([
-    Customer.updateOne(
-      { projectId, email: target.email },
-      { $set: { outreachAbandonedAt: new Date(), nextFollowUpAt: null } },
-    ),
-    DevelopmentLetter.updateMany(
-      { projectId, recipientEmail: target.email, status: { $in: ['queued', 'scheduled', 'retrying'] } },
-      { $set: { status: 'cancelled', error: '收件人已退订，取消待发送邮件' } },
-    ),
-  ]);
-  return target;
 }
 
 function page(title: string, body: string): string {

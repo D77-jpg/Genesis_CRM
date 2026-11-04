@@ -6,8 +6,10 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "node --watch-path=src --require ./scripts/os-user-info.cjs --import tsx src/index.ts",
+    "dev:worker": "node --watch-path=src --require ./scripts/os-user-info.cjs --import tsx src/worker.ts",
     "build": "rimraf dist && tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "start:worker": "node dist/worker.js",
     "typecheck": "tsc --noEmit",
     "smoke:xlsx": "node --import tsx scripts/smoke-xlsx.ts",
     "seed": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/seed.ts",
@@ -27,6 +29,7 @@
     "test:ai-settings": "node --require ./tests/os-user-info.cjs --import tsx --test tests/ai-settings.test.ts tests/ai-providers.test.ts",
     "test:security": "node --require ./tests/os-user-info.cjs --import tsx --test tests/security-hardening.test.ts tests/p0-security.test.ts tests/auth-cookie-session.test.ts tests/auth-email-2fa.test.ts",
     "test:p1": "node --require ./tests/os-user-info.cjs --import tsx --test tests/p1-compliance.test.ts tests/p1-onboarding.test.ts",
+    "test:p2": "node --require ./tests/os-user-info.cjs --import tsx --test tests/p2-tenant.test.ts tests/p2-storage.test.ts",
     "test:health": "node --require ./tests/os-user-info.cjs --import tsx --test tests/health-readiness.test.ts",
     "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts",
     "integration:credential": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-credential.ts",

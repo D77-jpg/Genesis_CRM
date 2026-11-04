@@ -936,6 +936,8 @@ export interface AuthUser {
   username: string;
   displayName: string;
   role: UserRole;
+  organizationId?: string;
+  isPlatformAdmin?: boolean;
 }
 
 export interface LoginResult {
@@ -968,6 +970,8 @@ export interface UserDto {
   /** Require an email OTP after the password step. */
   twoFactorEnabled: boolean;
   role: UserRole;
+  organizationId?: string;
+  isPlatformAdmin?: boolean;
   /** 账号启用状态：active 启用 / disabled 停用 */
   status: UserStatus;
   projectIds: string[];
@@ -1098,6 +1102,7 @@ export interface ProjectMailCompliance {
 
 export interface Project {
   id: string;
+  organizationId?: string;
   name: string;
   slug: string;
   code: string;
@@ -1119,6 +1124,72 @@ export interface Project {
   mailChannel?: MailChannel;
   status: ProjectStatus;
   isDefault: boolean;
+}
+
+/* ---------------------------- Organization / billing ---------------------------- */
+
+export type OrganizationPlan = 'starter' | 'growth' | 'enterprise';
+export type OrganizationStatus = 'active' | 'trialing' | 'suspended';
+
+export interface OrganizationLimits {
+  users: number;
+  projects: number;
+  monthlyEmails: number;
+  monthlyAiTokens: number;
+  storageBytes: number;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  status: OrganizationStatus;
+  plan: OrganizationPlan;
+  limits: OrganizationLimits;
+  billingEmail?: string;
+  billingAddress?: string;
+  taxId?: string;
+  currency: string;
+  locale: 'zh' | 'en';
+  subscriptionStatus: 'trialing' | 'active' | 'past_due' | 'cancelled';
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  trialEndsAt?: string;
+  createdAt: string;
+}
+
+export interface PlanDefinition {
+  id: OrganizationPlan;
+  monthlyPriceUsd: number;
+  limits: OrganizationLimits;
+  overage: { emailUsdPer1000: number; aiTokensUsdPer1M: number; storageUsdPerGb: number };
+  label: { zh: string; en: string };
+}
+
+export interface UsageSummary {
+  period: string;
+  usage: { emails: number; ai_tokens: number; storage_bytes: number };
+  limits: OrganizationLimits;
+  percentages: { emails: number; ai_tokens: number; storage_bytes: number };
+  plan: OrganizationPlan;
+  planLabel: string;
+  estimatedInvoiceUsd: number;
+  currency: 'USD';
+  periodEnd?: string;
+}
+
+export interface BillingInvoice {
+  _id: string;
+  number: string;
+  period: string;
+  status: 'draft' | 'open' | 'paid' | 'void';
+  currency: string;
+  lines: Array<{ key: string; description: string; quantity: number; unitAmountUsd: number; amountUsd: number }>;
+  subtotalUsd: number;
+  totalUsd: number;
+  dueAt: string;
+  paidAt?: string;
 }
 
 export type ProspectStatus = 'ready' | 'low' | 'needs_contact' | 'rejected' | 'converted';

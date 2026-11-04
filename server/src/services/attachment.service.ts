@@ -8,8 +8,6 @@
  *     service 层再用 { _id, customerId } 双条件兜底，杜绝改 customerId 越权。
  */
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs';
-import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Types } from 'mongoose';
 import env from '../config/env';
@@ -18,6 +16,9 @@ import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
 import { createAttachmentSchema, type CreateAttachmentInput } from '../validators/attachment.validator';
 import { attachmentAllowed } from './mail-security';
+import { addUsage, assertUsageAvailable } from './usage.service';
+import { deleteLegacyLocalObject, deleteObject, getLegacyLocalObject, getObject, putObject, storageProviderName } from './storage.service';
+import { currentOrganizationId } from '../models/tenant-context';
 
 const logger = createLogger('attachment-service');
 
@@ -52,13 +53,6 @@ function toAttachmentDto(doc: CustomerAttachmentDocument): AttachmentDto {
   };
 }
 
-/** 确保上传目录存在（幂等），返回目录绝对路径 */
-function ensureUploadDir(): string {
-  const dir = env.UPLOAD_DIR;
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
 /** 从原始文件名里提取安全的扩展名（.xxx）；非法 / 无扩展名返回空串 */
 function safeExt(originalName: string): string {
   const ext = path.extname(originalName).toLowerCase();
@@ -73,15 +67,13 @@ function decodeBase64(dataBase64: string): Buffer {
   return Buffer.from(raw, 'base64');
 }
 
-/** 删除磁盘文件（best-effort）：文件本就不存在视为成功，其它错误只记日志不抛出 */
-async function unlinkQuietly(filePath: string): Promise<void> {
+/** 删除存储对象（best-effort）：文件本就不存在视为成功，其它错误只记日志不抛出 */
+async function unlinkQuietly(doc: { storageProvider?: string; storageKey?: string; path: string }): Promise<void> {
   try {
-    await fsp.unlink(filePath);
+    if (doc.storageProvider === 's3' && doc.storageKey) await deleteObject(doc.storageKey);
+    else await deleteLegacyLocalObject(doc.path);
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code !== 'ENOENT') {
-      logger.warn(`删除附件磁盘文件失败（已忽略）: ${filePath}`, { message: (error as Error).message });
-    }
+    logger.warn('删除附件存储对象失败（已忽略）', { message: (error as Error).message });
   }
 }
 
@@ -130,12 +122,13 @@ export async function createAttachment(
     throw ApiError.badRequest('文件格式、扩展名或文件签名不受支持');
   }
 
-  const dir = ensureUploadDir();
+  await assertUsageAvailable('storageBytes', buffer.length);
   const filename = `${Date.now()}-${randomUUID()}${safeExt(input.originalName)}`;
-  const fullPath = path.join(dir, filename);
-
+  const org = currentOrganizationId()?.toString() || 'default';
+  const key = storageProviderName() === 's3' ? `attachments/${org}/${filename}` : filename;
+  let stored;
   try {
-    await fsp.writeFile(fullPath, buffer);
+    stored = await putObject(key, buffer, input.mimeType || 'application/octet-stream');
   } catch (error) {
     logger.error('写入附件失败', error instanceof Error ? error.message : String(error));
     throw ApiError.internal('附件保存失败，请稍后重试');
@@ -148,9 +141,12 @@ export async function createAttachment(
     filename,
     mimeType: input.mimeType || 'application/octet-stream',
     size: buffer.length,
-    path: fullPath,
+    path: stored.path,
+    storageProvider: stored.provider,
+    storageKey: stored.key,
     uploadedBy: userId ? new Types.ObjectId(userId) : undefined,
   });
+  await addUsage('storage_bytes', buffer.length);
 
   logger.info(`上传客户附件: customer=${customerId} file=${input.originalName} size=${buffer.length}`);
   return toAttachmentDto(doc);
@@ -177,17 +173,20 @@ export async function getAttachmentForDownload(
   if (!doc) {
     throw ApiError.notFound('附件不存在或无权访问');
   }
-  // Do not trust the stored path: legacy/corrupt DB records must never read outside uploads.
-  const root = path.resolve(env.UPLOAD_DIR);
-  const filePath = path.resolve(doc.path);
-  if (path.dirname(filePath) !== root || path.basename(filePath) !== doc.filename || !/^\d+-[0-9a-f-]{36}(?:\.[a-z0-9]{1,10})?$/i.test(doc.filename)) {
-    throw ApiError.notFound('附件文件不存在');
-  }
   let buffer: Buffer;
   try {
-    if ((await fsp.lstat(filePath)).isSymbolicLink()) throw new Error('symlink');
-    buffer = await fsp.readFile(filePath);
-  } catch {
+    if (doc.storageProvider === 's3' && doc.storageKey) {
+      buffer = await getObject(doc.storageKey);
+    } else {
+      // Do not trust the stored path: legacy/corrupt DB records must never read outside uploads.
+      const filePath = path.resolve(doc.path);
+      if (path.basename(filePath) !== doc.filename || !/^\d+-[0-9a-f-]{36}(?:\.[a-z0-9]{1,10})?$/i.test(doc.filename)) {
+        throw ApiError.notFound('附件文件不存在');
+      }
+      buffer = await getLegacyLocalObject(filePath);
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
     throw ApiError.notFound('附件文件已丢失，请重新上传');
   }
   return { originalName: doc.originalName, mimeType: doc.mimeType, size: doc.size, buffer };
@@ -214,7 +213,8 @@ export async function deleteAttachment(
   if (!doc) {
     throw ApiError.notFound('附件不存在或无权删除');
   }
-  await unlinkQuietly(doc.path);
+  await unlinkQuietly(doc);
+  await addUsage('storage_bytes', -doc.size);
   logger.info(`删除客户附件: customer=${customerId} attachment=${attachmentId}`);
   return { id: attachmentId, deleted: 1 };
 }
@@ -230,8 +230,10 @@ export async function purgeCustomerAttachments(
   if (ids.length === 0) return 0;
   const filter = Array.isArray(customerIds) ? { customerId: { $in: ids } } : { customerId: customerIds };
 
-  const docs = await CustomerAttachment.find(filter).select('path').lean();
+  const docs = await CustomerAttachment.find(filter).select('path storageProvider storageKey size').lean();
   const { deletedCount } = await CustomerAttachment.deleteMany(filter);
-  await Promise.all((docs as unknown as { path: string }[]).map((d) => unlinkQuietly(d.path)));
+  await Promise.all((docs as unknown as { path: string; storageProvider?: string; storageKey?: string; size?: number }[]).map((d) => unlinkQuietly(d)));
+  const released = (docs as unknown as { size?: number }[]).reduce((sum, item) => sum + (item.size ?? 0), 0);
+  await addUsage('storage_bytes', -released);
   return deletedCount ?? 0;
 }

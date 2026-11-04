@@ -10,6 +10,7 @@ import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 
 import env from '../config/env';
 import { createLogger } from '../config/logger';
 import { AuthChallenge, AuthSession, User, hashPassword, type UserDocument, type UserRole } from '../models';
+import { ensureDefaultOrganization } from './organization.service';
 import { ApiError } from '../utils/ApiError';
 import type { AuthUser, JwtPayload } from '../types/express';
 
@@ -204,6 +205,8 @@ function toAuthUser(doc: UserDocument): AuthUser {
     username: doc.username,
     displayName: doc.displayName || doc.username,
     role: doc.role,
+    ...(doc.organizationId ? { organizationId: String(doc.organizationId) } : {}),
+    isPlatformAdmin: Boolean(doc.isPlatformAdmin),
   };
 }
 
@@ -384,21 +387,36 @@ export async function getUserById(id: string): Promise<AuthUser> {
  */
 export async function bootstrapAdminUser(): Promise<void> {
   const username = env.ADMIN_USERNAME.trim().toLowerCase();
+  const organization = await ensureDefaultOrganization();
   const existing = await User.findOne({ username });
 
   if (existing) {
+    let changed = false;
+    if (!existing.organizationId) {
+      existing.organizationId = organization._id;
+      changed = true;
+    }
+    // The bootstrap administrator is the platform owner for single-tenant
+    // installations; additional organization admins are not platform admins.
+    if (!existing.isPlatformAdmin) {
+      existing.isPlatformAdmin = true;
+      changed = true;
+    }
     if (env.ADMIN_EMAIL && !existing.email) {
       // Fill a missing bootstrap email without overwriting an address changed in the UI.
       existing.email = env.ADMIN_EMAIL.trim().toLowerCase();
-      await existing.save({ validateBeforeSave: false });
+      changed = true;
       logger.info(`已为默认管理员补充邮箱: ${existing.email}`);
     }
+    if (changed) await existing.save({ validateBeforeSave: false });
     logger.debug(`默认管理员已存在: ${username}`);
     return;
   }
 
   const passwordHash = await hashPassword(env.ADMIN_PASSWORD);
   await User.create({
+    organizationId: organization._id,
+    isPlatformAdmin: true,
     username,
     passwordHash,
     displayName: env.ADMIN_DISPLAY_NAME,

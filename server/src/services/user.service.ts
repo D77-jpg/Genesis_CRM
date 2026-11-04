@@ -9,6 +9,7 @@ import { Types } from 'mongoose';
 import { AuthChallenge, AuthSession, Customer, MailQuotaBucket, Project, Scratchpad, User, UserMailAccount, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
+import { assertOrganizationCapacity } from './organization.service';
 import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator';
 
 const logger = createLogger('user-service');
@@ -21,6 +22,8 @@ export interface UserDto {
   email?: string;
   twoFactorEnabled: boolean;
   role: UserRole;
+  organizationId?: string;
+  isPlatformAdmin: boolean;
   status: UserStatus;
   projectIds: string[];
   defaultProjectId?: string;
@@ -38,6 +41,8 @@ function toUserDto(doc: Record<string, unknown>): UserDto {
   // 旧数据可能没有 status 字段，统一回退为 active
   return { ...rest, id: _id.toString(), status: (rest.status as UserStatus) ?? 'active',
     email: (rest.email as string | undefined) || undefined,
+    organizationId: rest.organizationId ? String(rest.organizationId) : undefined,
+    isPlatformAdmin: Boolean(rest.isPlatformAdmin),
     twoFactorEnabled: Boolean(rest.twoFactorEnabled),
     projectIds: ((rest.projectIds as unknown[]) ?? []).map(String),
     defaultProjectId: rest.defaultProjectId ? String(rest.defaultProjectId) : undefined } as unknown as UserDto;
@@ -61,13 +66,14 @@ export async function listUsers(): Promise<UserDto[]> {
 }
 
 /** 创建用户：用户名查重 → bcrypt 加密 → 落库 */
-export async function createUser(input: CreateUserInput): Promise<UserDto> {
+export async function createUser(input: CreateUserInput, actor?: { organizationId?: string }): Promise<UserDto> {
   const username = input.username; // validator 已 trim + lowercase
   const existing = await User.findOne({ username });
   if (existing) {
     throw ApiError.conflict(`用户名「${username}」已存在`);
   }
 
+  await assertOrganizationCapacity('users');
   const passwordHash = await hashPassword(input.password);
   const projectIds = await resolveProjectIds(input.projectIds);
   if (input.role !== 'admin' && projectIds.length === 0) throw ApiError.badRequest('该角色至少需要加入一个项目');
@@ -77,6 +83,7 @@ export async function createUser(input: CreateUserInput): Promise<UserDto> {
     if (emailOwner) throw ApiError.conflict('该邮箱已被其他账号使用');
   }
   const user = await User.create({
+    ...(actor?.organizationId ? { organizationId: new Types.ObjectId(actor.organizationId) } : {}),
     username,
     passwordHash,
     displayName: input.displayName?.trim() || username,

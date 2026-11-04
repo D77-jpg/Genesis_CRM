@@ -1,3 +1,4 @@
+import './tenant-setup';
 import {Schema,model,Types} from 'mongoose';
 import type {ResearchProfile,ResearchReport,WebsitePage} from '../services/website/site-analysis';
 interface WebsiteResearchRecord {

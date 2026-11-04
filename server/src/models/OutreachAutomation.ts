@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, Types, model, type HydratedDocument } from 'mongoose';
 
 /**

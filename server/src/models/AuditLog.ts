@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * Application audit trail.
  *

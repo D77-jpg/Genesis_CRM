@@ -1,10 +1,4 @@
-import {stopKnowledgeDocumentWorker} from './services/knowledge/document.service';
-import {stopKnowledgeIndexWorker} from './services/knowledge/index.service';
-import {stopAgentTaskWorker} from './services/agent/task.service';
-import {semanticPool} from './services/knowledge/embedding';
-import {startProspectingScheduler, stopProspectingScheduler} from './services/prospecting/scheduler';
-import {startOutreachFollowUpWorker} from './services/outreach-followup.service';
-import {startOutreachAutomationWorker, stopOutreachAutomationWorker} from './services/outreach-automation.service';
+import { startBackgroundJobs, stopBackgroundJobs } from './background/runtime';
 /**
  * 服务启动入口
  * ------------------------------------------------------------------
@@ -18,52 +12,52 @@ import { connectDatabase, disconnectDatabase } from './config/db';
 import { createLogger } from './config/logger';
 import { bootstrapAdminUser } from './services/auth.service';
 import { bootstrapProjects } from './services/project.service';
+import { ensureDefaultOrganization, migrateLegacyTenantData } from './services/organization.service';
 import { migrateLegacyCustomerStatus, migrateMailCustomerLastContact } from './services/customer.service';
 import { migrateLegacyQuotationVersion } from './services/quotation.service';
 import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
 import { beginShutdown } from './services/runtime-state';
-import { runMailQueue } from './services/mail-queue.service';
-import { syncInbox } from './services/mail-sync.service';
-import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, AuthChallenge, AuthSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, OutreachAutomationConfig, OutreachAutomationDay, OutreachAutomationEnrollment, Product, Project, ProjectPlaybook, Quotation, Scratchpad, User, UserMailAccount } from './models';
+import { AgentAction, AgentAiProvider, AgentAiSettings, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, AuthChallenge, AuthSession, BillingInvoice, Customer, EmailSuppression, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, Organization, OutreachAutomationConfig, OutreachAutomationDay, OutreachAutomationEnrollment, Product, Project, ProjectPlaybook, Quotation, Scratchpad, UsageRecord, User, UserMailAccount } from './models';
 import { MailMessage, MailSyncState } from './models/MailMessage';
-
-const mailTimers: NodeJS.Timeout[] = [];
 
 const logger = createLogger('bootstrap');
 
 async function bootstrap(): Promise<void> {
   try {
     await connectDatabase();
+    await ensureDefaultOrganization();
+    await migrateLegacyTenantData();
     await bootstrapProjects();
     await bootstrapAdminUser();
-    await bootstrapProjects();
     await migrateLegacyCustomerStatus();
     await migrateMailCustomerLastContact();
     await migrateLegacyQuotationVersion();
-    await Promise.all([Project.init(), User.init(), AuthSession.init(), AuthChallenge.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
+    await Promise.all([Organization.init(), UsageRecord.init(), BillingInvoice.init(), Project.init(), User.init(), AuthSession.init(), AuthChallenge.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
       FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Product.init(), ProjectPlaybook.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),
       AgentSession.init(), AgentMessage.init(), AgentRun.init(), AgentAction.init(), AgentCustomerPreview.init(),
       KnowledgeFeedback.init(), KnowledgeTrainingState.init(),
       UserMailAccount.init(), MailQuotaBucket.init(), MailAccountAudit.init(),
-      OutreachAutomationConfig.init(), OutreachAutomationEnrollment.init(), OutreachAutomationDay.init()]);
+      OutreachAutomationConfig.init(), OutreachAutomationEnrollment.init(), OutreachAutomationDay.init(),
+      AgentAiSettings.init(), AgentAiProvider.init()]);
     // AuthChallenge was introduced with an older unique secret index during
     // development; sync only this new collection so deployments upgrade the
     // index without touching existing business collections.
     await AuthChallenge.syncIndexes();
+    await Promise.all([
+      Project.syncIndexes(),
+      EmailSuppression.syncIndexes(),
+      AgentAiSettings.syncIndexes(),
+      AgentAiProvider.syncIndexes(),
+    ]);
     const app = createApp();
     const server = http.createServer(app);
     // 邮箱连通性检查可能受网络、防火墙或上游超时影响，不能阻塞 CRM 登录与启动。
     void verifyMailer().catch((error) => {
       logger.warn('邮件通道启动自检异常（不影响 CRM 使用）', error instanceof Error ? error.message : String(error));
     });
-    void runMailQueue();
-    void syncInbox();
-    mailTimers.push(setInterval(() => void runMailQueue(), env.MAIL_WORKER_INTERVAL_MS));
-    mailTimers.push(setInterval(() => void syncInbox(), env.IMAP_SYNC_INTERVAL_MS));
-    startProspectingScheduler();
-    startOutreachFollowUpWorker();
-    startOutreachAutomationWorker();
+    if (env.RUN_BACKGROUND_JOBS) startBackgroundJobs();
+    else logger.info('RUN_BACKGROUND_JOBS=false：API 进程不启动后台任务，请运行独立 worker');
 
     server.listen(env.PORT, env.HOST, () => {
       logger.info('==============================================');
@@ -105,10 +99,7 @@ function registerShutdown(server: http.Server): void {
     if (shuttingDown) return;
     shuttingDown = true;
     beginShutdown();
-    mailTimers.forEach(clearInterval);
-    stopProspectingScheduler();
-    stopOutreachAutomationWorker();
-    stopAgentTaskWorker();stopKnowledgeDocumentWorker();stopKnowledgeIndexWorker();semanticPool.close();
+    stopBackgroundJobs();
     logger.info(`收到 ${signal}，开始优雅停机...`);
 
     // 给正在处理的请求 10 秒收尾时间

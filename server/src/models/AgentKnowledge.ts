@@ -1,3 +1,4 @@
+import './tenant-setup';
 import {Schema,model,Types} from 'mongoose';
 import type {KnowledgeCategory,KnowledgeTerm} from '../services/agent/knowledge-types';
 export interface KnowledgeRevision {

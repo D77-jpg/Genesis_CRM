@@ -16,6 +16,7 @@ import mongoose from 'mongoose';
 import env from '../config/env';
 import { createLogger } from '../config/logger';
 import { ApiError, type ApiErrorDetail } from '../utils/ApiError';
+import { captureError } from '../services/error-monitor.service';
 
 const logger = createLogger('http');
 
@@ -80,6 +81,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const logLine = `${req.method} ${requestPath} -> ${apiError.statusCode} ${apiError.code}`;
   if (apiError.statusCode >= 500) {
     logger.error(logLine, { status:apiError.statusCode,code:apiError.code });
+    captureError(err, { status: apiError.statusCode, method: req.method, route: requestPath });
   } else {
     logger.warn(logLine, { status:apiError.statusCode,code:apiError.code });
   }

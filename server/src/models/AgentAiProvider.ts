@@ -1,6 +1,7 @@
+import './tenant-setup';
 import { Schema, model, type HydratedDocument, type Types } from 'mongoose';
 
-/** 一个可复用的 AI 服务商连接；全局共享，由管理员维护。 */
+/** 一个可复用的 AI 服务商连接；在组织内共享，由组织管理员维护。 */
 export type AgentAiProviderKind = 'openai' | 'mock';
 
 export interface IAgentAiProvider {
@@ -35,6 +36,6 @@ const schema = new Schema<IAgentAiProvider>({
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true, versionKey: false });
 
-schema.index({ name: 1 }, { unique: true });
+schema.index({ organizationId: 1, name: 1 }, { unique: true });
 
 export const AgentAiProvider = model<IAgentAiProvider>('AgentAiProvider', schema);

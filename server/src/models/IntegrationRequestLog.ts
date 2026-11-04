@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * IntegrationRequestLog 模型（Integration API v1 审计日志）
  * ------------------------------------------------------------------

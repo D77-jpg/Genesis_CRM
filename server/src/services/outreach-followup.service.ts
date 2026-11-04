@@ -263,3 +263,9 @@ export function startOutreachFollowUpWorker(): void {
   }, SCAN_INTERVAL_MS);
   timer.unref?.();
 }
+
+export function stopOutreachFollowUpWorker(): void {
+  if (!timer) return;
+  clearInterval(timer);
+  timer = null;
+}

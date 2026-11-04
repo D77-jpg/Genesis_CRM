@@ -8,7 +8,8 @@ import type { Request, RequestHandler } from 'express';
 import { ApiError } from '../utils/ApiError';
 import { isAuthSessionActive, safeTokenEqual, verifyToken } from '../services/auth.service';
 import { AUTH_COOKIE_NAMES, getCookie } from '../utils/auth-cookies';
-import { Project, User, type UserRole } from '../models';
+import { Organization, Project, User, type UserRole } from '../models';
+import { runWithTenant } from '../models/tenant-context';
 
 /** 从 Authorization 头中提取 token（兼容脚本 / 集成客户端） */
 function extractBearerToken(header?: string): string | null {
@@ -58,6 +59,12 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
     if (current.status === 'disabled') {
       throw ApiError.unauthorized('账号已停用，请联系管理员');
     }
+    if (!current.isPlatformAdmin && current.organizationId) {
+      const organization = await Organization.findById(current.organizationId).select('status');
+      if (!organization || organization.status === 'suspended') {
+        throw ApiError.forbidden('组织已暂停，请联系平台管理员');
+      }
+    }
 
     // Read-only accounts may use GET/HEAD/OPTIONS only. Authentication routes
     // stay exempt so a viewer can still refresh or sign out.
@@ -73,10 +80,17 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
       username: current.username,
       displayName: current.displayName || current.username,
       role: current.role,
+      ...(current.organizationId ? { organizationId: current.organizationId.toString() } : {}),
+      isPlatformAdmin: Boolean(current.isPlatformAdmin),
       // 部分旧版子路由仍会重复执行 requireAuth；保留父路由已经解析出的项目上下文。
       projectId: req.user?.projectId,
     };
-    next();
+    // All downstream service and Mongoose calls inherit this tenant boundary.
+    return runWithTenant({
+      organizationId: current.organizationId ? current.organizationId.toString() : undefined,
+      bypass: false,
+      source: 'http',
+    }, () => next());
   } catch (error) {
     next(error);
   }
@@ -97,6 +111,19 @@ export const requireRole =
     next();
   };
 
+/** Platform console guard. Runs downstream queries with tenant filtering disabled. */
+export const requirePlatformAdmin: RequestHandler = (req, _res, next) => {
+  if (!req.user?.isPlatformAdmin) {
+    next(ApiError.forbidden('只有平台管理员可以访问平台控制台'));
+    return;
+  }
+  return runWithTenant({
+    organizationId: req.user.organizationId,
+    bypass: true,
+    source: 'platform',
+  }, () => next());
+};
+
 export default requireAuth;
 
 /**
@@ -106,7 +133,7 @@ export default requireAuth;
 export const requireProject: RequestHandler = async (req, res, next) => {
   try {
     if (!req.user) throw ApiError.unauthorized();
-    const current = await User.findById(req.user.id).select('role projectIds defaultProjectId');
+    const current = await User.findById(req.user.id).select('role projectIds defaultProjectId organizationId');
     if (!current) throw ApiError.unauthorized();
 
     const requested = String(req.headers['x-project-id'] ?? '').trim();

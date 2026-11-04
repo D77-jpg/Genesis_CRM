@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * CustomerAttachment 模型
  * ------------------------------------------------------------------
@@ -23,8 +24,10 @@ export interface ICustomerAttachment {
   mimeType: string;
   /** 文件字节数 */
   size: number;
-  /** 磁盘绝对路径（对外不暴露） */
+  /** 本地绝对路径或对象存储 key（对外不暴露） */
   path: string;
+  storageProvider: 'local' | 's3';
+  storageKey?: string;
   /** 上传人（引用 User）；单用户环境下可留空 */
   uploadedBy?: Types.ObjectId;
   createdAt: Date;
@@ -69,6 +72,8 @@ const CustomerAttachmentSchema = new Schema<ICustomerAttachment>(
       type: String,
       required: [true, '附件存储路径为必填项'],
     },
+    storageProvider: { type: String, enum: ['local', 's3'], default: 'local' },
+    storageKey: { type: String, trim: true },
     uploadedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   {

@@ -1,3 +1,4 @@
+import './tenant-setup';
 import type {KnowledgeReview} from '../services/agent/knowledge-types';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 

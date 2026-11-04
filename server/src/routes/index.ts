@@ -55,6 +55,8 @@ import prospectingRoutes from './prospecting.routes';
 import productRoutes from './product.routes';
 import unsubscribeRoutes from './unsubscribe.routes';
 import mailComplianceRoutes from './mail-compliance.routes';
+import organizationRoutes from './organization.routes';
+import platformRoutes from './platform.routes';
 
 const router = Router();
 
@@ -116,6 +118,8 @@ router.use('/tracking', trackingRoutes);
 router.use('/unsubscribe', unsubscribeRoutes);
 // Integration API v1：服务凭证认证（与用户 JWT 完全隔离），供 AutoForceAI 等系统集成。
 router.use('/integrations/v1', integrationRoutes);
+router.use('/organizations', organizationRoutes);
+router.use('/platform', platformRoutes);
 router.use('/projects', projectRoutes);
 router.use('/customers', requireAuth, requireProject, customerRoutes);
 router.use('/website-research', requireAuth, requireProject, websiteResearchRoutes);

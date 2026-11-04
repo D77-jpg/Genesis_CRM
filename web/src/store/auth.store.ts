@@ -186,6 +186,9 @@ export const selectIsAuthenticated = (state: AuthState): boolean => state.status
  */
 export const selectIsAdmin = (state: AuthState): boolean => state.user?.role === 'admin';
 
+/** Platform operators can manage every tenant; ordinary admins cannot. */
+export const selectIsPlatformAdmin = (state: AuthState): boolean => Boolean(state.user?.isPlatformAdmin);
+
 /** Project managers can edit assigned project settings and see the whole project. */
 export const selectCanManageProjects = (state: AuthState): boolean =>
   state.user?.role === 'admin' || state.user?.role === 'project_admin';

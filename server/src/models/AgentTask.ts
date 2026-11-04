@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 export const taskStepKeys = ['locate_customer', 'research_customer', 'analyze_customer', 'save_draft', 'verify_draft'] as const;
 export type TaskStep = typeof taskStepKeys[number];

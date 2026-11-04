@@ -1,3 +1,4 @@
+import './tenant-setup';
 import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoose';
 
 export type ProjectStatus = 'active' | 'archived';
@@ -35,6 +36,7 @@ export interface ProjectMailCompliance {
 }
 
 export interface IProject {
+  organizationId?: Types.ObjectId;
   name: string;
   slug: string;
   code: string;
@@ -123,8 +125,8 @@ const ProjectSchema = new Schema<IProject>(
   { timestamps: true, versionKey: false, toJSON: { virtuals: true, versionKey: false } },
 );
 
-ProjectSchema.index({ slug: 1 }, { unique: true });
-ProjectSchema.index({ code: 1 }, { unique: true });
+ProjectSchema.index({ organizationId: 1, slug: 1 }, { unique: true });
+ProjectSchema.index({ organizationId: 1, code: 1 }, { unique: true });
 ProjectSchema.index({ status: 1, name: 1 });
 
 export const Project = model<IProject, ProjectModel>('Project', ProjectSchema);

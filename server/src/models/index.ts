@@ -1,8 +1,18 @@
+import './tenant-setup';
 /**
  * 模型统一出口
  * ------------------------------------------------------------------
  * 业务代码只从 '../models' 引入，方便后续替换持久层实现。
  */
+export { Organization } from './Organization';
+export type { IOrganization, OrganizationDocument, OrganizationModel, OrganizationStatus } from './Organization';
+
+export { UsageRecord, USAGE_METRICS } from './UsageRecord';
+export type { IUsageRecord, UsageRecordDocument, UsageRecordModel, UsageMetric } from './UsageRecord';
+
+export { BillingInvoice } from './BillingInvoice';
+export type { IBillingInvoice, BillingInvoiceDocument, BillingInvoiceModel, IInvoiceLine, InvoiceStatus } from './BillingInvoice';
+
 export { Customer } from './Customer';
 export type { ICustomer, ICustomerMethods, CustomerDocument, CustomerModel } from './Customer';
 

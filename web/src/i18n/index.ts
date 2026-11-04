@@ -8,6 +8,7 @@
  */
 import * as React from 'react';
 import { STORAGE_KEYS } from '@/constants';
+import { AUTO_PHRASES, AUTO_TRANSLATIONS } from './auto-translations';
 
 export type Language = 'zh' | 'en';
 
@@ -50,6 +51,9 @@ const zh = {
   'nav.compliance': '邮件合规',
   'nav.agentDiagnostics': 'AI 使用情况',
   'nav.aiSettings': 'AI 配置',
+  'nav.organization': '组织设置',
+  'nav.billing': '套餐与用量',
+  'nav.platform': '平台控制台',
   'nav.workspace': '工作台',
   'nav.manage': '管理',
   'nav.main': '主导航',
@@ -219,6 +223,84 @@ const zh = {
   'compliance.unsubscribeNote': '每封开发信自动附带退订链接与 List-Unsubscribe 邮件头。',
   'compliance.refresh': '刷新',
 
+  'org.title': '组织设置',
+  'org.subtitle': '租户资料、套餐配额与账单联系人',
+  'org.profileTitle': '组织资料',
+  'org.profileDesc': '该名称会显示在工作区与发票上。',
+  'org.name': '组织名称',
+  'org.slug': '组织标识',
+  'org.plan': '套餐',
+  'org.status': '状态',
+  'org.billingEmail': '账单邮箱',
+  'org.billingAddress': '账单地址',
+  'org.taxId': '税号',
+  'org.currency': '币种',
+  'org.locale': '默认语言',
+  'org.saved': '组织设置已保存',
+  'org.usageTitle': '本月用量',
+  'org.usageDesc': '配额在每个自然月开始时重置。',
+  'org.users': '用户',
+  'org.projects': '项目',
+  'org.emails': '已发邮件',
+  'org.aiTokens': 'AI Token',
+  'org.storage': '存储',
+  'org.viewBilling': '查看账单与套餐',
+  'org.currentPlan': '当前套餐',
+  'org.planLimits': '套餐配额',
+  'org.trialEnds': '试用结束',
+  'org.suspended': '已暂停',
+  'org.active': '正常',
+  'org.trialing': '试用中',
+
+  'billing.title': '套餐与用量',
+  'billing.subtitle': '计量用量、预估账单与套餐配额',
+  'billing.currentUsage': '当前用量',
+  'billing.estimatedInvoice': '预估账单',
+  'billing.period': '账单周期',
+  'billing.invoices': '发票',
+  'billing.invoicesDesc': '可为当前周期生成草稿预估；实际收款由外部支付系统处理。',
+  'billing.noInvoices': '还没有发票。',
+  'billing.createDraft': '生成草稿预估',
+  'billing.draftCreated': '草稿发票已生成',
+  'billing.status.draft': '草稿',
+  'billing.status.open': '待支付',
+  'billing.status.paid': '已支付',
+  'billing.status.void': '已作废',
+  'billing.plan.starter': '入门版',
+  'billing.plan.growth': '成长版',
+  'billing.plan.enterprise': '企业版',
+  'billing.perMonth': '/月',
+  'billing.limitEmails': '{value} 封邮件',
+  'billing.limitTokens': '{value} AI Token',
+  'billing.limitStorage': '{value} GB 存储',
+  'billing.limitUsers': '{value} 个用户',
+  'billing.limitProjects': '{value} 个项目',
+
+  'platform.title': '平台控制台',
+  'platform.subtitle': '在一处开通并运营所有租户',
+  'platform.organizations': '组织',
+  'platform.overview': '概览',
+  'platform.totalOrganizations': '组织数',
+  'platform.activeSubscriptions': '有效订阅',
+  'platform.totalUsers': '用户数',
+  'platform.totalProjects': '项目数',
+  'platform.emailsThisMonth': '本月邮件量',
+  'platform.create': '创建组织',
+  'platform.createDesc': '创建一个租户及其第一个组织管理员。',
+  'platform.name': '组织名称',
+  'platform.slug': '标识（可选）',
+  'platform.plan': '套餐',
+  'platform.adminUsername': '管理员用户名',
+  'platform.adminPassword': '初始密码',
+  'platform.adminEmail': '管理员邮箱（可选）',
+  'platform.orgCreated': '组织已创建',
+  'platform.empty': '还没有组织。',
+  'platform.counts': '{users} 位用户 · {projects} 个项目',
+  'platform.manage': '管理',
+  'platform.suspend': '暂停',
+  'platform.activate': '启用',
+  'platform.updated': '组织已更新',
+
   'users.title': '用户管理',
   'users.role.admin': '系统管理员',
   'users.role.project_admin': '项目管理员',
@@ -271,6 +353,9 @@ const en: Record<TranslationKey, string> = {
   'nav.compliance': 'Mail Compliance',
   'nav.agentDiagnostics': 'AI Usage',
   'nav.aiSettings': 'AI Settings',
+  'nav.organization': 'Organization',
+  'nav.billing': 'Plan & usage',
+  'nav.platform': 'Platform console',
   'nav.workspace': 'Workspace',
   'nav.manage': 'Manage',
   'nav.main': 'Main navigation',
@@ -440,6 +525,84 @@ const en: Record<TranslationKey, string> = {
   'compliance.unsubscribeNote': 'Every outreach email includes an unsubscribe link and List-Unsubscribe headers.',
   'compliance.refresh': 'Refresh',
 
+  'org.title': 'Organization',
+  'org.subtitle': 'Tenant profile, plan limits and billing contact',
+  'org.profileTitle': 'Organization profile',
+  'org.profileDesc': 'This name appears in the workspace and on invoices.',
+  'org.name': 'Organization name',
+  'org.slug': 'Organization slug',
+  'org.plan': 'Plan',
+  'org.status': 'Status',
+  'org.billingEmail': 'Billing email',
+  'org.billingAddress': 'Billing address',
+  'org.taxId': 'Tax ID',
+  'org.currency': 'Currency',
+  'org.locale': 'Default language',
+  'org.saved': 'Organization settings saved',
+  'org.usageTitle': 'Usage this month',
+  'org.usageDesc': 'Limits reset at the start of each calendar month.',
+  'org.users': 'Users',
+  'org.projects': 'Projects',
+  'org.emails': 'Emails sent',
+  'org.aiTokens': 'AI tokens',
+  'org.storage': 'Storage',
+  'org.viewBilling': 'View billing',
+  'org.currentPlan': 'Current plan',
+  'org.planLimits': 'Plan limits',
+  'org.trialEnds': 'Trial ends',
+  'org.suspended': 'Suspended',
+  'org.active': 'Active',
+  'org.trialing': 'Trialing',
+
+  'billing.title': 'Plan and usage',
+  'billing.subtitle': 'Metered usage, estimated invoice and plan limits',
+  'billing.currentUsage': 'Current usage',
+  'billing.estimatedInvoice': 'Estimated invoice',
+  'billing.period': 'Billing period',
+  'billing.invoices': 'Invoices',
+  'billing.invoicesDesc': 'Draft estimates can be generated for the current period; payment collection is handled externally.',
+  'billing.noInvoices': 'No invoices yet.',
+  'billing.createDraft': 'Generate draft estimate',
+  'billing.draftCreated': 'Draft invoice created',
+  'billing.status.draft': 'Draft',
+  'billing.status.open': 'Open',
+  'billing.status.paid': 'Paid',
+  'billing.status.void': 'Void',
+  'billing.plan.starter': 'Starter',
+  'billing.plan.growth': 'Growth',
+  'billing.plan.enterprise': 'Enterprise',
+  'billing.perMonth': '/month',
+  'billing.limitEmails': '{value} emails',
+  'billing.limitTokens': '{value} AI tokens',
+  'billing.limitStorage': '{value} GB storage',
+  'billing.limitUsers': '{value} users',
+  'billing.limitProjects': '{value} projects',
+
+  'platform.title': 'Platform console',
+  'platform.subtitle': 'Provision and operate every tenant from one place',
+  'platform.organizations': 'Organizations',
+  'platform.overview': 'Overview',
+  'platform.totalOrganizations': 'Organizations',
+  'platform.activeSubscriptions': 'Active subscriptions',
+  'platform.totalUsers': 'Users',
+  'platform.totalProjects': 'Projects',
+  'platform.emailsThisMonth': 'Emails this month',
+  'platform.create': 'Create organization',
+  'platform.createDesc': 'Create a tenant and its first organization administrator.',
+  'platform.name': 'Organization name',
+  'platform.slug': 'Slug (optional)',
+  'platform.plan': 'Plan',
+  'platform.adminUsername': 'Admin username',
+  'platform.adminPassword': 'Initial password',
+  'platform.adminEmail': 'Admin email (optional)',
+  'platform.orgCreated': 'Organization created',
+  'platform.empty': 'No organizations yet.',
+  'platform.counts': '{users} users · {projects} projects',
+  'platform.manage': 'Manage',
+  'platform.suspend': 'Suspend',
+  'platform.activate': 'Activate',
+  'platform.updated': 'Organization updated',
+
   'users.title': 'Users',
   'users.role.admin': 'System admin',
   'users.role.project_admin': 'Project admin',
@@ -485,6 +648,79 @@ export function setLanguage(language: Language): void {
 export function subscribeLanguage(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+const sortedPhrases = [...AUTO_PHRASES].sort((a, b) => b[0].length - a[0].length);
+
+/**
+ * Translate legacy JSX copy without requiring every screen to migrate to
+ * key-based i18n. Exact matches win; long phrases are then substituted for
+ * interpolated copy. Called by the DOM bridge and available to code that
+ * needs a one-off translation.
+ */
+/** Safe patterns for counts and relative times; never applied to prose fields. */
+function translateDynamic(value: string): string | null {
+  const patterns: Array<[RegExp, (...matches: string[]) => string]> = [
+    [/^其中\s*(\d+)\s*位有邮箱$/, (n) => `${n} of them have email`],
+    [/^已开发\s*(\d+)\s*\/\s*(\d+)\s*位$/, (done, total) => `Contacted ${done} / ${total}`],
+    [/^近\s*(\d+)\s*天\s*(\d+)\s*封$/, (days, count) => `${count} messages in ${days} days`],
+    [/^(\d+)\s*位可发信$/, (n) => `${n} contactable`],
+    [/^(\d+)\s*天后（(.+)）$/, (n, date) => `in ${n} days (${date})`],
+    [/^(\d+)\s*天前$/, (n) => `${n} days ago`],
+    [/^(\d+)\s*小时前$/, (n) => `${n} hours ago`],
+    [/^(\d+)\s*分钟前$/, (n) => `${n} minutes ago`],
+    [/^队列共\s*(\d+)\s*位$/, (n) => `Queue: ${n}`],
+    [/^剩余\s*(\d+)\s*封$/, (n) => `${n} messages remaining`],
+    [/^(\d+)\s*个$/, (n) => `${n}`],
+    [/^(\d+)\s*位$/, (n) => `${n}`],
+    [/^(\d+)\s*条$/, (n) => `${n}`],
+    [/^(\d+)\s*封$/, (n) => `${n} messages`],
+    [/^占比\s*(\d+)%$/, (n) => `${n}% share`],
+    [/^按数量排序，展示前\s*(\d+)\s*项$/, (n) => `Sorted by volume; top ${n}`],
+    [/^全选（(\d+)）$/, (n) => `Select all (${n})`],
+    [/^一键转为客户（(\d+)）$/, (n) => `Convert to customer (${n})`],
+    [/^(\d+)\s*份已发布资料$/, (n) => `${n} published documents`],
+    [/^另有\s*(\d+)\s*份待审核$/, (n) => `${n} pending review`],
+    [/^第\s*(\d+)\s*版$/, (n) => `v${n}`],
+    [/^(\d+)\s*篇$/, (n) => `${n} docs`],
+    [/^最近登录\s*(.+)$/, (time) => `Last login ${translateText(time, false)}`],
+    [/^(\d+)\s*次没成功$/, (n) => `${n} runs failed`],
+    [/^每人每天上限\s*(.+)$/, (value) => `Daily cap ${value}`],
+    [/^· 另有\s*(\d+)\s*封早期邮件没记录用的哪个模板，未计入$/, (n) => `· ${n} early messages did not record a template and are excluded`],
+    [/^另有\s*(\d+)\s*份待审核$/, (n) => `${n} pending review`],
+    [/^\/3 封$/, () => '/3 messages'],
+    [/^正在准备第\s*(\d+)\s*封$/, (n) => `Preparing message ${n}`],
+    [/^待发送第\s*(\d+)\s*封$/, (n) => `Message ${n} pending`],
+    [/^封 ·$/, () => 'messages ·'],
+    [/^等级\s*([A-Z])$/, (grade) => `Grade ${grade}`],
+    [/^优先级\s*(高|中|低)$/, (level) => `Priority ${level === '高' ? 'High' : level === '中' ? 'Medium' : 'Low'}`],
+    [/^AI 匹配\s*(\d+)$/, (n) => `AI match ${n}`],
+    [/^· 第\s*(\d+)\s*版$/, (n) => `· v${n}`],
+    [/^生效时间\s*(.+)$/, (value) => `Effective ${value}`],
+  ];
+  for (const [pattern, render] of patterns) {
+    const match = value.match(pattern);
+    if (match) return render(...match.slice(1));
+  }
+  return null;
+}
+
+export function translateText(text: string, allowPhrases = true): string {
+  if (current !== 'en') return text;
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+  const exact = AUTO_TRANSLATIONS[trimmed];
+  if (exact !== undefined) return text.replace(trimmed, exact);
+  const dynamic = translateDynamic(trimmed);
+  if (dynamic) return text.replace(trimmed, dynamic);
+  if (!allowPhrases || trimmed.length < 2) return text;
+  let translated = trimmed;
+  for (const [zh, en] of sortedPhrases) {
+    if (zh.length < 2) continue;
+    translated = translated.split(zh).join(en);
+  }
+  if (translated === trimmed) return text;
+  return text.replace(trimmed, translated.replace(/\s{2,}/g, ' '));
 }
 
 export function translate(key: TranslationKey, vars?: Record<string, string | number>): string {

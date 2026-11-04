@@ -1,3 +1,4 @@
+import './tenant-setup';
 /**
  * Outbound marketing suppression list.
  *
@@ -35,7 +36,7 @@ const schema = new Schema<IEmailSuppression>({
   createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true, versionKey: false });
 
-schema.index({ scopeKey: 1, email: 1 }, { unique: true });
+schema.index({ organizationId: 1, scopeKey: 1, email: 1 }, { unique: true });
 schema.index({ projectId: 1, createdAt: -1 });
 
 export const EmailSuppression = model<IEmailSuppression>('EmailSuppression', schema);

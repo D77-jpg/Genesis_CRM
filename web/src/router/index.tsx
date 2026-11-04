@@ -17,7 +17,7 @@
  */
 import * as React from 'react';
 import { createBrowserRouter } from 'react-router-dom';
-import { GuestRoute, ProtectedRoute, AdminRoute, ScrollToTop } from './guards';
+import { GuestRoute, ProtectedRoute, AdminRoute, PlatformRoute, ScrollToTop } from './guards';
 import { PageLoader } from '@/components/common/page-loader';
 import { ROUTES } from '@/constants';
 
@@ -41,6 +41,9 @@ const OnboardingPage = React.lazy(() => import('@/pages/onboarding').then((m) =>
 const MailCompliancePage = React.lazy(() => import('@/pages/mail-compliance').then((m) => ({ default: m.MailCompliancePage })));
 const AgentDiagnosticsPage = React.lazy(() => import('@/pages/agent-diagnostics').then((m) => ({ default: m.AgentDiagnosticsPage })));
 const AiSettingsPage = React.lazy(() => import('@/pages/ai-settings').then((m) => ({ default: m.AiSettingsPage })));
+const OrganizationPage = React.lazy(() => import('@/pages/organization').then((m) => ({ default: m.OrganizationPage })));
+const BillingPage = React.lazy(() => import('@/pages/billing').then((m) => ({ default: m.BillingPage })));
+const PlatformPage = React.lazy(() => import('@/pages/platform').then((m) => ({ default: m.PlatformPage })));
 const NotFoundPage = React.lazy(() => import('@/pages/not-found').then((m) => ({ default: m.NotFoundPage })));
 
 /** 懒加载页面的统一 Suspense 包装（局部工具，不对外导出） */
@@ -100,6 +103,18 @@ export const router = createBrowserRouter([
       {
         path: 'ai-settings',
         element: <AdminRoute>{withSuspense(<AiSettingsPage />)}</AdminRoute>,
+      },
+      {
+        path: 'organization',
+        element: <AdminRoute roles={['admin', 'project_admin']}>{withSuspense(<OrganizationPage />)}</AdminRoute>,
+      },
+      {
+        path: 'billing',
+        element: <AdminRoute>{withSuspense(<BillingPage />)}</AdminRoute>,
+      },
+      {
+        path: 'platform',
+        element: <PlatformRoute>{withSuspense(<PlatformPage />)}</PlatformRoute>,
       },
       { path: '*', element: withSuspense(<NotFoundPage />) },
     ],

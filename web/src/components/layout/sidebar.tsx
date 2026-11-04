@@ -9,8 +9,11 @@ import { Link, NavLink } from 'react-router-dom';
 import {
   BookOpen,
   Bot,
+  Building2,
+  CreditCard,
   FileText,
   FolderKanban,
+  Globe2,
   LayoutDashboard,
   Mail,
   Package,
@@ -23,7 +26,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useMetaStore } from '@/store/meta.store';
-import { selectCanManageProjects, selectIsAdmin, useAuthStore } from '@/store/auth.store';
+import { selectCanManageProjects, selectIsAdmin, selectIsPlatformAdmin, useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
 import { useProjectStore } from '@/store/project.store';
 import { ProjectLogo, projectLogoSrc } from '@/components/projects/project-logo';
@@ -39,6 +42,8 @@ export interface NavItem {
   adminOnly?: boolean;
   /** Admins and project admins can see this entry. */
   managerOnly?: boolean;
+  /** Only platform operators can see this entry. */
+  platformOnly?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -57,6 +62,9 @@ export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.mailCompliance, labelKey: 'nav.compliance', icon: ShieldCheck, end: false, managerOnly: true },
   { to: ROUTES.agentDiagnostics, labelKey: 'nav.agentDiagnostics', icon: ShieldCheck, end: false, adminOnly: true },
   { to: ROUTES.aiSettings, labelKey: 'nav.aiSettings', icon: Settings2, end: false, adminOnly: true },
+  { to: ROUTES.organization, labelKey: 'nav.organization', icon: Building2, end: false, managerOnly: true },
+  { to: ROUTES.billing, labelKey: 'nav.billing', icon: CreditCard, end: false, adminOnly: true },
+  { to: ROUTES.platform, labelKey: 'nav.platform', icon: Globe2, end: false, platformOnly: true },
 ];
 
 interface SidebarProps {
@@ -106,18 +114,19 @@ function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
 function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }): React.JSX.Element {
   const { t } = useI18n();
   const isAdmin = useAuthStore(selectIsAdmin);
+  const isPlatformAdmin = useAuthStore(selectIsPlatformAdmin);
   const canManageProjects = useAuthStore(selectCanManageProjects);
   // 按角色过滤导航：管理员入口和项目管理员入口分别控制
   const items = React.useMemo(
-    () => NAV_ITEMS.filter((item) => (!item.adminOnly || isAdmin) && (!item.managerOnly || canManageProjects)),
-    [isAdmin, canManageProjects],
+    () => NAV_ITEMS.filter((item) => (!item.adminOnly || isAdmin) && (!item.managerOnly || canManageProjects) && (!item.platformOnly || isPlatformAdmin)),
+    [isAdmin, isPlatformAdmin, canManageProjects],
   );
 
   return (
     <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3" aria-label={t('nav.main')}>
       {[
-        { label: t('nav.workspace'), items: items.filter((item) => !item.adminOnly && !item.managerOnly) },
-        { label: t('nav.manage'), items: items.filter((item) => item.adminOnly || item.managerOnly) },
+        { label: t('nav.workspace'), items: items.filter((item) => !item.adminOnly && !item.managerOnly && !item.platformOnly) },
+        { label: t('nav.manage'), items: items.filter((item) => item.adminOnly || item.managerOnly || item.platformOnly) },
       ]
         .filter((group) => group.items.length > 0)
         .map((group) => (
