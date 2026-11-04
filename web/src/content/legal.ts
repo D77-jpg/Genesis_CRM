@@ -16,12 +16,12 @@ export const LEGAL_DOCUMENTS: Record<LegalDocId, LegalDocument> = {
   terms: {
     id: 'terms',
     title: { zh: '服务条款', en: 'Terms of Service' },
-    summary: { zh: '规范 Genesis CRM 服务的使用、账户、数据、费用和责任。', en: 'Rules for using Genesis CRM, including accounts, data, fees and liability.' },
+    summary: { zh: '规范 GlobalCRM 服务的使用、账户、数据、费用和责任。', en: 'Rules for using GlobalCRM, including accounts, data, fees and liability.' },
     updated: '2026-11-04',
     body: {
       zh: `## 1. 协议范围
 
-本服务条款（“条款”）是你与 ${ENTITY}（“我们”）之间关于 Genesis CRM 云服务（“服务”）的协议。注册、访问或使用服务即表示你代表所在组织接受本条款；如果你没有授权，请不要使用服务。
+本服务条款（“条款”）是你与 ${ENTITY}（“我们”）之间关于 GlobalCRM 云服务（“服务”）的协议。注册、访问或使用服务即表示你代表所在组织接受本条款；如果你没有授权，请不要使用服务。
 
 ## 2. 服务内容
 
@@ -100,7 +100,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocId, LegalDocument> = {
 > 本文本为上市准备版本，具体运营主体、注册地址、适用法律和商业条款需由法务顾问在正式签约前复核。`,
       en: `## 1. Scope
 
-These Terms of Service ("Terms") govern your access to the Genesis CRM cloud service ("Service") provided by ${ENTITY} ("we", "us"). By registering, accessing or using the Service, you accept these Terms on behalf of your organization. If you are not authorized, do not use the Service.
+These Terms of Service ("Terms") govern your access to the GlobalCRM cloud service ("Service") provided by ${ENTITY} ("we", "us"). By registering, accessing or using the Service, you accept these Terms on behalf of your organization. If you are not authorized, do not use the Service.
 
 ## 2. The Service
 
@@ -187,7 +187,7 @@ We may update these Terms and will notify you of material changes before they ta
     body: {
       zh: `## 1. 适用范围
 
-本政策适用于 Genesis CRM 网站、应用、API 和支持渠道。企业客户在其组织内导入的客户数据由该客户控制，我们作为处理者按 DPA 处理；我们为自身营销、安全和账户管理处理的数据由我们作为控制者。
+本政策适用于 GlobalCRM 网站、应用、API 和支持渠道。企业客户在其组织内导入的客户数据由该客户控制，我们作为处理者按 DPA 处理；我们为自身营销、安全和账户管理处理的数据由我们作为控制者。
 
 ## 2. 我们收集的数据
 
@@ -254,7 +254,7 @@ We may update these Terms and will notify you of material changes before they ta
 > 本文本为上市准备版本，需由隐私顾问结合运营主体、部署区域、邮件服务商和 AI 子处理者复核。`,
       en: `## 1. Scope
 
-This Policy applies to the Genesis CRM website, application, API and support channels. Customer data imported by a business customer is controlled by that customer and processed by us as a processor under the DPA. Data we process for our own marketing, security and account administration is controlled by us.
+This Policy applies to the GlobalCRM website, application, API and support channels. Customer data imported by a business customer is controlled by that customer and processed by us as a processor under the DPA. Data we process for our own marketing, security and account administration is controlled by us.
 
 ## 2. Data we collect
 
@@ -324,12 +324,12 @@ We may update this Policy and will notify material changes through the Service o
   dpa: {
     id: 'dpa',
     title: { zh: '数据处理协议（DPA）', en: 'Data Processing Agreement (DPA)' },
-    summary: { zh: '客户作为控制者、Genesis CRM 作为处理者时的数据保护条款。', en: 'Data-protection terms when the customer is controller and Genesis CRM is processor.' },
+    summary: { zh: '客户作为控制者、GlobalCRM 作为处理者时的数据保护条款。', en: 'Data-protection terms when the customer is controller and GlobalCRM is processor.' },
     updated: '2026-11-04',
     body: {
       zh: `## 1. 角色与范围
 
-本 DPA 适用于我们为提供 Genesis CRM 服务而代表客户处理个人数据的情形。客户是控制者，我们是处理者。附件订单、主服务条款和本 DPA 共同构成完整协议；冲突时，就个人数据保护事项以本 DPA 为准。
+本 DPA 适用于我们为提供 GlobalCRM 服务而代表客户处理个人数据的情形。客户是控制者，我们是处理者。附件订单、主服务条款和本 DPA 共同构成完整协议；冲突时，就个人数据保护事项以本 DPA 为准。
 
 ## 2. 处理说明
 
@@ -392,7 +392,7 @@ We may update this Policy and will notify material changes through the Service o
 > 本文本为 DPA 模板，正式签约前需由双方律师复核，并根据实际子处理者、部署区域和客户所在法域补充附件。`,
       en: `## 1. Roles and scope
 
-This DPA applies when we process personal data on behalf of the customer to provide Genesis CRM. The customer is the controller and we are the processor. The order, master terms and this DPA form one agreement; for personal-data protection, this DPA controls conflicts.
+This DPA applies when we process personal data on behalf of the customer to provide GlobalCRM. The customer is the controller and we are the processor. The order, master terms and this DPA form one agreement; for personal-data protection, this DPA controls conflicts.
 
 ## 2. Processing details
 
@@ -463,7 +463,7 @@ Authorized representatives sign at contract execution. The operating entity, add
     body: {
       zh: `## 1. 适用范围
 
-本 SLA 适用于付费套餐的 Genesis CRM 托管服务。试用、免费额度、第三方邮件服务商、客户自有 SMTP/IMAP 服务和客户网络不在可用性承诺范围内。
+本 SLA 适用于付费套餐的 GlobalCRM 托管服务。试用、免费额度、第三方邮件服务商、客户自有 SMTP/IMAP 服务和客户网络不在可用性承诺范围内。
 
 ## 2. 可用性目标
 
@@ -525,7 +525,7 @@ Authorized representatives sign at contract execution. The operating entity, add
 > 本 SLA 为上市准备模板，补偿比例、支持时段和 RTO/RPO 需结合真实运维能力和合同承诺复核。`,
       en: `## 1. Scope
 
-This SLA applies to the hosted Genesis CRM service on paid plans. Trials, free allowances, third-party mail providers, customer-owned SMTP/IMAP services and customer networks are outside the availability commitment.
+This SLA applies to the hosted GlobalCRM service on paid plans. Trials, free allowances, third-party mail providers, customer-owned SMTP/IMAP services and customer networks are outside the availability commitment.
 
 ## 2. Availability target
 

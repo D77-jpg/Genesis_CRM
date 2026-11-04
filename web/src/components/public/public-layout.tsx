@@ -5,6 +5,7 @@ import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { usePageTitle } from '@/hooks/use-ui';
+import { PRODUCT_NAME, PRODUCT_NAME_UPPER } from '@/constants/brand';
 
 const COPY = {
   zh: {
@@ -51,12 +52,12 @@ export function PublicLayout({
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
-          <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label="Genesis CRM">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label={PRODUCT_NAME}>
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
               <Boxes className="h-5 w-5" aria-hidden />
             </span>
             <span className="hidden min-w-0 sm:block">
-              <span className="block text-sm font-semibold leading-5 tracking-tight">GENESIS CRM</span>
+              <span className="block text-sm font-semibold leading-5 tracking-tight">{PRODUCT_NAME_UPPER}</span>
               <span className="block text-[10px] leading-4 text-muted-foreground">{copy.product}</span>
             </span>
           </Link>
@@ -97,7 +98,7 @@ export function PublicLayout({
 
       <footer className="border-t border-border/70 bg-muted/20">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p>© {new Date().getFullYear()} Genesis CRM. {copy.rights}</p>
+          <p>© {new Date().getFullYear()} {PRODUCT_NAME}. {copy.rights}</p>
           <nav className="flex flex-wrap gap-x-4 gap-y-2" aria-label="Legal">
             <Link className="hover:text-foreground" to="/legal/terms">{copy.terms}</Link>
             <Link className="hover:text-foreground" to="/legal/privacy">{copy.privacy}</Link>

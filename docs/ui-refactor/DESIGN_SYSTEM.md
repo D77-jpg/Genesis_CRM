@@ -1,4 +1,4 @@
-# Genesis CRM 界面设计系统
+# GlobalCRM 界面设计系统
 
 ## 1. 设计方向
 

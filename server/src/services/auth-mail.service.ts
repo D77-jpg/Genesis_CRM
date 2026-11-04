@@ -7,6 +7,7 @@
  * can complete the flow without SMTP credentials.
  */
 import env from '../config/env';
+import { PRODUCT_NAME } from '../constants/brand';
 import { sendMail } from './mailer.service';
 
 function escapeHtml(value: string): string {
@@ -47,10 +48,10 @@ export async function sendTwoFactorEmail(
   const result = await sendMail({
     to: email,
     toName: displayName,
-    subject: 'Genesis CRM 登录验证码',
-    text: `你的 Genesis CRM 登录验证码是：${code}\n验证码 ${expiresMinutes} 分钟内有效。如非本人操作，请忽略本邮件。`,
+    subject: `${PRODUCT_NAME} 登录验证码`,
+    text: `你的 ${PRODUCT_NAME} 登录验证码是：${code}\n验证码 ${expiresMinutes} 分钟内有效。如非本人操作，请忽略本邮件。`,
     html: `<p>${safeName}，你好：</p>
-<p>你的 Genesis CRM 登录验证码是：</p>
+<p>你的 ${PRODUCT_NAME} 登录验证码是：</p>
 <p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p>
 <p>验证码 ${expiresMinutes} 分钟内有效。如非本人操作，请忽略本邮件。</p>`,
   });
@@ -70,7 +71,7 @@ export async function sendPasswordResetEmail(
   const result = await sendMail({
     to: email,
     toName: displayName,
-    subject: 'Genesis CRM 重置密码',
+    subject: `${PRODUCT_NAME} 重置密码`,
     text: `${displayName || '用户'}，你好：\n请在 ${expiresMinutes} 分钟内打开以下链接重置密码：\n${resetUrl}\n如非本人操作，请忽略本邮件。`,
     html: `<p>${safeName}，你好：</p>
 <p>请在 ${expiresMinutes} 分钟内打开以下链接重置密码：</p>

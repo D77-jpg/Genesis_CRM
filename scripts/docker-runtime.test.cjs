@@ -21,7 +21,7 @@ test('docker contexts exclude runtime secrets, PII and dependency trees', () => 
 
 test('standalone ingress and healthcheck contract', () => {
   const compose = read('compose.yaml');
-  assert.match(compose, /127\.0\.0\.1:\$\{GENESIS_HTTP_PORT:-8080\}:8080/);
+  assert.match(compose, /127\.0\.0\.1:\$\{GLOBALCRM_HTTP_PORT:-\$\{GENESIS_HTTP_PORT:-8080\}\}:8080/);
   assert.equal((compose.match(/^    ports:/gm) || []).length, 1);
   assert.match(compose, /mongo_data:\/data\/db/);
   assert.match(compose, /uploads:\/data\/uploads/);

@@ -137,7 +137,7 @@ function etagMatches(ifNoneMatch: string | undefined, etag: string): boolean {
     .some((value) => value === '*' || value.replace(/^W\//, '') === target);
 }
 
-/** GET /quotations/:quotationId/pdf —— 下载 Genesis 权威报价 PDF */
+/** GET /quotations/:quotationId/pdf —— 下载项目权威报价 PDF */
 export const integrationQuotationPdfHandler = asyncHandler(async (req, res) => {
   const { project } = requireIntegration(req);
   const pdf = await renderIntegrationQuotationPdf({

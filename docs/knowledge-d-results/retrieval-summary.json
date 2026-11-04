@@ -27,7 +27,7 @@
   "fixture": {
     "sources": 50,
     "cases": 120,
-    "directory": "D:\\Trade\\genesis\\CRM\\Genesis_CRM\\server\\evaluation\\knowledge"
+    "directory": "D:\\Trade\\genesis\\CRM\\GlobalCRM\\server\\evaluation\\knowledge"
   },
   "summary": {
     "cases": 120,

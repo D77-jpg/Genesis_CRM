@@ -748,7 +748,7 @@ const BASE_AUTO_TRANSLATIONS: Record<string, string> = {
   '报价单': 'Quotation',
 
   // Dashboard
-  '客户开发信管理工具': 'Customer Outreach Manager',
+  '客户开发信管理工具': 'GlobalCRM',
   '中': 'ZH',
   '客户总数': 'Total customers',
   '位可发信': 'contactable',

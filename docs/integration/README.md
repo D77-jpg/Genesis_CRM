@@ -4,7 +4,7 @@
 
 ## 这是什么
 
-Genesis_CRM 对外集成接口，供 AutoForceAI 等获客系统以**服务凭证**接入：
+GlobalCRM 对外集成接口，供 AutoForceAI 等获客系统以**服务凭证**接入：
 线索交接（幂等 upsert）、成交/流失回流（游标 feed）、门户摘要（stats），
 客户状态 / 报价只读查询，以及人工确认后的报价草稿写入。
 

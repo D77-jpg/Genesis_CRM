@@ -1,6 +1,6 @@
-# Customer Dev Letter Manager
+# GlobalCRM
 
-**外贸客户开发与邮件协作平台**
+**外贸客户开发、邮件触达与成交管理平台**
 
 | 项目 | 内容 |
 | --- | --- |
@@ -9,7 +9,7 @@
 | 运行环境 | Node.js >= 20.19，MongoDB 7.x 或 8.x |
 | 部署方式 | 本机开发，Docker Compose 单机部署 |
 
-Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。P2 起系统以「组织 → 项目」两层划分数据边界，支持组织级套餐、计量与平台运营；P3 补齐公开价格/帮助/法律页面、上市主流程 E2E、版本化数据库迁移、三套环境与压力/安全基线。
+GlobalCRM 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。P2 起系统以「组织 → 项目」两层划分数据边界，支持组织级套餐、计量与平台运营；P3 补齐公开价格/帮助/法律页面、上市主流程 E2E、版本化数据库迁移、三套环境与压力/安全基线。
 
 ## 目录
 
@@ -324,8 +324,8 @@ CORS_LAN_PORTS=5173,4173
 | `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容服务地址 |
 | `OPENAI_MODEL` | 服务端模板中的默认模型 | 主 Agent 模型名称 |
 | `TRANSLATE_PROVIDER` | `ai` | 中英对照翻译使用 `ai` 或 `index` |
-| `COMPANY_NAME` | Genesis 默认值 | 我方公司名称 |
-| `COMPANY_WEBSITE` | Genesis 默认值 | 我方公司网站 |
+| `COMPANY_NAME` | Genesis Bags 默认值 | 项目方公司名称 |
+| `COMPANY_WEBSITE` | Genesis Bags 默认值 | 项目方公司网站 |
 | `COMPANY_MOQ` | `100 pcs` | 默认 MOQ 文案 |
 | `SENDER_NAME` | `Genesis Sales Team` | 默认发件人签名 |
 | `DEFAULT_ORGANIZATION_NAME` | `Default Organization` | 旧数据迁移使用的默认组织名称 |
@@ -348,7 +348,7 @@ CORS_LAN_PORTS=5173,4173
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | `/api` | 浏览器请求 API 的基础路径 |
 | `VITE_API_PROXY_TARGET` | `http://127.0.0.1:5000` | Vite 开发代理目标 |
-| `VITE_APP_TITLE` | 客户开发信管理工具 | 页面标题 |
+| `VITE_APP_TITLE` | `GlobalCRM` | 页面标题与品牌展示名 |
 
 `VITE_API_BASE_URL` 和 `VITE_APP_TITLE` 是构建期变量。修改后需要重新构建前端。
 
@@ -569,6 +569,7 @@ P3 的 Compose 会先运行一次性 `migrate`，成功后再启动两个 Node �
 - [P3 安全测试与外部渗透测试清单](docs/P3-安全测试与外部渗透测试清单.md)
 - [P3 压力与稳定性测试报告](docs/P3-压力与稳定性测试报告.md)
 - [P3 上市准备验收报告](docs/P3-上市准备-验收报告.md)
+- [GlobalCRM 品牌与命名规范](docs/brand-guidelines.md)
 - [自动开发设计](docs/outreach-autopilot.md)
 - [客户草稿审核](docs/customer-draft-review.md)
 - [开发信中英对照](docs/letter-bilingual-review.md)

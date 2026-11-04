@@ -80,7 +80,7 @@ function translateTitle(): void {
   if (!originalTitle) originalTitle = document.title;
   document.title = document.title
     .split(' · ')
-    .map((part) => part === '客户开发信管理工具' ? 'Customer Outreach Manager' : translateText(part, false))
+    .map((part) => part === '客户开发信管理工具' ? 'GlobalCRM' : translateText(part, false))
     .join(' · ');
 }
 

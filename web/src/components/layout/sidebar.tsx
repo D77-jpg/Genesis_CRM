@@ -25,6 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { PRODUCT_NAME, PRODUCT_TAGLINE } from '@/constants/brand';
 import { useMetaStore } from '@/store/meta.store';
 import { selectCanManageProjects, selectIsAdmin, selectIsPlatformAdmin, useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
@@ -89,7 +90,7 @@ function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
   const { t } = useI18n();
   const fallbackCompanyName = useMetaStore((state) => state.meta?.company?.name);
   const project = useProjectStore((state) => state.activeProject);
-  const subtitle = project?.companyName || fallbackCompanyName || 'Customer Development CRM';
+  const subtitle = project?.companyName || fallbackCompanyName || PRODUCT_TAGLINE;
   const hasLogo = Boolean(project && projectLogoSrc(project));
 
   return (
@@ -99,7 +100,7 @@ function Brand({ collapsed }: { collapsed: boolean }): React.JSX.Element {
         {!collapsed && !hasLogo ? (
           <span className="min-w-0">
             <span className="block truncate text-[0.8125rem] font-semibold leading-tight tracking-[-0.01em]">
-              {project?.name || 'Genesis CRM'}
+              {project?.name || PRODUCT_NAME}
             </span>
             <span className="mt-0.5 block truncate text-[10px] leading-tight text-muted-foreground" title={subtitle}>
               {subtitle}

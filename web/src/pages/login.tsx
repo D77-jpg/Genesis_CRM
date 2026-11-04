@@ -40,6 +40,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useMetaStore } from '@/store/meta.store';
 import { usePageTitle } from '@/hooks/use-ui';
 import { ROUTES } from '@/constants';
+import { PRODUCT_NAME_UPPER, PRODUCT_TAGLINE_EN } from '@/constants/brand';
 import { readStorage, writeStorage } from '@/lib/utils';
 
 const REMEMBER_KEY = 'cdlm-remembered-username';
@@ -72,8 +73,8 @@ function BrandLockup(): React.JSX.Element {
     <div className="flex items-center gap-3 text-slate-950 dark:text-white">
       <LoginMark />
       <div className="min-w-0">
-        <p className="text-[15px] font-semibold leading-5 tracking-[0.015em]">GLOBAL CRM</p>
-        <p className="mt-0.5 truncate text-[11px] leading-4 text-slate-600 dark:text-slate-300">Export Business Management Hub</p>
+        <p className="text-[15px] font-semibold leading-5 tracking-[0.015em]">{PRODUCT_NAME_UPPER}</p>
+        <p className="mt-0.5 truncate text-[11px] leading-4 text-slate-600 dark:text-slate-300">{PRODUCT_TAGLINE_EN}</p>
       </div>
     </div>
   );
