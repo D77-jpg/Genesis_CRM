@@ -19,6 +19,7 @@ import { createLogger, safeLog } from './config/logger';
 import { ApiError } from './utils/ApiError';
 import apiRoutes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { requestIdMiddleware } from './middleware/request-id.middleware';
 
 const logger = createLogger('app');
 
@@ -65,7 +66,7 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Project-Id'],
-  exposedHeaders: ['X-Project-Id'],
+  exposedHeaders: ['X-Project-Id', 'X-Request-Id'],
   maxAge: 86400,
 };
 
@@ -87,6 +88,7 @@ export function createApp(): Application {
   // 反向代理（nginx 等）场景下正确识别协议与客户端 IP
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
+  app.use(requestIdMiddleware);
 
   /* ---------- 安全与基础中间件 ---------- */
   app.use(

@@ -42,6 +42,7 @@ import {
   checkCustomerDuplicates,
 } from '../services/customer.service';
 import { buildCustomersWorkbook, buildImportTemplate } from '../services/excel.service';
+import { recordAudit } from '../services/audit.service';
 import { previewOutreachSequence, queueOutreachSequence } from '../services/agent/outreach-sequence.service';
 import { applyDraftCleanup, previewDraftCleanup } from '../services/agent/draft-cleanup.service';
 import type { CustomerStatus } from '../constants';
@@ -90,6 +91,14 @@ export const updateCustomerHandler = asyncHandler(async (req: Request, res: Resp
 export const deleteCustomerHandler = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const data = await deleteCustomer(id, req.user);
+  await recordAudit({
+    actor: req.user,
+    action: 'customer.delete',
+    targetType: 'customer',
+    targetId: id,
+    request: req,
+    detail: { deleted: true },
+  });
   sendSuccess(res, data);
 });
 
@@ -113,6 +122,13 @@ export const bulkDeleteHandler = asyncHandler(async (req: Request, res: Response
   if (result.deleted === 0) {
     throw ApiError.notFound('所选客户均不存在或已被删除');
   }
+  await recordAudit({
+    actor: req.user,
+    action: 'customer.bulk_delete',
+    targetType: 'customer',
+    request: req,
+    detail: { deleted: result.deleted, requested: ids.length },
+  });
   sendSuccess(res, { ...result, requested: ids.length });
 });
 
@@ -180,6 +196,13 @@ export const checkDuplicatesHandler = asyncHandler(async (req: Request, res: Res
 export const importCustomersHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as ImportCustomersInput;
   const result = await importCustomers(input, req.user);
+  await recordAudit({
+    actor: req.user,
+    action: 'customer.import',
+    targetType: 'customer',
+    request: req,
+    detail: { dryRun: result.dryRun },
+  });
   // dryRun 返回 200 但通过 meta 标明是预检
   sendSuccess(res, result, 200, { dryRun: result.dryRun });
 });
@@ -193,6 +216,13 @@ export const exportCustomersHandler = asyncHandler(async (req: Request, res: Res
   }
 
   const buffer = buildCustomersWorkbook(rows);
+  await recordAudit({
+    actor: req.user,
+    action: 'customer.export',
+    targetType: 'customer',
+    request: req,
+    detail: { rows: rows.length, filterKeys: Object.keys(query) },
+  });
   const stamp = new Date().toISOString().slice(0, 10);
   setExcelHeaders(res, `customers-${stamp}.xlsx`, `客户列表-${stamp}.xlsx`);
   res.send(buffer);

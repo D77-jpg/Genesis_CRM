@@ -22,6 +22,10 @@ export interface IUser {
   projectIds: Types.ObjectId[];
   defaultProjectId?: Types.ObjectId;
   lastLoginAt?: Date;
+  /** Consecutive failed password attempts; selected explicitly by the auth service. */
+  failedLoginAttempts: number;
+  /** Temporary lockout expiry; selected explicitly by the auth service. */
+  lockedUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,12 +52,14 @@ const UserSchema = new Schema<IUser, {}, IUserMethods>(
     },
     passwordHash: { type: String, required: true, select: false },
     displayName: { type: String, trim: true, default: '', maxlength: 80 },
-    role: { type: String, enum: ['admin', 'user'], default: 'admin' },
+    role: { type: String, enum: ['admin', 'user'], default: 'user' },
     // 旧数据无此字段时按「启用」处理（查询逻辑用 status !== 'disabled' 判断），无需迁移
     status: { type: String, enum: ['active', 'disabled'], default: 'active' },
     projectIds: { type: [Schema.Types.ObjectId], ref: 'Project', default: [] },
     defaultProjectId: { type: Schema.Types.ObjectId, ref: 'Project' },
     lastLoginAt: { type: Date },
+    failedLoginAttempts: { type: Number, default: 0, min: 0, select: false },
+    lockedUntil: { type: Date, select: false },
   },
   {
     timestamps: true,

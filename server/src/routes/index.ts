@@ -45,6 +45,7 @@ import trackingRoutes from './tracking.routes';
 import projectRoutes from './project.routes';
 import scratchpadRoutes from './scratchpad.routes';
 import agentRoutes from './agent.routes';
+import auditRoutes from './audit.routes';
 import knowledgeIndexRoutes from './knowledge-index.routes';
 import knowledgeDocumentRoutes from './knowledge-documents.routes';
 import mailAccountRoutes from './mail-account.routes';
@@ -127,6 +128,7 @@ router.use('/prospecting', requireAuth, requireProject, prospectingRoutes);
 router.use('/outreach-automation', requireAuth, requireProject, outreachAutomationRoutes);
 router.use('/mail-accounts', requireAuth, requireProject, mailAccountRoutes);
 router.use('/users', userRoutes);
+router.use('/audit-logs', auditRoutes);
 router.get('/stats/overview', requireAuth, requireProject, overviewHandler);
 
 export default router;

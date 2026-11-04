@@ -248,7 +248,7 @@ CORS_LAN_PORTS=5173,4173
 | `JWT_SECRET` | 无 | 登录令牌签名密钥，至少 32 个字符 |
 | `JWT_EXPIRES_IN` | `7d` | 登录令牌有效期 |
 | `ADMIN_USERNAME` | `admin` | 首次启动创建的管理员账号 |
-| `ADMIN_PASSWORD` | 无 | 管理员初始密码 |
+| `ADMIN_PASSWORD` | 无 | 管理员初始密码（至少 10 位；生产环境至少 16 位） |
 | `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个值用英文逗号分隔 |
 | `CORS_ALLOW_PRIVATE_NETWORK` | `false` | 是否允许私有网段前端访问 |
 | `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp` |
@@ -353,6 +353,7 @@ X-Project-Id: <projectId>
 | `/api/agent` | AI Agent、翻译和诊断 |
 | `/api/scratchpad` | 个人随手记 |
 | `/api/users` | 用户管理，管理员专属 |
+| `/api/audit-logs` | 登录与关键操作审计，管理员专属 |
 | `/api/tracking` | 邮件打开和点击追踪，公开 token |
 | `/api/integrations/v1` | 外部系统集成，独立服务凭证 |
 
@@ -401,6 +402,9 @@ docker compose --env-file .env.production up -d --wait
 ## 10. 安全与数据边界
 
 - 所有业务数据按项目隔离，业务员只能访问分配给自己的项目和客户。
+- 新建用户默认是业务员（`user`），管理员角色必须由管理员显式授予。
+- 新建/重置密码要求 10–72 位，并至少包含大小写字母、数字、符号中的三类；连续 5 次登录失败会锁定账号 15 分钟。
+- 登录成功/失败、用户管理和客户删除/导入/导出会写入审计日志；审计接口仅管理员可访问。
 - 管理员专属功能同时在前端路由和后端接口校验。
 - 邮箱授权码使用服务端密钥加密，API 不返回明文密钥。
 - JWT、管理员密码和邮箱加密密钥不得写入代码、镜像或浏览器变量。
