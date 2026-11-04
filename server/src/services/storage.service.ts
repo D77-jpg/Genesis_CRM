@@ -70,7 +70,10 @@ function s3Request(method: 'GET' | 'PUT' | 'DELETE', key: string, body?: Buffer,
   const signingKey = hmac(hmac(hmac(hmac(`AWS4${config.secretKey}`, dateStamp), config.region), 's3'), 'aws4_request');
   const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
   headers.authorization = `AWS4-HMAC-SHA256 Credential=${config.accessKey}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-  return fetch(url, { method, headers, ...(body ? { body } : {}) });
+  // Node's Buffer is a Uint8Array backed by ArrayBufferLike; the DOM
+  // RequestInit body type requires a concrete ArrayBuffer across TS versions.
+  const requestBody = body ? new Uint8Array(body).buffer : undefined;
+  return fetch(url, { method, headers, ...(requestBody ? { body: requestBody } : {}) });
 }
 
 function ensureLocalDir(): string {

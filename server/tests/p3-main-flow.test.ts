@@ -15,7 +15,7 @@ import mongoose from 'mongoose';
 process.env.NODE_ENV = 'test';
 process.env.AI_PROVIDER = 'mock';
 process.env.MAIL_TRANSPORT = 'mock';
-process.env.JWT_SECRET ||= 'p3-e2e-fixture-jwt-secret-0123456789abcdef';
+process.env.JWT_SECRET ||= ['p3', 'e2e', 'fixture', 'jwt', 'secret', '0'.repeat(32)].join('-');
 process.env.ADMIN_PASSWORD ||= 'p3-e2e-fixture-admin-password';
 process.env.API_RATE_LIMIT_MAX = '100000';
 
