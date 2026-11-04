@@ -341,6 +341,264 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /globalsite/capabilities:
+    get:
+      x-status: draft
+      x-implementation-phase: C1
+      x-required-scope: globalsite:read
+      tags:
+        - globalsite-draft
+      operationId: getGlobalSiteCapabilities
+      summary: '[草案，尚未实现] 查询已实现且凭证获授权的 GlobalSite 能力'
+      description: S1 设计草案。实现前不得作为在线能力；批准实现后再更新冻结快照。组织由凭证及绑定项目解析，不接受请求体组织 ID。
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: 成功；结构以草案为准。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteCapabilitiesResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+        '429':
+          $ref: '#/components/responses/GlobalSiteRateLimited'
+        '500':
+          $ref: '#/components/responses/GlobalSiteInternalError'
+        '503':
+          $ref: '#/components/responses/GlobalSiteUnavailable'
+  /globalsite/products:
+    get:
+      x-status: draft
+      x-implementation-phase: C2
+      x-required-scope: products:read
+      tags:
+        - globalsite-draft
+      operationId: listGlobalSiteProducts
+      summary: '[草案，尚未实现] 增量读取产品'
+      description: >-
+        S1 设计草案。实现前不得作为在线能力；批准实现后再更新冻结快照。组织由凭证及绑定项目解析，不接受请求体组织 ID。 只返回显式公开投影与撤销 tombstone；不返回内部 notes/价格/私密内容。nextCursor
+        在末页和空页仍为增量水位；hasMore=false 后等待下一轮。游标规则见 globalsite-对接设计.md，不能套用到旧 outcomes。
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteCursor'
+        - $ref: '#/components/parameters/GlobalSiteLimit'
+      responses:
+        '200':
+          description: 成功；结构以草案为准。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteProductFeedResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+        '429':
+          $ref: '#/components/responses/GlobalSiteRateLimited'
+        '500':
+          $ref: '#/components/responses/GlobalSiteInternalError'
+        '503':
+          $ref: '#/components/responses/GlobalSiteUnavailable'
+  /globalsite/products/{productId}:
+    get:
+      x-status: draft
+      x-implementation-phase: C2
+      x-required-scope: products:read
+      tags:
+        - globalsite-draft
+      operationId: getGlobalSiteProduct
+      summary: '[草案，尚未实现] 查询产品详情或撤销标记'
+      description: S1 设计草案。实现前不得作为在线能力；批准实现后再更新冻结快照。组织由凭证及绑定项目解析，不接受请求体组织 ID。
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+      responses:
+        '200':
+          description: 成功；结构以草案为准。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteProductResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          description: 项目未绑定、资源未授权或不属于本项目，统一404。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/GlobalSiteRateLimited'
+        '500':
+          $ref: '#/components/responses/GlobalSiteInternalError'
+        '503':
+          $ref: '#/components/responses/GlobalSiteUnavailable'
+  /globalsite/materials:
+    get:
+      x-status: draft
+      x-implementation-phase: C3
+      x-required-scope: materials:read
+      tags:
+        - globalsite-draft
+      operationId: listGlobalSiteMaterials
+      summary: '[草案，尚未实现] 增量读取公开资料'
+      description: >-
+        S1 设计草案。实现前不得作为在线能力；批准实现后再更新冻结快照。组织由凭证及绑定项目解析，不接受请求体组织 ID。 只返回显式公开投影与撤销 tombstone；不返回内部 notes/价格/私密内容。nextCursor
+        在末页和空页仍为增量水位；hasMore=false 后等待下一轮。游标规则见 globalsite-对接设计.md，不能套用到旧 outcomes。
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteCursor'
+        - $ref: '#/components/parameters/GlobalSiteLimit'
+      responses:
+        '200':
+          description: 成功；结构以草案为准。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteMaterialFeedResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+        '429':
+          $ref: '#/components/responses/GlobalSiteRateLimited'
+        '500':
+          $ref: '#/components/responses/GlobalSiteInternalError'
+        '503':
+          $ref: '#/components/responses/GlobalSiteUnavailable'
+  /globalsite/materials/{materialId}:
+    get:
+      x-status: draft
+      x-implementation-phase: C3
+      x-required-scope: materials:read
+      tags:
+        - globalsite-draft
+      operationId: getGlobalSiteMaterial
+      summary: '[草案，尚未实现] 查询公开资料详情或撤销标记'
+      description: S1 设计草案。实现前不得作为在线能力；批准实现后再更新冻结快照。组织由凭证及绑定项目解析，不接受请求体组织 ID。
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: materialId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+      responses:
+        '200':
+          description: 成功；结构以草案为准。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteMaterialResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          description: 项目未绑定、资源未授权或不属于本项目，统一404。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/GlobalSiteRateLimited'
+        '500':
+          $ref: '#/components/responses/GlobalSiteInternalError'
+        '503':
+          $ref: '#/components/responses/GlobalSiteUnavailable'
+  /globalsite/inquiries:
+    post:
+      x-status: draft
+      x-implementation-phase: C4
+      x-required-scope: inquiries:write
+      tags:
+        - globalsite-draft
+      operationId: storeGlobalSiteInquiry
+      summary: '[草案，尚未实现] 按询盘外部 ID 幂等存档完整需求'
+      description: >-
+        S1 设计草案。实现前不得作为在线能力；批准实现后再更新冻结快照。组织由凭证及绑定项目解析，不接受请求体组织 ID。 前置：现有 customers/upsert 已成功取得本项目
+        customerId。只归档、不修改销售维护字段；同业务 ID 与同载荷返回原 data，不同载荷409。请求体上限32KiB；不接附件或原始IP/Cookie。
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteIdempotencyKey'
+      responses:
+        '200':
+          description: 同业务记录重放，data 与首次一致；请求重放可保留首次201状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteInquiryResponse'
+        '201':
+          description: 首次持久化成功，stored不表示销售已读。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteInquiryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/GlobalSiteRateLimited'
+        '500':
+          $ref: '#/components/responses/GlobalSiteInternalError'
+        '503':
+          $ref: '#/components/responses/GlobalSiteUnavailable'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalSiteInquiryRequest'
+
 components:
   securitySchemes:
     serviceToken:
@@ -360,6 +618,34 @@ components:
         type: string
         pattern: '^[a-f\d]{24}$'
       description: 目标项目 ID。必须显式携带且在凭证绑定的项目集合内；无默认项目回退。
+
+    GlobalSiteCursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 2048
+      description: 草案：签名 opaque 游标，7 天有效，绑定组织/项目/资源/权限；过期返回 VALIDATION_ERROR details.reason=CURSOR_EXPIRED。
+    GlobalSiteLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    GlobalSiteIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+      description: 草案：重试保持原 key 与原始载荷，跨操作/项目隔离；同业务键异载荷也返回409。
 
   schemas:
     Error:
@@ -629,6 +915,511 @@ components:
                 $ref: '#/components/schemas/QuotationSummary'
       required: [success, data]
 
+    GlobalSiteAsset:
+      type: object
+      required:
+        - id
+        - url
+        - expiresAt
+        - sha256
+        - mime
+        - bytes
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        url:
+          type: string
+          format: uri
+          description: 短期签名 HTTPS 下载地址，仅公开授权资源；不得返回本地路径。
+        expiresAt:
+          type: string
+          format: date-time
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        mime:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+            - application/pdf
+        bytes:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+    GlobalSiteProduct:
+      type: object
+      required:
+        - id
+        - revision
+        - updatedAt
+        - deleted
+        - sku
+        - name
+        - status
+        - specs
+        - assets
+      properties:
+        id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        revision:
+          type: integer
+          minimum: 1
+        updatedAt:
+          type: string
+          format: date-time
+        deleted:
+          type: boolean
+          enum:
+            - false
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 80
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        category:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 4000
+        status:
+          type: string
+          enum:
+            - active
+            - archived
+        specs:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required:
+              - code
+              - name
+              - value
+            properties:
+              code:
+                type: string
+                minLength: 1
+                maxLength: 60
+              name:
+                type: string
+                minLength: 1
+                maxLength: 120
+              value:
+                type: string
+                minLength: 1
+                maxLength: 500
+              unit:
+                type: string
+                minLength: 1
+                maxLength: 40
+        moq:
+          type: string
+          minLength: 1
+          maxLength: 120
+        leadTime:
+          type: string
+          minLength: 1
+          maxLength: 120
+        assets:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/GlobalSiteAsset'
+    GlobalSiteTombstone:
+      type: object
+      required:
+        - id
+        - revision
+        - updatedAt
+        - deleted
+      properties:
+        id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        revision:
+          type: integer
+          minimum: 1
+        updatedAt:
+          type: string
+          format: date-time
+        deleted:
+          type: boolean
+          enum:
+            - true
+    GlobalSiteMaterial:
+      type: object
+      required:
+        - id
+        - revision
+        - updatedAt
+        - deleted
+        - kind
+        - title
+        - content
+        - sourceLabel
+        - productIds
+        - assets
+      properties:
+        id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        revision:
+          type: integer
+          minimum: 1
+        updatedAt:
+          type: string
+          format: date-time
+        deleted:
+          type: boolean
+          enum:
+            - false
+        kind:
+          type: string
+          enum:
+            - company
+            - certification
+            - factory
+            - quality
+            - faq
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        content:
+          type: string
+          maxLength: 24000
+        sourceLabel:
+          type: string
+          minLength: 1
+          maxLength: 500
+        productIds:
+          type: array
+          maxItems: 200
+          items:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        assets:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/GlobalSiteAsset'
+    GlobalSiteProductResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/GlobalSiteProduct'
+            - $ref: '#/components/schemas/GlobalSiteTombstone'
+    GlobalSiteProductFeedResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              maxItems: 200
+              items:
+                oneOf:
+                  - $ref: '#/components/schemas/GlobalSiteProduct'
+                  - $ref: '#/components/schemas/GlobalSiteTombstone'
+            nextCursor:
+              type: string
+              minLength: 1
+              maxLength: 2048
+              description: 最后一页和空页也保留增量水位；原样回传，不可解析。
+            hasMore:
+              type: boolean
+    GlobalSiteMaterialResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/GlobalSiteMaterial'
+            - $ref: '#/components/schemas/GlobalSiteTombstone'
+    GlobalSiteMaterialFeedResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              maxItems: 200
+              items:
+                oneOf:
+                  - $ref: '#/components/schemas/GlobalSiteMaterial'
+                  - $ref: '#/components/schemas/GlobalSiteTombstone'
+            nextCursor:
+              type: string
+              minLength: 1
+              maxLength: 2048
+              description: 最后一页和空页也保留增量水位；原样回传，不可解析。
+            hasMore:
+              type: boolean
+    GlobalSiteCapabilitiesResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          required:
+            - contractVersion
+            - projectId
+            - capabilities
+            - limits
+          properties:
+            contractVersion:
+              type: string
+              enum:
+                - '1.0'
+            projectId:
+              type: string
+              pattern: ^[a-fA-F0-9]{24}$
+            capabilities:
+              type: array
+              maxItems: 3
+              items:
+                type: string
+                enum:
+                  - globalsite.products.v1
+                  - globalsite.materials.v1
+                  - globalsite.inquiries.v1
+            limits:
+              type: object
+              required:
+                - pageSizeMax
+                - inquiryMessageMaxLength
+              properties:
+                pageSizeMax:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                inquiryMessageMaxLength:
+                  type: integer
+                  minimum: 1
+                  maximum: 5000
+    GlobalSiteInquiryRequest:
+      type: object
+      required:
+        - schemaVersion
+        - sourceSystem
+        - externalId
+        - siteId
+        - customerId
+        - submittedAt
+        - contact
+        - message
+        - productRefs
+        - pageUrl
+        - consent
+      properties:
+        schemaVersion:
+          type: string
+          enum:
+            - '1.0'
+        sourceSystem:
+          type: string
+          enum:
+            - globalsite
+        externalId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        siteId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        customerId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+        submittedAt:
+          type: string
+          format: date-time
+        contact:
+          type: object
+          required:
+            - name
+            - email
+          properties:
+            name:
+              type: string
+              minLength: 1
+              maxLength: 120
+            email:
+              type: string
+              format: email
+              maxLength: 200
+            company:
+              type: string
+              minLength: 1
+              maxLength: 200
+            phone:
+              type: string
+              minLength: 1
+              maxLength: 60
+            country:
+              type: string
+              minLength: 1
+              maxLength: 120
+        message:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        productRefs:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              name:
+                type: string
+                minLength: 1
+                maxLength: 200
+        pageUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+          pattern: ^https?://
+          description: 公开页面地址，清理个人信息查询参数；不含用户名密码。
+        quantity:
+          type: string
+          minLength: 1
+          maxLength: 120
+        utm:
+          type: object
+          required: []
+          properties:
+            source:
+              type: string
+              minLength: 1
+              maxLength: 120
+            medium:
+              type: string
+              minLength: 1
+              maxLength: 120
+            campaign:
+              type: string
+              minLength: 1
+              maxLength: 200
+        consent:
+          type: object
+          required:
+            - version
+            - accepted
+            - at
+          properties:
+            version:
+              type: string
+              minLength: 1
+              maxLength: 80
+            accepted:
+              type: boolean
+              enum:
+                - true
+            at:
+              type: string
+              format: date-time
+      additionalProperties: false
+    GlobalSiteInquiryResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          required:
+            - inquiryId
+            - customerId
+            - externalId
+            - receivedAt
+            - deliveryStatus
+          properties:
+            inquiryId:
+              type: string
+              pattern: ^[a-fA-F0-9]{24}$
+            customerId:
+              type: string
+              pattern: ^[a-fA-F0-9]{24}$
+            externalId:
+              type: string
+              minLength: 1
+              maxLength: 128
+            receivedAt:
+              type: string
+              format: date-time
+            deliveryStatus:
+              type: string
+              enum:
+                - stored
+
   responses:
     Unauthorized:
       description: token 缺失 / 无效 / 已撤销 / 已过期
@@ -689,3 +1480,51 @@ components:
           example:
             success: false
             error: { code: "NOT_FOUND", message: "客户不存在" }
+
+    GlobalSiteRateLimited:
+      description: 草案：429 RATE_LIMITED，按 Retry-After 有界重试。
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+        Retry-After:
+          schema:
+            type: string
+          description: 延迟秒数或 HTTP 日期。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GlobalSiteUnavailable:
+      description: 草案：503 SERVICE_UNAVAILABLE，临时不可用。
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+        Retry-After:
+          schema:
+            type: string
+          description: 延迟秒数或 HTTP 日期。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GlobalSiteInternalError:
+      description: 草案：500 INTERNAL_ERROR，保留请求 ID 并原键重试。
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+x-globalsite-draft:
+  status: draft
+  phases: [C1, C2, C3, C4]
+  implemented: false
+  description: >-
+    GlobalSite S1 草案；仅新增定义，不改已有端点。C1–C4 为建议拆分，具体范围以双方批准任务为准。
+    本次追加必然改变全文件 SHA，冻结快照与 CI 哈希在实现阶段再更新；当前固定哈希门禁预期失败。
+    新端点真实权限由 x-required-scope 描述；HTTP bearer security 数组留空。

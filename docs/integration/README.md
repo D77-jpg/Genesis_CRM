@@ -9,6 +9,10 @@ GlobalCRM 对外集成接口，供 AutoForceAI 等获客系统以**服务凭证*
 客户状态 / 报价只读查询，以及人工确认后的报价草稿写入。
 
 **权威契约：[`integration-v1.openapi.yaml`](./integration-v1.openapi.yaml)**。
+GlobalSite S1 对接设计见 [`globalsite-对接设计.md`](./globalsite-对接设计.md)。
+基础 OpenAPI 追加的 C1–C4 是未实现草案，不能作为当前在线能力。
+本次只追加文档，不更新冻结 SHA 快照；现有全文件哈希门禁将检测到草案变更，
+需在实现阶段双方批准并通过契约测试后重锁，不能据此宣称发布门禁全绿。
 v1 内只允许向后兼容地新增可选字段；删除/改名/改变语义必须发布 v2。
 报价扩展契约：[`quotation-draft-v1.1.openapi.yaml`](./quotation-draft-v1.1.openapi.yaml)，
 能力标识 `quotation-draft.v1`；基础契约版本仍为 `1.0`。
