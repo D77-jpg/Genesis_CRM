@@ -145,6 +145,32 @@ test('refresh sessions stay valid inside a tenant-scoped request', async () => {
   assert.equal(active, true, 'AuthSession must not be tenant-filtered');
 });
 
+test('background upserts derive the tenant key from their project', async () => {
+  const org = await models.Organization.create({
+    name: 'Background Org', slug: 'background-org', plan: 'starter',
+    limits: { users: 5, projects: 2, monthlyEmails: 5_000, monthlyAiTokens: 1_000_000, storageBytes: 5 * 1024 ** 3 },
+    subscriptionStatus: 'active',
+  });
+  const project = await tenant.runWithTenant({ organizationId: String(org._id) }, () => models.Project.create({
+    name: 'Background Project', slug: 'background-project', code: 'BACKGROUND', companyName: 'Background Co', mailProfileKey: 'background',
+  }));
+  const letter = await models.DevelopmentLetter.findOneAndUpdate(
+    { projectId: project._id, requestKey: 'background-upsert-fixture' },
+    {
+      $setOnInsert: {
+        projectId: project._id,
+        customerId: new mongoose.Types.ObjectId(),
+        recipientEmail: 'background@example.test',
+        subject: 'Background subject',
+        content: 'Background body',
+        status: 'sent',
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  assert.equal(String(letter?.organizationId), String(org._id));
+});
+
 test('platform provisioning creates an isolated organization admin', async () => {
   const created = await orgService.createOrganization({
     name: 'Acme Tenant',

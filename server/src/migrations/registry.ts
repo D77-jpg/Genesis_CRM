@@ -5,6 +5,7 @@ import { legacyCustomerStatusMigration } from './004-customer-status';
 import { mailCustomerLastContactMigration } from './005-mail-last-contact';
 import { legacyQuotationVersionMigration } from './006-quotation-version';
 import { indexSynchronizationMigration } from './007-sync-indexes';
+import { backfillLetterOrganizationMigration } from './008-backfill-letter-organization';
 import type { Migration } from './types';
 
 /** Ordered registry. Append only; ids sort lexicographically by date. */
@@ -16,4 +17,5 @@ export const migrations: Migration[] = [
   mailCustomerLastContactMigration,
   legacyQuotationVersionMigration,
   indexSynchronizationMigration,
+  backfillLetterOrganizationMigration,
 ];

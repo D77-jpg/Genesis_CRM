@@ -35,22 +35,47 @@ function applyQueryFilter(query: TenantQuery): void {
  * project-scoped documents still need a tenant key, so derive it from the
  * project for saves performed outside an HTTP/worker organization context.
  */
-async function deriveProjectOrganization(doc: { organizationId?: Types.ObjectId; projectId?: unknown }): Promise<void> {
-  if (doc.organizationId || !doc.projectId || !Types.ObjectId.isValid(String(doc.projectId))) return;
+async function projectOrganizationId(projectId: unknown): Promise<Types.ObjectId | undefined> {
+  if (!projectId || !Types.ObjectId.isValid(String(projectId))) return undefined;
   const ProjectModel = mongoose.models.Project;
-  if (!ProjectModel) return;
-  const project = await ProjectModel.findById(doc.projectId).select('organizationId').lean() as { organizationId?: Types.ObjectId } | null;
-  if (project?.organizationId) doc.organizationId = project.organizationId;
+  if (!ProjectModel) return undefined;
+  const project = await ProjectModel.findById(projectId).select('organizationId').lean() as { organizationId?: Types.ObjectId } | null;
+  return project?.organizationId;
 }
 
-function applyUpsertOrganization(query: TenantQuery): void {
-  const organizationId = scopedOrganizationId();
-  if (!organizationId || query.getOptions().upsert !== true) return;
+async function deriveProjectOrganization(doc: { organizationId?: Types.ObjectId; projectId?: unknown }): Promise<void> {
+  if (doc.organizationId) return;
+  const organizationId = await projectOrganizationId(doc.projectId);
+  if (organizationId) doc.organizationId = organizationId;
+}
+
+/**
+ * Upserts do not run the document save hook, so a background worker's
+ * findOneAndUpdate(..., { upsert: true }) would otherwise create a
+ * project-scoped row without its tenant key. Prefer the request tenant when
+ * available and otherwise derive it from the project's organization.
+ */
+function applyUpsertOrganization(query: TenantQuery): Promise<void> | void {
+  if (query.getOptions().upsert !== true) return;
   const update = query.getUpdate();
   if (!update || Array.isArray(update)) return;
   const setOnInsert = (update.$setOnInsert ?? {}) as Record<string, unknown>;
-  if (!setOnInsert.organizationId) setOnInsert.organizationId = organizationId;
-  update.$setOnInsert = setOnInsert;
+  if (setOnInsert.organizationId) return;
+  const organizationId = scopedOrganizationId();
+  if (organizationId) {
+    setOnInsert.organizationId = organizationId;
+    update.$setOnInsert = setOnInsert;
+    return;
+  }
+  const filter = query.getFilter() ?? {};
+  const projectId = setOnInsert.projectId
+    ?? (update.$set as Record<string, unknown> | undefined)?.projectId
+    ?? filter.projectId;
+  return projectOrganizationId(projectId).then((derived) => {
+    if (!derived) return;
+    setOnInsert.organizationId = derived;
+    update.$setOnInsert = setOnInsert;
+  });
 }
 
 const QUERY_METHODS = [
@@ -80,8 +105,9 @@ export function tenantPlugin(schema: Schema): void {
     schema.pre(method, function tenantFilter(this: TenantQuery, next: MiddlewareNext) {
       try {
         applyQueryFilter(this);
-        applyUpsertOrganization(this);
-        next();
+        const pending = applyUpsertOrganization(this);
+        if (pending) void pending.then(() => next(), next);
+        else next();
       } catch (error) {
         next(error as Error);
       }

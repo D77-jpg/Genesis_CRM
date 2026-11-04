@@ -3,6 +3,7 @@ import { before, after, beforeEach, test } from 'node:test';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { assertMigrationsApplied, formatMigrationState, migrationState, runMigrations } from '../src/migrations/runner';
+import { backfillLetterOrganizationMigration } from '../src/migrations/008-backfill-letter-organization';
 import type { Migration } from '../src/migrations/types';
 
 process.env.NODE_ENV = 'test';
@@ -42,7 +43,7 @@ after(async () => {
 beforeEach(async () => {
   const db = mongoose.connection.db;
   assert.ok(db);
-  await Promise.all(['schema_migrations', 'migration_locks', 'p3_markers'].map((name) => db.collection(name).drop().catch(() => undefined)));
+  await Promise.all(['schema_migrations', 'migration_locks', 'p3_markers', 'projects', 'developmentletters'].map((name) => db.collection(name).drop().catch(() => undefined)));
 });
 
 test('migration runner applies pending migrations once and records status', async () => {
@@ -97,6 +98,19 @@ test('startup guard rejects records from a newer build', async () => {
   const state = await migrationState({ registry });
   assert.deepEqual(state.unknown, ['20990101-999-from-newer-build']);
   await assert.rejects(() => assertMigrationsApplied(), /unknown to this build|unknown/i);
+});
+
+test('letter organization backfill derives tenant from the project', async () => {
+  const db = mongoose.connection.db;
+  assert.ok(db);
+  const projectId = new mongoose.Types.ObjectId();
+  const organizationId = new mongoose.Types.ObjectId();
+  const letterId = new mongoose.Types.ObjectId();
+  await db.collection('projects').insertOne({ _id: projectId, organizationId });
+  await db.collection('developmentletters').insertOne({ _id: letterId, projectId });
+  await backfillLetterOrganizationMigration.up(mongoose.connection);
+  const letter = await db.collection('developmentletters').findOne({ _id: letterId });
+  assert.equal(String(letter?.organizationId), String(organizationId));
 });
 
 test('migration lock blocks a concurrent runner', async () => {
