@@ -697,6 +697,36 @@ function translateDynamic(value: string): string | null {
     [/^AI 匹配\s*(\d+)$/, (n) => `AI match ${n}`],
     [/^· 第\s*(\d+)\s*版$/, (n) => `· v${n}`],
     [/^生效时间\s*(.+)$/, (value) => `Effective ${value}`],
+    [/^(.+)（自定义）$/, (name) => `${translateText(name, false)} (custom)`],
+    [/^(.+)的开发信草稿$/, (name) => `${translateText(name, false)} outreach drafts`],
+    [/^(.+) 已与其他项目严格隔离$/, (name) => `${translateText(name, false)} is strictly isolated from other projects`],
+    [/^删除项目 (.+)$/, (name) => `Delete project ${translateText(name, false)}`],
+    [/^(.+) 封面$/, (name) => `${translateText(name, false)} cover`],
+    [/^(.+) 及其数据已永久移除$/, (name) => `${translateText(name, false)} and its data were permanently removed`],
+    [/^连接测试通过（(\d+) ms）$/, (ms) => `Connection test passed (${ms} ms)`],
+    [/^响应耗时 (\d+) ms$/, (ms) => `Response time ${ms} ms`],
+    [/^启用 (.+)$/, (name) => `Enable ${translateText(name, false)}`],
+    [/^测试 (.+)$/, (name) => `Test ${translateText(name, false)}`],
+    [/^编辑 (.+)$/, (name) => `Edit ${translateText(name, false)}`],
+    [/^删除 (.+)$/, (name) => `Delete ${translateText(name, false)}`],
+    [/^已切换到 (.+)$/, (name) => `Switched to ${translateText(name, false)}`],
+    [/^共\s*(\d+)\s*条，每次发送都会自动留档$/, (n) => `${n} records; every send is logged automatically`],
+    [/^最近联系\s*(.+)$/, (time) => `Last contact ${translateText(time, false)}`],
+    [/^明细 #(\d+)$/, (n) => `Line #${n}`],
+    [/^(\d+)\s*字$/, (n) => `${n} characters`],
+    [/^原始文件(\d+)$/, (n) => `Original files (${n})`],
+    [/^(\d+)\s*个占位符没有对应资料$/, (n) => `${n} placeholders have no matching data`],
+    [/^第\s*(\d+)\s*封$/, (n) => `Message ${n}`],
+    [/^将在 (.+) 发送（本地时间）$/, (time) => `Sends at ${translateText(time, false)} (local time)`],
+    [/^· 发送于 (.+)$/, (time) => `· Sent at ${time}`],
+    [/^发送于 (.+)$/, (time) => `Sent at ${time}`],
+    [/^草稿待审核 (\d+) 封 · 任务需处理 (\d+) 项$/, (drafts, tasks) => `${drafts} drafts pending review · ${tasks} tasks need attention`],
+    [/^第 (\d+) 封 · (.+) · (.+)$/, (n, name, time) => `Message ${n} · ${name} · ${time}`],
+    [/^还有 (\d+) 封，去待办查看$/, (n) => `${n} more messages; open to-do`],
+    [/^业务来源：(.+)$/, (value) => `Business source: ${value}`],
+    [/^备注：(.+)$/, (value) => `Notes: ${value}`],
+    [/^第\s*(\d+)\s*封\s*·$/, (n) => `Message ${n} ·`],
+    [/^首封开发信已发送（SMTP 已接受，等待客户回复）。主题：(.+)；收件人：(.+)$/, (subject, recipient) => `First outreach sent (SMTP accepted; awaiting reply). Subject: ${subject}; Recipient: ${recipient}`],
   ];
   for (const [pattern, render] of patterns) {
     const match = value.match(pattern);
@@ -719,7 +749,7 @@ export function translateText(text: string, allowPhrases = true): string {
     if (zh.length < 2) continue;
     translated = translated.split(zh).join(en);
   }
-  if (translated === trimmed) return text;
+  if (translated === trimmed || /[\u4e00-\u9fff]/.test(translated)) return text;
   return text.replace(trimmed, translated.replace(/\s{2,}/g, ' '));
 }
 

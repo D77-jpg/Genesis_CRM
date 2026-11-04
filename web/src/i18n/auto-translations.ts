@@ -6,7 +6,9 @@
  * content (customer names, email bodies, product descriptions). When a screen
  * is migrated to `useI18n`, its strings can be removed from this map.
  */
-export const AUTO_TRANSLATIONS: Record<string, string> = {
+import { LEGACY_UI_TRANSLATIONS } from './legacy-ui-translations';
+
+const BASE_AUTO_TRANSLATIONS: Record<string, string> = {
   // Shell / common
   '正在加载…': 'Loading…',
   '加载中…': 'Loading…',
@@ -970,6 +972,11 @@ export const AUTO_TRANSLATIONS: Record<string, string> = {
   '个邮箱，入选': ' emails; selected ',
   '主题：': 'Subject:',
   '高': 'High',
+};
+
+export const AUTO_TRANSLATIONS: Record<string, string> = {
+  ...BASE_AUTO_TRANSLATIONS,
+  ...LEGACY_UI_TRANSLATIONS,
 };
 
 /** Short phrases used for dynamic/interpolated copy. Longest matches win. */
