@@ -64,7 +64,7 @@ services:
 
   migrate:
     build: {context: ./server, dockerfile: Dockerfile}
-    image: genesis-crm-server:local
+    image: globalcrm-server:local
     command: ["node", "dist/scripts/migrate.js"]
     environment: *server-env
     networks: [internal]
@@ -75,7 +75,7 @@ services:
 
   server:
     build: {context: ./server, dockerfile: Dockerfile}
-    image: genesis-crm-server:local
+    image: globalcrm-server:local
     environment:
       <<: *server-env
       RUN_BACKGROUND_JOBS: "false"
@@ -94,7 +94,7 @@ services:
 
   worker:
     build: {context: ./server, dockerfile: Dockerfile}
-    image: genesis-crm-server:local
+    image: globalcrm-server:local
     command: ["node", "dist/worker.js"]
     environment:
       <<: *server-env
@@ -125,10 +125,10 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        VITE_APP_TITLE: ${VITE_APP_TITLE:-Genesis CRM}
-    image: genesis-crm-web:local
+        VITE_APP_TITLE: ${VITE_APP_TITLE:-GlobalCRM}
+    image: globalcrm-web:local
     ports:
-      - "127.0.0.1:${GENESIS_HTTP_PORT:-8080}:8080"
+      - "127.0.0.1:${GLOBALCRM_HTTP_PORT:-${GENESIS_HTTP_PORT:-8080}}:8080"
     networks: [internal]
     depends_on:
       server: {condition: service_healthy}

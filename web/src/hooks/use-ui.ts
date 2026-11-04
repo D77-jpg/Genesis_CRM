@@ -2,6 +2,7 @@
  * 响应式断点 / 页面标题 / 快捷键等轻量 Hook
  */
 import { useEffect, useState } from 'react';
+import { PRODUCT_DISPLAY_NAME } from '@/constants/brand';
 
 /** 订阅 CSS 媒体查询，返回是否匹配（响应式布局切换用） */
 export function useMediaQuery(query: string): boolean {
@@ -28,7 +29,7 @@ export function useIsMobile(): boolean {
 /** 设置浏览器标签页标题 */
 export function usePageTitle(title: string): void {
   useEffect(() => {
-    const suffix = '客户开发信管理工具';
+    const suffix = PRODUCT_DISPLAY_NAME;
     document.title = title ? `${title} · ${suffix}` : suffix;
   }, [title]);
 }

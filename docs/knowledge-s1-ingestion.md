@@ -66,8 +66,8 @@ python -m venv .cache/knowledge-parser
 在仅本地的 `server/.env` 填写两个非密钥配置，不提交到 Git：
 
 ```dotenv
-KNOWLEDGE_PYTHON=D:/Trade/genesis/CRM/Genesis_CRM/server/.cache/knowledge-parser/Scripts/python.exe
-KNOWLEDGE_TOKENIZER_DIR=D:/Trade/genesis/CRM/Genesis_CRM/server/.cache/knowledge-parser/assets
+KNOWLEDGE_PYTHON=D:/Trade/genesis/CRM/GlobalCRM/server/.cache/knowledge-parser/Scripts/python.exe
+KNOWLEDGE_TOKENIZER_DIR=D:/Trade/genesis/CRM/GlobalCRM/server/.cache/knowledge-parser/assets
 ```
 
 安装脚本仅下载固定提交的**公开词表**，校验摘要；不会发送业务文件。RapidOCR 权重来自锁定安装包并在每次解析前核验。正常解析不下载、不调用外部 OCR、Embedding 或 LLM，禁用 Python socket 连接、子进程和 ONNX 遥测。解析脚本不得随意替换；如升级，建立新修订。

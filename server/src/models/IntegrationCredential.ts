@@ -2,7 +2,7 @@ import './tenant-setup';
 /**
  * IntegrationCredential 模型（Integration API v1）
  * ------------------------------------------------------------------
- * 供 AutoForceAI 等外部系统以「服务凭证」接入 Genesis。
+ * 供 AutoForceAI 等外部系统以「服务凭证」接入 GlobalCRM。
  *
  * 安全约定：
  *   - 原始 token 形如 `gci_<48 hex>`，仅在创建/轮换时返回一次；

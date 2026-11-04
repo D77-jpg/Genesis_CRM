@@ -1,9 +1,9 @@
 {
-  "name": "cdlm-web",
+  "name": "globalcrm-web",
   "version": "2.6.0",
   "private": true,
   "type": "module",
-  "description": "Customer Dev Letter Manager - Web (Vite + React 18 + TypeScript + Tailwind + shadcn/ui)",
+  "description": "GlobalCRM - Web (Vite + React 18 + TypeScript + Tailwind + shadcn/ui)",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

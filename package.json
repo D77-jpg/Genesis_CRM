@@ -1,8 +1,8 @@
 {
-  "name": "customer-dev-letter-manager",
+  "name": "globalcrm",
   "version": "2.6.0",
   "private": true,
-  "description": "客户开发信管理工具 —— 客户信息维护 + Excel 导入 + 富文本开发信发送与记录",
+  "description": "GlobalCRM —— 外贸客户开发、邮件触达与成交管理平台",
   "scripts": {
     "install:all": "npm install --prefix server && npm install --prefix web",
     "dev": "concurrently -n \"SERVER,WEB\" -c \"cyan,magenta\" \"npm:dev:server\" \"npm:dev:web\"",

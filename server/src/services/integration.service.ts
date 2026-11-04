@@ -446,7 +446,7 @@ async function markCustomerQuoting(
   });
 }
 
-/** 用户确认后，为已同步客户幂等创建一份 Genesis 权威 draft。 */
+/** 用户确认后，为已同步客户幂等创建一份项目权威 draft。 */
 export async function createQuotationDraft(input: {
   credentialId: string;
   projectId: string;

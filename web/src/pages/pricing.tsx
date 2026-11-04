@@ -71,7 +71,7 @@ const COPY = {
     ctaTitle: '准备好把外销流程跑顺了吗？',
     ctaDesc: '预约一次 30 分钟演示，我们会按你的产品、市场和团队配置试用空间。',
     ctaButton: '预约演示',
-    salesSubject: 'Genesis CRM 试用咨询',
+    salesSubject: 'GlobalCRM 试用咨询',
   },
   en: {
     title: 'Turn cross-border sales into a repeatable growth system',
@@ -117,7 +117,7 @@ const COPY = {
     ctaTitle: 'Ready to make outbound repeatable?',
     ctaDesc: 'Book a 30-minute walkthrough. We will configure a trial workspace around your products, markets and team.',
     ctaButton: 'Book a demo',
-    salesSubject: 'Genesis CRM trial inquiry',
+    salesSubject: 'GlobalCRM trial inquiry',
   },
 } as const;
 

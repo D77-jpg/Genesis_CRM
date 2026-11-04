@@ -1,5 +1,5 @@
 /**
- * Genesis 权威报价 PDF
+ * GlobalCRM 权威报价 PDF
  * ------------------------------------------------------------------
  * - 数据只从当前项目的 Quotation / Customer 读取；
  * - 使用随 npm 依赖部署的 Noto Sans SC，避免中文乱码；
@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import PDFDocument from 'pdfkit';
 import { Customer, Project, Quotation, type QuotationDocument } from '../models';
+import { PRODUCT_NAME } from '../constants/brand';
 import { ApiError } from '../utils/ApiError';
 
 const PAGE_WIDTH = 595.28;
@@ -132,8 +133,8 @@ async function buildPdf(quotation: QuotationDocument, customer: PdfCustomer, bra
       Title: `Quotation ${quotation.quotationNo}`,
       Author: branding.companyName,
       Subject: `${quotation.status.toUpperCase()} quotation version ${quotation.version ?? 1}`,
-      Creator: 'Genesis_CRM',
-      Producer: 'Genesis_CRM / PDFKit',
+      Creator: PRODUCT_NAME,
+      Producer: `${PRODUCT_NAME} / PDFKit`,
       CreationDate: quotation.createdAt,
       ModDate: quotation.updatedAt,
     },

@@ -28,7 +28,7 @@
 沿用 S1/S2 的固定 Python 环境和 Embedding，无需下载新 Embedding。显式安装公开重排制品（只下载公开模型，不发送业务资料）：
 
 ```powershell
-cd D:\Trade\genesis\CRM\Genesis_CRM\server
+cd D:\Trade\genesis\CRM\GlobalCRM\server
 .cache\knowledge-parser\Scripts\python.exe semantic/setup_runtime.py --model-dir .cache/knowledge-semantic/model --reranker-dir .cache/knowledge-semantic/reranker
 ```
 

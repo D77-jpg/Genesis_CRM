@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { buildImportTemplate } from '../src/services/excel.service';
 
-const dir = 'D:/Trade/genesis/CRM/Genesis_CRM/.dsh/fixtures';
+const dir = 'D:/Trade/genesis/CRM/GlobalCRM/.dsh/fixtures';
 mkdirSync(dir, { recursive: true });
 
 // 1) 官方模板

@@ -64,9 +64,9 @@
 设置私有本地配置（示例路径须按实际目录调整，不包含密钥）：
 
 ```dotenv
-KNOWLEDGE_PYTHON=D:/Trade/genesis/CRM/Genesis_CRM/server/.cache/knowledge-parser/Scripts/python.exe
-KNOWLEDGE_MODEL_DIR=D:/Trade/genesis/CRM/Genesis_CRM/server/.cache/knowledge-semantic/model
-KNOWLEDGE_INDEX_DIR=D:/Trade/genesis/CRM/Genesis_CRM/server/.cache/knowledge-semantic/index
+KNOWLEDGE_PYTHON=D:/Trade/genesis/CRM/GlobalCRM/server/.cache/knowledge-parser/Scripts/python.exe
+KNOWLEDGE_MODEL_DIR=D:/Trade/genesis/CRM/GlobalCRM/server/.cache/knowledge-semantic/model
+KNOWLEDGE_INDEX_DIR=D:/Trade/genesis/CRM/GlobalCRM/server/.cache/knowledge-semantic/index
 ```
 
 `KNOWLEDGE_EMBEDDING_PYTHON` 可选，未设置时使用 S1 的解释器。首次安装脚本只下载固定公开模型，服务不联网。模型/数据库/索引均不提交 Git。当前开发机已安装并验证公开模型文件；真实知识仍需管理员审核发布和发起准备，不自动处理 82 条草稿。

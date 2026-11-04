@@ -53,7 +53,7 @@
   "fixture": {
     "sources": 64,
     "cases": 120,
-    "directory": "D:\\Trade\\genesis\\CRM\\Genesis_CRM\\server\\evaluation\\knowledge\\transfer"
+    "directory": "D:\\Trade\\genesis\\CRM\\GlobalCRM\\server\\evaluation\\knowledge\\transfer"
   },
   "productionHashes": [
     {

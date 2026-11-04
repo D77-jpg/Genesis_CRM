@@ -46,7 +46,7 @@ export const envSchema = z.object({
 
   ADMIN_USERNAME: z.string().min(1).default('admin'),
   ADMIN_PASSWORD: z.string().min(10, 'ADMIN_PASSWORD 至少需要 10 个字符'),
-  ADMIN_DISPLAY_NAME: z.string().default('Genesis Admin'),
+  ADMIN_DISPLAY_NAME: z.string().default('GlobalCRM Admin'),
   /** Optional email address assigned to the bootstrap administrator. */
   ADMIN_EMAIL: z.preprocess(
     (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,

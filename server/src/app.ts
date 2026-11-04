@@ -15,6 +15,7 @@ import env from './config/env';
 import { createLogger, safeLog } from './config/logger';
 import { ApiError } from './utils/ApiError';
 import apiRoutes from './routes';
+import { PRODUCT_NAME } from './constants/brand';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { requestIdMiddleware } from './middleware/request-id.middleware';
 
@@ -131,7 +132,7 @@ export function createApp(): Application {
     res.json({
       success: true,
       data: {
-        name: 'Customer Dev Letter Manager API',
+        name: `${PRODUCT_NAME} API`,
         version: '2.6.0',
         docs: '/api/health, /api/meta',
         env: env.NODE_ENV,

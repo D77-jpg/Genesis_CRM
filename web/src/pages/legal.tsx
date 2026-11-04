@@ -13,14 +13,14 @@ const COPY = {
   zh: {
     updated: '生效日期',
     version: '版本 1.0',
-    summary: '本文本适用于 Genesis CRM 上市准备，正式签约前需经法务复核。',
+    summary: '本文本适用于 GlobalCRM 上市准备，正式签约前需经法务复核。',
     related: '其他法律文件',
     back: '返回首页',
   },
   en: {
     updated: 'Effective',
     version: 'Version 1.0',
-    summary: 'Launch-readiness text for Genesis CRM. Counsel review is required before execution.',
+    summary: 'Launch-readiness text for GlobalCRM. Counsel review is required before execution.',
     related: 'Other legal documents',
     back: 'Back to home',
   },
