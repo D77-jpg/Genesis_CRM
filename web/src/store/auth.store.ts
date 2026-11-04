@@ -185,3 +185,10 @@ export const selectIsAuthenticated = (state: AuthState): boolean => state.status
  * 业务员只看自己名下客户（后端已做数据隔离，前端隐藏相应操作即可）。
  */
 export const selectIsAdmin = (state: AuthState): boolean => state.user?.role === 'admin';
+
+/** Project managers can edit assigned project settings and see the whole project. */
+export const selectCanManageProjects = (state: AuthState): boolean =>
+  state.user?.role === 'admin' || state.user?.role === 'project_admin';
+
+/** Read-only accounts must not see write controls; the API also rejects writes. */
+export const selectIsReadOnly = (state: AuthState): boolean => state.user?.role === 'viewer';

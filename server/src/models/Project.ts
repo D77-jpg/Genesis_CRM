@@ -2,6 +2,38 @@ import { Schema, model, Types, type HydratedDocument, type Model } from 'mongoos
 
 export type ProjectStatus = 'active' | 'archived';
 
+/**
+ * Customer-editable brand / sales narrative. Every field is optional so
+ * existing projects keep the built-in profile resolved by project code.
+ */
+export interface ProjectBrandProfile {
+  label?: string;
+  identity?: string;
+  offerSummary?: string;
+  outreachFocus?: string;
+  avoidTopics?: string;
+  insightLabel?: string;
+  insightExamples?: string;
+  proofExamples?: string;
+  ctaExamples?: string;
+  subjectFocus?: string;
+  signatureTitle?: string;
+  signatureLines?: string[];
+}
+
+export interface ProjectMailCompliance {
+  /** Gradual sending ramp-up for a new mailbox/domain. */
+  warmupEnabled: boolean;
+  warmupStartedAt?: Date;
+  warmupStartLimit: number;
+  warmupDailyIncrement: number;
+  warmupMaxLimit: number;
+  /** Project-wide hard cap per sender mailbox per UTC day. */
+  dailySendLimit: number;
+  /** Open/click telemetry is optional and can be disabled for privacy. */
+  trackingEnabled: boolean;
+}
+
 export interface IProject {
   name: string;
   slug: string;
@@ -18,6 +50,12 @@ export interface IProject {
   /** Optional project logo: compressed data URL or an absolute https URL. */
   logoImage?: string;
   coverImage?: string;
+  /** Brand, offer, outreach focus and signature edited in project settings. */
+  brandProfile?: ProjectBrandProfile;
+  /** Sending compliance controls (warm-up and project-level daily cap). */
+  mailCompliance?: ProjectMailCompliance;
+  /** Set by the first-use checklist; null/undefined means onboarding is pending. */
+  onboardingCompletedAt?: Date;
   status: ProjectStatus;
   isDefault: boolean;
   createdBy?: Types.ObjectId;
@@ -54,6 +92,30 @@ const ProjectSchema = new Schema<IProject>(
     logoImage: { type: String, maxlength: 600000 },
     // Compressed data URL (browser downscales to <=1280px) or an absolute https URL.
     coverImage: { type: String, maxlength: 600000 },
+    brandProfile: {
+      label: { type: String, trim: true, maxlength: 200 },
+      identity: { type: String, trim: true, maxlength: 500 },
+      offerSummary: { type: String, trim: true, maxlength: 2000 },
+      outreachFocus: { type: String, trim: true, maxlength: 1000 },
+      avoidTopics: { type: String, trim: true, maxlength: 1000 },
+      insightLabel: { type: String, trim: true, maxlength: 200 },
+      insightExamples: { type: String, trim: true, maxlength: 2000 },
+      proofExamples: { type: String, trim: true, maxlength: 3000 },
+      ctaExamples: { type: String, trim: true, maxlength: 1000 },
+      subjectFocus: { type: String, trim: true, maxlength: 300 },
+      signatureTitle: { type: String, trim: true, maxlength: 300 },
+      signatureLines: { type: [String], default: undefined },
+    },
+    mailCompliance: {
+      warmupEnabled: { type: Boolean, default: false },
+      warmupStartedAt: Date,
+      warmupStartLimit: { type: Number, default: 20, min: 1, max: 5000 },
+      warmupDailyIncrement: { type: Number, default: 10, min: 1, max: 1000 },
+      warmupMaxLimit: { type: Number, default: 200, min: 1, max: 10000 },
+      dailySendLimit: { type: Number, default: 300, min: 1, max: 10000 },
+      trackingEnabled: { type: Boolean, default: true },
+    },
+    onboardingCompletedAt: Date,
     status: { type: String, enum: ['active', 'archived'], default: 'active', index: true },
     isDefault: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },

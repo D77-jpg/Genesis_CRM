@@ -70,7 +70,7 @@ export async function createUser(input: CreateUserInput): Promise<UserDto> {
 
   const passwordHash = await hashPassword(input.password);
   const projectIds = await resolveProjectIds(input.projectIds);
-  if (input.role === 'user' && projectIds.length === 0) throw ApiError.badRequest('业务员至少需要加入一个项目');
+  if (input.role !== 'admin' && projectIds.length === 0) throw ApiError.badRequest('该角色至少需要加入一个项目');
   const email = input.email?.trim().toLowerCase() || undefined;
   if (email) {
     const emailOwner = await User.findOne({ email }).select('_id');
@@ -134,9 +134,9 @@ async function toFreshDto(id: Types.ObjectId): Promise<UserDto> {
 export async function updateUser(actorId: string, targetId: string, input: UpdateUserInput): Promise<UserDto> {
   const target = await findUserOrThrow(targetId);
 
-  // admin → user 属于「降级」，会让其失去管理权限，套用与停用 / 删除相同的保护
-  if (input.role === 'user' && target.role === 'admin') {
-    await assertCanRevokeAdmin(actorId, target, '降级为业务员');
+  // 任何 admin → 非 admin 都属于「降级」，会让其失去管理权限，套用与停用 / 删除相同的保护
+  if (input.role !== undefined && input.role !== 'admin' && target.role === 'admin') {
+    await assertCanRevokeAdmin(actorId, target, '降级为非管理员');
   }
 
   if (input.displayName !== undefined) {
@@ -162,7 +162,7 @@ export async function updateUser(actorId: string, targetId: string, input: Updat
   if (input.projectIds !== undefined) {
     const previous = target.projectIds.map(String);
     const next = await resolveProjectIds(input.projectIds);
-    if ((input.role ?? target.role) === 'user' && next.length === 0) throw ApiError.badRequest('业务员至少需要加入一个项目');
+    if ((input.role ?? target.role) !== 'admin' && next.length === 0) throw ApiError.badRequest('该角色至少需要加入一个项目');
     target.projectIds = next;
     if (!target.defaultProjectId || !next.some((id) => String(id) === String(target.defaultProjectId))) {
       target.defaultProjectId = next[0];

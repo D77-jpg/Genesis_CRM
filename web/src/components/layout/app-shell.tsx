@@ -16,11 +16,15 @@ import { cn } from '@/lib/utils';
 import { ScratchpadPanel } from '@/components/scratchpad/scratchpad-panel';
 import { AgentPanel } from '@/components/agent/agent-panel';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { selectIsReadOnly, useAuthStore } from '@/store/auth.store';
+import { useI18n } from '@/i18n';
 
 const SIDEBAR_WIDTH = '15rem';
 const SIDEBAR_WIDTH_COLLAPSED = '3.75rem';
 
 export function AppShell(): React.JSX.Element {
+  const { t } = useI18n();
+  const readOnly = useAuthStore(selectIsReadOnly);
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
   const mobileNavOpen = useUiStore((state) => state.mobileNavOpen);
@@ -50,7 +54,7 @@ export function AppShell(): React.JSX.Element {
 
   return (
     <div className="workspace-shell overflow-hidden">
-      <a href="#workspace-main" className="workspace-skip-link">跳转到主要内容</a>
+      <a href="#workspace-main" className="workspace-skip-link">{t('app.skip')}</a>
 
       {/* App frame: flush white chrome, neutral canvas, content owns the hierarchy. */}
       <div className="workspace-shell-body flex h-full w-full overflow-hidden bg-background">
@@ -76,6 +80,12 @@ export function AppShell(): React.JSX.Element {
             className="workspace-main no-print min-w-0 flex-1 overflow-y-auto bg-background px-4 py-4 sm:px-4 sm:py-4"
           >
             <div className="mx-auto min-w-0 w-full max-w-[var(--workspace-content-width)]">
+              {readOnly ? (
+                <div role="status" className="mb-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                  <span><strong className="font-medium">{t('role.readOnlyTitle')}</strong> · {t('role.readOnlyDesc')}</span>
+                </div>
+              ) : null}
               <Outlet />
             </div>
           </main>
@@ -89,7 +99,7 @@ export function AppShell(): React.JSX.Element {
           aria-describedby={undefined}
           className={cn('left-0 top-0 h-dvh max-h-none w-[16rem] max-w-[85vw] translate-x-0 translate-y-0 gap-0 rounded-none border-0 p-0 sm:p-0')}
         >
-          <DialogTitle className="sr-only">主导航</DialogTitle>
+          <DialogTitle className="sr-only">{t('nav.main')}</DialogTitle>
           <Sidebar collapsed={false} mobile onNavigate={() => setMobileNavOpen(false)} />
         </DialogContent>
       </Dialog>

@@ -55,7 +55,10 @@ export const envSchema = z.object({
   /** 收件人可访问的 CRM 公网地址，仅用于生成邮件追踪 URL。 */
   TRACKING_BASE_URL: z.string().url().default('http://localhost:5000'),
   /** 邮件里引用的静态资源（品牌 logo）使用的公网地址；留空则复用 TRACKING_BASE_URL。 */
-  PUBLIC_BASE_URL: z.string().url().optional(),
+  PUBLIC_BASE_URL: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().url().optional(),
+  ),
   /** 关闭后开发信结尾只输出文字签名，不引用 logo 图片。 */
   SIGNATURE_LOGO: booleanish.default(true),
   /** 官网被 WAF 拦截时，是否用无头浏览器兜底抓取（需要安装 playwright）。 */

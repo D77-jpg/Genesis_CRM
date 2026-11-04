@@ -18,7 +18,6 @@ import {
   EyeOff,
   FileText,
   Factory,
-  Globe,
   Handshake,
   Inbox,
   LockKeyhole,
@@ -33,6 +32,8 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label, FieldMessage } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { LanguageToggle } from '@/components/layout/language-toggle';
+import { useI18n } from '@/i18n';
 import { ForgotPasswordDialog } from '@/components/auth/forgot-password-dialog';
 import { loginSchema, type LoginFormValues } from '@/lib/validators';
 import { useAuthStore } from '@/store/auth.store';
@@ -99,7 +100,8 @@ function FlowStep({
 }
 
 export function LoginPage(): React.JSX.Element {
-  usePageTitle('登录');
+  const { t, language } = useI18n();
+  usePageTitle(t('auth.login'));
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -216,10 +218,7 @@ export function LoginPage(): React.JSX.Element {
         <div className="mx-auto flex h-[84px] max-w-[1600px] items-center justify-between px-5 sm:px-8 lg:px-12 xl:px-20">
           <BrandLockup />
           <div className="flex items-center gap-2">
-            <span className="hidden items-center gap-2 rounded-full border border-white/45 bg-white/25 px-3.5 py-2 text-xs font-medium text-slate-700 backdrop-blur-md sm:inline-flex dark:border-white/15 dark:bg-white/10 dark:text-slate-200">
-              <Globe className="h-3.5 w-3.5" aria-hidden />
-              简体中文
-            </span>
+            <LanguageToggle />
             <ThemeToggle className="text-slate-800 hover:bg-white/45 hover:text-slate-950 dark:text-white dark:hover:bg-white/15 dark:hover:text-white" />
           </div>
         </div>
@@ -237,7 +236,9 @@ export function LoginPage(): React.JSX.Element {
               <span className="text-slate-500 dark:text-slate-300">All in One CRM.</span>
             </h1>
             <p className="mt-6 max-w-[570px] text-[15px] leading-7 text-slate-700 dark:text-slate-200">
-              从询盘、客户、报价到订单与出货，把外贸业务的每个关键节点放进同一个工作台，让团队少一点来回确认，多一点成交推进。
+              {language === 'zh'
+                ? '从询盘、客户、报价到订单与出货，把外贸业务的每个关键节点放进同一个工作台，让团队少一点来回确认，多一点成交推进。'
+                : 'From inquiry and customer management to quotations, orders and shipping, keep every export milestone in one workspace and spend less time chasing updates.'}
             </p>
 
             <div className="mt-10 flex max-w-[650px] items-start justify-between gap-1.5 xl:mt-12 xl:max-w-[690px]">
@@ -260,12 +261,12 @@ export function LoginPage(): React.JSX.Element {
                 {twoFactorChallenge ? 'TWO-FACTOR VERIFICATION' : 'WELCOME BACK'}
               </p>
               <h2 className="mt-2 text-[2.15rem] font-semibold leading-tight tracking-[-0.045em] text-slate-950 dark:text-white">
-                {twoFactorChallenge ? '两步验证' : '欢迎回来'}
+                {twoFactorChallenge ? t('auth.twoFactor') : t('auth.welcome')}
               </h2>
               <p className="mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400">
                 {twoFactorChallenge
-                  ? `验证码已发送至 ${twoFactorChallenge.emailHint}`
-                  : '登录你的 GLOBAL CRM 工作空间'}
+                  ? `${t('auth.twoFactorHint')} · ${twoFactorChallenge.emailHint}`
+                  : t('auth.subtitle')}
               </p>
             </div>
 
@@ -282,7 +283,7 @@ export function LoginPage(): React.JSX.Element {
                 ) : null}
 
                 <div>
-                  <Label htmlFor="login-otp">邮箱验证码</Label>
+                  <Label htmlFor="login-otp">{t('auth.twoFactor')}</Label>
                   <div className="relative mt-1.5">
                     <MailCheck className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" aria-hidden />
                     <Input
@@ -300,13 +301,13 @@ export function LoginPage(): React.JSX.Element {
                       }}
                     />
                   </div>
-                  <FieldMessage hint="验证码 10 分钟内有效；未收到请检查垃圾箱或返回重新登录" className="pl-1" />
+                  <FieldMessage hint={t('auth.twoFactorHint')} className="pl-1" />
                 </div>
 
                 <Button type="submit" className="login-submit h-[52px] w-full rounded-xl text-[15px] font-semibold" size="lg" loading={verifyingTwoFactor} disabled={verifyingTwoFactor || otp.length !== 6}>
-                  {verifyingTwoFactor ? '正在验证…' : (
+                  {verifyingTwoFactor ? t('common.loading') : (
                     <>
-                      验证并登录
+                      {t('auth.verify')}
                       <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
                     </>
                   )}
@@ -317,7 +318,7 @@ export function LoginPage(): React.JSX.Element {
                   onClick={handleBackToPassword}
                   className="w-full text-center text-[13px] font-medium text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/30 dark:text-slate-400 dark:hover:text-white"
                 >
-                  返回密码登录
+                  {t('auth.backLogin')}
                 </button>
               </form>
             ) : (
@@ -341,14 +342,14 @@ export function LoginPage(): React.JSX.Element {
 
               <div>
                 <Label htmlFor="login-username" className="sr-only">
-                  用户名
+                  {t('auth.username')}
                 </Label>
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" aria-hidden />
                   <Input
                     id="login-username"
                     className="h-[52px] rounded-xl border-slate-200 bg-white pl-12 pr-4 text-[15px] text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.03)] placeholder:text-slate-400 focus-visible:border-[#8a70ff] focus-visible:ring-[#8a70ff]/15 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
-                    placeholder="请输入用户名"
+                    placeholder={t('auth.username')}
                     autoComplete="username"
                     autoFocus
                     invalid={Boolean(errors.username)}
@@ -360,7 +361,7 @@ export function LoginPage(): React.JSX.Element {
 
               <div>
                 <Label htmlFor="login-password" className="sr-only">
-                  密码
+                  {t('auth.password')}
                 </Label>
                 <div className="relative">
                   <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" aria-hidden />
@@ -368,7 +369,7 @@ export function LoginPage(): React.JSX.Element {
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     className="h-[52px] rounded-xl border-slate-200 bg-white pl-12 pr-12 text-[15px] text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.03)] placeholder:text-slate-400 focus-visible:border-[#8a70ff] focus-visible:ring-[#8a70ff]/15 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
-                    placeholder="请输入密码"
+                    placeholder={t('auth.password')}
                     autoComplete="current-password"
                     invalid={Boolean(errors.password)}
                     {...register('password')}
@@ -393,21 +394,21 @@ export function LoginPage(): React.JSX.Element {
                     onCheckedChange={(checked) => setValue('remember', checked === true)}
                     className="border-slate-300 bg-white data-[state=checked]:border-[#7658f6] data-[state=checked]:bg-[#7658f6] dark:border-white/20 dark:bg-slate-900"
                   />
-                  记住用户名
+                  {language === 'zh' ? '记住用户名' : 'Remember username'}
                 </label>
                 <button
                   type="button"
                   onClick={() => setForgotOpen(true)}
                   className="text-[13px] font-medium text-[#6547ee] transition-colors hover:text-[#4c2fd1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/30 dark:text-[#b7a6ff] dark:hover:text-[#d4c9ff]"
                 >
-                  忘记密码？
+                  {t('auth.forgot')}
                 </button>
               </div>
 
               <Button type="submit" className="login-submit mt-2 h-[52px] w-full rounded-xl text-[15px] font-semibold" size="lg" loading={loggingIn} disabled={loggingIn}>
-                {loggingIn ? '正在登录…' : (
+                {loggingIn ? t('auth.loggingIn') : (
                   <>
-                    登录
+                    {t('auth.login')}
                     <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
                   </>
                 )}
@@ -417,17 +418,17 @@ export function LoginPage(): React.JSX.Element {
 
             <div className="my-6 flex items-center gap-3">
               <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" aria-hidden />
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">或</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">{language === 'zh' ? '或' : 'or'}</span>
               <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" aria-hidden />
             </div>
 
             <button
               type="button"
-              onClick={() => toast.info('请联系系统管理员开通账号')}
+              onClick={() => toast.info(language === 'zh' ? '请联系系统管理员开通账号' : 'Contact your system administrator to request an account')}
               className="flex h-[50px] w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[14px] font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/25 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/5"
             >
               <Mail className="h-[18px] w-[18px] text-slate-500 dark:text-slate-400" aria-hidden />
-              联系管理员开通账号
+              {language === 'zh' ? '联系管理员开通账号' : 'Request an account'}
             </button>
 
             <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-[11px] leading-5 text-slate-400 dark:text-slate-500">

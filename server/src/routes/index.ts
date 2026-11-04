@@ -53,6 +53,8 @@ import outreachAutomationRoutes from './outreach-automation.routes';
 import integrationRoutes from './integration.routes';
 import prospectingRoutes from './prospecting.routes';
 import productRoutes from './product.routes';
+import unsubscribeRoutes from './unsubscribe.routes';
+import mailComplianceRoutes from './mail-compliance.routes';
 
 const router = Router();
 
@@ -110,6 +112,8 @@ router.get(IRONHUE_LOGO_ROUTE, (_req, res) => {
 router.use('/auth', authRoutes);
 // 真实邮件客户端不携带 CRM JWT；该路由只接受随机 token，且不返回 CRM 数据。
 router.use('/tracking', trackingRoutes);
+// Public, signed one-click unsubscribe (no CRM session or project header).
+router.use('/unsubscribe', unsubscribeRoutes);
 // Integration API v1：服务凭证认证（与用户 JWT 完全隔离），供 AutoForceAI 等系统集成。
 router.use('/integrations/v1', integrationRoutes);
 router.use('/projects', projectRoutes);
@@ -127,6 +131,7 @@ router.use('/knowledge-documents', requireAuth, requireProject, knowledgeDocumen
 router.use('/prospecting', requireAuth, requireProject, prospectingRoutes);
 router.use('/outreach-automation', requireAuth, requireProject, outreachAutomationRoutes);
 router.use('/mail-accounts', requireAuth, requireProject, mailAccountRoutes);
+router.use('/mail-compliance', mailComplianceRoutes);
 router.use('/users', userRoutes);
 router.use('/audit-logs', auditRoutes);
 router.get('/stats/overview', requireAuth, requireProject, overviewHandler);

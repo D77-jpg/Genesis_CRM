@@ -59,6 +59,14 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
       throw ApiError.unauthorized('账号已停用，请联系管理员');
     }
 
+    // Read-only accounts may use GET/HEAD/OPTIONS only. Authentication routes
+    // stay exempt so a viewer can still refresh or sign out.
+    if (current.role === 'viewer'
+      && !['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase())
+      && !req.baseUrl.includes('/auth')) {
+      throw ApiError.forbidden('当前账号为只读账号，不能执行写操作');
+    }
+
     // 以库中最新的角色 / 显示名为准：角色被调整后即时生效，无需等 token 过期
     req.user = {
       id: current._id.toString(),

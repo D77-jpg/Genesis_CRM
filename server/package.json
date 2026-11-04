@@ -26,6 +26,7 @@
     "test:agent": "node --require ./tests/os-user-info.cjs --import tsx --test tests/agent.test.ts",
     "test:ai-settings": "node --require ./tests/os-user-info.cjs --import tsx --test tests/ai-settings.test.ts tests/ai-providers.test.ts",
     "test:security": "node --require ./tests/os-user-info.cjs --import tsx --test tests/security-hardening.test.ts tests/p0-security.test.ts tests/auth-cookie-session.test.ts tests/auth-email-2fa.test.ts",
+    "test:p1": "node --require ./tests/os-user-info.cjs --import tsx --test tests/p1-compliance.test.ts tests/p1-onboarding.test.ts",
     "test:health": "node --require ./tests/os-user-info.cjs --import tsx --test tests/health-readiness.test.ts",
     "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts",
     "integration:credential": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-credential.ts",

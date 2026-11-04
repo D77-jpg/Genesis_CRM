@@ -30,6 +30,7 @@ import type { AuthUser } from '../types/express';
 import { ApiError } from '../utils/ApiError';
 import type { CreateProjectInput, UpdateProjectInput } from '../validators/project.validator';
 import { getProjectActiveChannel } from './mailer.service';
+import type { ProjectBrandProfile, ProjectMailCompliance } from '../models/Project';
 
 export interface ProjectDto {
   id: string;
@@ -45,6 +46,9 @@ export interface ProjectDto {
   mailProfileKey: string;
   logoImage?: string;
   coverImage?: string;
+  brandProfile?: ProjectBrandProfile;
+  mailCompliance?: ProjectMailCompliance;
+  onboardingCompletedAt?: Date;
   status: 'active' | 'archived';
   isDefault: boolean;
   mailChannel?: 'mock' | 'smtp';
@@ -58,6 +62,9 @@ const dto = (raw: Record<string, unknown>): ProjectDto => ({
   mailFrom: raw.mailFrom ? String(raw.mailFrom) : undefined, mailProfileKey: String(raw.mailProfileKey),
   logoImage: raw.logoImage ? String(raw.logoImage) : undefined,
   coverImage: raw.coverImage ? String(raw.coverImage) : undefined,
+  brandProfile: raw.brandProfile as ProjectBrandProfile | undefined,
+  mailCompliance: raw.mailCompliance as ProjectMailCompliance | undefined,
+  onboardingCompletedAt: raw.onboardingCompletedAt as Date | undefined,
   status: raw.status as 'active' | 'archived', isDefault: Boolean(raw.isDefault),
 });
 
@@ -85,8 +92,15 @@ export async function createProject(input: CreateProjectInput, actor: AuthUser):
   }
 }
 
-export async function updateProject(id: string, input: UpdateProjectInput): Promise<ProjectDto> {
+export async function updateProject(id: string, input: UpdateProjectInput, actor?: AuthUser): Promise<ProjectDto> {
   if (!Types.ObjectId.isValid(id)) throw ApiError.notFound('项目不存在');
+  if (actor && actor.role === 'project_admin') {
+    const allowed = await User.exists({ _id: actor.id, projectIds: new Types.ObjectId(id) });
+    if (!allowed) throw ApiError.notFound('项目不存在或无权修改');
+  }
+  if (actor && actor.role !== 'admin' && actor.role !== 'project_admin') {
+    throw ApiError.forbidden('只有管理员可以修改项目资料');
+  }
   if (input.status === 'archived') {
     const existing = await Project.findById(id).select('isDefault');
     if (!existing) throw ApiError.notFound('项目不存在');

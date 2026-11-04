@@ -14,6 +14,7 @@ import { createLogger } from '../config/logger';
 import { htmlToPlainText } from '../utils/text';
 import { getProjectMailConfig } from './project-mail-config.service';
 import { getPersonalImapConfig, listPersonalImapConfigs, type PersonalImapConfig } from './mail-account.service';
+import { suppressEmail } from './mail-compliance.service';
 
 const logger = createLogger('imap-sync');
 const addresses = (value?: AddressObject | AddressObject[]) => (value ? (Array.isArray(value) ? value : [value]).flatMap(a => a.value.map(v => (v.address || '').trim().toLowerCase()).filter(Boolean)) : []);
@@ -135,6 +136,58 @@ export async function relinkMailCustomers(input: { projectId: string; limit?: nu
   return { scanned: rows.length, linked, prospects, unmatched };
 }
 
+function headerText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map((item) => String(item)).join(', ');
+  if (value && typeof value === 'object' && 'value' in value) return String((value as { value?: unknown }).value ?? '');
+  return '';
+}
+
+/** Extract recipients from a DSN/ARF report, if the provider supplied one. */
+function failedRecipients(headers: Map<string, unknown>, text: string): string[] {
+  const header = headerText(headers.get('x-failed-recipients') || headers.get('original-rcpt-to'));
+  let source = header;
+  if (!source) {
+    // DSN bodies put the failed address on Final-Recipient / Original-Recipient.
+    // Scanning the entire body would wrongly catch the sender's own signature.
+    source = text.split(/\r?\n/)
+      .filter((line) => /^(?:final|original)-recipient\s*:/i.test(line))
+      .join('\n');
+  }
+  return [...new Set((source.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? []).map((email) => email.toLowerCase()))].slice(0, 20);
+}
+
+async function applyInboundCompliance(input: {
+  projectId: string;
+  from: string;
+  subject: string;
+  text: string;
+  headers: Map<string, unknown>;
+}): Promise<void> {
+  const subject = input.subject.toLowerCase();
+  const body = input.text.toLowerCase();
+  const bounce = /mailer-daemon|postmaster|mail delivery (?:failed|subsystem)/i.test(input.from)
+    || /undeliverable|delivery status notification|mail delivery failed|returned mail|退信|无法投递|投递失败/i.test(`${subject}\n${body}`);
+  if (bounce) {
+    for (const email of failedRecipients(input.headers, input.text)) {
+      await suppressEmail({ projectId: input.projectId, email, reason: 'hard_bounce', source: 'inbound', note: 'Bounce report received', global: true });
+    }
+    return;
+  }
+  if (/unsubscribe|remove me|stop emailing|do not contact|opt[ -]?out|退订|取消订阅|不要再发|停止联系/i.test(`${subject}\n${body}`) && input.from) {
+    await suppressEmail({ projectId: input.projectId, email: input.from, reason: 'unsubscribe', source: 'inbound', note: 'Unsubscribe request received by email', global: true });
+  }
+  if (/feedback-report|abuse report|complaint/i.test(`${subject}\n${body}`)) {
+    // ARF complaints are sent by the provider, not by the customer. Prefer the
+    // reported recipient headers; only fall back to From for direct complaints.
+    const reported = failedRecipients(input.headers, input.text);
+    const targets = reported.length ? reported : (input.from ? [input.from] : []);
+    for (const email of targets) {
+      await suppressEmail({ projectId: input.projectId, email, reason: 'complaint', source: 'inbound', note: 'Complaint report received', global: true });
+    }
+  }
+}
+
 export async function importMail(source: Buffer, account?: string, projectId?: string, mailbox?: {
   mailAccountId: string; userId: string; address: string;
 }) {
@@ -176,6 +229,14 @@ export async function importMail(source: Buffer, account?: string, projectId?: s
       references, subject: (parsed.subject || '').slice(0, 998), normalizedSubject: normalizeSubject(parsed.subject || ''),
       from, fromName: parsed.from?.value[0]?.name, to: addresses(parsed.to), cc: addresses(parsed.cc),
       html: safeMailHtml(parsed.html || ''), text: parsed.text || htmlToPlainText(safeMailHtml(parsed.html || '')), sentAt, attachments });
+    // Persist compliance state before returning so a later queue run sees it.
+    await applyInboundCompliance({
+      projectId: scopedProjectId,
+      from,
+      subject: parsed.subject || '',
+      text: parsed.text || htmlToPlainText(safeMailHtml(parsed.html || '')),
+      headers: parsed.headers as unknown as Map<string, unknown>,
+    });
     // Incoming timeline events are derived from MailMessage in the EXISTING service.
     return doc;
   } catch (error) {

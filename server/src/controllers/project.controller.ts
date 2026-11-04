@@ -13,7 +13,7 @@ export const createProjectHandler = asyncHandler(async (req: Request, res: Respo
 });
 
 export const updateProjectHandler = asyncHandler(async (req: Request, res: Response) => {
-  sendSuccess(res, await updateProject(req.params.id, req.body as UpdateProjectInput));
+  sendSuccess(res, await updateProject(req.params.id, req.body as UpdateProjectInput, req.user!));
 });
 
 export const deleteProjectHandler = asyncHandler(async (req: Request, res: Response) => {

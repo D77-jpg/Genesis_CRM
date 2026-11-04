@@ -48,6 +48,9 @@ export type { IAuthChallenge, AuthChallengeDocument, AuthChallengePurpose } from
 export { AuditLog, AUDIT_ACTIONS } from './AuditLog';
 export type { AuditAction, IAuditLog, AuditLogDocument } from './AuditLog';
 
+export { EmailSuppression, SUPPRESSION_REASONS } from './EmailSuppression';
+export type { IEmailSuppression, EmailSuppressionDocument, SuppressionReason } from './EmailSuppression';
+
 export { UserMailAccount, MailQuotaBucket, MailAccountAudit } from './UserMailAccount';
 export type {
   IUserMailAccount,
@@ -57,7 +60,7 @@ export type {
 } from './UserMailAccount';
 
 export { Project } from './Project';
-export type { IProject, ProjectDocument, ProjectModel, ProjectStatus } from './Project';
+export type { IProject, ProjectDocument, ProjectModel, ProjectStatus, ProjectBrandProfile, ProjectMailCompliance } from './Project';
 
 export { Scratchpad } from './Scratchpad';
 export type { IScratchpad, ScratchpadDocument, ScratchpadModel } from './Scratchpad';

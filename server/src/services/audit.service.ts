@@ -15,7 +15,7 @@ const logger = createLogger('audit');
 export type AuditActor = {
   id?: string;
   username?: string;
-  role?: 'admin' | 'user';
+  role?: 'admin' | 'project_admin' | 'user' | 'viewer';
 };
 
 export interface AuditEvent {
@@ -35,7 +35,7 @@ export interface AuditLogDto {
   id: string;
   actorId?: string;
   actorUsername?: string;
-  actorRole?: 'admin' | 'user';
+  actorRole?: 'admin' | 'project_admin' | 'user' | 'viewer';
   projectId?: string;
   action: AuditAction;
   targetType?: string;

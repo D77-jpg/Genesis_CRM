@@ -42,8 +42,8 @@ export const createUserSchema = z.object({
   email: emailSchema.optional(),
   /** 邮件 OTP 二次验证；开启时必须配置邮箱。 */
   twoFactorEnabled: z.boolean().default(false),
-  /** 角色：admin 管理员 / user 业务员，默认业务员 */
-  role: z.enum(['admin', 'user']).default('user'),
+  /** 角色：admin 系统管理员 / project_admin 项目管理员 / user 销售 / viewer 只读 */
+  role: z.enum(['admin', 'project_admin', 'user', 'viewer']).default('user'),
   /** 普通用户可进入的项目；不传时兼容旧客户端，自动分配默认项目。 */
   projectIds: z.array(objectIdSchema).max(100).optional(),
 }).superRefine((data, ctx) => {
@@ -60,7 +60,7 @@ export const updateUserSchema = z
     displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional(),
     email: emailSchema.optional(),
     twoFactorEnabled: z.boolean().optional(),
-    role: z.enum(['admin', 'user']).optional(),
+    role: z.enum(['admin', 'project_admin', 'user', 'viewer']).optional(),
     projectIds: z.array(objectIdSchema).max(100).optional(),
   })
   .refine(

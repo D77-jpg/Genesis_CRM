@@ -334,7 +334,7 @@ export const userFormSchema = z.object({
   role: z.enum(USER_ROLE_VALUES, { error: '请选择角色' }),
   projectIds: z.array(z.string()).default([]),
 }).superRefine((value, ctx) => {
-  if (value.role === 'user' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '业务员至少需要加入一个项目' });
+  if (value.role !== 'admin' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '该角色至少需要加入一个项目' });
   if (value.twoFactorEnabled && !value.email?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['email'], message: '开启 2FA 前请填写邮箱' });
 });
 export type UserFormValues = z.infer<typeof userFormSchema>;
@@ -368,6 +368,7 @@ export const editUserFormSchema = z.object({
   role: z.enum(USER_ROLE_VALUES, { error: '请选择角色' }),
   projectIds: z.array(z.string()).default([]),
 }).superRefine((value, ctx) => {
+  if (value.role !== 'admin' && value.projectIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['projectIds'], message: '该角色至少需要加入一个项目' });
   if (value.twoFactorEnabled && !value.email?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['email'], message: '开启 2FA 前请填写邮箱' });
 });
 

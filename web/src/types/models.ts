@@ -297,7 +297,7 @@ export type LetterStatus = 'draft' | 'sent' | 'opened' | 'failed' | 'queued' | '
 /** 发送通道 */
 export type MailChannel = 'mock' | 'smtp';
 /** 用户角色 */
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'project_admin' | 'user' | 'viewer';
 /** 用户账号启用状态：active 启用 / disabled 停用 */
 export type UserStatus = 'active' | 'disabled';
 export type ProjectStatus = 'active' | 'archived';
@@ -1071,6 +1071,31 @@ export interface UpdateUserInput {
 
 /* ---------------------------- 多项目工作空间 ---------------------------- */
 
+export interface ProjectBrandProfile {
+  label?: string;
+  identity?: string;
+  offerSummary?: string;
+  outreachFocus?: string;
+  avoidTopics?: string;
+  insightLabel?: string;
+  insightExamples?: string;
+  proofExamples?: string;
+  ctaExamples?: string;
+  subjectFocus?: string;
+  signatureTitle?: string;
+  signatureLines?: string[];
+}
+
+export interface ProjectMailCompliance {
+  warmupEnabled: boolean;
+  warmupStartedAt?: string;
+  warmupStartLimit: number;
+  warmupDailyIncrement: number;
+  warmupMaxLimit: number;
+  dailySendLimit: number;
+  trackingEnabled: boolean;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -1083,6 +1108,9 @@ export interface Project {
   senderName?: string;
   mailFrom?: string;
   mailProfileKey: string;
+  brandProfile?: ProjectBrandProfile;
+  mailCompliance?: ProjectMailCompliance;
+  onboardingCompletedAt?: string;
   /** 项目级真实发送开关；未设置时沿用服务端配置 */
   mailTransport?: MailChannel;
   /** 项目 Logo（压缩 data URL 或 HTTPS 地址） */
@@ -1207,7 +1235,7 @@ export interface UpdateScratchpadInput {
   expectedVersion: number;
 }
 
-export type CreateProjectInput = Omit<Project, 'id' | 'status' | 'isDefault' | 'mailChannel'>;
+export type CreateProjectInput = Omit<Project, 'id' | 'status' | 'isDefault' | 'mailChannel' | 'onboardingCompletedAt'>;
 export type UpdateProjectInput = Partial<Omit<CreateProjectInput, 'slug' | 'code'>> & { status?: ProjectStatus };
 
 /** 重置密码（PUT /api/users/:id/password） */

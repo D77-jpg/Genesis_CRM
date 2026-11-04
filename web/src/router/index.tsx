@@ -37,6 +37,8 @@ const TemplatesPage = React.lazy(() => import('@/pages/templates').then((m) => (
 const ProductsPage = React.lazy(() => import('@/pages/products').then((m) => ({ default: m.ProductsPage })));
 const UsersPage = React.lazy(() => import('@/pages/users').then((m) => ({ default: m.UsersPage })));
 const ProjectsPage = React.lazy(() => import('@/pages/projects').then((m) => ({ default: m.ProjectsPage })));
+const OnboardingPage = React.lazy(() => import('@/pages/onboarding').then((m) => ({ default: m.OnboardingPage })));
+const MailCompliancePage = React.lazy(() => import('@/pages/mail-compliance').then((m) => ({ default: m.MailCompliancePage })));
 const AgentDiagnosticsPage = React.lazy(() => import('@/pages/agent-diagnostics').then((m) => ({ default: m.AgentDiagnosticsPage })));
 const AiSettingsPage = React.lazy(() => import('@/pages/ai-settings').then((m) => ({ default: m.AiSettingsPage })));
 const NotFoundPage = React.lazy(() => import('@/pages/not-found').then((m) => ({ default: m.NotFoundPage })));
@@ -82,9 +84,14 @@ export const router = createBrowserRouter([
         path: 'users',
         element: <AdminRoute>{withSuspense(<UsersPage />)}</AdminRoute>,
       },
+      { path: 'onboarding', element: withSuspense(<OnboardingPage />) },
       {
         path: 'projects',
-        element: <AdminRoute>{withSuspense(<ProjectsPage />)}</AdminRoute>,
+        element: <AdminRoute roles={['admin', 'project_admin']}>{withSuspense(<ProjectsPage />)}</AdminRoute>,
+      },
+      {
+        path: 'mail-compliance',
+        element: <AdminRoute roles={['admin', 'project_admin']}>{withSuspense(<MailCompliancePage />)}</AdminRoute>,
       },
       {
         path: 'agent-diagnostics',

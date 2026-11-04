@@ -9,6 +9,7 @@ import { sendMail, type SendMailPayload, type SendMailResult } from './mailer.se
 import { createLogger } from '../config/logger';
 import { auditMailResult, reserveMailAttempt } from './mail-account.service';
 import { scheduleOutreachFollowUp } from './outreach-followup.service';
+import { isEmailSuppressed, suppressEmail, unsubscribeHeaders } from './mail-compliance.service';
 
 const logger = createLogger('mail-queue');
 export const newMessageId = () => `<${randomUUID()}@crm.genesis.local>`;
@@ -59,7 +60,7 @@ export async function processMailJob(id?: string, deliver: (payload: SendMailPay
     Customer.findOne({ _id: job.customerId, projectId: job.projectId }), job.sentBy ? User.findById(job.sentBy) : null,
   ]);
   const projectAccess = user?.role === 'admin' || user?.projectIds.some((id) => String(id) === String(job.projectId));
-  if (!customer || !user || user.status === 'disabled' || !projectAccess || (user.role !== 'admin' && String(customer.ownerId) !== String(user._id))) {
+  if (!customer || !user || user.status === 'disabled' || user.role === 'viewer' || !projectAccess || (user.role === 'user' && String(customer.ownerId) !== String(user._id))) {
     await DevelopmentLetter.updateOne({ _id: job._id, status: 'sending' }, {
       $set: { status: 'cancelled', error: '客户或发送人权限已变化，任务已取消' },
       $push: { history: { at: new Date(), status: 'cancelled' } },
@@ -69,6 +70,14 @@ export async function processMailJob(id?: string, deliver: (payload: SendMailPay
 
   if((job.agentOutreachId||job.agentTaskId)&&await hasProtectedCustomerMail(String(job.customerId),String(job.projectId))){
     await DevelopmentLetter.updateOne({_id:job._id,status:'sending'},{$set:{status:'cancelled',error:'检测到停止营销联系记录，已阻止投递'},$push:{history:{at:new Date(),status:'cancelled'}}});return;
+  }
+  const suppression = await isEmailSuppressed(String(job.projectId), job.recipientEmail);
+  if (suppression) {
+    await DevelopmentLetter.updateOne({ _id: job._id, status: 'sending' }, {
+      $set: { status: 'cancelled', error: `收件人已进入不再发送名单（${suppression.reason}），已阻止投递` },
+      $push: { history: { at: new Date(), status: 'cancelled', error: '收件人已退订或被标记为退信/投诉' } },
+    });
+    return;
   }
   let result: SendMailResult;
   const accountId = job.mailAccountId ? String(job.mailAccountId) : undefined;
@@ -81,7 +90,8 @@ export async function processMailJob(id?: string, deliver: (payload: SendMailPay
       result = await deliver({ projectId: String(job.projectId), mailAccountId: accountId, senderUserId, from: job.senderAddress,
         to: job.recipientEmail, toName: job.recipientName, subject: job.subject,
         html: job.deliveryContent || job.content, text: job.contentText, messageId: job.messageId,
-        inReplyTo: job.inReplyTo, references: job.references });
+        inReplyTo: job.inReplyTo, references: job.references,
+        headers: unsubscribeHeaders(String(job.projectId), job.recipientEmail) });
     } catch (error) {
       result = error instanceof Error && error.name === 'ApiError'
         ? { accepted: false, channel: job.channel, error: error.message, durationMs: 0 }
@@ -90,6 +100,16 @@ export async function processMailJob(id?: string, deliver: (payload: SendMailPay
   }
   if (accountId && senderUserId) {
     await auditMailResult(accountId, String(job.projectId), senderUserId, result.accepted, result.error).catch(() => undefined);
+  }
+  if (result.hardBounce) {
+    await suppressEmail({
+      projectId: String(job.projectId),
+      email: job.recipientEmail,
+      reason: 'hard_bounce',
+      source: 'smtp',
+      note: result.error?.slice(0, 500),
+      global: true,
+    }).catch(() => undefined);
   }
   const retry = !result.accepted && result.retryable && !result.uncertain && job.attempts < env.MAIL_MAX_ATTEMPTS;
   const status = result.accepted ? 'sent' : retry ? 'retrying' : 'failed';

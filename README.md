@@ -39,8 +39,9 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 
 - 一套部署可管理多个外贸项目。
 - 项目切换会同步切换客户、邮件、模板、跟进、附件、报价和 Dashboard 数据。
-- 业务员只能访问被分配的项目和本人负责的客户；管理员可查看全部项目。
+- 系统管理员可查看全部项目；项目管理员和只读账号可查看被分配项目的全部数据；销售只能访问被分配项目下本人负责的客户。
 - 浏览器通过 `X-Project-Id` 传递当前项目，后端对业务查询再次校验项目范围。
+- 新建项目后可进入「新手引导」，按品牌、产品、行业卡、发件邮箱、团队和 AI 清单完成初始化。
 
 ### 客户与开发过程
 
@@ -72,6 +73,16 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 - 支持 SMTP 真实发件和 Mock 模拟发件。
 - HTML 邮件支持打开追踪和链接点击追踪。追踪数据只作互动参考。
 
+### 邮件合规与送达
+
+- 每封开发信自动附带可见退订链接，并发送 `List-Unsubscribe` / `List-Unsubscribe-Post` 邮件头，支持 RFC 8058 一键退订。
+- 退订、硬退信、投诉和人工地址进入项目级或全局「不再发送名单」；后续队列任务会直接取消。
+- 收件箱同步会识别退信报告和退订请求；SMTP 永久退信也会自动写入抑制名单。
+- 管理端可检查发件域名的 SPF、DKIM（可选 selector）和 DMARC DNS 记录。
+- 项目可关闭打开/点击追踪；关闭后不再插入像素或改写链接，已产生的统计仍保留。
+- 支持邮箱预热：按起始上限、每日增量和最高上限逐日提升，并与邮箱自身额度、项目每日上限取最小值。
+- 项目设置中可维护品牌身份、供应内容、开发信重点、主题偏好和签名，替换代码内置话术。
+
 ### 产品与报价
 
 - 按项目维护产品目录、SKU、规格、MOQ、交期和阶梯价。
@@ -87,11 +98,13 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 - AI 配置、用量、诊断和每日额度由管理员管理。
 - 支持 OpenAI 兼容的模型服务，可在管理界面覆盖服务端默认配置。
 
-### 团队协作
+### 团队协作与界面
 
-- 管理员和业务员两级角色。
+- 四级角色：系统管理员、项目管理员、销售、只读。只读账号在前端隐藏写操作，后端也会拒绝所有非 GET 写请求。
+- 系统管理员管理账号和全部项目；项目管理员管理被分配项目的资料、品牌与邮件合规；销售只看本人客户；只读账号可查看项目全量数据。
 - 用户管理、项目分配、客户归属和邮箱绑定。
-- Dashboard 展示客户漏斗、待跟进、开发信和邮件活动。
+- 中英文界面切换在右上角，偏好保存在浏览器；导航、登录、项目、引导和邮件合规等核心界面均已双语化。
+- Dashboard 展示客户漏斗、待跟进、开发信和邮件活动，并显示初始化进度卡片。
 - 个人随手记按用户和项目隔离，并同步到服务端。
 
 ## 3. 技术架构
@@ -267,7 +280,7 @@ CORS_LAN_PORTS=5173,4173
 | `IMAP_HOST` / `IMAP_PORT` | 空 / `993` | IMAP 服务地址和端口 |
 | `MAIL_CREDENTIAL_ENCRYPTION_KEY` | 空 | 邮箱凭据加密密钥，生产环境必须单独配置 |
 | `TRACKING_BASE_URL` | `http://localhost:5000` | 邮件追踪使用的公网根地址 |
-| `PUBLIC_BASE_URL` | 空 | 邮件品牌图片的公网根地址，留空时复用追踪地址 |
+| `PUBLIC_BASE_URL` | 空 | 邮件品牌图片和退订链接的公网根地址，留空时复用追踪地址；生产环境必须设为 HTTPS |
 | `UPLOAD_DIR` | `server/uploads` | 客户附件和邮件附件的本地目录 |
 | `MAX_ATTACHMENT_SIZE` | `15728640` | 单个附件大小上限，单位为字节 |
 | `AI_PROVIDER` | `mock` | `mock` 或 `openai` |
@@ -316,6 +329,7 @@ npm run test:mail --prefix server
 npm run test:agent --prefix server
 npm run test:ai-settings --prefix server
 npm run test:security --prefix server
+npm run test:p1 --prefix server
 npm run test:health --prefix server
 ```
 
@@ -367,13 +381,15 @@ X-Project-Id: <projectId>
 | `/api/health` | 健康检查，包含 `/live` 和 `/ready` |
 | `/api/meta` | 枚举、占位符和公司元数据 |
 | `/api/auth` | 登录、邮件 2FA、忘记/重置密码、刷新、注销和当前用户 |
-| `/api/projects` | 项目工作空间 |
+| `/api/projects` | 项目工作空间、品牌配置和新手引导状态 |
 | `/api/customers` | 客户、跟进、附件和时间线 |
 | `/api/website-research` | 客户官网资料研究 |
 | `/api/letters` | 开发信、审核和发送 |
 | `/api/templates` | 开发信模板 |
 | `/api/mail` | 邮件、线程、附件和定时任务 |
 | `/api/mail-accounts` | 用户发件邮箱 |
+| `/api/mail-compliance` | 抑制名单、SPF/DKIM/DMARC 检查和预热策略 |
+| `/api/unsubscribe/:token` | 公开的签名一键退订链接 |
 | `/api/products` | 产品目录 |
 | `/api/quotations` | 报价单和报价核对 |
 | `/api/prospecting` | 今日开发和潜客池 |
@@ -385,9 +401,10 @@ X-Project-Id: <projectId>
 | `/api/users` | 用户管理，管理员专属 |
 | `/api/audit-logs` | 登录与关键操作审计，管理员专属 |
 | `/api/tracking` | 邮件打开和点击追踪，公开 token |
+| `/api/unsubscribe` | 签名退订确认页和 RFC 8058 一键退订，公开 |
 | `/api/integrations/v1` | 外部系统集成，独立服务凭证 |
 
-业务接口统一返回 JSON；邮件追踪接口返回重定向或透明图片。错误响应包含 HTTP 状态码和错误信息。生产环境不要直接暴露 `/api`，应由同源反向代理转发。
+业务接口统一返回 JSON；邮件追踪接口返回重定向或透明图片，退订接口返回确认页。错误响应包含 HTTP 状态码和错误信息。生产环境不要直接暴露 `/api`，应由同源反向代理转发，并把 `PUBLIC_BASE_URL` 设为邮件收件人可访问的 HTTPS 地址，否则退订链接会指向本地地址。
 
 ## 9. 生产部署
 
