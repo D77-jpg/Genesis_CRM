@@ -46,6 +46,8 @@ beforeEach(async () => {
     models.AgentAiSettings.deleteMany({}),
     models.AgentAiProvider.deleteMany({}),
     models.BillingInvoice.deleteMany({}),
+    models.Customer.deleteMany({}),
+    models.DevelopmentLetter.deleteMany({}),
   ]);
 });
 
@@ -69,12 +71,26 @@ test('legacy documents are backfilled into the default organization', async () =
   const legacy = await models.Project.create({
     name: 'Legacy', slug: 'legacy', code: 'LEGACY', companyName: 'Legacy Co', mailProfileKey: 'legacy',
   });
+  const customer = await models.Customer.create({
+    projectId: legacy._id, name: 'Legacy Customer', email: 'legacy-customer@example.test',
+  });
+  const letter = await models.DevelopmentLetter.create({
+    projectId: legacy._id, customerId: customer._id, recipientEmail: 'legacy-customer@example.test', subject: 'Legacy subject', content: 'Legacy body',
+  });
   assert.equal(legacy.organizationId, undefined);
+  assert.equal(customer.organizationId, undefined);
+  assert.equal(letter.organizationId, undefined);
   await orgService.migrateLegacyTenantData();
-  const migrated = await models.Project.findById(legacy._id);
-  assert.ok(migrated?.organizationId, 'legacy project receives a tenant key');
+  const [migrated, migratedCustomer, migratedLetter] = await Promise.all([
+    models.Project.findById(legacy._id),
+    models.Customer.findById(customer._id),
+    models.DevelopmentLetter.findById(letter._id),
+  ]);
   const defaultOrg = await models.Organization.findOne({ slug: orgService.DEFAULT_ORGANIZATION_SLUG });
-  assert.equal(String(migrated?.organizationId), String(defaultOrg?._id));
+  assert.ok(defaultOrg);
+  for (const document of [migrated, migratedCustomer, migratedLetter]) {
+    assert.equal(String(document?.organizationId), String(defaultOrg._id), 'legacy business documents receive the default tenant key');
+  }
 });
 
 test('usage records are isolated and quota checks fail closed', async () => {
