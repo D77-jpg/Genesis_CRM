@@ -1526,5 +1526,5 @@ x-globalsite-draft:
   implemented: false
   description: >-
     GlobalSite S1 草案；仅新增定义，不改已有端点。C1–C4 为建议拆分，具体范围以双方批准任务为准。
-    本次追加必然改变全文件 SHA，冻结快照与 CI 哈希在实现阶段再更新；当前固定哈希门禁预期失败。
+    冻结快照与原始 SHA 保持不变；CI 校验历史冻结文件与全部旧定义，仅放行明确未实现的约定草案。
     新端点真实权限由 x-required-scope 描述；HTTP bearer security 数组留空。

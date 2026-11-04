@@ -95,11 +95,11 @@ C4 请求级幂等：credentialId + projectId + operation + key，内部摘要 k
 本 PR 不改旧 paths/components/tags/servers/info 定义，仅追加新 paths/schemas/parameters/responses 与顶层草案说明。新的 $ref 闭合，草案字段为候选冻结集，实施批准前可审查调整，双方不得各自扩展。
 
 ## 8. 冻结、验证与交付门槛
-现有 COMPATIBILITY.md/CI 的基础文件 SHA256=7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679。本次按任务追加草案必然改变文件哈希，**不更新冻结快照/不修改 CI/不绕过门禁**。因此 integration-release-gate 的“OpenAPI 哈希”检查预期失败，即使旧定义结构完全相同；实现阶段 C1–C4 批准、行为测试和双方契约测试通过后再更新快照及相容记录。此 S1 PR 为设计评审，不应声称可直接通过冻结发布门禁。
+现有 COMPATIBILITY.md/CI 的基础文件 SHA256=7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679，冻结快照保持不变。初次追加草案导致全文件指纹检查失败后，用户明确授权额外调整 `.github/workflows/integration-release-gate.yml`，不修改业务代码。新检查从不可变基线 `e2e3486300250b75d08295bcba6b8bd09a8e4774` 读取原始文件并验证原 SHA；仅剔除约定的 6 个未实现草案路径、GlobalSite 命名空间新增组件与草案元数据后，逐项深等比较整个原契约。旧接口、共享组件、认证、版本及其他原字段均不得改动；其他新增路径和未标草案的操作同样不放行。所有引用须可解析、operationId 不可重复，草案仍须具备原有服务认证及项目头要求。实现阶段 C1–C4 批准、行为测试和双方契约测试通过后再更新快照及相容记录；本次自动检查通过仅表示原契约受保护、草案合法，不表示新能力已实现或生产就绪。
 S1 校验 YAML 可解析、旧 paths/components 逐项深等、新 schema 引用/operationId/项目头/scope 标记闭合；运行现有 typecheck/build/lint 与 server test:security/test:integration/test:health。本站 S1 无 package.json，不能运行应用检查。
 C 阶段：在 CRM 添加新 scope/项目隔离/投影与撤销/tombstone/游标签名/幂等/恢复/脱敏测试，冻结新定义与行为；本站固定批准 commit，校验每个真实请求与响应（好坏例、缺 scope、跨项目、重放/冲突、断网、过期 cursor）。J1 两仓独立 PR 联调，不能用修改测试跳过已有行为保护。
 无数据库迁移在本 PR 执行；C2/C3/C4 才创建新 tenant 集合与索引，不修改现有集合名或库名。待决策：C 阶段详细编号、公开投影授权 UI、保留期/清理与部署数据区域；本站设计中不重复定义这些 Integration API。
 
 
 ### S1 实测记录（2026-11-04）
-GlobalCRM typecheck/build/lint 均通过（lint 12 条既有 warning）；集成 24/24、安全 19/19、健康 5/5，均无 skip。首轮受限环境临时 MongoDB 启动失败，正常本机权限重跑通过。静态校验确认旧 6 个路径与所有旧组件深等，新增 6 个草案操作、121 个引用可解析。git diff --check 通过。未修改应用或测试代码；固定文件哈希发布门禁按本节说明预期失败，未更新快照。
+GlobalCRM typecheck/build/lint 均通过（lint 12 条既有 warning）；集成 24/24、安全 19/19、健康 5/5，均无 skip。首轮受限环境临时 MongoDB 启动失败，正常本机权限重跑通过。静态校验确认旧 6 个路径与所有旧组件深等，新增 6 个草案操作、121 个引用可解析。首次远端 server/web/security/operations 通过，hygiene 因全文件 SHA 变化失败。授权修正后的检查在本地验证原冻结 SHA、旧定义、草案与引用，并通过 17 项拒绝错误改动的回归检查；workflow YAML 与脚本可解析，其余四个任务、触发条件和兼容性快照检查不变。未修改应用代码或业务测试，冻结快照未更新。
