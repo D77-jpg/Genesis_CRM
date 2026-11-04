@@ -247,6 +247,7 @@ export function MailCompliancePage(): React.JSX.Element {
                 <Switch checked={settings.trackingEnabled} onCheckedChange={(checked) => setSettings({ ...settings, trackingEnabled: checked })} aria-label={t('compliance.trackingEnabled')} />
               </label>
               <div className="flex items-end lg:col-span-5"><Button type="button" size="sm" loading={settingsSaving} onClick={() => void saveSettings()}>{t('common.save')}</Button></div>
+              {settings.trackingEnabled ? <p className="text-xs text-muted-foreground lg:col-span-5">{t('compliance.trackingNotice')}</p> : null}
               {overview ? <p className="text-xs text-muted-foreground lg:col-span-5">{t('compliance.currentCap')}: <strong className="text-foreground">{overview.effectiveDailyLimit}</strong></p> : null}
             </div>
           ) : <p className="text-xs text-muted-foreground">{t('common.loading')}</p>}
