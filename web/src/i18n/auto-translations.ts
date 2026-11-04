@@ -968,6 +968,8 @@ export const AUTO_TRANSLATIONS: Record<string, string> = {
   '个，补全': ' completed ',
   '个，Hunter 补到': '; Hunter found ',
   '个邮箱，入选': ' emails; selected ',
+  '主题：': 'Subject:',
+  '高': 'High',
 };
 
 /** Short phrases used for dynamic/interpolated copy. Longest matches win. */
