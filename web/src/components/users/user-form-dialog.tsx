@@ -53,18 +53,27 @@ export interface UserFormDialogProps {
 /** 新建：表单值 → 创建载荷（显示名留空则不带，交给后端回退为用户名） */
 function toCreatePayload(values: UserFormValues): CreateUserInput {
   const displayName = values.displayName?.trim();
+  const email = values.email?.trim().toLowerCase();
   return {
     username: values.username.trim().toLowerCase(),
     password: values.password,
     role: values.role,
     projectIds: values.projectIds,
+    twoFactorEnabled: values.twoFactorEnabled,
     ...(displayName ? { displayName } : {}),
+    ...(email ? { email } : {}),
   };
 }
 
-/** 编辑：表单值 → 更新载荷（只提交显示名 + 角色） */
+/** 编辑：表单值 → 更新载荷（显示名 / 邮箱 / 2FA / 角色 / 项目） */
 function toUpdatePayload(values: UserFormValues): UpdateUserInput {
-  return { displayName: values.displayName?.trim() ?? '', role: values.role, projectIds: values.projectIds };
+  return {
+    displayName: values.displayName?.trim() ?? '',
+    email: values.email?.trim().toLowerCase() ?? '',
+    twoFactorEnabled: Boolean(values.twoFactorEnabled),
+    role: values.role,
+    projectIds: values.projectIds,
+  };
 }
 
 export function UserFormDialog({
@@ -86,7 +95,15 @@ export function UserFormDialog({
   const initial = React.useMemo<UserFormValues>(
     () =>
       user
-        ? { username: user.username, password: '', displayName: user.displayName, role: user.role, projectIds: user.projectIds ?? [] }
+        ? {
+            username: user.username,
+            password: '',
+            displayName: user.displayName,
+            email: user.email ?? '',
+            twoFactorEnabled: Boolean(user.twoFactorEnabled),
+            role: user.role,
+            projectIds: user.projectIds ?? [],
+          }
         : { ...defaultUserFormValues, projectIds: activeProject ? [activeProject.id] : [] },
     [user, activeProject],
   );
@@ -115,6 +132,7 @@ export function UserFormDialog({
 
   const roleValue = watch('role');
   const selectedProjects = watch('projectIds');
+  const twoFactorEnabled = watch('twoFactorEnabled');
 
   const submit = React.useCallback(async () => {
     await handleSubmit(async (values) => {
@@ -251,6 +269,37 @@ export function UserFormDialog({
               />
               <FieldMessage error={fieldError('displayName')} />
             </div>
+
+            <div>
+              <Label htmlFor="user-email" invalid={Boolean(errors.email)}>
+                邮箱
+              </Label>
+              <Input
+                id="user-email"
+                type="email"
+                className="mt-1.5"
+                placeholder="用于忘记密码和邮件验证码登录"
+                autoComplete="email"
+                invalid={Boolean(errors.email)}
+                {...register('email')}
+              />
+              <FieldMessage error={fieldError('email')} hint="选填；开启邮件 2FA 时必须填写，且不能与其他账号重复" />
+            </div>
+
+            <label htmlFor="user-two-factor" className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm">
+              <Checkbox
+                id="user-two-factor"
+                className="mt-0.5"
+                checked={Boolean(twoFactorEnabled)}
+                onCheckedChange={(checked) => setValue('twoFactorEnabled', checked === true, { shouldValidate: true })}
+              />
+              <span>
+                <span className="block font-medium">启用邮件 2FA</span>
+                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                  登录密码通过后，再向邮箱发送 6 位验证码；建议管理员和远程账号开启。
+                </span>
+              </span>
+            </label>
 
             <div>
               <Label htmlFor="user-role" invalid={Boolean(errors.role)}>

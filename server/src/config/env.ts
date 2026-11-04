@@ -20,6 +20,11 @@ export const envSchema = z.object({
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(5000),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  /** Public frontend URL used in password-reset emails; falls back to CORS_ORIGIN. */
+  APP_BASE_URL: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().url('APP_BASE_URL 格式不正确').optional(),
+  ),
   CORS_ALLOW_PRIVATE_NETWORK: booleanish.default(false),
   CORS_LAN_PORTS: z.string().default('5173,4173'),
 
@@ -37,6 +42,11 @@ export const envSchema = z.object({
   ADMIN_USERNAME: z.string().min(1).default('admin'),
   ADMIN_PASSWORD: z.string().min(10, 'ADMIN_PASSWORD 至少需要 10 个字符'),
   ADMIN_DISPLAY_NAME: z.string().default('Genesis Admin'),
+  /** Optional email address assigned to the bootstrap administrator. */
+  ADMIN_EMAIL: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().email('ADMIN_EMAIL 格式不正确').optional(),
+  ),
 
   MAIL_TRANSPORT: z.enum(['mock', 'smtp']).default('mock'),
   MAIL_FROM: z.string().default('Genesis (Xiamen) Bags Co., Ltd. <sales@genesisgroup.cn>'),

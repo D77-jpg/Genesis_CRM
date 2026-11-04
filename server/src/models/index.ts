@@ -42,6 +42,9 @@ export type { IUser, IUserMethods, UserDocument, UserModel, UserRole, UserStatus
 export { AuthSession } from './AuthSession';
 export type { IAuthSession, AuthSessionDocument } from './AuthSession';
 
+export { AuthChallenge } from './AuthChallenge';
+export type { IAuthChallenge, AuthChallengeDocument, AuthChallengePurpose } from './AuthChallenge';
+
 export { AuditLog, AUDIT_ACTIONS } from './AuditLog';
 export type { AuditAction, IAuditLog, AuditLogDocument } from './AuditLog';
 

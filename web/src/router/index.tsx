@@ -2,6 +2,7 @@
  * 路由表
  * ------------------------------------------------------------------
  *   /login                  公开（已登录时反向重定向到仪表盘）
+ *   /reset-password         公开（邮件重置密码链接）
  *   ProtectedRoute          守卫：恢复登录态 → 未登录跳 /login → 渲染 AppShell
  *     /                     仪表盘
  *     /customers            客户管理
@@ -21,6 +22,7 @@ import { PageLoader } from '@/components/common/page-loader';
 import { ROUTES } from '@/constants';
 
 const LoginPage = React.lazy(() => import('@/pages/login').then((m) => ({ default: m.LoginPage })));
+const ResetPasswordPage = React.lazy(() => import('@/pages/reset-password').then((m) => ({ default: m.ResetPasswordPage })));
 const DashboardPage = React.lazy(() => import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage })));
 const CustomersPage = React.lazy(() => import('@/pages/customers').then((m) => ({ default: m.CustomersPage })));
 const CustomerDetailPage = React.lazy(() =>
@@ -52,6 +54,10 @@ export const router = createBrowserRouter([
         <LoginPage />
       </GuestRoute>,
     ),
+  },
+  {
+    path: ROUTES.resetPassword,
+    element: withSuspense(<ResetPasswordPage />),
   },
   {
     path: '/',

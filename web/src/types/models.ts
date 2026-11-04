@@ -943,6 +943,16 @@ export interface LoginResult {
   user: AuthUser;
 }
 
+/** Login can pause after the password step while the email OTP is checked. */
+export interface TwoFactorChallenge {
+  twoFactorRequired: true;
+  challengeId: string;
+  emailHint: string;
+  expiresAt: string;
+}
+
+export type LoginResponse = LoginResult | TwoFactorChallenge;
+
 /* ---------------------------- 用户管理 ---------------------------- */
 
 /**
@@ -953,6 +963,10 @@ export interface UserDto {
   id: string;
   username: string;
   displayName: string;
+  /** Account email used for password reset and email OTP 2FA. */
+  email?: string;
+  /** Require an email OTP after the password step. */
+  twoFactorEnabled: boolean;
   role: UserRole;
   /** 账号启用状态：active 启用 / disabled 停用 */
   status: UserStatus;
@@ -1039,13 +1053,18 @@ export interface CreateUserInput {
   password: string;
   /** 显示名，留空时后端回退为用户名 */
   displayName?: string;
+  /** 账号邮箱，用于忘记密码和邮件 OTP 2FA */
+  email?: string;
+  twoFactorEnabled?: boolean;
   role: UserRole;
   projectIds?: string[];
 }
 
-/** 编辑用户资料（PUT /api/users/:id）：显示名 / 角色，至少一项 */
+/** 编辑用户资料（PUT /api/users/:id）：显示名 / 邮箱 / 2FA / 角色，至少一项 */
 export interface UpdateUserInput {
   displayName?: string;
+  email?: string;
+  twoFactorEnabled?: boolean;
   role?: UserRole;
   projectIds?: string[];
 }

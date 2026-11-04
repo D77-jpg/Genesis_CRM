@@ -25,7 +25,7 @@ import { createApp } from './app';
 import { beginShutdown } from './services/runtime-state';
 import { runMailQueue } from './services/mail-queue.service';
 import { syncInbox } from './services/mail-sync.service';
-import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, AuthSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, OutreachAutomationConfig, OutreachAutomationDay, OutreachAutomationEnrollment, Product, Project, ProjectPlaybook, Quotation, Scratchpad, User, UserMailAccount } from './models';
+import { AgentAction, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, AuthChallenge, AuthSession, Customer, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, OutreachAutomationConfig, OutreachAutomationDay, OutreachAutomationEnrollment, Product, Project, ProjectPlaybook, Quotation, Scratchpad, User, UserMailAccount } from './models';
 import { MailMessage, MailSyncState } from './models/MailMessage';
 
 const mailTimers: NodeJS.Timeout[] = [];
@@ -41,12 +41,16 @@ async function bootstrap(): Promise<void> {
     await migrateLegacyCustomerStatus();
     await migrateMailCustomerLastContact();
     await migrateLegacyQuotationVersion();
-    await Promise.all([Project.init(), User.init(), AuthSession.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
+    await Promise.all([Project.init(), User.init(), AuthSession.init(), AuthChallenge.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
       FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Product.init(), ProjectPlaybook.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),
       AgentSession.init(), AgentMessage.init(), AgentRun.init(), AgentAction.init(), AgentCustomerPreview.init(),
       KnowledgeFeedback.init(), KnowledgeTrainingState.init(),
       UserMailAccount.init(), MailQuotaBucket.init(), MailAccountAudit.init(),
       OutreachAutomationConfig.init(), OutreachAutomationEnrollment.init(), OutreachAutomationDay.init()]);
+    // AuthChallenge was introduced with an older unique secret index during
+    // development; sync only this new collection so deployments upgrade the
+    // index without touching existing business collections.
+    await AuthChallenge.syncIndexes();
     const app = createApp();
     const server = http.createServer(app);
     // 邮箱连通性检查可能受网络、防火墙或上游超时影响，不能阻塞 CRM 登录与启动。

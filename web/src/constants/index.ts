@@ -46,6 +46,7 @@ export const SCRATCHPAD_MAX_LENGTH = 50_000;
 
 export const ROUTES = {
   login: '/login',
+  resetPassword: '/reset-password',
   dashboard: '/',
   customers: '/customers',
   customerDetail: '/customers/:id',

@@ -16,6 +16,10 @@ export interface IUser {
   username: string;
   passwordHash: string;
   displayName: string;
+  /** Optional account email used for password reset and email OTP 2FA. */
+  email?: string;
+  /** Require an email OTP after the password step. */
+  twoFactorEnabled: boolean;
   role: UserRole;
   status: UserStatus;
   /** 可访问的项目。系统管理员不受此列表限制，普通用户严格按此列表授权。 */
@@ -52,6 +56,8 @@ const UserSchema = new Schema<IUser, {}, IUserMethods>(
     },
     passwordHash: { type: String, required: true, select: false },
     displayName: { type: String, trim: true, default: '', maxlength: 80 },
+    email: { type: String, trim: true, lowercase: true, maxlength: 200, unique: true, sparse: true },
+    twoFactorEnabled: { type: Boolean, default: false },
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
     // 旧数据无此字段时按「启用」处理（查询逻辑用 status !== 'disabled' 判断），无需迁移
     status: { type: String, enum: ['active', 'disabled'], default: 'active' },

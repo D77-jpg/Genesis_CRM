@@ -192,7 +192,11 @@ MONGODB_URI=mongodb://127.0.0.1:27017/cdlm
 JWT_SECRET=请替换为至少32个字符的随机字符串
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=请替换为安全的初始密码
+# 可选：给默认管理员绑定邮箱，用于忘记密码和邮件 2FA
+ADMIN_EMAIL=
+# mock 模式不会真实发信；本地测试时验证码/重置链接会打印到服务端控制台
 MAIL_TRANSPORT=mock
+APP_BASE_URL=http://localhost:5173
 IMAP_ENABLED=false
 ```
 
@@ -221,7 +225,7 @@ npm run dev
 - 后端 API：`http://127.0.0.1:5000/api`
 - 健康检查：`http://127.0.0.1:5000/api/health`
 
-首次启动会根据 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员。登录后可在用户管理页面创建业务员账号。
+首次启动会根据 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员。登录后可在用户管理页面创建业务员账号；建议同时为管理员绑定邮箱并开启邮件 2FA。忘记密码只对已绑定邮箱的账号发送重置链接。
 
 ### 5.6 局域网访问
 
@@ -251,9 +255,11 @@ CORS_LAN_PORTS=5173,4173
 | `COOKIE_SECURE` | `false` | HTTPS 部署时设为 `true`；生产环境默认自动启用 Secure cookie |
 | `ADMIN_USERNAME` | `admin` | 首次启动创建的管理员账号 |
 | `ADMIN_PASSWORD` | 无 | 管理员初始密码（至少 10 位；生产环境至少 16 位） |
+| `ADMIN_EMAIL` | 空 | 可选，默认管理员邮箱；也可登录后在用户管理中设置 |
 | `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个值用英文逗号分隔 |
+| `APP_BASE_URL` | 空 | 密码重置邮件中的前端地址，留空时取 `CORS_ORIGIN` 第一项 |
 | `CORS_ALLOW_PRIVATE_NETWORK` | `false` | 是否允许私有网段前端访问 |
-| `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp` |
+| `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp`；邮件 2FA 和忘记密码在生产环境需设为 `smtp` |
 | `SMTP_HOST` / `SMTP_PORT` | 空 / `587` | SMTP 服务地址和端口 |
 | `SMTP_USER` / `SMTP_PASS` | 空 | SMTP 账号和授权码 |
 | `SMTP_REQUIRE_TLS` | `true` | 是否要求 STARTTLS |
@@ -346,13 +352,21 @@ X-Project-Id: <projectId>
 
 浏览器访问令牌过期时，前端会自动调用 `POST /api/auth/refresh` 轮换刷新令牌；可用 `POST /api/auth/logout` 注销当前会话。
 
+账号可在「用户管理」中绑定邮箱并开启邮件 2FA。开启后，`POST /api/auth/login` 在密码正确时返回 `twoFactorRequired`、`challengeId` 和脱敏邮箱，不会签发 cookie；前端调用 `POST /api/auth/login/verify-2fa` 提交 6 位验证码后才创建会话。验证码 10 分钟有效，同一挑战最多尝试 5 次。
+
+忘记密码流程：
+
+1. `POST /api/auth/forgot-password` 提交用户名。无论账号是否存在都返回相同结果，避免账号枚举。
+2. 账号有邮箱时会收到 30 分钟有效的重置链接；邮件由系统 `MAIL_*`/`SMTP_*` 通道发送，`mock` 模式会打印到服务端控制台。
+3. `POST /api/auth/reset-password` 提交 `token` 和新密码；成功后撤销该账号的所有会话和未完成挑战。
+
 主要路由分组：
 
 | 前缀 | 用途 |
 | --- | --- |
 | `/api/health` | 健康检查，包含 `/live` 和 `/ready` |
 | `/api/meta` | 枚举、占位符和公司元数据 |
-| `/api/auth` | 登录、刷新、注销和当前用户 |
+| `/api/auth` | 登录、邮件 2FA、忘记/重置密码、刷新、注销和当前用户 |
 | `/api/projects` | 项目工作空间 |
 | `/api/customers` | 客户、跟进、附件和时间线 |
 | `/api/website-research` | 客户官网资料研究 |
@@ -421,7 +435,8 @@ docker compose --env-file .env.production up -d --wait
 - 新建用户默认是业务员（`user`），管理员角色必须由管理员显式授予。
 - 新建/重置密码要求 10–72 位，并至少包含大小写字母、数字、符号中的三类；连续 5 次登录失败会锁定账号 15 分钟。
 - 浏览器登录使用 HttpOnly access/refresh cookie，刷新令牌在服务端保存摘要并支持轮换、注销撤销；写操作使用 double-submit CSRF 校验。
-- 登录成功/失败/注销、用户管理和客户删除/导入/导出会写入审计日志；审计接口仅管理员可访问。
+- 可选的邮件 2FA 使用 6 位一次性验证码，验证码只保存带密钥的哈希摘要；忘记密码使用一次性重置令牌，均有时效和尝试次数限制。
+- 登录成功/失败/注销、2FA 挑战、密码重置、用户管理和客户删除/导入/导出会写入审计日志；审计接口仅管理员可访问。
 - 管理员专属功能同时在前端路由和后端接口校验。
 - 邮箱授权码使用服务端密钥加密，API 不返回明文密钥。
 - JWT、管理员密码和邮箱加密密钥不得写入代码、镜像或浏览器变量。

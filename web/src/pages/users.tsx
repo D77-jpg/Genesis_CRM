@@ -132,8 +132,11 @@ function UserRow({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{user.displayName || user.username}</span>
           {isSelf ? <Badge variant="muted">当前登录</Badge> : null}
+          {user.twoFactorEnabled ? <Badge variant="outline">2FA</Badge> : null}
         </div>
-        <span className="block truncate text-xs text-muted-foreground">@{user.username}</span>
+        <span className="block truncate text-xs text-muted-foreground">
+          @{user.username}{user.email ? ` · ${user.email}` : ' · 未绑定邮箱'}
+        </span>
       </div>
 
       <Badge variant="outline" className={cn('gap-1 font-normal', USER_ROLE_BADGE_CLASS[user.role])}>

@@ -9,7 +9,7 @@ import { create } from 'zustand';
 import { apiGet, apiPost, setUnauthorizedHandler, toErrorMessage, ApiClientError } from '@/lib/api';
 import { ROUTES, SCRATCHPAD_PENDING_PREFIX, STORAGE_KEYS } from '@/constants';
 import { removeStorage, removeStorageByPrefix } from '@/lib/utils';
-import type { AuthUser, LoginResult } from '@/types';
+import type { AuthUser, LoginResponse, LoginResult, TwoFactorChallenge } from '@/types';
 import { useProjectStore } from './project.store';
 
 export type AuthStatus = 'idle' | 'bootstrapping' | 'authenticated' | 'unauthenticated';
@@ -27,8 +27,14 @@ interface AuthState {
   /** 登录请求进行中 */
   loggingIn: boolean;
   loginError: string | null;
+  /** 密码已通过、等待邮件 OTP 的临时挑战 */
+  twoFactorChallenge: TwoFactorChallenge | null;
+  verifyingTwoFactor: boolean;
+  twoFactorError: string | null;
 
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<'authenticated' | 'twoFactor' | 'failed'>;
+  verifyTwoFactor: (code: string) => Promise<boolean>;
+  clearTwoFactor: () => void;
   logout: (options?: { silent?: boolean }) => void;
   bootstrap: () => Promise<void>;
   handleSessionExpired: () => void;
@@ -40,25 +46,75 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   initialized: false,
   loggingIn: false,
   loginError: null,
+  twoFactorChallenge: null,
+  verifyingTwoFactor: false,
+  twoFactorError: null,
 
   async login(username, password) {
-    set({ loggingIn: true, loginError: null });
+    set({ loggingIn: true, loginError: null, twoFactorChallenge: null, twoFactorError: null });
     try {
-      const result = await apiPost<LoginResult>('/auth/login', { username, password });
+      const result = await apiPost<LoginResponse>('/auth/login', { username, password });
       // Remove any token left by a pre-cookie-session build.
+      removeStorage(STORAGE_KEYS.token);
+      if ('twoFactorRequired' in result && result.twoFactorRequired) {
+        set({
+          user: null,
+          status: 'unauthenticated',
+          initialized: true,
+          loggingIn: false,
+          loginError: null,
+          twoFactorChallenge: result,
+          twoFactorError: null,
+        });
+        return 'twoFactor';
+      }
+      const loginResult = result as LoginResult;
+      set({
+        user: loginResult.user,
+        status: 'authenticated',
+        initialized: true,
+        loggingIn: false,
+        loginError: null,
+        twoFactorChallenge: null,
+        twoFactorError: null,
+      });
+      return 'authenticated';
+    } catch (error) {
+      set({ loggingIn: false, loginError: toErrorMessage(error, '登录失败，请检查用户名与密码') });
+      return 'failed';
+    }
+  },
+
+  async verifyTwoFactor(code) {
+    const challenge = get().twoFactorChallenge;
+    if (!challenge) return false;
+    set({ verifyingTwoFactor: true, twoFactorError: null });
+    try {
+      const result = await apiPost<LoginResult>('/auth/login/verify-2fa', {
+        challengeId: challenge.challengeId,
+        code,
+      });
       removeStorage(STORAGE_KEYS.token);
       set({
         user: result.user,
         status: 'authenticated',
         initialized: true,
-        loggingIn: false,
-        loginError: null,
+        verifyingTwoFactor: false,
+        twoFactorChallenge: null,
+        twoFactorError: null,
       });
       return true;
     } catch (error) {
-      set({ loggingIn: false, loginError: toErrorMessage(error, '登录失败，请检查用户名与密码') });
+      set({
+        verifyingTwoFactor: false,
+        twoFactorError: toErrorMessage(error, '验证码校验失败，请重试'),
+      });
       return false;
     }
+  },
+
+  clearTwoFactor() {
+    set({ twoFactorChallenge: null, twoFactorError: null, verifyingTwoFactor: false });
   },
 
   logout({ silent = false } = {}) {
@@ -74,6 +130,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       initialized: true,
       loggingIn: false,
       loginError: silent ? null : get().loginError,
+      twoFactorChallenge: null,
+      twoFactorError: null,
     });
   },
 
@@ -107,7 +165,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     removeStorage(STORAGE_KEYS.token);
     removeStorageByPrefix(SCRATCHPAD_PENDING_PREFIX);
     useProjectStore.getState().reset();
-    set({ user: null, status: 'unauthenticated', initialized: true });
+    set({ user: null, status: 'unauthenticated', initialized: true, twoFactorChallenge: null, twoFactorError: null });
     // 强制整页跳登录页：避免残留的内存态 UI 在掉登录后仍能被继续操作
     if (window.location.pathname !== ROUTES.login) {
       window.location.assign(ROUTES.login);

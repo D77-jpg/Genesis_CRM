@@ -23,6 +23,7 @@ import {
   Inbox,
   LockKeyhole,
   Mail,
+  MailCheck,
   ShieldCheck,
   Truck,
   UserRound,
@@ -32,6 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label, FieldMessage } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { ForgotPasswordDialog } from '@/components/auth/forgot-password-dialog';
 import { loginSchema, type LoginFormValues } from '@/lib/validators';
 import { useAuthStore } from '@/store/auth.store';
 import { useMetaStore } from '@/store/meta.store';
@@ -104,10 +106,18 @@ export function LoginPage(): React.JSX.Element {
   const login = useAuthStore((state) => state.login);
   const loggingIn = useAuthStore((state) => state.loggingIn);
   const loginError = useAuthStore((state) => state.loginError);
+  const twoFactorChallenge = useAuthStore((state) => state.twoFactorChallenge);
+  const verifyingTwoFactor = useAuthStore((state) => state.verifyingTwoFactor);
+  const twoFactorError = useAuthStore((state) => state.twoFactorError);
+  const verifyTwoFactor = useAuthStore((state) => state.verifyTwoFactor);
+  const clearTwoFactor = useAuthStore((state) => state.clearTwoFactor);
   const status = useAuthStore((state) => state.status);
   const fetchMeta = useMetaStore((state) => state.fetchMeta);
 
   const [showPassword, setShowPassword] = React.useState(false);
+  const [otp, setOtp] = React.useState('');
+  const [otpError, setOtpError] = React.useState<string | null>(null);
+  const [forgotOpen, setForgotOpen] = React.useState(false);
 
   const {
     register,
@@ -140,8 +150,9 @@ export function LoginPage(): React.JSX.Element {
   const onSubmit = React.useCallback(
     async (values: LoginFormValues) => {
       clearErrors();
-      const ok = await login(values.username, values.password);
-      if (!ok) {
+      setOtpError(null);
+      const result = await login(values.username, values.password);
+      if (result === 'failed') {
         // store 里已把中文错误写进 loginError，这里补一个字段级提示便于定位
         setError('password', { message: '用户名或密码不正确' });
         return;
@@ -150,6 +161,12 @@ export function LoginPage(): React.JSX.Element {
       if (values.remember) writeStorage(REMEMBER_KEY, values.username);
       else writeStorage(REMEMBER_KEY, '');
 
+      if (result === 'twoFactor') {
+        setOtp('');
+        toast.info('验证码已发送', { description: '请查看账号绑定邮箱中的 6 位验证码' });
+        return;
+      }
+
       // 登录成功后拉一次元数据（占位符 / 公司信息 / 邮件通道）
       await fetchMeta({ force: true });
       toast.success('登录成功', { description: '欢迎回来' });
@@ -157,6 +174,29 @@ export function LoginPage(): React.JSX.Element {
     },
     [login, setError, clearErrors, fetchMeta, navigate, from],
   );
+
+  const onVerify = React.useCallback(
+    async (event: React.FormEvent) => {
+      event.preventDefault();
+      if (otp.length !== 6) {
+        setOtpError('请输入 6 位数字验证码');
+        return;
+      }
+      setOtpError(null);
+      const ok = await verifyTwoFactor(otp);
+      if (!ok) return;
+      await fetchMeta({ force: true });
+      toast.success('登录成功', { description: '双重验证已通过' });
+      navigate(from, { replace: true });
+    },
+    [otp, verifyTwoFactor, fetchMeta, navigate, from],
+  );
+
+  const handleBackToPassword = (): void => {
+    setOtp('');
+    setOtpError(null);
+    clearTwoFactor();
+  };
 
   // Radix Checkbox 不是原生 input，走 watch + setValue 而不是 register，避免事件形状不匹配
   const remember = watch('remember');
@@ -216,11 +256,71 @@ export function LoginPage(): React.JSX.Element {
         <section className="mx-auto w-full max-w-[32rem] lg:mx-0 lg:justify-self-end" aria-label="登录">
           <div className="rounded-[1.75rem] border border-white/75 bg-white/95 p-6 text-slate-950 shadow-[0_28px_80px_-36px_rgba(15,23,42,0.48),0_2px_12px_rgba(15,23,42,0.06)] backdrop-blur-2xl sm:p-10 dark:border-white/10 dark:bg-slate-950/90 dark:text-white">
             <div>
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-[#7658f6] dark:text-[#b7a6ff]">WELCOME BACK</p>
-              <h2 className="mt-2 text-[2.15rem] font-semibold leading-tight tracking-[-0.045em] text-slate-950 dark:text-white">欢迎回来</h2>
-              <p className="mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400">登录你的 GLOBAL CRM 工作空间</p>
+              <p className="text-[10px] font-semibold tracking-[0.22em] text-[#7658f6] dark:text-[#b7a6ff]">
+                {twoFactorChallenge ? 'TWO-FACTOR VERIFICATION' : 'WELCOME BACK'}
+              </p>
+              <h2 className="mt-2 text-[2.15rem] font-semibold leading-tight tracking-[-0.045em] text-slate-950 dark:text-white">
+                {twoFactorChallenge ? '两步验证' : '欢迎回来'}
+              </h2>
+              <p className="mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                {twoFactorChallenge
+                  ? `验证码已发送至 ${twoFactorChallenge.emailHint}`
+                  : '登录你的 GLOBAL CRM 工作空间'}
+              </p>
             </div>
 
+            {twoFactorChallenge ? (
+              <form className="mt-8 space-y-5" noValidate onSubmit={(event) => void onVerify(event)}>
+                {twoFactorError || otpError ? (
+                  <div role="alert" className="flex gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm leading-5 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <div>
+                      <p className="font-medium">验证失败</p>
+                      <p className="mt-0.5 text-rose-600/90 dark:text-rose-200/80">{otpError || twoFactorError}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div>
+                  <Label htmlFor="login-otp">邮箱验证码</Label>
+                  <div className="relative mt-1.5">
+                    <MailCheck className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" aria-hidden />
+                    <Input
+                      id="login-otp"
+                      className="h-[52px] rounded-xl border-slate-200 bg-white pl-12 pr-4 text-center text-[20px] tracking-[0.45em] text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.03)] focus-visible:border-[#8a70ff] focus-visible:ring-[#8a70ff]/15 dark:border-white/10 dark:bg-slate-900 dark:text-white"
+                      placeholder="000000"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      autoFocus
+                      value={otp}
+                      onChange={(event) => {
+                        setOtp(event.target.value.replace(/\D/g, '').slice(0, 6));
+                        setOtpError(null);
+                      }}
+                    />
+                  </div>
+                  <FieldMessage hint="验证码 10 分钟内有效；未收到请检查垃圾箱或返回重新登录" className="pl-1" />
+                </div>
+
+                <Button type="submit" className="login-submit h-[52px] w-full rounded-xl text-[15px] font-semibold" size="lg" loading={verifyingTwoFactor} disabled={verifyingTwoFactor || otp.length !== 6}>
+                  {verifyingTwoFactor ? '正在验证…' : (
+                    <>
+                      验证并登录
+                      <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
+                    </>
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={handleBackToPassword}
+                  className="w-full text-center text-[13px] font-medium text-slate-500 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/30 dark:text-slate-400 dark:hover:text-white"
+                >
+                  返回密码登录
+                </button>
+              </form>
+            ) : (
             <form
               className="mt-8 space-y-5"
               noValidate
@@ -297,7 +397,7 @@ export function LoginPage(): React.JSX.Element {
                 </label>
                 <button
                   type="button"
-                  onClick={() => toast.info('请联系系统管理员重置密码')}
+                  onClick={() => setForgotOpen(true)}
                   className="text-[13px] font-medium text-[#6547ee] transition-colors hover:text-[#4c2fd1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8a70ff]/30 dark:text-[#b7a6ff] dark:hover:text-[#d4c9ff]"
                 >
                   忘记密码？
@@ -313,6 +413,7 @@ export function LoginPage(): React.JSX.Element {
                 )}
               </Button>
             </form>
+            )}
 
             <div className="my-6 flex items-center gap-3">
               <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" aria-hidden />
@@ -336,6 +437,8 @@ export function LoginPage(): React.JSX.Element {
           </div>
         </section>
       </main>
+
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </div>
   );
 }
