@@ -29,7 +29,7 @@ export const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
 
   ADMIN_USERNAME: z.string().min(1).default('admin'),
-  ADMIN_PASSWORD: z.string().min(6, 'ADMIN_PASSWORD 至少需要 6 个字符'),
+  ADMIN_PASSWORD: z.string().min(10, 'ADMIN_PASSWORD 至少需要 10 个字符'),
   ADMIN_DISPLAY_NAME: z.string().default('Genesis Admin'),
 
   MAIL_TRANSPORT: z.enum(['mock', 'smtp']).default('mock'),

@@ -4,7 +4,18 @@
  * 仅管理员可用：创建 / 编辑资料 / 重置密码 / 停用启用，用户名规则与 User 模型保持一致。
  */
 import { z } from 'zod';
+import { PASSWORD_MAX_LENGTH, passwordPolicyIssues } from '../utils/password-policy';
 import { objectIdSchema } from './common';
+
+/** Shared password rule for account creation and administrator resets. */
+const passwordSchema = z
+  .string()
+  .max(PASSWORD_MAX_LENGTH, `密码最多 ${PASSWORD_MAX_LENGTH} 位`)
+  .superRefine((value, ctx) => {
+    for (const message of passwordPolicyIssues(value)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    }
+  });
 
 /** 用户名：字母 / 数字 / . _ -，3-40 位，统一转小写（与 User 模型 username 约束一致） */
 const usernameSchema = z
@@ -18,7 +29,7 @@ const usernameSchema = z
 export const createUserSchema = z.object({
   username: usernameSchema,
   /** 明文密码，服务端 bcrypt 加密后存储；bcrypt 上限 72 字节 */
-  password: z.string().min(6, '密码至少 6 位').max(72, '密码最多 72 位'),
+  password: passwordSchema,
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional(),
   /** 角色：admin 管理员 / user 业务员，默认业务员 */
   role: z.enum(['admin', 'user']).default('user'),
@@ -43,7 +54,7 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 /** 重置密码：管理员为指定账号设置新密码，服务端 bcrypt 重新哈希 */
 export const resetPasswordSchema = z.object({
-  password: z.string().min(6, '密码至少 6 位').max(72, '密码最多 72 位'),
+  password: passwordSchema,
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

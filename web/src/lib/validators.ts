@@ -282,6 +282,34 @@ export type ImportOptionsValues = z.infer<typeof importOptionsSchema>;
 
 /* ---------------------------- 用户管理 ---------------------------- */
 
+/** Keep this in sync with server/src/utils/password-policy.ts. */
+const PASSWORD_MIN_LENGTH = 10;
+const PASSWORD_MAX_LENGTH = 72;
+const commonPasswords = new Set([
+  'password', 'password1', 'password123', 'admin', 'admin123', 'administrator',
+  'welcome', 'welcome1', 'letmein', 'changeme', 'change-me', 'qwerty', 'qwerty123',
+  '123456', '12345678', '123456789', '1234567890', '111111', '000000', 'abc123',
+  'iloveyou', 'genesis', 'ironhue', 'velaturo',
+]);
+
+function passwordPolicyIssues(password: string): string[] {
+  const issues: string[] = [];
+  if (password.length < PASSWORD_MIN_LENGTH) issues.push(`密码至少 ${PASSWORD_MIN_LENGTH} 位`);
+  if (password.length > PASSWORD_MAX_LENGTH) issues.push(`密码最多 ${PASSWORD_MAX_LENGTH} 位`);
+  if (commonPasswords.has(password.trim().toLowerCase())) issues.push('密码过于常见，请使用不容易被猜到的密码');
+  if (/(.)\1{3,}/.test(password)) issues.push('密码不能包含连续重复字符');
+  if (/(password|admin|qwerty|letmein|welcome)/i.test(password)) issues.push('密码不能包含常见弱密码词');
+  const categories = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((pattern) => pattern.test(password)).length;
+  if (categories < 3) issues.push('密码需包含大小写字母、数字、符号中的至少三类');
+  return issues;
+}
+
+const passwordSchema = z.string().superRefine((value, ctx) => {
+  for (const message of passwordPolicyIssues(value)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  }
+});
+
 /**
  * 新建用户表单：用户名 / 密码 / 显示名 / 角色。
  * 规则与后端 server/src/validators/user.validator.ts 保持一致（前端先拦一道）。
@@ -293,7 +321,7 @@ export const userFormSchema = z.object({
     .min(3, '用户名至少 3 个字符')
     .max(40, '用户名最多 40 个字符')
     .regex(/^[a-zA-Z0-9._-]+$/, '用户名只能包含字母、数字、点、下划线、连字符'),
-  password: z.string().min(6, '密码至少 6 位').max(72, '密码最多 72 位'),
+  password: passwordSchema,
   displayName: z.string().trim().max(80, '显示名最多 80 个字符').optional().or(z.literal('')),
   role: z.enum(USER_ROLE_VALUES, { error: '请选择角色' }),
   projectIds: z.array(z.string()).default([]),
@@ -324,7 +352,7 @@ export const editUserFormSchema = z.object({
 
 /** 重置密码表单：仅一个新密码字段 */
 export const resetPasswordFormSchema = z.object({
-  password: z.string().min(6, '密码至少 6 位').max(72, '密码最多 72 位'),
+  password: passwordSchema,
 });
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordFormSchema>;
 

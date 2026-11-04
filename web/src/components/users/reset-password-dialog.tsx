@@ -129,12 +129,12 @@ export function ResetPasswordDialog({
                 id="reset-password"
                 type="password"
                 className="mt-1.5"
-                placeholder="至少 6 位"
+                placeholder="至少 10 位，大小写/数字/符号"
                 autoComplete="new-password"
                 invalid={Boolean(errors.password)}
                 {...register('password')}
               />
-              <FieldMessage error={errors.password?.message} hint="6-72 位；重置后请转告本人" />
+              <FieldMessage error={errors.password?.message} hint="10-72 位，需包含大小写字母、数字、符号中的至少三类；重置后请转告本人" />
             </div>
           </form>
         </DialogBody>

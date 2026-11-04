@@ -14,6 +14,11 @@ import type { AuthUser, JwtPayload } from '../types/express';
 
 const logger = createLogger('auth');
 
+/** Account lockout policy. Keep these values visible for tests and operations. */
+export const LOGIN_MAX_FAILED_ATTEMPTS = 5;
+export const LOGIN_LOCK_MINUTES = 15;
+const LOGIN_LOCK_MS = LOGIN_LOCK_MINUTES * 60 * 1000;
+
 export interface LoginResult {
   token: string;
   expiresAt: string;
@@ -71,15 +76,44 @@ function toAuthUser(doc: UserDocument): AuthUser {
 export async function login(username: string, password: string): Promise<LoginResult> {
   const normalized = username.trim().toLowerCase();
 
-  // passwordHash 在 schema 中 select:false，这里显式取出
-  const user = await User.findOne({ username: normalized }).select('+passwordHash');
+  // passwordHash / lockout fields are select:false; the auth path opts in explicitly.
+  const user = await User.findOne({ username: normalized }).select(
+    '+passwordHash +failedLoginAttempts +lockedUntil',
+  );
   if (!user) {
     // 统一话术，避免暴露「用户是否存在」
     throw ApiError.unauthorized('用户名或密码错误');
   }
 
+  const now = new Date();
+  if (user.lockedUntil && user.lockedUntil > now) {
+    throw ApiError.tooManyRequests('登录失败次数过多，账号已临时锁定，请稍后再试');
+  }
+  // An expired lock must not carry its old failure count into the next window.
+  if (user.lockedUntil && user.lockedUntil <= now) {
+    await User.updateOne({ _id: user._id }, { $set: { failedLoginAttempts: 0 }, $unset: { lockedUntil: 1 } });
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = undefined;
+  }
+
   const ok = await user.comparePassword(password);
   if (!ok) {
+    const failedAttempts = (user.failedLoginAttempts ?? 0) + 1;
+    const lockedUntil = failedAttempts >= LOGIN_MAX_FAILED_ATTEMPTS
+      ? new Date(now.getTime() + LOGIN_LOCK_MS)
+      : undefined;
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          failedLoginAttempts: failedAttempts,
+          ...(lockedUntil ? { lockedUntil } : {}),
+        },
+      },
+    );
+    if (lockedUntil) {
+      throw ApiError.tooManyRequests('登录失败次数过多，账号已临时锁定，请稍后再试');
+    }
     throw ApiError.unauthorized('用户名或密码错误');
   }
 
@@ -88,8 +122,11 @@ export async function login(username: string, password: string): Promise<LoginRe
     throw ApiError.forbidden('账号已停用，请联系管理员');
   }
 
-  user.lastLoginAt = new Date();
-  await user.save({ validateBeforeSave: false });
+  // Successful login clears the lockout window and records the last login.
+  await User.updateOne(
+    { _id: user._id },
+    { $set: { lastLoginAt: new Date(), failedLoginAttempts: 0 }, $unset: { lockedUntil: 1 } },
+  );
 
   const authUser = toAuthUser(user as UserDocument);
   const { token, expiresAt } = signToken(authUser);

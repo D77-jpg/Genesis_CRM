@@ -12,6 +12,7 @@ import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/pagination';
 import { createUser, deleteUser, listUsers, resetPassword, setUserStatus, updateUser } from '../services/user.service';
+import { recordAudit } from '../services/audit.service';
 import type {
   CreateUserInput,
   ResetPasswordInput,
@@ -27,28 +28,67 @@ export const listUsersHandler = asyncHandler(async (_req: Request, res: Response
 export const createUserHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as CreateUserInput;
   const data = await createUser(input);
+  await recordAudit({
+    actor: req.user,
+    action: 'user.create',
+    targetType: 'user',
+    targetId: data.id,
+    request: req,
+    detail: { username: data.username, role: data.role },
+  });
   sendSuccess(res, data, 201);
 });
 
 export const updateUserHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as UpdateUserInput;
   const data = await updateUser(req.user!.id, req.params.id, input);
+  await recordAudit({
+    actor: req.user,
+    action: 'user.update',
+    targetType: 'user',
+    targetId: data.id,
+    request: req,
+    detail: { fields: Object.keys(input), role: data.role },
+  });
   sendSuccess(res, data);
 });
 
 export const resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as ResetPasswordInput;
   const data = await resetPassword(req.params.id, input.password);
+  await recordAudit({
+    actor: req.user,
+    action: 'user.password_reset',
+    targetType: 'user',
+    targetId: data.id,
+    request: req,
+  });
   sendSuccess(res, data);
 });
 
 export const setUserStatusHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as SetUserStatusInput;
   const data = await setUserStatus(req.user!.id, req.params.id, input.status);
+  await recordAudit({
+    actor: req.user,
+    action: 'user.status_change',
+    targetType: 'user',
+    targetId: data.id,
+    request: req,
+    detail: { status: data.status },
+  });
   sendSuccess(res, data);
 });
 
 export const deleteUserHandler = asyncHandler(async (req: Request, res: Response) => {
   const data = await deleteUser(req.user!.id, req.params.id);
+  await recordAudit({
+    actor: req.user,
+    action: 'user.delete',
+    targetType: 'user',
+    targetId: data.id,
+    request: req,
+    detail: { reassignedCustomers: data.reassignedCustomers },
+  });
   sendSuccess(res, data);
 });
