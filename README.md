@@ -1,208 +1,117 @@
 # GlobalCRM
 
-**外贸客户开发、邮件触达与成交管理平台**
+**面向跨境 B2B 销售团队的自托管 CRM。把客户、开发信、邮件、报价、知识库和团队协作放进同一个工作区。**
 
-| 项目 | 内容 |
-| --- | --- |
-| 当前版本 | 2.6.0 |
-| 文档更新 | 2026-11-04 |
-| 运行环境 | Node.js >= 20.19，MongoDB 7.x 或 8.x |
-| 部署方式 | 本机开发，Docker Compose 单机部署 |
+[![CI](https://github.com/D77-jpg/GlobalCRM/actions/workflows/integration-release-gate.yml/badge.svg?branch=main)](https://github.com/D77-jpg/GlobalCRM/actions/workflows/integration-release-gate.yml)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.19-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7%20%7C%208-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![License: TBD](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-GlobalCRM 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。P2 起系统以「组织 → 项目」两层划分数据边界，支持组织级套餐、计量与平台运营；P3 补齐公开价格/帮助/法律页面、上市主流程 E2E、版本化数据库迁移、三套环境与压力/安全基线。
+> 当前版本：`2.6.0` · 文档更新：`2026-11-04` · 状态：积极开发中
+
+GlobalCRM is a self-hosted, multi-tenant CRM for cross-border B2B sales teams. It keeps customer development, personalized outreach, mailbox conversations, quotations, product knowledge and team permissions in one project workspace.
 
 ## 目录
 
-- [1. 项目定位](#1-项目定位)
-- [2. 核心能力](#2-核心能力)
-- [3. 技术架构](#3-技术架构)
-- [4. 目录结构](#4-目录结构)
-- [5. 快速开始](#5-快速开始)
-- [6. 配置说明](#6-配置说明)
-- [7. 常用命令](#7-常用命令)
-- [8. API 概览](#8-api-概览)
-- [9. 生产部署](#9-生产部署)
-- [10. 安全与数据边界](#10-安全与数据边界)
-- [11. 术语](#11-术语)
-- [12. 相关文档](#12-相关文档)
-- [13. 许可](#13-许可)
+- [为什么使用 GlobalCRM](#为什么使用-globalcrm)
+- [核心功能](#核心功能)
+- [界面预览](#界面预览)
+- [技术架构](#技术架构)
+- [快速开始](#快速开始)
+- [配置](#配置)
+- [常用命令](#常用命令)
+- [生产部署](#生产部署)
+- [API 与集成](#api-与集成)
+- [安全与数据边界](#安全与数据边界)
+- [项目结构](#项目结构)
+- [文档](#文档)
+- [Contributing](#contributing)
+- [License](#license)
+- [联系](#联系)
 
-## 1. 项目定位
+<p align="center">
+  <img src="docs/assets/globalcrm-login.png" alt="GlobalCRM 登录页" width="860" />
+</p>
 
-本系统用于外贸团队的日常客户开发与跟进。它把客户资料、开发信、邮件线程、报价和知识依据放在同一个项目工作空间中，减少在表格、邮箱和多个 AI 工具之间来回切换。
+## 为什么使用 GlobalCRM
 
-系统不替代邮件服务商，也不绕过客户许可。自动发送受审核结论、发送额度、客户状态和停止信号约束。
+外贸团队的日常工作通常散落在表格、邮箱、聊天工具和多个 AI 工具中。GlobalCRM 把这些动作收进一个可追溯的项目工作区：
 
-## 2. 核心能力
+- **一个工作台完成客户开发**：从潜客池、客户档案、开发信、回复跟进到报价，不必反复切换系统。
+- **触达有边界**：审核、发送额度、退订、抑制名单和送达检查共同约束邮件发送。
+- **AI 有依据**：开发信可以引用项目知识库，报价核对对照产品目录和历史价格，不让模型编造业务数据。
+- **数据可自托管**：支持本机、Docker Compose 和独立 Worker 部署，组织和项目之间保持隔离。
 
-### 多项目工作空间
+## 核心功能
 
-- 一套部署可管理多个外贸项目。
-- 项目切换会同步切换客户、邮件、模板、跟进、附件、报价和 Dashboard 数据。
-- 组织管理员可查看本组织全部项目；项目管理员和只读账号可查看被分配项目的全部数据；销售只能访问被分配项目下本人负责的客户。
-- 浏览器通过 `X-Project-Id` 传递当前项目，后端对业务查询再次校验项目范围。
-- 新建项目后可进入「新手引导」，按品牌、产品、行业卡、发件邮箱、团队和 AI 清单完成初始化。
+| 领域 | 能力 |
+| --- | --- |
+| 客户与潜客 | 客户档案、联系人、标签、来源、优先级、Excel 导入、重复检查、跟进提醒、时间线和附件 |
+| 潜客开发 | 搜索方案、关键词、候选池、公共池、领取/放回、官网资料补全、转为客户 |
+| 开发信 | 富文本编辑器、模板和占位符、固定签名、中英对照、AI 草稿、引用知识、发送前审核 |
+| 邮件中心 | 收件箱、发件记录、邮件线程、定时发送、失败重试、IMAP 增量同步、SMTP 和 Mock 发件 |
+| 邮件合规 | 可见退订链接、RFC 8058 一键退订、List-Unsubscribe、退信/投诉/人工抑制名单、SPF/DKIM/DMARC 检查、邮箱预热 |
+| 产品与报价 | 产品目录、SKU、MOQ、交期、阶梯价、批量导入、多币种报价、历史比较和报价核对 |
+| 知识库与 AI | 文档上传、解析、索引、关键词和语义检索、引用来源、AI 配置、用量和每日额度 |
+| 组织与权限 | 组织/项目两级隔离、组织管理员、项目管理员、销售、只读、平台运营、套餐计量和账单草稿 |
+| 部署与运维 | 版本化 MongoDB 迁移、API 和 Worker 分离、Prometheus 指标、备份恢复、Docker Compose |
 
-### 组织、套餐与平台运营（P2）
+## 界面预览
 
-- 组织（Organization）是项目之上的租户边界：用户、项目、客户、邮件、模板、附件、知识库等业务集合都带 `organizationId`。
-- 租户上下文通过 AsyncLocalStorage 注入，Mongoose 全局插件统一为查询、聚合、更新和删除追加组织过滤；平台运营接口显式绕过。
-- 组织管理员可维护组织资料、账单邮箱、税号和套餐；套餐包含用户数、项目数、月邮件量、AI Token 和存储空间限额。
-- 每月按组织记录邮件发送、AI Token 和附件存储用量，超额时发送/上传前失败关闭；账单页可按当月用量生成草稿估算单。
-- 平台控制台仅供 `isPlatformAdmin` 使用，可创建组织及组织管理员、暂停/恢复组织、查看跨组织用量并生成账单。
-- 旧版单租户数据通过版本化迁移显式迁移到默认组织；应用和 worker 启动时只校验迁移状态，不执行迁移。
+<p align="center">
+  <img src="docs/assets/globalcrm-pricing.png" alt="GlobalCRM 定价页" width="860" />
+</p>
 
-### 上市准备（P3）
-
-- **公开产品页**：`/pricing` 展示三档套餐、年付优惠、额度对比和 FAQ；`/help` 提供 10 篇中英双语操作文档；`/legal/terms|privacy|dpa|sla` 提供服务条款、隐私政策、DPA 和 SLA。
-- **E2E 主流程**：`npm run test:e2e --prefix server` 用真实 HTTP 接口验证「登录 → 导入客户 → 发信 → 收回复 → 报价」；测试使用内存 Mongo，不依赖外部邮箱。
-- **版本化迁移**：`server/src/migrations/` 前向、追加式迁移；`schema_migrations` 记录校验和，应用启动 fail closed 检查，Compose 用一次性 `migrate` 服务先于 API/worker 完成。
-- **三套环境**：开发使用 `server/.env.example`，预发布使用 `staging.env.example`，生产使用 `production.env.example`；三者独立数据库、密钥、卷和域名。
-- **压力与稳定性**：`npm run load --prefix server` 提供可配置并发/时长的只读压测与 p50/p95/p99、错误率、进程内存报告；默认限流为 600 次/分钟，压测需在隔离环境临时提高。
-- **安全基线**：`npm run test:security --prefix server` 覆盖鉴权、CSRF、租户隔离、安全头、公共接口最小暴露；外部渗透测试仍需在上线前由独立第三方执行，清单见 `docs/P3-安全测试与外部渗透测试清单.md`。
-
-### 客户与开发过程
-
-- 客户档案、联系人、来源、优先级、标签和自定义业务字段。
-- Excel 导入支持列名自动识别和手动映射。
-- 客户详情包含跟进记录、附件、时间线、开发信、报价和待审核草稿。
-- 支持客户状态流转、跟进提醒和重复客户检查。
-
-### 今日开发与潜客池
-
-- 按项目维护搜索方案、关键词和补全数量。
-- 支持候选池、公共池、领取、放回和转为客户。
-- 可通过公开官网资料补全公司、职位、国家、社交账号等字段。
-- 候选转为客户前可预览将写入的客户资料。
-
-### 开发信与审核
-
-- 富文本开发信编辑器，支持模板、占位符和固定签名。
-- 模板中心按首次开发、产品推荐、报价、跟进、节日等分类管理。
-- 发送前支持编辑、预览和中英对照。
-- 草稿审核保存审核结论和内容指纹。内容被修改后必须重新审核。
-- 支持 AI 生成草稿、引用知识依据、检查占位符和发送前校验。
-
-### 邮件中心
-
-- 统一查看收件箱、发件记录、定时任务和客户邮件线程。
-- 支持立即发送、定时发送、取消、失败重试和待核实状态。
-- 支持 IMAP 增量收件、客户邮箱匹配、未知邮件处理、回复和附件。
-- 支持 SMTP 真实发件和 Mock 模拟发件。
-- HTML 邮件支持打开追踪和链接点击追踪。追踪数据只作互动参考。
-
-### 邮件合规与送达
-
-- 每封开发信自动附带可见退订链接，并发送 `List-Unsubscribe` / `List-Unsubscribe-Post` 邮件头，支持 RFC 8058 一键退订。
-- 退订、硬退信、投诉和人工地址进入项目级或全局「不再发送名单」；后续队列任务会直接取消。
-- 收件箱同步会识别退信报告和退订请求；SMTP 永久退信也会自动写入抑制名单。
-- 管理端可检查发件域名的 SPF、DKIM（可选 selector）和 DMARC DNS 记录。
-- 项目可关闭打开/点击追踪；关闭后不再插入像素或改写链接，已产生的统计仍保留。启用追踪时应在隐私政策中告知收件人。
-- 支持邮箱预热：按起始上限、每日增量和最高上限逐日提升，并与邮箱自身额度、项目每日上限取最小值。
-- 项目设置中可维护品牌身份、供应内容、开发信重点、主题偏好和签名，替换代码内置话术。
-
-### 产品与报价
-
-- 按项目维护产品目录、SKU、规格、MOQ、交期和阶梯价。
-- 支持产品 Excel 模板批量导入。
-- 报价单支持多币种、状态流转和历史比较。
-- 报价核对会对照产品目录、数量档位和历史报价，不调用模型编造价格。
-
-### 知识库与 AI
-
-- 项目知识文档上传、解析、索引和检索。
-- 开发信可引用知识依据，并展示引用来源和风险提示。
-- 支持关键词检索和本地语义检索。
-- AI 配置、用量、诊断和每日额度由管理员管理。
-- 支持 OpenAI 兼容的模型服务，可在管理界面覆盖服务端默认配置。
-
-### 团队协作与界面
-
-- 四级业务角色：组织管理员（`admin`）、项目管理员、销售、只读。只读账号在前端隐藏写操作，后端也会拒绝所有非 GET 写请求。
-- 组织管理员管理本组织账号和全部项目；项目管理员管理被分配项目的资料、品牌与邮件合规；销售只看本人客户；只读账号可查看项目全量数据。
-- 平台运营使用独立的 `isPlatformAdmin` 标记，不占用业务角色；平台控制台可跨组织查看和运营。
-- 用户管理、项目分配、客户归属和邮箱绑定。
-- 中英文界面切换在右上角，偏好保存在浏览器；导航、登录、项目、引导、客户、邮件、知识库、表单弹窗和系统设置等界面文案均已英文化，客户资料、邮件正文等业务数据保持原文。
-- Dashboard 展示客户漏斗、待跟进、开发信和邮件活动，并显示初始化进度卡片。
-- 个人随手记按用户和项目隔离，并同步到服务端。
-
-## 3. 技术架构
+## 技术架构
 
 ```mermaid
 flowchart LR
   U[浏览器<br/>React SPA] -->|HTTPS /api| A[Express API]
   A --> M[(MongoDB)]
-  A --> F[本地附件目录或 S3]
-  A --> S[SMTP / IMAP]
-  A --> K[知识索引与本地模型]
+  A --> F[本地附件或 S3]
+  A --> K[知识索引与语义检索]
   A --> L[OpenAI 兼容模型服务]
-  A -. 指标 / 错误 .-> O[Prometheus / 日志]
-  W[独立 Worker] --> M
-  W --> S
+  A --> Q[邮件队列]
+  Q --> W[独立 Worker]
+  W --> M
+  W --> F
   W --> K
   W --> L
+  W --> S[SMTP / IMAP]
+  A -. 指标与日志 .-> O[Prometheus / 结构化日志]
 ```
 
 | 层次 | 技术 |
 | --- | --- |
 | 前端 | React 18、TypeScript、Vite 6、Tailwind CSS、Radix UI、Zustand、React Router、React Quill |
-| 后端 | Node.js >= 20.19、Express 4、TypeScript、Mongoose 8、Zod |
+| 后端 | Node.js 20.19+、Express 4、TypeScript、Mongoose 8、Zod |
 | 数据库 | MongoDB 7.x 或 8.x |
 | 邮件 | Nodemailer、ImapFlow、MailParser |
 | 文档处理 | SheetJS、Mammoth、PDF Parse、PDFKit |
-| AI | OpenAI 兼容 Chat Completions 服务，服务端密钥与项目级配置 |
-| 部署 | Docker Compose、Nginx、PowerShell 运维脚本；API 与后台 Worker 可独立扩缩容 |
-| 可观测性 | Prometheus 文本指标、结构化日志、进程内错误环形缓冲 |
+| AI | OpenAI 兼容 Chat Completions 服务、服务端密钥、项目级配置 |
+| 部署 | Docker Compose、Nginx、独立 Worker、Prometheus 文本指标 |
 
-## 4. 目录结构
+## 快速开始
 
-```text
-.
-├── server/                  后端 API
-│   ├── src/
-│   │   ├── background/      后台任务运行时（API 或独立 Worker 共用）
-│   │   ├── config/          环境变量、数据库和日志配置
-│   │   ├── controllers/     HTTP 控制器
-│   │   ├── middleware/      鉴权、租户上下文、校验、错误处理
-│   │   ├── models/          Mongoose 数据模型与租户插件
-│   │   ├── routes/          REST 路由
-│   │   ├── services/        客户、邮件、AI、知识库、存储、计量等业务逻辑
-│   │   ├── worker.ts        独立后台 Worker 入口
-│   │   └── scripts/         管理员初始化和数据脚本
-│   ├── tests/               服务端测试
-│   ├── evaluation/          知识库评测
-│   ├── parsers/             文档解析适配
-│   ├── semantic/            本地语义检索适配
-│   ├── uploads/             运行期附件，不提交 Git
-│   └── .env.example         后端配置模板
-├── web/                     前端 SPA
-│   ├── src/components/      通用组件和业务组件
-│   ├── src/pages/           页面
-│   ├── src/router/          路由和权限守卫
-│   ├── src/store/           Zustand 状态
-│   ├── public/              静态资源
-│   └── vite.config.ts       Vite 配置和 API 代理
-├── docs/                    设计、验收和运维文档
-├── scripts/                 备份、冒烟测试和审计脚本
-├── compose.yaml             Docker Compose 单机编排
-├── production.env.example   生产环境变量模板
-└── package.json             根目录脚本
+### 环境要求
+
+- Node.js `>= 20.19.0`
+- npm，随 Node.js 安装
+- MongoDB `7.x` 或 `8.x`，默认监听 `127.0.0.1:27017`
+- 可选：Docker Engine 和 Docker Compose v2，用于容器化部署
+- 可选：Python 环境和本地模型，用于知识库文档解析和语义检索
+- 可选：SMTP 和 IMAP 账号，用于真实收发邮件；默认使用 Mock 发件
+
+### 1. 克隆仓库
+
+```bash
+git clone https://github.com/D77-jpg/GlobalCRM.git
+cd GlobalCRM
 ```
 
-## 5. 快速开始
-
-### 5.1 环境要求
-
-- Node.js 20.19 或更高版本。
-- npm，随 Node.js 安装。
-- MongoDB 7.x 或 8.x，默认监听 `127.0.0.1:27017`。
-- 可选：Docker Engine 和 Docker Compose v2，用于容器化部署。
-- 可选：Python 环境和本地模型，用于知识库语义检索。
-- 可选：SMTP 和 IMAP 账号，用于真实收发邮件。默认使用 Mock 发件。
-
-### 5.2 安装依赖
-
-在仓库根目录执行：
+### 2. 安装依赖
 
 ```bash
 npm install
@@ -211,9 +120,7 @@ npm run install:all
 
 `npm install` 安装根目录的 `concurrently`，`npm run install:all` 安装 `server` 和 `web` 的依赖。
 
-### 5.3 配置后端
-
-复制配置模板：
+### 3. 配置环境
 
 ```powershell
 # Windows PowerShell
@@ -225,35 +132,29 @@ Copy-Item server\.env.example server\.env
 cp server/.env.example server/.env
 ```
 
-开发环境至少确认以下配置：
+至少确认以下配置：
 
 ```dotenv
 MONGODB_URI=mongodb://127.0.0.1:27017/cdlm
 JWT_SECRET=请替换为至少32个字符的随机字符串
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=请替换为安全的初始密码
-# 可选：给默认管理员绑定邮箱，用于忘记密码和邮件 2FA
-ADMIN_EMAIL=
-# mock 模式不会真实发信；本地测试时验证码/重置链接会打印到服务端控制台
-MAIL_TRANSPORT=mock
 APP_BASE_URL=http://localhost:5173
+MAIL_TRANSPORT=mock
 IMAP_ENABLED=false
 ```
 
 `server/.env` 已被 Git 忽略。不要提交真实密钥、客户邮箱授权码或生产数据库地址。
 
-### 5.4 启动 MongoDB
+### 4. 初始化数据库
 
-Windows 服务方式：
-
-```powershell
-Get-Service MongoDB
-Start-Service MongoDB
+```bash
+npm run migrate --prefix server
 ```
 
-也可以使用本机 `mongod`，或使用 `compose.yaml` 启动 MongoDB。数据库未启动时，API 会启动失败或健康检查返回 503。
+迁移会创建管理员账号，并初始化组织和项目数据。应用启动时只检查迁移状态，不会隐式修改数据库。
 
-### 5.5 启动前后端
+### 5. 启动开发服务
 
 ```bash
 npm run dev
@@ -262,322 +163,209 @@ npm run dev
 启动后访问：
 
 - 前端：`http://localhost:5173/`
-- 后端 API：`http://127.0.0.1:5000/api`
+- API：`http://127.0.0.1:5000/api`
 - 健康检查：`http://127.0.0.1:5000/api/health`
 
-首次启动前先执行 `npm run migrate --prefix server`。迁移会按 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员，并把旧版数据迁移到默认组织；应用启动时只校验迁移是否已完成，不会隐式改库。登录后可在用户管理页面创建业务员账号；建议同时为管理员绑定邮箱并开启邮件 2FA。忘记密码只对已绑定邮箱的账号发送重置链接。
-
-开发环境默认由 API 进程同时运行后台任务。需要模拟生产拆分时，在 API 设置 `RUN_BACKGROUND_JOBS=false`，另开终端执行：
+需要在开发环境启用独立后台 Worker 时：
 
 ```bash
+# .env 中设置 RUN_BACKGROUND_JOBS=false
 npm run dev:worker --prefix server
 ```
 
-### 5.6 局域网访问
+局域网访问时，确认 `server/.env` 中的 `CORS_ALLOW_PRIVATE_NETWORK=true` 和 `CORS_LAN_PORTS=5173,4173`，然后用本机局域网 IP 访问前端。不要将开发端口直接暴露到公网。
 
-Vite 已配置 `host: true`，后端默认监听 `0.0.0.0`。需要允许局域网前端访问时，确认 `server/.env` 包含：
+## 配置
 
-```dotenv
-HOST=0.0.0.0
-CORS_ALLOW_PRIVATE_NETWORK=true
-CORS_LAN_PORTS=5173,4173
-```
-
-其他设备使用 `http://<本机局域网IP>:5173/` 访问。局域网地址会随 DHCP 变化，且不要把开发端口直接暴露到公网。
-
-## 6. 配置说明
-
-完整配置项见 [server/.env.example](server/.env.example)。常用配置如下。
+完整配置项见 [`server/.env.example`](server/.env.example) 和 [`web/.env.example`](web/.env.example)。常用变量如下：
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `NODE_ENV` | `development` | `development`、`test` 或 `production` |
-| `APP_ENV` | `development` | 环境标识：`development`、`staging` 或 `production`；staging 也可使用 `NODE_ENV=production` |
-| `API_RATE_LIMIT_WINDOW_MS` | `60000` | API 限流窗口（毫秒） |
-| `API_RATE_LIMIT_MAX` | `600` | 每个 IP、每个窗口的最大请求数；隔离压测时临时提高 |
-| `HOST` | `0.0.0.0` | API 监听地址 |
-| `PORT` | `5000` | API 端口 |
+| `APP_ENV` | `development` | 环境标识：`development`、`staging` 或 `production` |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/cdlm` | MongoDB 连接地址 |
+| `PORT` | `5000` | API 监听端口 |
 | `JWT_SECRET` | 无 | 登录令牌签名密钥，至少 32 个字符 |
-| `JWT_ACCESS_EXPIRES_IN` | `15m` | 浏览器访问令牌有效期（HttpOnly cookie） |
-| `JWT_REFRESH_EXPIRES_DAYS` | `30` | 刷新会话有效期，单位为天 |
-| `COOKIE_SECURE` | `false` | HTTPS 部署时设为 `true`；生产环境默认自动启用 Secure cookie |
-| `ADMIN_USERNAME` | `admin` | 首次启动创建的管理员账号 |
-| `ADMIN_PASSWORD` | 无 | 管理员初始密码（至少 10 位；生产环境至少 16 位） |
-| `ADMIN_EMAIL` | 空 | 可选，默认管理员邮箱；也可登录后在用户管理中设置 |
+| `ADMIN_USERNAME` | `admin` | 首次初始化创建的管理员账号 |
+| `ADMIN_PASSWORD` | 无 | 管理员初始密码，生产环境至少 16 个字符 |
 | `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个值用英文逗号分隔 |
-| `APP_BASE_URL` | 空 | 密码重置邮件中的前端地址，留空时取 `CORS_ORIGIN` 第一项 |
-| `CORS_ALLOW_PRIVATE_NETWORK` | `false` | 是否允许私有网段前端访问 |
-| `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp`；邮件 2FA 和忘记密码在生产环境需设为 `smtp` |
-| `SMTP_HOST` / `SMTP_PORT` | 空 / `587` | SMTP 服务地址和端口 |
-| `SMTP_USER` / `SMTP_PASS` | 空 | SMTP 账号和授权码 |
-| `SMTP_REQUIRE_TLS` | `true` | 是否要求 STARTTLS |
-| `IMAP_ENABLED` | `false` | 是否启用后台收件 |
-| `IMAP_HOST` / `IMAP_PORT` | 空 / `993` | IMAP 服务地址和端口 |
-| `MAIL_CREDENTIAL_ENCRYPTION_KEY` | 空 | 邮箱凭据加密密钥，生产环境必须单独配置 |
-| `TRACKING_BASE_URL` | `http://localhost:5000` | 邮件追踪使用的公网根地址 |
-| `PUBLIC_BASE_URL` | 空 | 邮件品牌图片和退订链接的公网根地址，留空时复用追踪地址；生产环境必须设为 HTTPS |
-| `UPLOAD_DIR` | `server/uploads` | 客户附件和邮件附件的本地目录 |
-| `MAX_ATTACHMENT_SIZE` | `15728640` | 单个附件大小上限，单位为字节 |
+| `APP_BASE_URL` | 空 | 密码重置邮件中的前端地址 |
+| `MAIL_TRANSPORT` | `mock` | `mock` 或 `smtp` |
+| `MAIL_CREDENTIAL_ENCRYPTION_KEY` | 空 | 邮箱授权码加密密钥，生产环境必须单独配置 |
+| `PUBLIC_BASE_URL` | 空 | 邮件图片和退订链接的公网 HTTPS 根地址 |
+| `UPLOAD_DIR` | `server/uploads` | 本地附件目录 |
+| `STORAGE_PROVIDER` | `local` | `local` 或 `s3` |
 | `AI_PROVIDER` | `mock` | `mock` 或 `openai` |
 | `OPENAI_API_KEY` | 空 | AI 服务密钥，仅保存在服务端 |
-| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容服务地址 |
-| `OPENAI_MODEL` | 服务端模板中的默认模型 | 主 Agent 模型名称 |
-| `TRANSLATE_PROVIDER` | `ai` | 中英对照翻译使用 `ai` 或 `index` |
-| `COMPANY_NAME` | Genesis Bags 默认值 | 项目方公司名称 |
-| `COMPANY_WEBSITE` | Genesis Bags 默认值 | 项目方公司网站 |
-| `COMPANY_MOQ` | `100 pcs` | 默认 MOQ 文案 |
-| `SENDER_NAME` | `Genesis Sales Team` | 默认发件人签名 |
-| `DEFAULT_ORGANIZATION_NAME` | `Default Organization` | 旧数据迁移使用的默认组织名称 |
-| `DEFAULT_ORGANIZATION_SLUG` | `default` | 默认组织 slug，只能包含小写字母、数字和连字符 |
-| `RUN_BACKGROUND_JOBS` | `true` | API 是否内嵌后台任务；生产拆分 Worker 时设为 `false` |
-| `WORKER_HEALTH_PORT` | `5100` | 独立 Worker 健康检查端口 |
-| `STORAGE_PROVIDER` | `local` | 附件存储：`local` 或 `s3` |
-| `S3_ENDPOINT` | 空 | S3/MinIO 自定义端点，留空使用 AWS 默认端点 |
-| `S3_REGION` | `us-east-1` | S3 区域 |
-| `S3_BUCKET` | 空 | 附件桶名；`s3` 模式必填 |
-| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | 空 | S3 凭据，只放服务端环境变量 |
-| `S3_FORCE_PATH_STYLE` | `true` | MinIO 等路径风格桶设为 `true` |
-| `METRICS_ENABLED` | `true` | 是否启用 `GET /api/metrics` Prometheus 指标 |
+| `RUN_BACKGROUND_JOBS` | `true` | API 是否内嵌后台任务；生产环境建议拆分 Worker |
+| `GLOBALCRM_HTTP_PORT` | `8080` | Docker Compose 的宿主机 Web 端口 |
 
-生产环境启动时，服务端会校验密钥强度。`JWT_SECRET` 必须至少 32 个字符，`ADMIN_PASSWORD` 至少 16 个字符，`MAIL_CREDENTIAL_ENCRYPTION_KEY` 必须单独生成且至少 32 个字符。
+生产环境启动时会校验密钥强度。`JWT_SECRET` 必须至少 32 个字符，`ADMIN_PASSWORD` 至少 16 个字符，`MAIL_CREDENTIAL_ENCRYPTION_KEY` 必须单独生成且至少 32 个字符。
 
-前端配置见 [web/.env.example](web/.env.example)：
+前端构建期变量：
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `/api` | 浏览器请求 API 的基础路径 |
+| `VITE_API_BASE_URL` | `/api` | 浏览器访问 API 的基础路径 |
 | `VITE_API_PROXY_TARGET` | `http://127.0.0.1:5000` | Vite 开发代理目标 |
-| `VITE_APP_TITLE` | `GlobalCRM` | 页面标题与品牌展示名 |
+| `VITE_APP_TITLE` | `GlobalCRM` | 页面标题和品牌展示名 |
 
-`VITE_API_BASE_URL` 和 `VITE_APP_TITLE` 是构建期变量。修改后需要重新构建前端。
+修改前端变量后需要重新构建前端。
 
-## 7. 常用命令
-
-### 根目录
+## 常用命令
 
 | 命令 | 说明 |
 | --- | --- |
-| `npm run dev` | 同时启动后端和前端开发服务 |
-| `npm run dev:server` | 仅启动后端 |
+| `npm run dev` | 同时启动 API 和前端开发服务 |
+| `npm run dev:server` | 仅启动 API |
 | `npm run dev:web` | 仅启动前端 |
-| `npm run dev:worker --prefix server` | 启动独立后台 Worker（开发） |
-| `npm run start:worker --prefix server` | 启动已构建的独立后台 Worker |
-| `npm run build` | 构建后端和前端 |
-| `npm start` | 启动已构建的后端 |
+| `npm run dev:worker --prefix server` | 启动开发模式后台 Worker |
+| `npm run build` | 构建 API 和前端 |
+| `npm start` | 启动构建后的 API |
+| `npm run start:worker --prefix server` | 启动构建后的独立 Worker |
 | `npm run typecheck` | 前后端 TypeScript 类型检查 |
 | `npm run lint` | 前端 ESLint 检查 |
-| `npm run seed` | 写入开发种子数据，仅在隔离数据库使用 |
-| `npm run install:all` | 安装 server 和 web 依赖 |
+| `npm run seed --prefix server` | 写入开发种子数据，仅限隔离数据库 |
+| `npm run migrate --prefix server` | 执行数据库迁移 |
 
-### 服务端测试
+### 测试
 
 ```bash
-npm run typecheck --prefix server
-npm run test:mail --prefix server
-npm run test:agent --prefix server
-npm run test:ai-settings --prefix server
+npm run typecheck
+npm run lint
 npm run test:security --prefix server
-npm run test:p1 --prefix server
-npm run test:p2 --prefix server
-npm run test:p3 --prefix server
+npm run test:integration --prefix server
 npm run test:e2e --prefix server
-npm run test:health --prefix server
-npm run migrate:status --prefix server
-npm run migrate --prefix server
+npm run test:p3 --prefix server
 ```
 
-压测（在隔离的 staging 环境执行，先临时提高 `API_RATE_LIMIT_MAX`）：
+CI 使用 [integration-release-gate.yml](.github/workflows/integration-release-gate.yml)，覆盖服务端、前端、安全、集成、知识库评测和运维检查。提交 PR 前建议至少完成类型检查、构建、安全测试和集成测试。
 
-```powershell
-$env:LOAD_BASE_URL='http://127.0.0.1:5002/api'
-$env:LOAD_USERNAME='admin'
-$env:LOAD_PASSWORD='<staging password>'
-$env:LOAD_DURATION_SECONDS='60'
-$env:LOAD_CONCURRENCY='20'
-npm run load --prefix server
-```
+## 生产部署
 
-完整测试脚本见 [server/package.json](server/package.json)。
-
-需要运行需要独立 MongoDB 的冒烟测试时，先启动测试夹具：
-
-```bash
-npm run test:fixture --prefix server
-```
-
-然后在另一个终端执行 `./scripts/smoke-test.ps1` 或对应的服务端测试。不要对真实业务数据库运行种子、重置或冒烟脚本。
-
-## 8. API 概览
-
-除公开接口外，API 使用登录鉴权。浏览器通过 `POST /api/auth/login` 获得两个 HttpOnly cookie：
-
-- `cdlm_access`：短期访问令牌，默认 15 分钟。
-- `cdlm_refresh`：刷新令牌，默认 30 天；服务端只保存其摘要，可随时撤销。
-
-浏览器端的 `cdlm_access` 不会暴露给 JavaScript；写操作还需要从可读的 `cdlm_csrf` cookie 读取值，并在请求头回传：
-
-```http
-X-CSRF-Token: <csrf-token>
-X-Project-Id: <projectId>
-```
-
-服务端在迁移期仍兼容已有 Bearer token（不经过 cookie，也不要求 CSRF 头）；新脚本建议使用 cookie jar，或改用 `/api/integrations/v1` 的独立服务凭证：
-
-```http
-Authorization: Bearer <token>
-X-Project-Id: <projectId>
-```
-
-浏览器访问令牌过期时，前端会自动调用 `POST /api/auth/refresh` 轮换刷新令牌；可用 `POST /api/auth/logout` 注销当前会话。
-
-账号可在「用户管理」中绑定邮箱并开启邮件 2FA。开启后，`POST /api/auth/login` 在密码正确时返回 `twoFactorRequired`、`challengeId` 和脱敏邮箱，不会签发 cookie；前端调用 `POST /api/auth/login/verify-2fa` 提交 6 位验证码后才创建会话。验证码 10 分钟有效，同一挑战最多尝试 5 次。
-
-忘记密码流程：
-
-1. `POST /api/auth/forgot-password` 提交用户名。无论账号是否存在都返回相同结果，避免账号枚举。
-2. 账号有邮箱时会收到 30 分钟有效的重置链接；邮件由系统 `MAIL_*`/`SMTP_*` 通道发送，`mock` 模式会打印到服务端控制台。
-3. `POST /api/auth/reset-password` 提交 `token` 和新密码；成功后撤销该账号的所有会话和未完成挑战。
-
-主要路由分组：
-
-| 前缀 | 用途 |
-| --- | --- |
-| `/api/health` | 健康检查，包含 `/live` 和 `/ready` |
-| `/api/meta` | 枚举、占位符和公司元数据 |
-| `/api/auth` | 登录、邮件 2FA、忘记/重置密码、刷新、注销和当前用户 |
-| `/api/projects` | 项目工作空间、品牌配置和新手引导状态 |
-| `/api/customers` | 客户、跟进、附件和时间线 |
-| `/api/website-research` | 客户官网资料研究 |
-| `/api/letters` | 开发信、审核和发送 |
-| `/api/templates` | 开发信模板 |
-| `/api/mail` | 邮件、线程、附件和定时任务 |
-| `/api/mail-accounts` | 用户发件邮箱 |
-| `/api/mail-compliance` | 抑制名单、SPF/DKIM/DMARC 检查和预热策略 |
-| `/api/unsubscribe/:token` | 公开的签名一键退订链接 |
-| `/api/products` | 产品目录 |
-| `/api/quotations` | 报价单和报价核对 |
-| `/api/prospecting` | 今日开发和潜客池 |
-| `/api/outreach-automation` | 自动开发配置和执行 |
-| `/api/knowledge-documents` | 知识文档 |
-| `/api/knowledge-index` | 知识索引和检索 |
-| `/api/agent` | AI Agent、翻译和诊断 |
-| `/api/scratchpad` | 个人随手记 |
-| `/api/users` | 用户管理，管理员专属 |
-| `/api/audit-logs` | 登录与关键操作审计，管理员专属 |
-| `/api/tracking` | 邮件打开和点击追踪，公开 token |
-| `/api/unsubscribe` | 签名退订确认页和 RFC 8058 一键退订，公开 |
-| `/api/integrations/v1` | 外部系统集成，独立服务凭证 |
-| `/api/organizations` | 当前组织资料、用量、套餐和账单草稿，管理员专属 |
-| `/api/platform` | 平台运营：跨组织概览、组织创建、暂停/恢复、用量、账单和最近错误，`isPlatformAdmin` 专属 |
-| `/api/metrics` | Prometheus 文本指标，公开只读；只在 `METRICS_ENABLED=true` 时注册 |
-| `/api/public/plans` | 公开套餐目录，供价格页使用，不包含任何组织或密钥数据 |
-
-业务接口统一返回 JSON；邮件追踪接口返回重定向或透明图片，退订接口返回确认页。错误响应包含 HTTP 状态码和错误信息。生产环境不要直接暴露 `/api`，应由同源反向代理转发，并把 `PUBLIC_BASE_URL` 设为邮件收件人可访问的 HTTPS 地址，否则退订链接会指向本地地址。
-
-## 9. 生产部署
-
-### 9.1 直接构建
+### 直接构建
 
 ```bash
 npm run build
 npm start
-# 另开一个进程运行后台任务（推荐）
+# 另开一个进程运行后台任务
 npm run start:worker --prefix server
 ```
 
-单进程临时部署也可以设置 `RUN_BACKGROUND_JOBS=true` 后只运行 `npm start`，但生产环境建议 API 与 Worker 分离，避免长任务占用 HTTP 进程。
+使用 Nginx 托管 `web/dist`，并把 `/api` 反向代理到 API 服务。前端路由需要回退到 `index.html`。生产环境建议将 API 和 Worker 分开运行，并配置 HTTPS、持久化附件存储和日志采集。
 
-构建产物：
-
-- `server/dist/`：编译后的 Node 服务。
-- `web/dist/`：静态前端资源。
-
-使用 Nginx 托管 `web/dist`，并把 `/api` 反向代理到后端。前端路由需要回退到 `index.html`。
-
-### 9.2 Docker Compose
-
-Docker Compose 适合单机预演和内部部署。先准备独立的生产环境文件：
+### Docker Compose
 
 ```powershell
 Copy-Item production.env.example .env.production
+# 填写全部占位值，确认数据库、密钥、域名和卷路径
+docker compose -p globalcrm --env-file .env.production config --quiet
+docker compose -p globalcrm --env-file .env.production build
+docker compose -p globalcrm --env-file .env.production up -d --wait
 ```
 
-填写所有占位值后执行：
+Compose 会先运行一次性的 `migrate` 服务，成功后启动 API、Worker 和 Web。默认仅将 Web 发布到 `127.0.0.1:8080`，公网访问必须由独立的 HTTPS 反向代理终止 TLS。不要把 API 或 MongoDB 端口直接发布到公网。
 
-```bash
-docker compose --env-file .env.production config --quiet
-docker compose --env-file .env.production build
-docker compose --env-file .env.production up -d --wait
-```
+部署前请阅读：
 
-默认只把 Web 发布到 `127.0.0.1:8080`。公网访问必须由独立的 HTTPS 反向代理终止 TLS，不要把 API 或 MongoDB 端口直接发布到公网。
-
-P3 的 Compose 会先运行一次性 `migrate`，成功后再启动两个 Node 服务：
-
-- `migrate`：执行 `node dist/scripts/migrate.js`，失败则 API/worker 不会启动。
-- `server`：只处理 HTTP API，`RUN_BACKGROUND_JOBS=false`。
-- `worker`：独立消费邮件队列、收件箱同步、获客、自动开发、Agent 和知识库任务，健康检查为容器内 `:5100/health`。
-
-两者共享 MongoDB、上传卷和相同的 `MAIL_CREDENTIAL_ENCRYPTION_KEY`。生产建议使用 `STORAGE_PROVIDER=s3` 并配置 S3/MinIO，避免多副本 API 依赖本地附件卷。Prometheus 可抓取 `GET /api/metrics`；如不希望公开，应在反向代理层限制来源。
-
-详细要求见 [Docker 运行说明](docs/operations/docker-runtime.md)。
-
-### 9.3 备份
-
-数据库备份和恢复演练见 [MongoDB 备份与恢复](docs/operations/mongo-backup.md)。备份 MongoDB、上传目录和加密密钥时必须分开保存。不要只备份数据库卷而遗漏附件和密钥。
-
-## 10. 安全与数据边界
-
-- 所有业务数据按「组织 → 项目」隔离：Mongoose 租户插件统一追加 `organizationId` 过滤，业务员只能访问分配给自己的项目和客户。
-- 平台运营接口要求 `isPlatformAdmin`，并在独立的 bypass 租户上下文运行；普通管理员只能管理本组织。
-- 组织用量在每月发送/上传前校验，超额失败关闭；账单草稿只做估算，实际收款仍由外部财务流程处理。
-- 数据库迁移版本化、只追加、带校验和与 advisory lock；应用启动只校验，不允许通过启动流程隐式改库。
-- 公共价格/帮助/法律页无需登录，但公开接口只返回套餐目录，不暴露组织、用户或用量数据。
-- 新建用户默认是业务员（`user`），管理员角色必须由管理员显式授予。
-- 新建/重置密码要求 10–72 位，并至少包含大小写字母、数字、符号中的三类；连续 5 次登录失败会锁定账号 15 分钟。
-- 浏览器登录使用 HttpOnly access/refresh cookie，刷新令牌在服务端保存摘要并支持轮换、注销撤销；写操作使用 double-submit CSRF 校验。
-- 可选的邮件 2FA 使用 6 位一次性验证码，验证码只保存带密钥的哈希摘要；忘记密码使用一次性重置令牌，均有时效和尝试次数限制。
-- 登录成功/失败/注销、2FA 挑战、密码重置、用户管理和客户删除/导入/导出会写入审计日志；审计接口仅管理员可访问。
-- 管理员专属功能同时在前端路由和后端接口校验。
-- 邮箱授权码使用服务端密钥加密，API 不返回明文密钥。
-- JWT、管理员密码和邮箱加密密钥不得写入代码、镜像或浏览器变量。
-- 上传附件只通过鉴权接口下载，不开放静态目录。
-- 邮件追踪 token 只保存摘要，不记录客户邮箱、IP 或 User-Agent。
-- `.env`、`server/uploads/`、数据库备份、客户表格和含客户信息的截图都不得提交 Git。
-- 生产日志可能包含客户信息，访问权限应限制在运维人员范围内。
-
-## 11. 术语
-
-| 术语 | 含义 |
-| --- | --- |
-| 项目 | 一套客户、邮件、模板和知识库的隔离边界 |
-| 潜客 | 尚未转为正式客户的候选公司或联系人 |
-| 开发信 | 面向客户发送的首次或后续商务邮件 |
-| 模板 | 含占位符的可复用开发信内容 |
-| 知识依据 | 开发信可引用的产品、公司和业务资料 |
-| 审核结论 | 业务员对草稿标记的通过或不通过状态 |
-| 发件通道 | Mock 模拟通道或真实 SMTP 通道 |
-
-## 12. 相关文档
-
-- [V2.6 多项目工作空间验收报告](docs/V2.6-多项目工作空间-验收报告.md)
-- [P2 多租户与运营验收报告](docs/P2-多租户与运营-验收报告.md)
-- [P3 环境、迁移与发布](docs/P3-环境与发布.md)
-- [P3 帮助中心与新手文档](docs/P3-帮助中心与新手文档.md)
-- [P3 法律文件与价格页](docs/P3-法律文件与价格页.md)
-- [P3 安全测试与外部渗透测试清单](docs/P3-安全测试与外部渗透测试清单.md)
-- [P3 压力与稳定性测试报告](docs/P3-压力与稳定性测试报告.md)
-- [P3 上市准备验收报告](docs/P3-上市准备-验收报告.md)
-- [GlobalCRM 品牌与命名规范](docs/brand-guidelines.md)
-- [自动开发设计](docs/outreach-autopilot.md)
-- [客户草稿审核](docs/customer-draft-review.md)
-- [开发信中英对照](docs/letter-bilingual-review.md)
-- [产品目录与报价核对](docs/product-quote-playbook.md)
-- [今日开发与潜客导入](docs/prospecting-profiles-and-import.md)
 - [Docker 运行说明](docs/operations/docker-runtime.md)
 - [MongoDB 备份与恢复](docs/operations/mongo-backup.md)
+- [环境、迁移与发布](docs/P3-环境与发布.md)
 
-## 13. 许可
+## API 与集成
 
-本仓库为内部业务工具，未附加开源许可证。
+服务端默认监听 `http://127.0.0.1:5000`：
+
+| 端点 | 用途 |
+| --- | --- |
+| `GET /api/health/live` | 进程存活检查 |
+| `GET /api/health/ready` | 数据库可用且未进入 draining 状态 |
+| `GET /api/health` | 数据库、进程内存、邮件通道和版本 |
+| `/api/integrations/v1` | 外部系统集成，使用独立服务凭证 |
+
+浏览器登录使用 HttpOnly 的 `cdlm_access` 和 `cdlm_refresh` cookie。写请求还需要从 `cdlm_csrf` cookie 读取值，并在请求头回传 `X-CSRF-Token` 和 `X-Project-Id`。外部系统使用 `Authorization: Bearer <token>` 和 `X-Project-Id`，接口契约见 [Integration API v1](docs/integration/README.md)。
+
+生产环境应把 `/api` 放在同源反向代理后，并将 `PUBLIC_BASE_URL` 设为收件人可访问的 HTTPS 地址，否则退订链接会指向本地地址。
+
+## 安全与数据边界
+
+- 业务数据按组织和项目隔离。Mongoose 租户插件统一追加组织过滤，服务端再次校验项目范围。
+- 浏览器登录使用 HttpOnly access/refresh cookie。写操作使用 double-submit CSRF 校验。
+- 可选邮件 2FA；忘记密码使用一次性重置令牌，验证码和重置令牌均有时效和尝试次数限制。
+- 生产密钥只放在环境变量或密钥管理系统中，不写入代码、镜像或浏览器变量。
+- 附件只通过鉴权接口下载，不开放静态目录。
+- 开发信默认附带可见退订链接和标准退订邮件头；退订、硬退信、投诉和人工抑制地址会进入不再发送名单。
+- 邮件追踪只保存 token 摘要，不记录客户邮箱、IP 或 User-Agent。
+- 不要提交 `.env`、`server/uploads/`、数据库备份、客户表格或含客户信息的截图。
+
+发现安全问题请不要在公开 Issue 中披露可利用细节。请通过 `support@genesisgroup.cn` 联系维护者，并在邮件标题注明 `[GlobalCRM Security]`。当前邮箱为过渡联系方式，正式开源后将提供专用安全邮箱。
+
+## 项目结构
+
+```text
+.
+├── server/                  后端 API
+│   ├── src/
+│   │   ├── background/      后台任务运行时
+│   │   ├── config/          环境变量、数据库和日志配置
+│   │   ├── controllers/     HTTP 控制器
+│   │   ├── middleware/      鉴权、租户上下文、校验和错误处理
+│   │   ├── models/          Mongoose 模型与租户插件
+│   │   ├── routes/          REST 路由
+│   │   ├── services/        客户、邮件、AI、知识库、存储和计量
+│   │   ├── worker.ts        独立 Worker 入口
+│   │   └── scripts/         迁移、初始化和数据脚本
+│   ├── tests/               服务端测试
+│   ├── evaluation/          知识库评测
+│   ├── parsers/             文档解析适配
+│   ├── semantic/            本地语义检索适配
+│   └── .env.example         后端配置模板
+├── web/                     前端 SPA
+│   ├── src/components/      通用组件和业务组件
+│   ├── src/pages/           页面
+│   ├── src/router/          路由和权限守卫
+│   ├── src/store/           Zustand 状态
+│   └── vite.config.ts       Vite 配置和 API 代理
+├── docs/                    设计、验收和运维文档
+├── scripts/                 备份、冒烟测试和审计脚本
+├── compose.yaml             Docker Compose 单机编排
+├── production.env.example   生产环境变量模板
+└── package.json             根目录脚本
+```
+
+## 文档
+
+- [品牌与命名规范](docs/brand-guidelines.md)
+- [环境、迁移与发布](docs/P3-环境与发布.md)
+- [Docker 运行说明](docs/operations/docker-runtime.md)
+- [MongoDB 备份与恢复](docs/operations/mongo-backup.md)
+- [Integration API v1](docs/integration/README.md)
+- [知识库与销售 Agent 路线](docs/knowledge-agent-roadmap.md)
+- [安全测试与外部渗透测试清单](docs/P3-安全测试与外部渗透测试清单.md)
+- [压力与稳定性测试报告](docs/P3-压力与稳定性测试报告.md)
+- [产品目录与报价核对](docs/product-quote-playbook.md)
+- [今日开发与潜客导入](docs/prospecting-profiles-and-import.md)
+- [自动开发设计](docs/outreach-autopilot.md)
+
+## Contributing
+
+欢迎 Issue 和 Pull Request。提交前请阅读以下约定：
+
+1. **先讨论较大的改动。** 新功能、数据模型变化和接口变化先开 Issue，说明使用场景、影响范围和测试计划。
+2. **保持改动聚焦。** 一个 PR 解决一个问题，避免把重构、格式化和功能改动混在一起。
+3. **本地验证。** 至少运行 `npm run typecheck`、`npm run build`、`npm run test:security --prefix server` 和 `npm run test:integration --prefix server`。
+4. **不要提交敏感数据。** 不要在 Issue、测试夹具、日志或截图中包含真实客户邮箱、授权码、访问令牌、数据库备份或生产配置。
+5. **写清 PR 说明。** 描述改了什么、为什么改、如何验证，以及是否有迁移或配置变更。
+
+提交信息建议使用 Conventional Commits，例如 `feat: add quotation reminder`、`fix: handle empty mail subject`。
+
+## License
+
+本仓库当前尚未添加 `LICENSE` 文件，默认保留所有权利。项目计划开源，正式发布前需要由维护者确定并提交许可证，建议在 Apache-2.0 和 AGPL-3.0 之间做一次明确选择。许可证确定前，本仓库不授予复制、分发或商业使用权。
+
+## 联系
+
+- 产品与支持：`support@genesisgroup.cn`
+- 安全问题：`support@genesisgroup.cn`，标题请注明 `[GlobalCRM Security]`
+
+如果这个项目对你的团队有帮助，欢迎 Star、提交 Issue 或参与改进。
