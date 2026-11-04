@@ -7,8 +7,8 @@
  * - 深色模式样式已在 index.css 中覆盖 quill.snow.css
  */
 import * as React from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -66,7 +66,6 @@ const FORMATS = [
   'color',
   'background',
   'list',
-  'bullet',
   'align',
   'blockquote',
   'link',

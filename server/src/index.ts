@@ -2,7 +2,7 @@ import { startBackgroundJobs, stopBackgroundJobs } from './background/runtime';
 /**
  * 服务启动入口
  * ------------------------------------------------------------------
- * 启动顺序：环境变量校验（import 时完成）→ 连接 MongoDB → 初始化管理员
+ * 启动顺序：环境变量校验（import 时完成）→ 连接 MongoDB → 校验版本化迁移
  *          → 邮件通道自检 → 监听端口
  * 退出顺序：停止接收新连接 → 关闭 HTTP → 关闭数据库连接 → 退出进程
  */
@@ -10,46 +10,17 @@ import http from 'node:http';
 import env from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/db';
 import { createLogger } from './config/logger';
-import { bootstrapAdminUser } from './services/auth.service';
-import { bootstrapProjects } from './services/project.service';
-import { ensureDefaultOrganization, migrateLegacyTenantData } from './services/organization.service';
-import { migrateLegacyCustomerStatus, migrateMailCustomerLastContact } from './services/customer.service';
-import { migrateLegacyQuotationVersion } from './services/quotation.service';
 import { verifyMailer } from './services/mailer.service';
 import { createApp } from './app';
 import { beginShutdown } from './services/runtime-state';
-import { AgentAction, AgentAiProvider, AgentAiSettings, AgentCustomerPreview, AgentMessage, AgentRun, AgentSession, AuthChallenge, AuthSession, BillingInvoice, Customer, EmailSuppression, CustomerAttachment, CustomerEvent, DevelopmentLetter, FollowUp, KnowledgeFeedback, KnowledgeTrainingState, LetterTemplate, MailAccountAudit, MailQuotaBucket, Organization, OutreachAutomationConfig, OutreachAutomationDay, OutreachAutomationEnrollment, Product, Project, ProjectPlaybook, Quotation, Scratchpad, UsageRecord, User, UserMailAccount } from './models';
-import { MailMessage, MailSyncState } from './models/MailMessage';
+import { assertMigrationsApplied } from './migrations';
 
 const logger = createLogger('bootstrap');
 
 async function bootstrap(): Promise<void> {
   try {
     await connectDatabase();
-    await ensureDefaultOrganization();
-    await migrateLegacyTenantData();
-    await bootstrapProjects();
-    await bootstrapAdminUser();
-    await migrateLegacyCustomerStatus();
-    await migrateMailCustomerLastContact();
-    await migrateLegacyQuotationVersion();
-    await Promise.all([Organization.init(), UsageRecord.init(), BillingInvoice.init(), Project.init(), User.init(), AuthSession.init(), AuthChallenge.init(), Customer.init(), DevelopmentLetter.init(), MailMessage.init(), MailSyncState.init(),
-      FollowUp.init(), CustomerEvent.init(), CustomerAttachment.init(), Product.init(), ProjectPlaybook.init(), Quotation.init(), LetterTemplate.init(), Scratchpad.init(),
-      AgentSession.init(), AgentMessage.init(), AgentRun.init(), AgentAction.init(), AgentCustomerPreview.init(),
-      KnowledgeFeedback.init(), KnowledgeTrainingState.init(),
-      UserMailAccount.init(), MailQuotaBucket.init(), MailAccountAudit.init(),
-      OutreachAutomationConfig.init(), OutreachAutomationEnrollment.init(), OutreachAutomationDay.init(),
-      AgentAiSettings.init(), AgentAiProvider.init()]);
-    // AuthChallenge was introduced with an older unique secret index during
-    // development; sync only this new collection so deployments upgrade the
-    // index without touching existing business collections.
-    await AuthChallenge.syncIndexes();
-    await Promise.all([
-      Project.syncIndexes(),
-      EmailSuppression.syncIndexes(),
-      AgentAiSettings.syncIndexes(),
-      AgentAiProvider.syncIndexes(),
-    ]);
+    await assertMigrationsApplied();
     const app = createApp();
     const server = http.createServer(app);
     // 邮箱连通性检查可能受网络、防火墙或上游超时影响，不能阻塞 CRM 登录与启动。
@@ -62,7 +33,7 @@ async function bootstrap(): Promise<void> {
     server.listen(env.PORT, env.HOST, () => {
       logger.info('==============================================');
       logger.info(`  Multi-project CRM API 已启动`);
-      logger.info(`  环境      : ${env.NODE_ENV}`);
+      logger.info(`  环境      : ${env.appEnv} (NODE_ENV=${env.NODE_ENV})`);
       logger.info(`  监听地址  : ${env.HOST}:${env.PORT}`);
       logger.info(`  健康检查  : http://localhost:${env.PORT}/api/health`);
       logger.info(`  元数据    : http://localhost:${env.PORT}/api/meta`);

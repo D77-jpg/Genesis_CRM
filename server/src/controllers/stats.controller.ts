@@ -98,6 +98,7 @@ export const healthHandler = asyncHandler(async (_req: Request, res: Response) =
     uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
     env: env.NODE_ENV,
+    appEnv: env.appEnv,
     database: database.state,
     checks: { database: { ok: database.ok, latencyMs: database.latencyMs }, draining },
     process: processSnapshot(),

@@ -17,8 +17,13 @@ const booleanish = z
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  /** Deployment environment. NODE_ENV controls Node/runtime behavior; APP_ENV names dev/staging/prod. */
+  APP_ENV: z.enum(['development', 'staging', 'production']).optional(),
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(5000),
+  /** Per-IP API rate limit; load/soak tests may raise this in an isolated environment. */
+  API_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60_000),
+  API_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   /** Public frontend URL used in password-reset emails; falls back to CORS_ORIGIN. */
   APP_BASE_URL: z.preprocess(
@@ -195,8 +200,11 @@ if (productionErrors.length) {
   process.exit(1);
 }
 
+const appEnv = raw.APP_ENV ?? (raw.NODE_ENV === 'production' ? 'production' : 'development');
+
 export const env = {
   ...raw,
+  appEnv,
   isProd: raw.NODE_ENV === 'production',
   isDev: raw.NODE_ENV === 'development',
   /** CORS 白名单数组 */

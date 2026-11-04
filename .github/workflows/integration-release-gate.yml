@@ -92,6 +92,8 @@ jobs:
         run: npm run test:template-feedback
       - name: Security boundary regression tests
         run: npm run test:security
+      - name: P3 migration and revenue-path E2E gate
+        run: npm run test:p3
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Production build（服务端）

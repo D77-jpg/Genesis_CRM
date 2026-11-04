@@ -67,10 +67,10 @@ const corsOptions: cors.CorsOptions = {
   maxAge: 86400,
 };
 
-/** 全局限流：单 IP 每分钟最多 600 次请求 */
+/** 全局限流：单 IP、按配置窗口的请求上限（默认 600 次/分钟） */
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 600,
+  windowMs: env.API_RATE_LIMIT_WINDOW_MS,
+  max: env.API_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   // 健康检查不计入限流

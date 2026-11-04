@@ -57,6 +57,7 @@ import unsubscribeRoutes from './unsubscribe.routes';
 import mailComplianceRoutes from './mail-compliance.routes';
 import organizationRoutes from './organization.routes';
 import platformRoutes from './platform.routes';
+import publicRoutes from './public.routes';
 
 const router = Router();
 
@@ -64,6 +65,7 @@ const router = Router();
 router.get('/health', healthHandler);
 router.get('/health/live', liveHandler);
 router.get('/health/ready', readyHandler);
+router.use('/public', publicRoutes);
 
 /**
  * 元数据接口：把枚举与占位符定义下发给前端，

@@ -7,7 +7,7 @@
  * 右侧只保留登录所需动作，避免把登录页做成营销落地页。
  */
 import * as React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -435,6 +435,15 @@ export function LoginPage(): React.JSX.Element {
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
               仅限授权成员使用 · 登录信息加密传输
             </p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={ROUTES.pricing}>{language === 'zh' ? '价格与套餐' : 'Pricing'}</Link>
+              <span aria-hidden>·</span>
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={ROUTES.help}>{language === 'zh' ? '帮助中心' : 'Help center'}</Link>
+              <span aria-hidden>·</span>
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={`${ROUTES.legal}/terms`}>{language === 'zh' ? '服务条款' : 'Terms'}</Link>
+              <span aria-hidden>·</span>
+              <Link className="hover:text-slate-800 dark:hover:text-white" to={`${ROUTES.legal}/privacy`}>{language === 'zh' ? '隐私政策' : 'Privacy'}</Link>
+            </div>
           </div>
         </section>
       </main>

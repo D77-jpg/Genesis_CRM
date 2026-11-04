@@ -19,6 +19,8 @@ export interface OrganizationLimits {
 export interface PlanDefinition {
   id: OrganizationPlan;
   monthlyPriceUsd: number;
+  /** Annual list price (10 monthly payments; two months free). */
+  annualPriceUsd: number;
   limits: OrganizationLimits;
   overage: {
     emailUsdPer1000: number;
@@ -32,18 +34,21 @@ export const PLAN_CATALOG: Record<OrganizationPlan, PlanDefinition> = {
   starter: {
     id: 'starter',
     monthlyPriceUsd: 49,
+    annualPriceUsd: 490,
     limits: { users: 5, projects: 2, monthlyEmails: 5_000, monthlyAiTokens: 1_000_000, storageBytes: 5 * 1024 ** 3 },
     overage: { emailUsdPer1000: 2, aiTokensUsdPer1M: 5, storageUsdPerGb: 0.5 },
   },
   growth: {
     id: 'growth',
     monthlyPriceUsd: 149,
+    annualPriceUsd: 1_490,
     limits: { users: 20, projects: 10, monthlyEmails: 50_000, monthlyAiTokens: 10_000_000, storageBytes: 50 * 1024 ** 3 },
     overage: { emailUsdPer1000: 1.5, aiTokensUsdPer1M: 4, storageUsdPerGb: 0.35 },
   },
   enterprise: {
     id: 'enterprise',
     monthlyPriceUsd: 499,
+    annualPriceUsd: 4_990,
     limits: { users: 200, projects: 100, monthlyEmails: 500_000, monthlyAiTokens: 100_000_000, storageBytes: 500 * 1024 ** 3 },
     overage: { emailUsdPer1000: 1, aiTokensUsdPer1M: 3, storageUsdPerGb: 0.2 },
   },

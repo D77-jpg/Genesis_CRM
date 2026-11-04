@@ -22,6 +22,10 @@ import { PageLoader } from '@/components/common/page-loader';
 import { ROUTES } from '@/constants';
 
 const LoginPage = React.lazy(() => import('@/pages/login').then((m) => ({ default: m.LoginPage })));
+const PricingPage = React.lazy(() => import('@/pages/pricing').then((m) => ({ default: m.PricingPage })));
+const HelpPage = React.lazy(() => import('@/pages/help').then((m) => ({ default: m.HelpPage })));
+const HelpArticlePage = React.lazy(() => import('@/pages/help').then((m) => ({ default: m.HelpArticlePage })));
+const LegalPage = React.lazy(() => import('@/pages/legal').then((m) => ({ default: m.LegalPage })));
 const ResetPasswordPage = React.lazy(() => import('@/pages/reset-password').then((m) => ({ default: m.ResetPasswordPage })));
 const DashboardPage = React.lazy(() => import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage })));
 const CustomersPage = React.lazy(() => import('@/pages/customers').then((m) => ({ default: m.CustomersPage })));
@@ -63,6 +67,34 @@ export const router = createBrowserRouter([
   {
     path: ROUTES.resetPassword,
     element: withSuspense(<ResetPasswordPage />),
+  },
+  {
+    path: ROUTES.pricing,
+    element: withSuspense(<><ScrollToTop /><PricingPage /></>),
+  },
+  {
+    path: ROUTES.help,
+    element: withSuspense(<><ScrollToTop /><HelpPage /></>),
+  },
+  {
+    path: `${ROUTES.help}/:slug`,
+    element: withSuspense(<><ScrollToTop /><HelpArticlePage /></>),
+  },
+  {
+    path: `${ROUTES.legal}/terms`,
+    element: withSuspense(<><ScrollToTop /><LegalPage doc="terms" /></>),
+  },
+  {
+    path: `${ROUTES.legal}/privacy`,
+    element: withSuspense(<><ScrollToTop /><LegalPage doc="privacy" /></>),
+  },
+  {
+    path: `${ROUTES.legal}/dpa`,
+    element: withSuspense(<><ScrollToTop /><LegalPage doc="dpa" /></>),
+  },
+  {
+    path: `${ROUTES.legal}/sla`,
+    element: withSuspense(<><ScrollToTop /><LegalPage doc="sla" /></>),
   },
   {
     path: '/',

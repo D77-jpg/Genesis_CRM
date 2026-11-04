@@ -68,7 +68,7 @@ export default defineConfig({
             '@radix-ui/react-tooltip',
             '@radix-ui/react-popover',
           ],
-          editor: ['react-quill'],
+          editor: ['react-quill-new'],
           excel: ['xlsx'],
         },
       },

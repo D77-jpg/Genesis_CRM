@@ -1162,6 +1162,7 @@ export interface Organization {
 export interface PlanDefinition {
   id: OrganizationPlan;
   monthlyPriceUsd: number;
+  annualPriceUsd?: number;
   limits: OrganizationLimits;
   overage: { emailUsdPer1000: number; aiTokensUsdPer1M: number; storageUsdPerGb: number };
   label: { zh: string; en: string };

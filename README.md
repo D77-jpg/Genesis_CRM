@@ -9,7 +9,7 @@
 | 运行环境 | Node.js >= 20.19，MongoDB 7.x 或 8.x |
 | 部署方式 | 本机开发，Docker Compose 单机部署 |
 
-Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。P2 起系统以「组织 → 项目」两层划分数据边界，支持组织级套餐、计量与平台运营，并提供本地开发和容器化部署方式。
+Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客户资料、潜客开发、开发信、邮件往来、产品报价和知识库。P2 起系统以「组织 → 项目」两层划分数据边界，支持组织级套餐、计量与平台运营；P3 补齐公开价格/帮助/法律页面、上市主流程 E2E、版本化数据库迁移、三套环境与压力/安全基线。
 
 ## 目录
 
@@ -50,7 +50,16 @@ Customer Dev Letter Manager 面向外贸业务团队，统一管理多项目客�
 - 组织管理员可维护组织资料、账单邮箱、税号和套餐；套餐包含用户数、项目数、月邮件量、AI Token 和存储空间限额。
 - 每月按组织记录邮件发送、AI Token 和附件存储用量，超额时发送/上传前失败关闭；账单页可按当月用量生成草稿估算单。
 - 平台控制台仅供 `isPlatformAdmin` 使用，可创建组织及组织管理员、暂停/恢复组织、查看跨组织用量并生成账单。
-- 旧版单租户数据首次启动自动迁移到默认组织；默认组织沿用企业版限额，避免历史数据突然被限流。
+- 旧版单租户数据通过版本化迁移显式迁移到默认组织；应用和 worker 启动时只校验迁移状态，不执行迁移。
+
+### 上市准备（P3）
+
+- **公开产品页**：`/pricing` 展示三档套餐、年付优惠、额度对比和 FAQ；`/help` 提供 10 篇中英双语操作文档；`/legal/terms|privacy|dpa|sla` 提供服务条款、隐私政策、DPA 和 SLA。
+- **E2E 主流程**：`npm run test:e2e --prefix server` 用真实 HTTP 接口验证「登录 → 导入客户 → 发信 → 收回复 → 报价」；测试使用内存 Mongo，不依赖外部邮箱。
+- **版本化迁移**：`server/src/migrations/` 前向、追加式迁移；`schema_migrations` 记录校验和，应用启动 fail closed 检查，Compose 用一次性 `migrate` 服务先于 API/worker 完成。
+- **三套环境**：开发使用 `server/.env.example`，预发布使用 `staging.env.example`，生产使用 `production.env.example`；三者独立数据库、密钥、卷和域名。
+- **压力与稳定性**：`npm run load --prefix server` 提供可配置并发/时长的只读压测与 p50/p95/p99、错误率、进程内存报告；默认限流为 600 次/分钟，压测需在隔离环境临时提高。
+- **安全基线**：`npm run test:security --prefix server` 覆盖鉴权、CSRF、租户隔离、安全头、公共接口最小暴露；外部渗透测试仍需在上线前由独立第三方执行，清单见 `docs/P3-安全测试与外部渗透测试清单.md`。
 
 ### 客户与开发过程
 
@@ -256,7 +265,7 @@ npm run dev
 - 后端 API：`http://127.0.0.1:5000/api`
 - 健康检查：`http://127.0.0.1:5000/api/health`
 
-首次启动会根据 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员，并把旧版数据迁移到默认组织。登录后可在用户管理页面创建业务员账号；建议同时为管理员绑定邮箱并开启邮件 2FA。忘记密码只对已绑定邮箱的账号发送重置链接。
+首次启动前先执行 `npm run migrate --prefix server`。迁移会按 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 创建管理员，并把旧版数据迁移到默认组织；应用启动时只校验迁移是否已完成，不会隐式改库。登录后可在用户管理页面创建业务员账号；建议同时为管理员绑定邮箱并开启邮件 2FA。忘记密码只对已绑定邮箱的账号发送重置链接。
 
 开发环境默认由 API 进程同时运行后台任务。需要模拟生产拆分时，在 API 设置 `RUN_BACKGROUND_JOBS=false`，另开终端执行：
 
@@ -283,6 +292,9 @@ CORS_LAN_PORTS=5173,4173
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `NODE_ENV` | `development` | `development`、`test` 或 `production` |
+| `APP_ENV` | `development` | 环境标识：`development`、`staging` 或 `production`；staging 也可使用 `NODE_ENV=production` |
+| `API_RATE_LIMIT_WINDOW_MS` | `60000` | API 限流窗口（毫秒） |
+| `API_RATE_LIMIT_MAX` | `600` | 每个 IP、每个窗口的最大请求数；隔离压测时临时提高 |
 | `HOST` | `0.0.0.0` | API 监听地址 |
 | `PORT` | `5000` | API 端口 |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/cdlm` | MongoDB 连接地址 |
@@ -368,7 +380,22 @@ npm run test:ai-settings --prefix server
 npm run test:security --prefix server
 npm run test:p1 --prefix server
 npm run test:p2 --prefix server
+npm run test:p3 --prefix server
+npm run test:e2e --prefix server
 npm run test:health --prefix server
+npm run migrate:status --prefix server
+npm run migrate --prefix server
+```
+
+压测（在隔离的 staging 环境执行，先临时提高 `API_RATE_LIMIT_MAX`）：
+
+```powershell
+$env:LOAD_BASE_URL='http://127.0.0.1:5002/api'
+$env:LOAD_USERNAME='admin'
+$env:LOAD_PASSWORD='<staging password>'
+$env:LOAD_DURATION_SECONDS='60'
+$env:LOAD_CONCURRENCY='20'
+npm run load --prefix server
 ```
 
 完整测试脚本见 [server/package.json](server/package.json)。
@@ -444,6 +471,7 @@ X-Project-Id: <projectId>
 | `/api/organizations` | 当前组织资料、用量、套餐和账单草稿，管理员专属 |
 | `/api/platform` | 平台运营：跨组织概览、组织创建、暂停/恢复、用量、账单和最近错误，`isPlatformAdmin` 专属 |
 | `/api/metrics` | Prometheus 文本指标，公开只读；只在 `METRICS_ENABLED=true` 时注册 |
+| `/api/public/plans` | 公开套餐目录，供价格页使用，不包含任何组织或密钥数据 |
 
 业务接口统一返回 JSON；邮件追踪接口返回重定向或透明图片，退订接口返回确认页。错误响应包含 HTTP 状态码和错误信息。生产环境不要直接暴露 `/api`，应由同源反向代理转发，并把 `PUBLIC_BASE_URL` 设为邮件收件人可访问的 HTTPS 地址，否则退订链接会指向本地地址。
 
@@ -485,8 +513,9 @@ docker compose --env-file .env.production up -d --wait
 
 默认只把 Web 发布到 `127.0.0.1:8080`。公网访问必须由独立的 HTTPS 反向代理终止 TLS，不要把 API 或 MongoDB 端口直接发布到公网。
 
-P2 的 Compose 会启动两个 Node 服务：
+P3 的 Compose 会先运行一次性 `migrate`，成功后再启动两个 Node 服务：
 
+- `migrate`：执行 `node dist/scripts/migrate.js`，失败则 API/worker 不会启动。
 - `server`：只处理 HTTP API，`RUN_BACKGROUND_JOBS=false`。
 - `worker`：独立消费邮件队列、收件箱同步、获客、自动开发、Agent 和知识库任务，健康检查为容器内 `:5100/health`。
 
@@ -503,6 +532,8 @@ P2 的 Compose 会启动两个 Node 服务：
 - 所有业务数据按「组织 → 项目」隔离：Mongoose 租户插件统一追加 `organizationId` 过滤，业务员只能访问分配给自己的项目和客户。
 - 平台运营接口要求 `isPlatformAdmin`，并在独立的 bypass 租户上下文运行；普通管理员只能管理本组织。
 - 组织用量在每月发送/上传前校验，超额失败关闭；账单草稿只做估算，实际收款仍由外部财务流程处理。
+- 数据库迁移版本化、只追加、带校验和与 advisory lock；应用启动只校验，不允许通过启动流程隐式改库。
+- 公共价格/帮助/法律页无需登录，但公开接口只返回套餐目录，不暴露组织、用户或用量数据。
 - 新建用户默认是业务员（`user`），管理员角色必须由管理员显式授予。
 - 新建/重置密码要求 10–72 位，并至少包含大小写字母、数字、符号中的三类；连续 5 次登录失败会锁定账号 15 分钟。
 - 浏览器登录使用 HttpOnly access/refresh cookie，刷新令牌在服务端保存摘要并支持轮换、注销撤销；写操作使用 double-submit CSRF 校验。
@@ -532,6 +563,12 @@ P2 的 Compose 会启动两个 Node 服务：
 
 - [V2.6 多项目工作空间验收报告](docs/V2.6-多项目工作空间-验收报告.md)
 - [P2 多租户与运营验收报告](docs/P2-多租户与运营-验收报告.md)
+- [P3 环境、迁移与发布](docs/P3-环境与发布.md)
+- [P3 帮助中心与新手文档](docs/P3-帮助中心与新手文档.md)
+- [P3 法律文件与价格页](docs/P3-法律文件与价格页.md)
+- [P3 安全测试与外部渗透测试清单](docs/P3-安全测试与外部渗透测试清单.md)
+- [P3 压力与稳定性测试报告](docs/P3-压力与稳定性测试报告.md)
+- [P3 上市准备验收报告](docs/P3-上市准备-验收报告.md)
 - [自动开发设计](docs/outreach-autopilot.md)
 - [客户草稿审核](docs/customer-draft-review.md)
 - [开发信中英对照](docs/letter-bilingual-review.md)

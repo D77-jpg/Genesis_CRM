@@ -10,15 +10,14 @@ import mongoose from 'mongoose';
 import env from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/db';
 import { createLogger } from './config/logger';
-import { ensureDefaultOrganization, migrateLegacyTenantData } from './services/organization.service';
+import { assertMigrationsApplied } from './migrations';
 import { startBackgroundJobs, stopBackgroundJobs } from './background/runtime';
 
 const logger = createLogger('worker-bootstrap');
 
 async function main(): Promise<void> {
   await connectDatabase();
-  await ensureDefaultOrganization();
-  await migrateLegacyTenantData();
+  await assertMigrationsApplied();
   startBackgroundJobs();
 
   const health = http.createServer((req, res) => {
