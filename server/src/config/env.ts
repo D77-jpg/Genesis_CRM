@@ -26,7 +26,13 @@ export const envSchema = z.object({
   MONGODB_URI: z.string().min(1).default('mongodb://127.0.0.1:27017/cdlm'),
 
   JWT_SECRET: z.string().min(32, 'JWT_SECRET 至少需要 32 个字符'),
+  /** @deprecated 仅保留旧环境文件兼容；新部署请使用 JWT_ACCESS_EXPIRES_IN。 */
   JWT_EXPIRES_IN: z.string().default('7d'),
+  /** Browser access cookie lifetime; refresh sessions cover the longer-lived login. */
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+  /** Set true when the CRM is served over HTTPS; production defaults to secure cookies below. */
+  COOKIE_SECURE: booleanish.default(false),
 
   ADMIN_USERNAME: z.string().min(1).default('admin'),
   ADMIN_PASSWORD: z.string().min(10, 'ADMIN_PASSWORD 至少需要 10 个字符'),

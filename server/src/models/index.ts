@@ -39,6 +39,9 @@ export type {
 export { User, hashPassword } from './User';
 export type { IUser, IUserMethods, UserDocument, UserModel, UserRole, UserStatus } from './User';
 
+export { AuthSession } from './AuthSession';
+export type { IAuthSession, AuthSessionDocument } from './AuthSession';
+
 export { AuditLog, AUDIT_ACTIONS } from './AuditLog';
 export type { AuditAction, IAuditLog, AuditLogDocument } from './AuditLog';
 

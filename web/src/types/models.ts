@@ -939,7 +939,6 @@ export interface AuthUser {
 }
 
 export interface LoginResult {
-  token: string;
   expiresAt: string;
   user: AuthUser;
 }

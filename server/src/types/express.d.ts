@@ -28,6 +28,8 @@ export interface JwtPayload {
   username: string;
   displayName: string;
   role: UserRole;
+  /** Server-side refresh session id; absent on legacy/test bearer tokens. */
+  sid?: string;
   iat?: number;
   exp?: number;
 }

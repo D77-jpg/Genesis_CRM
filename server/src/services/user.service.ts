@@ -6,7 +6,7 @@
  * 涉及「让管理员失去权限」的操作（停用 / 删除 / 降级）受自我保护与「最后一个启用管理员」约束。
  */
 import { Types } from 'mongoose';
-import { Customer, MailQuotaBucket, Project, Scratchpad, User, UserMailAccount, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
+import { AuthSession, Customer, MailQuotaBucket, Project, Scratchpad, User, UserMailAccount, hashPassword, type UserDocument, type UserRole, type UserStatus } from '../models';
 import { ApiError } from '../utils/ApiError';
 import { createLogger } from '../config/logger';
 import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator';
@@ -156,6 +156,8 @@ export async function resetPassword(targetId: string, password: string): Promise
   const passwordHash = await hashPassword(password);
   const result = await User.updateOne({ _id: targetId }, { $set: { passwordHash } });
   if (result.matchedCount === 0) throw ApiError.notFound('用户不存在');
+  // A password reset must invalidate every existing browser session.
+  await AuthSession.updateMany({ userId: targetId }, { $set: { revokedAt: new Date() } });
   logger.info(`重置密码: userId=${targetId}`);
   return { id: targetId };
 }
@@ -170,6 +172,9 @@ export async function setUserStatus(actorId: string, targetId: string, status: U
 
   target.status = status;
   await target.save({ validateBeforeSave: false });
+  if (status === 'disabled') {
+    await AuthSession.updateMany({ userId: target._id }, { $set: { revokedAt: new Date() } });
+  }
   logger.info(`${status === 'disabled' ? '停用' : '启用'}用户: ${target.username}`);
 
   return toFreshDto(target._id);
@@ -190,6 +195,7 @@ export async function deleteUser(
   const mailAccounts = await UserMailAccount.find({ userId: target._id }).select('_id');
   await Promise.all([
     Scratchpad.deleteMany({ userId: target._id }),
+    AuthSession.deleteMany({ userId: target._id }),
     MailQuotaBucket.deleteMany({ mailAccountId: { $in: mailAccounts.map((account) => account._id) } }),
     UserMailAccount.deleteMany({ userId: target._id }),
   ]);

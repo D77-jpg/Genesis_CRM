@@ -1,13 +1,14 @@
 /**
  * 登录态
  * ------------------------------------------------------------------
- * - Token 持久化在 localStorage，刷新页面后通过 GET /auth/me 恢复用户信息
+ * - 访问令牌与刷新令牌保存在 HttpOnly cookie，前端不读取 token
+ * - 刷新页面后通过 GET /auth/me 恢复用户信息
  * - 401 时由 lib/api.ts 回调 handleSessionExpired，避免 api 层反向依赖 store
  */
 import { create } from 'zustand';
-import { apiGet, apiPost, getToken, setUnauthorizedHandler, toErrorMessage, ApiClientError } from '@/lib/api';
+import { apiGet, apiPost, setUnauthorizedHandler, toErrorMessage, ApiClientError } from '@/lib/api';
 import { ROUTES, SCRATCHPAD_PENDING_PREFIX, STORAGE_KEYS } from '@/constants';
-import { removeStorage, removeStorageByPrefix, writeStorage } from '@/lib/utils';
+import { removeStorage, removeStorageByPrefix } from '@/lib/utils';
 import type { AuthUser, LoginResult } from '@/types';
 import { useProjectStore } from './project.store';
 
@@ -20,7 +21,6 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 interface AuthState {
   user: AuthUser | null;
-  token: string | null;
   status: AuthStatus;
   /** 首屏恢复登录态是否已结束（路由守卫据此决定是否显示 loading） */
   initialized: boolean;
@@ -36,8 +36,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
-  token: getToken(),
-  status: getToken() ? 'idle' : 'unauthenticated',
+  status: 'idle',
   initialized: false,
   loggingIn: false,
   loginError: null,
@@ -46,10 +45,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ loggingIn: true, loginError: null });
     try {
       const result = await apiPost<LoginResult>('/auth/login', { username, password });
-      writeStorage(STORAGE_KEYS.token, result.token);
+      // Remove any token left by a pre-cookie-session build.
+      removeStorage(STORAGE_KEYS.token);
       set({
         user: result.user,
-        token: result.token,
         status: 'authenticated',
         initialized: true,
         loggingIn: false,
@@ -63,12 +62,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   logout({ silent = false } = {}) {
+    // Clear the browser cookie on the server as well; the local state must not
+    // remain usable while the request is in flight.
+    void apiPost('/auth/logout').catch(() => undefined);
     removeStorage(STORAGE_KEYS.token);
     removeStorageByPrefix(SCRATCHPAD_PENDING_PREFIX);
     useProjectStore.getState().reset();
     set({
       user: null,
-      token: null,
       status: 'unauthenticated',
       initialized: true,
       loggingIn: false,
@@ -76,15 +77,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     });
   },
 
-  /** 应用启动时调用：有 token 就校验，没有就直接进入未登录态 */
+  /** 应用启动时调用：通过 cookie 恢复登录态 */
   async bootstrap() {
-    const token = getToken();
-    if (!token) {
-      set({ user: null, token: null, status: 'unauthenticated', initialized: true });
-      return;
-    }
-
-    set({ status: 'bootstrapping', token });
+    set({ status: 'bootstrapping' });
     for (let attempt = 0; attempt < BOOTSTRAP_RETRIES; attempt++) {
       try {
         const { user } = await apiGet<{ user: AuthUser }>('/auth/me');
@@ -92,19 +87,19 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         return;
       } catch (error) {
         const status = error instanceof ApiClientError ? error.status : 0;
-        // 401/403：token 确实失效 → 静默清理，交给路由守卫跳登录页
+        // 401/403：cookie 会话确实失效 → 清理，交给路由守卫跳登录页
         if (status === 401 || status === 403) {
           removeStorage(STORAGE_KEYS.token);
           removeStorageByPrefix(SCRATCHPAD_PENDING_PREFIX);
-          set({ user: null, token: null, status: 'unauthenticated', initialized: true });
+          set({ user: null, status: 'unauthenticated', initialized: true });
           return;
         }
-        // 网络抖动 / 后端重启 / 5xx：token 可能仍有效，不销毁，稍后重试
+        // 网络抖动 / 后端重启 / 5xx：cookie 可能仍有效，稍后重试
         if (attempt < BOOTSTRAP_RETRIES - 1) await sleep(BOOTSTRAP_RETRY_DELAY);
       }
     }
-    // 重试耗尽仍连不上：保留 localStorage 里的 token（服务恢复后刷新可免重输），仅回到未登录态
-    set({ user: null, token: null, status: 'unauthenticated', initialized: true });
+    // 重试耗尽仍连不上：服务恢复后刷新页面可重新恢复 cookie 会话。
+    set({ user: null, status: 'unauthenticated', initialized: true });
   },
 
   handleSessionExpired() {
@@ -112,7 +107,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     removeStorage(STORAGE_KEYS.token);
     removeStorageByPrefix(SCRATCHPAD_PENDING_PREFIX);
     useProjectStore.getState().reset();
-    set({ user: null, token: null, status: 'unauthenticated', initialized: true });
+    set({ user: null, status: 'unauthenticated', initialized: true });
     // 强制整页跳登录页：避免残留的内存态 UI 在掉登录后仍能被继续操作
     if (window.location.pathname !== ROUTES.login) {
       window.location.assign(ROUTES.login);

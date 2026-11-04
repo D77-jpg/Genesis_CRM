@@ -24,6 +24,7 @@ import type {
 /* ---------------------------- 存储键 ---------------------------- */
 
 export const STORAGE_KEYS = {
+  /** 旧版本地 token；仅用于升级时清理，不再写入 */
   token: 'cdlm-token',
   theme: 'cdlm-theme',
   sidebar: 'cdlm-sidebar-collapsed',

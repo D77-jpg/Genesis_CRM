@@ -65,7 +65,7 @@ const corsOptions: cors.CorsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Project-Id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Project-Id', 'X-CSRF-Token'],
   exposedHeaders: ['X-Project-Id', 'X-Request-Id'],
   maxAge: 86400,
 };

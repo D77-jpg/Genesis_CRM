@@ -17,6 +17,23 @@ import { STORAGE_KEYS } from '@/constants';
 import { removeStorage, readStorage } from './utils';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const CSRF_COOKIE_NAME = 'cdlm_csrf';
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const prefix = `${name}=`;
+  for (const part of document.cookie.split(';')) {
+    const value = part.trim();
+    if (value.startsWith(prefix)) {
+      try {
+        return decodeURIComponent(value.slice(prefix.length));
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
 
 /** 统一的客户端错误类型 */
 export class ApiClientError extends Error {
@@ -50,21 +67,19 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
-export function getToken(): string | null {
-  return readStorage<string | null>(STORAGE_KEYS.token, null);
-}
-
 export const http: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 60_000,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
 /* ---------------------------- 请求拦截 ---------------------------- */
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getToken();
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`);
+  const method = (config.method ?? 'get').toLowerCase();
+  if (!['get', 'head', 'options'].includes(method)) {
+    const csrf = readCookie(CSRF_COOKIE_NAME);
+    if (csrf) config.headers.set('X-CSRF-Token', csrf);
   }
   const projectId = readStorage<string | null>(STORAGE_KEYS.activeProject, null);
   if (projectId) config.headers.set('X-Project-Id', projectId);
@@ -72,6 +87,28 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 /* ---------------------------- 响应拦截 ---------------------------- */
+let refreshPromise: Promise<void> | null = null;
+
+function refreshSession(): Promise<void> {
+  if (!refreshPromise) {
+    const csrf = readCookie(CSRF_COOKIE_NAME);
+    refreshPromise = axios
+      .post(
+        `${API_BASE_URL}/auth/refresh`,
+        {},
+        {
+          withCredentials: true,
+          headers: csrf ? { 'X-CSRF-Token': csrf } : undefined,
+        },
+      )
+      .then(() => undefined)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 http.interceptors.response.use(
   (response) => {
     // 二进制响应（Excel 下载）直接透传，不做解包
@@ -92,7 +129,7 @@ http.interceptors.response.use(
     }
     return response;
   },
-  (error: AxiosError<ApiFailureLike>) => {
+  async (error: AxiosError<ApiFailureLike>) => {
     if (axios.isCancel(error)) {
       const cancelled = new ApiClientError('请求已取消', 0, 'UNKNOWN_ERROR');
       (cancelled as { isCancel: boolean }).isCancel = true;
@@ -101,8 +138,28 @@ http.interceptors.response.use(
 
     const status = error.response?.status ?? 0;
     const payload = error.response?.data;
+    const config = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const requestUrl = config?.url ?? '';
 
-    // 401：登录态失效
+    // 访问令牌过期时静默刷新一次；登录/刷新/登出本身失败不进入刷新循环。
+    if (
+      status === 401
+      && config
+      && !config._retry
+      && !requestUrl.includes('/auth/login')
+      && !requestUrl.includes('/auth/refresh')
+      && !requestUrl.includes('/auth/logout')
+    ) {
+      config._retry = true;
+      try {
+        await refreshSession();
+        return http.request(config);
+      } catch {
+        // fall through to the normal 401 handling below
+      }
+    }
+
+    // 401：登录态失效（refresh 也失败）
     if (status === 401) {
       removeStorage(STORAGE_KEYS.token);
       unauthorizedHandler?.();

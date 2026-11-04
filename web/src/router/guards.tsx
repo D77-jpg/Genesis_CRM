@@ -37,7 +37,7 @@ export function ProtectedRoute(): React.JSX.Element {
   const initializeProjects = useProjectStore((state) => state.initialize);
   const location = useLocation();
 
-  // 首屏：有 token 就校验，没有就直接进入未登录态
+  // 首屏：通过 HttpOnly cookie 恢复会话
   React.useEffect(() => {
     if (!initialized) void bootstrap();
   }, [initialized, bootstrap]);
