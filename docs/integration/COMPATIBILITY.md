@@ -56,3 +56,5 @@
 - Six implemented C1 GET operations are separately frozen; S1 six /globalsite/* operations remain unimplemented drafts.
 - Approved by C1 task: additive products:read/company:read/playbook:read/knowledge:read, scoped reads and per-credential 429 protection; no GlobalSite or AutoForceAI caller changes in this repository.
 - CI verifies the immutable historical source SHA, deep-equality of all old definitions, existing S1 drafts, and the new C1 snapshot/hash; HTTP behavior tests run in test:integration.
+
+历史冻结定义的原始副本 snapshots/integration-v1.legacy.openapi.yaml 直接来自 e2e3486300250b75d08295bcba6b8bd09a8e4774，校验既有发布 SHA 后再比较。CI 浅克隆也能校验，不依赖本地拥有历史 git 对象；仅规范化 CRLF→LF，定义内容不变。

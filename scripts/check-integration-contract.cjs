@@ -5,9 +5,10 @@ const { readFileSync } = require('node:fs');
 const yaml = (() => { try { return require('../server/node_modules/js-yaml'); } catch { return require('../web/node_modules/js-yaml'); } })();
 
 const contractPath = 'docs/integration/integration-v1.openapi.yaml';
-const frozenCommit = 'e2e3486300250b75d08295bcba6b8bd09a8e4774';
+// Byte-equivalent snapshot from immutable e2e3486300250b75d08295bcba6b8bd09a8e4774.
+// Verify the published digest even in shallow CI checkouts; normalize only CRLF.
 const frozenSha = '7798eb621795e8dc405ff56c0fdfb806622ec5a6144d85d6e839ee85d9061679';
-const frozenBytes = execFileSync('git', ['show', frozenCommit + ':' + contractPath]);
+const frozenBytes = Buffer.from(readFileSync('docs/integration/snapshots/integration-v1.legacy.openapi.yaml', 'utf8').replace(/\r\n/g, '\n'));
 assert.equal(createHash('sha256').update(frozenBytes).digest('hex'), frozenSha,
   'Frozen source must still match the original published SHA');
 const parse = (text) => yaml.load(text, { schema: yaml.JSON_SCHEMA });

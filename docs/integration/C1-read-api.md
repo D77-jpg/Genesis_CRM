@@ -26,7 +26,7 @@ GET /products、/company-profile、/playbook、/knowledge/summaries 均使用 up
 
 历史 SHA 和所有原 paths/components 保持不变；S1 草案继续受保护。本次六项 C1 操作和相关组件冻结到 snapshots/globalsite-c1.json，并由指纹和深等比较双重保护。真实 HTTP 测试验证结构/空值/权限/增量/游标/签名过期与共享限流。GlobalSite 不在此任务实现调用方；正式接入需以本次批准契约校验请求与响应，不能调用 S1 未实现的草案。
 
-快照指纹按 LF 换行规范化计算，避免 Windows 自动换行转换造成误报；原始历史冻结指纹仍按不可变 git 对象原始字节验证。
+快照指纹按 LF 换行规范化计算，避免 Windows 自动换行转换造成误报；历史冻结副本仍使用原始发布指纹校验，内容与不可变 git 对象一致。
 
 ## 操作示例（占位 ID、虚构内容）
 
@@ -67,3 +67,5 @@ npm run integration:public -- revoke --project <projectId> --kind knowledge --so
 ## 已知边界
 
 本次没有公开资料管理 UI，采用受控 CLI。没有自动提炼原文、补造公司事实或从销售话术推断目标市场。列表是有上界的增量扫描，并非历史事务快照；需周期性全量对账。产品聚合借助公开记录索引、每页最多100及5秒执行上限防止长查询；超大目录需后续基于实测规模增加物化同步索引，不能通过提高限流上限代替容量验证。生产需事先部署新索引并配置现有 PUBLIC_BASE_URL 的公网 HTTPS；本任务不连接或迁移生产业务数据库，不新增环境变量。
+
+历史冻结定义的原始副本 snapshots/integration-v1.legacy.openapi.yaml 直接来自 e2e3486300250b75d08295bcba6b8bd09a8e4774，校验既有发布 SHA 后再比较。CI 浅克隆也能校验，不依赖本地拥有历史 git 对象；仅规范化 CRLF→LF，定义内容不变。
