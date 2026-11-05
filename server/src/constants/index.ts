@@ -62,6 +62,10 @@ export const INTEGRATION_SCOPES = [
   'stats:read',
   'quotations:draft',
   'quotations:read',
+  'products:read',
+  'company:read',
+  'playbook:read',
+  'knowledge:read',
 ] as const;
 export type IntegrationScope = (typeof INTEGRATION_SCOPES)[number];
 

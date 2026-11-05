@@ -599,6 +599,201 @@ paths:
             schema:
               $ref: '#/components/schemas/GlobalSiteInquiryRequest'
 
+  /products:
+    get:
+      summary: GlobalSite C1 Products
+      operationId: globalSiteC1Products
+      x-status: stable
+      x-implementation-phase: C1
+      x-required-scope: products:read
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC1UpdatedSince'
+        - $ref: '#/components/parameters/GlobalSiteC1Cursor'
+        - $ref: '#/components/parameters/GlobalSiteC1Limit'
+      responses:
+        '200':
+          description: 成功。所有字段均显式定义空值；从不输出内部备注或销售策略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC1ProductFeed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/GlobalSiteC1RateLimited'
+  /company-profile:
+    get:
+      summary: GlobalSite C1 CompanyProfile
+      operationId: globalSiteC1CompanyProfile
+      x-status: stable
+      x-implementation-phase: C1
+      x-required-scope: company:read
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC1UpdatedSince'
+        - $ref: '#/components/parameters/GlobalSiteC1Cursor'
+        - $ref: '#/components/parameters/GlobalSiteC1Limit'
+      responses:
+        '200':
+          description: 成功。所有字段均显式定义空值；从不输出内部备注或销售策略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC1CompanyFeed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/GlobalSiteC1RateLimited'
+  /playbook:
+    get:
+      summary: GlobalSite C1 Playbook
+      operationId: globalSiteC1Playbook
+      x-status: stable
+      x-implementation-phase: C1
+      x-required-scope: playbook:read
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC1UpdatedSince'
+        - $ref: '#/components/parameters/GlobalSiteC1Cursor'
+        - $ref: '#/components/parameters/GlobalSiteC1Limit'
+      responses:
+        '200':
+          description: 成功。所有字段均显式定义空值；从不输出内部备注或销售策略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC1PlaybookFeed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/GlobalSiteC1RateLimited'
+  /knowledge/summaries:
+    get:
+      summary: GlobalSite C1 KnowledgeSummaries
+      operationId: globalSiteC1KnowledgeSummaries
+      x-status: stable
+      x-implementation-phase: C1
+      x-required-scope: knowledge:read
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC1UpdatedSince'
+        - $ref: '#/components/parameters/GlobalSiteC1Cursor'
+        - $ref: '#/components/parameters/GlobalSiteC1Limit'
+      responses:
+        '200':
+          description: 成功。所有字段均显式定义空值；从不输出内部备注或销售策略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC1KnowledgeFeed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/GlobalSiteC1RateLimited'
+  /products/{id}:
+    get:
+      summary: GlobalSite C1 Product
+      operationId: globalSiteC1Product
+      x-status: stable
+      x-implementation-phase: C1
+      x-required-scope: products:read
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC1ProductId'
+      responses:
+        '200':
+          description: 成功。所有字段均显式定义空值；从不输出内部备注或销售策略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC1ProductResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/GlobalSiteC1RateLimited'
+  /products/{id}/images/{imageId}:
+    get:
+      summary: GlobalSite C1 ProductImage
+      operationId: globalSiteC1ProductImage
+      x-status: stable
+      x-implementation-phase: C1
+      x-required-scope: products:read
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC1ProductId'
+        - $ref: '#/components/parameters/GlobalSiteC1ImageId'
+        - $ref: '#/components/parameters/GlobalSiteC1Expires'
+        - $ref: '#/components/parameters/GlobalSiteC1Signature'
+      responses:
+        '200':
+          description: 签名、凭证、项目、存储摘要均有效；private, no-store。不重定向到内部存储。
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/GlobalSiteC1RateLimited'
+
 components:
   securitySchemes:
     serviceToken:
@@ -646,6 +841,70 @@ components:
         minLength: 1
         maxLength: 128
       description: 草案：重试保持原 key 与原始载荷，跨操作/项目隔离；同业务键异载荷也返回409。
+
+    GlobalSiteC1UpdatedSince:
+      name: updatedSince
+      in: query
+      required: false
+      description: UTC ISO8601 时间，包含边界（>=）。仅首轮传入；配合游标时不能更改。缺省全量；允许与当前游标相同值。
+      schema:
+        type: string
+        format: date-time
+    GlobalSiteC1Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: 上一页 nextCursor，原样传入；过期/篡改/跨范围返回 422 VALIDATION_ERROR。
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 2048
+    GlobalSiteC1Limit:
+      name: limit
+      in: query
+      required: false
+      description: 每页数量。
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    GlobalSiteC1ProductId:
+      name: id
+      in: path
+      required: true
+      description: 本项目内的稳定产品 ID。
+      schema:
+        type: string
+        nullable: false
+        description: 稳定 Mongo ObjectId 字符串；不为空，不使用 SKU 或名称。
+        pattern: ^[a-f0-9]{24}$
+    GlobalSiteC1ImageId:
+      name: imageId
+      in: path
+      required: true
+      description: 图片公开记录中的稳定 ID。
+      schema:
+        type: string
+        nullable: false
+        description: 稳定 Mongo ObjectId 字符串；不为空，不使用 SKU 或名称。
+        pattern: ^[a-f0-9]{24}$
+    GlobalSiteC1Expires:
+      name: expires
+      in: query
+      required: true
+      description: 签名过期 Unix 秒数。
+      schema:
+        type: integer
+        minimum: 1
+    GlobalSiteC1Signature:
+      name: signature
+      in: query
+      required: true
+      description: 签名，不是服务凭证；不得记录。
+      schema:
+        type: string
+        pattern: ^[a-f0-9]{64}$
 
   schemas:
     Error:
@@ -1420,6 +1679,442 @@ components:
               enum:
                 - stored
 
+    GlobalSiteC1Image:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - url
+        - expiresAt
+        - mime
+        - bytes
+        - sha256
+      properties:
+        id:
+          type: string
+          nullable: false
+          description: 稳定 Mongo ObjectId 字符串；不为空，不使用 SKU 或名称。
+          pattern: ^[a-f0-9]{24}$
+        url:
+          type: string
+          format: uri
+          description: 短期签名下载 URL；不为 null。下载仍需同一凭证、项目头及 products:read。不得记录 URL 查询串。
+        expiresAt:
+          type: string
+          format: date-time
+          description: 5 分钟后失效，不能用作永久链接；不为 null。
+        mime:
+          type: string
+          enum:
+            - image/png
+            - image/jpeg
+            - image/webp
+          description: 已验证图片类型；不为 null。
+        bytes:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+          description: 图片字节数；不为 null。
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+          description: 下载校验摘要；不为 null。
+    GlobalSiteC1Spec:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - value
+        - unit
+      properties:
+        code:
+          type: string
+          nullable: false
+          description: 规格编码
+        name:
+          type: string
+          nullable: false
+          description: 规格名称
+        value:
+          type: string
+          nullable: false
+          description: 规格值
+        unit:
+          type: string
+          nullable: true
+          description: 单位；未填写返回 null。
+    GlobalSiteC1Product:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - sku
+        - name
+        - category
+        - description
+        - status
+        - specs
+        - material
+        - application
+        - certifications
+        - moq
+        - leadTime
+        - images
+        - updatedAt
+      properties:
+        id:
+          type: string
+          nullable: false
+          description: 稳定 Mongo ObjectId 字符串；不为空，不使用 SKU 或名称。
+          pattern: ^[a-f0-9]{24}$
+        sku:
+          type: string
+          nullable: false
+          description: SKU；不为空。
+        name:
+          type: string
+          nullable: false
+          description: 产品名称；不为空。
+        category:
+          type: string
+          nullable: true
+          description: 产品分类；未填写返回 null。
+        description:
+          type: string
+          nullable: true
+          description: 产品描述；未填写返回 null。
+        status:
+          type: string
+          enum:
+            - active
+            - archived
+          description: 产品状态；不为 null。
+        specs:
+          type: array
+          items:
+            $ref: '#/components/schemas/GlobalSiteC1Spec'
+          description: 规格；排除内部 notes；无值返回 []，不为 null。
+        material:
+          type: string
+          nullable: true
+          description: 经审核补充的材质；未公开返回 null。
+        application:
+          type: string
+          nullable: true
+          description: 经审核补充的应用；未公开返回 null。
+        certifications:
+          type: array
+          items:
+            type: string
+          description: 经审核补充的认证；无值返回 []，不为 null。
+        moq:
+          type: string
+          nullable: true
+          description: 起订量；未填写返回 null。
+        leadTime:
+          type: string
+          nullable: true
+          description: 交期；未填写返回 null。
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/GlobalSiteC1Image'
+          description: 仅显式审核关联的已存储图片；无值返回 []，不为 null。
+        updatedAt:
+          type: string
+          format: date-time
+          description: 产品或公开补充记录最近更新时间（取较晚者）；不为 null。
+    GlobalSiteC1Company:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - website
+        - industry
+        - address
+        - phone
+        - email
+        - foundedYear
+        - capacity
+        - certifications
+        - updatedAt
+      properties:
+        id:
+          type: string
+          nullable: false
+          description: 稳定 Mongo ObjectId 字符串；不为空，不使用 SKU 或名称。
+          pattern: ^[a-f0-9]{24}$
+        name:
+          type: string
+          nullable: false
+          description: 项目 companyName；不为空，不使用全局默认公司。
+        website:
+          type: string
+          nullable: true
+          description: 项目网站；未填写返回 null。
+        industry:
+          type: string
+          nullable: true
+          description: 项目行业；未填写返回 null。
+        address:
+          type: string
+          nullable: true
+          description: 审核后的地址；未公开返回 null。
+        phone:
+          type: string
+          nullable: true
+          description: 审核后的公开联系电话；未公开返回 null。
+        email:
+          type: string
+          nullable: true
+          description: 审核后的公开邮箱；不回退到发送邮箱，未公开返回 null。
+        foundedYear:
+          type: integer
+          nullable: true
+          minimum: 1000
+          maximum: 9999
+          description: 审核后的成立年份；缺失返回 null。
+        capacity:
+          type: string
+          nullable: true
+          description: 审核后的产能；缺失返回 null。
+        certifications:
+          type: array
+          items:
+            type: string
+          description: 审核后的公司认证；无值返回 []，不为 null。
+        updatedAt:
+          type: string
+          format: date-time
+          description: 项目或公开补充记录最近更新时间；不为 null。
+    GlobalSiteC1Playbook:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - brandPositioning
+        - sellingPoints
+        - targetMarkets
+        - updatedAt
+      properties:
+        id:
+          type: string
+          nullable: false
+          description: 稳定 Mongo ObjectId 字符串；不为空，不使用 SKU 或名称。
+          pattern: ^[a-f0-9]{24}$
+        brandPositioning:
+          type: string
+          nullable: true
+          description: 明确标记 public 的品牌定位；未公开返回 null。
+        sellingPoints:
+          type: array
+          items:
+            type: string
+          description: 明确标记 public 的卖点；排除 internal 及未标记项；无值返回 []，不为 null。
+        targetMarkets:
+          type: array
+          items:
+            type: string
+          description: 明确标记 public 的目标市场；无值返回 []，不为 null。
+        updatedAt:
+          type: string
+          format: date-time
+          description: 审核后的话术摘要更新时间；不包含内部销售策略、原卡片或系统默认话术；不为 null。
+    GlobalSiteC1Knowledge:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - title
+        - summary
+        - updatedAt
+        - deleted
+      properties:
+        id:
+          type: string
+          nullable: false
+          description: 稳定 Mongo ObjectId 字符串；不为空，不使用 SKU 或名称。
+          pattern: ^[a-f0-9]{24}$
+        title:
+          type: string
+          nullable: false
+          description: 人工审核的公开标题；不使用原文件名。
+        summary:
+          type: string
+          nullable: false
+          description: 人工审核的公开摘要；不读取或返回原文件、解析正文。
+        updatedAt:
+          type: string
+          format: date-time
+          description: 摘要公开记录更新时间；不为 null。
+        deleted:
+          type: boolean
+          description: 撤销公开后为 true；title/summary 为固定空字符串，供同步方移除旧摘要。
+    GlobalSiteC1ProductFeed:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: 成功标记；不为 null。
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - nextCursor
+            - hasMore
+            - syncUntil
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GlobalSiteC1Product'
+              description: 数据项；单例资料最多一条；无值返回 []，不为 null。
+            nextCursor:
+              type: string
+              nullable: true
+              description: 不透明签名游标；末页 null。绑定凭证、组织、项目、资源、updatedSince、批次上界；7 天过期。
+            hasMore:
+              type: boolean
+              description: 是否还有下一页；不为 null。
+            syncUntil:
+              type: string
+              format: date-time
+              description: 本批次服务端上界。完整处理所有页后保存；下一轮 updatedSince 建议回退 1 秒并按 id+updatedAt 去重；不为 null。
+    GlobalSiteC1CompanyFeed:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: 成功标记；不为 null。
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - nextCursor
+            - hasMore
+            - syncUntil
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GlobalSiteC1Company'
+              description: 数据项；单例资料最多一条；无值返回 []，不为 null。
+            nextCursor:
+              type: string
+              nullable: true
+              description: 不透明签名游标；末页 null。绑定凭证、组织、项目、资源、updatedSince、批次上界；7 天过期。
+            hasMore:
+              type: boolean
+              description: 是否还有下一页；不为 null。
+            syncUntil:
+              type: string
+              format: date-time
+              description: 本批次服务端上界。完整处理所有页后保存；下一轮 updatedSince 建议回退 1 秒并按 id+updatedAt 去重；不为 null。
+    GlobalSiteC1PlaybookFeed:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: 成功标记；不为 null。
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - nextCursor
+            - hasMore
+            - syncUntil
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GlobalSiteC1Playbook'
+              description: 数据项；单例资料最多一条；无值返回 []，不为 null。
+            nextCursor:
+              type: string
+              nullable: true
+              description: 不透明签名游标；末页 null。绑定凭证、组织、项目、资源、updatedSince、批次上界；7 天过期。
+            hasMore:
+              type: boolean
+              description: 是否还有下一页；不为 null。
+            syncUntil:
+              type: string
+              format: date-time
+              description: 本批次服务端上界。完整处理所有页后保存；下一轮 updatedSince 建议回退 1 秒并按 id+updatedAt 去重；不为 null。
+    GlobalSiteC1KnowledgeFeed:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: 成功标记；不为 null。
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - nextCursor
+            - hasMore
+            - syncUntil
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GlobalSiteC1Knowledge'
+              description: 数据项；单例资料最多一条；无值返回 []，不为 null。
+            nextCursor:
+              type: string
+              nullable: true
+              description: 不透明签名游标；末页 null。绑定凭证、组织、项目、资源、updatedSince、批次上界；7 天过期。
+            hasMore:
+              type: boolean
+              description: 是否还有下一页；不为 null。
+            syncUntil:
+              type: string
+              format: date-time
+              description: 本批次服务端上界。完整处理所有页后保存；下一轮 updatedSince 建议回退 1 秒并按 id+updatedAt 去重；不为 null。
+    GlobalSiteC1ProductResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: 不为 null。
+        data:
+          $ref: '#/components/schemas/GlobalSiteC1Product'
+
   responses:
     Unauthorized:
       description: token 缺失 / 无效 / 已撤销 / 已过期
@@ -1520,6 +2215,19 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
+    GlobalSiteC1RateLimited:
+      description: 每凭证所有绑定项目合计每 UTC 固定分钟最多 120 次请求（包括图片）；所有 API 实例共享 Mongo 原子计数。无权限请求先返回 403。旧端点业务结构不变，新增此防护。
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: 距窗口结束的秒数。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
 x-globalsite-draft:
   status: draft
   phases: [C1, C2, C3, C4]
@@ -1528,3 +2236,9 @@ x-globalsite-draft:
     GlobalSite S1 草案；仅新增定义，不改已有端点。C1–C4 为建议拆分，具体范围以双方批准任务为准。
     冻结快照与原始 SHA 保持不变；CI 校验历史冻结文件与全部旧定义，仅放行明确未实现的约定草案。
     新端点真实权限由 x-required-scope 描述；HTTP bearer security 数组留空。
+
+x-globalsite-c1:
+  status: stable
+  implemented: true
+  task: C1-read-api
+  description: 新任务批准的 /products 等 C1 路径；S1 /globalsite/* 草案仍未实现，不能当别名调用。

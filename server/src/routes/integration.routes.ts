@@ -1,3 +1,5 @@
+import { installIntegrationReadRoutes } from './integration-read.routes';
+import { integrationCredentialLimit } from '../middleware/integration-limit.middleware';
 /**
  * Integration API v1 路由
  * ------------------------------------------------------------------
@@ -38,56 +40,57 @@ const router = Router();
 // 全部集成端点：审计先行（认证失败也要留痕）→ 服务凭证认证 → 显式项目绑定
 router.use(integrationAuditLog, requireServiceToken, requireIntegrationProject);
 
-router.get('/health', healthHandler);
+installIntegrationReadRoutes(router);
+router.get('/health', integrationCredentialLimit, healthHandler);
 
 router.post(
   '/customers/upsert',
-  requireScope('customers:upsert'),
+  requireScope('customers:upsert'), integrationCredentialLimit,
   validate({ body: upsertCustomerBody }),
   upsertCustomerHandler,
 );
 
 router.get(
   '/outcomes',
-  requireScope('outcomes:read'),
+  requireScope('outcomes:read'), integrationCredentialLimit,
   validate({ query: outcomesQuery }),
   outcomesHandler,
 );
 
-router.get('/stats/overview', requireScope('stats:read'), statsOverviewHandler);
+router.get('/stats/overview', requireScope('stats:read'), integrationCredentialLimit, statsOverviewHandler);
 
 // 阶段 5.2 预留只读（注意：必须位于 /customers/upsert 之后，避免 :externalRef 抢占）
 router.get(
   '/customers/:externalRef',
-  requireScope('customers:upsert'),
+  requireScope('customers:upsert'), integrationCredentialLimit,
   validate({ params: externalRefParams }),
   customerStatusHandler,
 );
 
 router.get(
   '/customers/:externalRef/quotations',
-  requireScope('quotations:read'),
+  requireScope('quotations:read'), integrationCredentialLimit,
   validate({ params: externalRefParams }),
   customerQuotationsHandler,
 );
 
 router.post(
   '/customers/:externalRef/quotation-drafts',
-  requireScope('quotations:draft'),
+  requireScope('quotations:draft'), integrationCredentialLimit,
   validate({ params: quotationExternalRefParams, body: createQuotationDraftBody }),
   createQuotationDraftHandler,
 );
 
 router.get(
   '/quotations/:quotationId/pdf',
-  requireScope('quotations:read'),
+  requireScope('quotations:read'), integrationCredentialLimit,
   validate({ params: quotationIdParams }),
   integrationQuotationPdfHandler,
 );
 
 router.get(
   '/quotations/:quotationId',
-  requireScope('quotations:read'),
+  requireScope('quotations:read'), integrationCredentialLimit,
   validate({ params: quotationIdParams }),
   integrationQuotationHandler,
 );

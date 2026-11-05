@@ -70,7 +70,10 @@ async function main(): Promise<void> {
             return String(def._id);
           }),
         );
-        const scopes = scopesRaw ? scopesRaw.split(',').map((s) => s.trim()).filter(Boolean) : [...INTEGRATION_SCOPES];
+        // Keep the pre-C1 default grant unchanged. Public-data scopes require an
+        // explicit operator selection; adding an enum must not broaden defaults.
+        const scopes = scopesRaw ? scopesRaw.split(',').map((s) => s.trim()).filter(Boolean)
+          : INTEGRATION_SCOPES.filter(s => !['products:read', 'company:read', 'playbook:read', 'knowledge:read'].includes(s));
         const expiresRaw = one(args, 'expires');
         const { credential, token } = await createCredential({
           name,

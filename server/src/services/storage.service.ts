@@ -5,7 +5,7 @@
  * S3-compatible endpoint (AWS S3, MinIO, Aliyun OSS S3 gateway) with SigV4,
  * avoiding a provider SDK in the application process.
  */
-import { createHash, createHmac } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -104,14 +104,37 @@ export async function putObject(key: string, body: Buffer, contentType?: string)
   return { provider: 'local', key, path: fullPath };
 }
 
-export async function getObject(key: string): Promise<Buffer> {
+export async function getObject(key: string, maxBytes?: number): Promise<Buffer> {
   if (env.STORAGE_PROVIDER === 's3') {
     const response = await s3Request('GET', key);
     if (!response.ok) throw ApiError.notFound('附件文件已丢失，请重新上传');
+    if (maxBytes !== undefined) {
+      if (Number(response.headers.get('content-length')) > maxBytes || !response.body) {
+        await response.body?.cancel();
+        throw ApiError.badRequest('图片大小不合法');
+      }
+      const reader = response.body.getReader(), chunks: Buffer[] = [];
+      let bytes = 0;
+      try {
+        for (;;) {
+          const part = await reader.read();
+          if (part.done) break;
+          bytes += part.value.byteLength;
+          if (bytes > maxBytes) { await reader.cancel(); throw ApiError.badRequest('图片大小不合法'); }
+          chunks.push(Buffer.from(part.value));
+        }
+        return Buffer.concat(chunks);
+      } finally { reader.releaseLock(); }
+    }
     return Buffer.from(await response.arrayBuffer());
   }
   try {
-    return await fsp.readFile(safeLocalPath(key));
+    const fullPath = safeLocalPath(key);
+    if (maxBytes !== undefined) {
+      const stat = await fsp.lstat(fullPath);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > maxBytes) throw ApiError.badRequest('图片大小不合法');
+    }
+    return await fsp.readFile(fullPath);
   } catch {
     throw ApiError.notFound('附件文件已丢失，请重新上传');
   }
@@ -148,4 +171,16 @@ export async function deleteLegacyLocalObject(filePath: string): Promise<void> {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
+}
+
+/** Short-lived application-level capabilities; keys/paths never appear in URLs. */
+export function signStorageCapability(identity: string, expires: number): string {
+  const key = createHmac('sha256', env.JWT_SECRET).update('integration-storage-capability.v1').digest();
+  return createHmac('sha256', key).update(JSON.stringify([identity, expires])).digest('hex');
+}
+
+export function verifyStorageCapability(identity: string, expires: number, signature: string): boolean {
+  if (!Number.isSafeInteger(expires) || expires <= Math.floor(Date.now() / 1000)
+    || expires > Math.floor(Date.now() / 1000) + 300 || !/^[a-f0-9]{64}$/.test(signature)) return false;
+  return timingSafeEqual(Buffer.from(signStorageCapability(identity, expires), 'hex'), Buffer.from(signature, 'hex'));
 }
