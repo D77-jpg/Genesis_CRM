@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import integrationManagementRoutes from './integration-management.routes';
 import { requireAuth, requireProject, requireRole } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { idParamsSchema } from '../validators/common';
@@ -11,6 +12,7 @@ import { recordAudit } from '../services/audit.service';
 
 const router = Router();
 router.use(requireAuth);
+router.use('/integrations', integrationManagementRoutes);
 router.get('/', listProjectsHandler);
 // Keep these before /:id so "onboarding" is not parsed as a project id.
 router.get('/onboarding', requireProject, asyncHandler(async (req, res) => {

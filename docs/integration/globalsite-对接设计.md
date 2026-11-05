@@ -107,3 +107,13 @@ GlobalCRM typecheck/build/lint 均通过（lint 12 条既有 warning）；集成
 ## C1 正式任务覆盖说明（2026-11-05）
 
 已批准的 C1 任务为只读产品、公司、话术及知识摘要，详细来源/分页/公开审核/签名/迁移见 [C1-read-api.md](C1-read-api.md)。机器定义见同目录 OpenAPI 的 GlobalSiteC1* 组件及 /products、/company-profile、/playbook、/knowledge/summaries 路径；新增 scope 为 products:read/company:read/playbook:read/knowledge:read。S1 建议的 /globalsite/* 路径仍保持未实现草案，不能混用；新接口不宣称实现 C2–C4。本文前述 S1 仅文档范围/不创建根 AGENTS 的限制为历史记录，C1 已授权业务实现并维护根 AGENTS。旧接口与 GS-D01 保持不变；所有集成请求增加共享每凭证120次/分钟防护，429 遵守 Retry-After。
+
+## C2 凭证管理（2026-11-05）
+
+私有管理API基址 /api/projects/integrations，由CRM用户Cookie会话+CSRF（兼容用户JWT）认证，必须显式传X-Project-Id，只有本组织已获分配项目的project_admin及本组织admin可访问；服务凭证不可管理凭证。端点、请求与响应以同一OpenAPI的GlobalSiteC2*组件和operation.servers为准，不修改已有Integration端点定义。
+
+GlobalSite预设包含products:read/company:read/playbook:read/knowledge:read/customers:upsert/inquiries:write/outcomes:read。用户已确认保留inquiries:write预选并标记待开放；新增可签发保留scope不等于实现S1询盘草案，UI和设置API必须明确available:false。默认脚本签发权限仍保留C1之前的五项，不自动扩大。
+
+创建/轮换只在本次响应返回明文（private,no-store），永不落库/审计/列表或浏览器持久存储。轮换保持credentialId，生成新令牌，在同一记录仅保存当前/上一个SHA256哈希和旧令牌截止时间；默认UI宽限24小时，0立即失效，最长7天。过期以服务端时钟判断，不依赖清理任务；宽限期中不再次宽限轮换，避免提前作废承诺。脚本默认0兼容既有即时轮换；吊销立即使新旧令牌全部失效。
+
+套餐每项目有效凭证默认starter=3、growth=10、enterprise=50，可通过Organization.limits.integrationCredentialsPerProject覆盖。已过期/吊销不占位；轮换同一记录不额外占位。唯一多键seatKeys索引原子占据所有绑定项目的席位，保护并发创建；已有无seatKeys凭证计入既有占用且保持可用。新建有组织项目凭证必须同组织；无组织历史项目仅保留受控旧脚本行为，后台不开放。索引部署与验证见C2交付文档。所有创建/轮换/吊销（含脚本）调用同一服务并记录不含token/hash的审计元数据。

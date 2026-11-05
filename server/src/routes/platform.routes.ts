@@ -41,6 +41,7 @@ const updateSchema = z.object({
   currency: z.string().trim().length(3).optional(),
   locale: z.enum(['zh', 'en']).optional(),
   limits: z.object({
+    integrationCredentialsPerProject: z.number().int().min(1).max(1000).optional(),
     users: z.number().int().positive().optional(),
     projects: z.number().int().positive().optional(),
     monthlyEmails: z.number().int().positive().optional(),

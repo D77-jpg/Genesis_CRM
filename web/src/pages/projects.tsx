@@ -16,6 +16,7 @@ import { useProjectStore } from '@/store/project.store';
 import { useMetaStore } from '@/store/meta.store';
 import { selectIsAdmin, useAuthStore } from '@/store/auth.store';
 import { STORAGE_KEYS } from '@/constants';
+import { writeStorage } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import type { Project, ProjectBrandProfile } from '@/types';
 
@@ -229,6 +230,7 @@ export function ProjectsPage(): React.JSX.Element {
               <div className="flex items-baseline gap-2"><p className="shrink-0 text-[11px] text-muted-foreground">公司主体</p><p className="min-w-0 truncate" title={project.companyName}>{project.companyName}</p></div>
               <div className="flex flex-wrap gap-1.5"><Badge variant="muted">{project.mailChannel === 'smtp' ? '邮箱直发' : '模拟发送'}</Badge>{project.isDefault ? <Badge variant="outline">默认项目</Badge> : null}</div>
               <div className="flex flex-wrap gap-1.5 border-t border-border pt-2.5">
+                <Button type="button" variant="outline" size="sm" disabled={project.status !== 'active'} onClick={() => { writeStorage(STORAGE_KEYS.activeProject, project.id); window.location.assign('/projects/integrations'); }}>{t('integrations.title')}</Button>
                 {project.status === 'active' && !isCurrent ? (
                   <Button type="button" size="sm" onClick={() => switchProject(project.id)}>
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden />切换

@@ -133,6 +133,21 @@ jobs:
       - name: Production build（含 typecheck）
         run: npm run build
 
+      - name: Install locked browser test runtime
+        run: |
+          npm ci --prefix ../server
+          node ../server/node_modules/playwright/cli.js install chromium
+      - name: C2 credential management browser regression (fictional isolated data)
+        env:
+          C2_UI_SCREENSHOTS: ${{ runner.temp }}/c2-ui-evidence
+        run: npm run test:credentials-ui --prefix ../server
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: c2-credentials-fictional-ui
+          path: ${{ runner.temp }}/c2-ui-evidence/*.png
+          if-no-files-found: ignore
+
   security:
     runs-on: ubuntu-latest
     steps:

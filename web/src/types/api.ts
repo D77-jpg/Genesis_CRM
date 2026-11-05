@@ -17,6 +17,7 @@ export type ErrorCode =
 
 /** 字段级错误，前端可用来定位到具体输入框 */
 export interface ApiErrorDetail {
+  reason?: string;
   /** 形如 "body.email" / "query.page" */
   field?: string;
   /** 形如 "email" */

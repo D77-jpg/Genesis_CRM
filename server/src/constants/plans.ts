@@ -9,6 +9,7 @@ export const ORGANIZATION_PLAN_LABELS: Record<OrganizationPlan, { zh: string; en
 };
 
 export interface OrganizationLimits {
+  integrationCredentialsPerProject?: number;
   users: number;
   projects: number;
   monthlyEmails: number;
@@ -55,7 +56,11 @@ export const PLAN_CATALOG: Record<OrganizationPlan, PlanDefinition> = {
 };
 
 export function limitsForPlan(plan: OrganizationPlan): OrganizationLimits {
-  return { ...PLAN_CATALOG[plan].limits };
+  return { ...PLAN_CATALOG[plan].limits, integrationCredentialsPerProject: integrationCredentialLimit(plan) };
+}
+
+export function integrationCredentialLimit(plan: OrganizationPlan): number {
+  return ({ starter: 3, growth: 10, enterprise: 50 } as const)[plan];
 }
 
 export function planCatalog(): Array<PlanDefinition & { label: { zh: string; en: string } }> {

@@ -19,6 +19,10 @@ v1 内只允许向后兼容地新增可选字段；删除/改名/改变语义必
 
 ## 快速开始（本地联调）
 
+C2 客户自助凭证入口为“项目工作空间 → 集成与连接”。部署前运行 `server/` 下
+`npm run integration:credential -- migrate`；轮换宽限、套餐和迁移边界见 [C2-凭证管理.md](C2-凭证管理.md)。
+管理API使用用户会话，不能用服务凭证调用。GlobalSite预设中的 `inquiries:write` 已按用户确认保留并标明待开放。
+
 ```bash
 cd server
 npm run dev                                          # 启动 CRM API（:5000）

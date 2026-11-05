@@ -20,10 +20,15 @@ import {
 } from '../constants';
 
 export interface IIntegrationCredential {
+  organizationId?: Types.ObjectId;
   /** 显示名，例如 "AutoForceAI 生产环境" */
   name: string;
   /** token 的 SHA-256 哈希（hex）；唯一索引 */
   tokenHash: string;
+  previousTokenHash?: string | null;
+  previousValidUntil?: Date | null;
+  seatKeys?: string[];
+  quotaEnabled?: boolean;
   /** token 前缀（含 gci_），仅用于脱敏展示 */
   tokenPrefix: string;
   /** 授权 scope 集合 */
@@ -50,6 +55,10 @@ const IntegrationCredentialSchema = new Schema<IIntegrationCredential>(
   {
     name: { type: String, required: true, trim: true, maxlength: 120 },
     tokenHash: { type: String, required: true, unique: true, index: true, select: false },
+    previousTokenHash: { type: String, default: null, select: false },
+    previousValidUntil: { type: Date, default: null },
+    seatKeys: { type: [String], default: undefined, select: false },
+    quotaEnabled: { type: Boolean, default: false, select: false },
     tokenPrefix: { type: String, required: true, maxlength: 16 },
     scopes: {
       type: [String],
@@ -85,11 +94,19 @@ const IntegrationCredentialSchema = new Schema<IIntegrationCredential>(
       transform: (_doc, ret: Record<string, unknown>) => {
         delete ret._id;
         delete ret.tokenHash;
+        delete ret.previousTokenHash;
+        delete ret.seatKeys;
+        delete ret.quotaEnabled;
         return ret;
       },
     },
   },
 );
+
+IntegrationCredentialSchema.index({ previousTokenHash: 1 }, { sparse: true });
+IntegrationCredentialSchema.index({ seatKeys: 1 }, {
+  unique: true, partialFilterExpression: { quotaEnabled: true, status: 'active' },
+});
 
 export const IntegrationCredential = model<IIntegrationCredential>(
   'IntegrationCredential',

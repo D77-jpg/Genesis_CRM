@@ -36,6 +36,7 @@ const OrganizationSchema = new Schema<IOrganization>(
     status: { type: String, enum: ['active', 'trialing', 'suspended'], default: 'active', index: true },
     plan: { type: String, enum: ORGANIZATION_PLANS, default: 'starter', index: true },
     limits: {
+      integrationCredentialsPerProject: { type: Number, min: 1, max: 1000 },
       users: { type: Number, default: () => limitsForPlan('starter').users, min: 1 },
       projects: { type: Number, default: () => limitsForPlan('starter').projects, min: 1 },
       monthlyEmails: { type: Number, default: () => limitsForPlan('starter').monthlyEmails, min: 1 },

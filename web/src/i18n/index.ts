@@ -1,3 +1,4 @@
+import { integrationsZh, integrationsEn } from './integrations';
 /**
  * Lightweight i18n for the CRM shell.
  *
@@ -13,6 +14,7 @@ import { AUTO_PHRASES, AUTO_TRANSLATIONS } from './auto-translations';
 export type Language = 'zh' | 'en';
 
 const zh = {
+  ...integrationsZh,
   'common.loading': '正在加载…',
   'common.save': '保存',
   'common.saving': '保存中…',
@@ -315,6 +317,7 @@ const zh = {
 export type TranslationKey = keyof typeof zh;
 
 const en: Record<TranslationKey, string> = {
+  ...integrationsEn,
   'common.loading': 'Loading…',
   'common.save': 'Save',
   'common.saving': 'Saving…',

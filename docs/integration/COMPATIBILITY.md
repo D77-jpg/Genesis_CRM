@@ -58,3 +58,10 @@
 - CI verifies the immutable historical source SHA, deep-equality of all old definitions, existing S1 drafts, and the new C1 snapshot/hash; HTTP behavior tests run in test:integration.
 
 历史冻结定义的原始副本 snapshots/integration-v1.legacy.openapi.yaml 直接来自 e2e3486300250b75d08295bcba6b8bd09a8e4774，校验既有发布 SHA 后再比较。CI 浅克隆也能校验，不依赖本地拥有历史 git 对象；仅规范化 CRLF→LF，定义内容不变。
+
+## GlobalSite C2 additive freeze (2026-11-05)
+
+- Snapshot: snapshots/globalsite-c2.json (LF canonical SHA-256 9a805701d8d0c7d377cef90039b987f20051cbcbcdcdd75b951aa0733e343eb9).
+- Six private management operations use CRM user session/JWT, explicit project binding and admin/project_admin role. Service tokens cannot manage credentials.
+- Existing base, quotation, C1 snapshots and S1 draft operations remain unchanged. Reserved inquiries:write is explicitly unavailable and does not implement its draft endpoint.
+- Rotation retains credential ID and old immediate CLI behavior by default; UI may explicitly request bounded grace. New/old token hashes are never returned by management list/logs.
