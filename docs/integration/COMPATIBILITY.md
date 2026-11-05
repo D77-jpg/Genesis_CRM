@@ -47,3 +47,14 @@
 - Genesis_CRM H-13 合并主线 `origin/main@2213b45`（PR #11）；AutoForceAI H-13 合并主线 `origin/main@7b29a04`（PR #20）。这是 H-14 开工快照，不是将来的候选 tag commit；冻结 Integration v1.0 SHA-256 与 quotation-draft.v1 扩展 SHA-256 均不变。
 - 本地回归（2026-09-26）：Genesis server integration 23、mail 79、template-feedback 3、scratchpad 3、agent 32、security 5 项均 skip=0；server typecheck/build、web build，H-12 Mongo/H-13 Docker 工具测试 7/7、Compose 静态配置通过。AutoForceAI 后端 247 passed、合同/迁移 32 passed，Web 13/13、typecheck/build；备份在 WSL/Linux 10/10 无 skip。上述仅为本地证据，H-14 PR 和合并后 main Actions 仍须复核。
 - 正式 HTTPS、从零双仓容器/登录、跨仓 CRM 与报价 E2E、隔离数据库恢复和 24 小时生产试运行仍无 H-14 实测记录；不得宣称生产就绪。具体发布、远端分支清理、候选 tag 门槛及应急措施见 AutoForceAI `deploy/H14_RELEASE_CHECKLIST.md`。
+
+## GlobalSite C1 additive freeze (2026-11-05)
+
+- Historical base SHA, original endpoints and quotation extension snapshot above remain unchanged.
+- Frozen C1 snapshot: snapshots/globalsite-c1.json
+- C1 snapshot SHA-256: 53b8132d3a7fcd354f38b71787fd439ba05895e9aec2da39a78816e371b2f4cd
+- Six implemented C1 GET operations are separately frozen; S1 six /globalsite/* operations remain unimplemented drafts.
+- Approved by C1 task: additive products:read/company:read/playbook:read/knowledge:read, scoped reads and per-credential 429 protection; no GlobalSite or AutoForceAI caller changes in this repository.
+- CI verifies the immutable historical source SHA, deep-equality of all old definitions, existing S1 drafts, and the new C1 snapshot/hash; HTTP behavior tests run in test:integration.
+
+历史冻结定义的原始副本 snapshots/integration-v1.legacy.openapi.yaml 直接来自 e2e3486300250b75d08295bcba6b8bd09a8e4774，校验既有发布 SHA 后再比较。CI 浅克隆也能校验，不依赖本地拥有历史 git 对象；仅规范化 CRLF→LF，定义内容不变。

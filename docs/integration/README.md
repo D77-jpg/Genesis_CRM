@@ -10,9 +10,9 @@ GlobalCRM 对外集成接口，供 AutoForceAI 等获客系统以**服务凭证*
 
 **权威契约：[`integration-v1.openapi.yaml`](./integration-v1.openapi.yaml)**。
 GlobalSite S1 对接设计见 [`globalsite-对接设计.md`](./globalsite-对接设计.md)。
-基础 OpenAPI 追加的 C1–C4 是未实现草案，不能作为当前在线能力。
-不更新冻结 SHA 快照；自动检查验证历史冻结文件的原始 SHA，并逐项保护旧接口定义，
-只允许约定的未实现草案。草案实现阶段仍需双方批准、通过契约测试并重新冻结。
+S1 的 `/globalsite/*` 六项仍为未实现草案；正式 C1 只读接口见 [C1-read-api.md](C1-read-api.md)，
+按本次批准任务新增 `/products`、`/company-profile`、`/playbook`、`/knowledge/summaries` 与签名图片下载。
+自动检查继续验证历史冻结 SHA/旧定义与 S1 草案，并对正式 C1 单独冻结快照；不改旧快照。
 v1 内只允许向后兼容地新增可选字段；删除/改名/改变语义必须发布 v2。
 报价扩展契约：[`quotation-draft-v1.1.openapi.yaml`](./quotation-draft-v1.1.openapi.yaml)，
 能力标识 `quotation-draft.v1`；基础契约版本仍为 `1.0`。

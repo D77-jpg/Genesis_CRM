@@ -37,7 +37,7 @@
     "test:e2e": "node --require ./tests/os-user-info.cjs --import tsx --test tests/p3-main-flow.test.ts",
     "load": "node --import tsx scripts/load-test.ts",
     "test:health": "node --require ./tests/os-user-info.cjs --import tsx --test tests/health-readiness.test.ts",
-    "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts",
+    "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts tests/integration-read.test.ts",
     "integration:credential": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-credential.ts",
     "test:fixture": "node tests/start-fixture.cjs",
     "eval:knowledge:validate": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/schema.ts",
@@ -57,7 +57,8 @@
     "eval:knowledge:operations": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/operations.ts",
     "knowledge:maintenance": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/knowledge-maintenance.ts",
     "test:website-research": "node --require ./tests/os-user-info.cjs --import tsx --test tests/website-public-web.test.ts tests/website-research.test.ts",
-    "dev:workspace": "node --require ./scripts/os-user-info.cjs --import tsx src/local-workspace.ts"
+    "dev:workspace": "node --require ./scripts/os-user-info.cjs --import tsx src/local-workspace.ts",
+    "integration:public": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-public.ts"
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "^1.0.0",
@@ -95,6 +96,9 @@
     "@types/nodemailer": "^8.0.1",
     "@types/pdfkit": "^0.17.6",
     "@types/sanitize-html": "^2.16.1",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "js-yaml": "4.3.2",
     "mongodb-memory-server": "^11.2.0",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",

@@ -103,3 +103,7 @@ C 阶段：在 CRM 添加新 scope/项目隔离/投影与撤销/tombstone/游标
 
 ### S1 实测记录（2026-11-04）
 GlobalCRM typecheck/build/lint 均通过（lint 12 条既有 warning）；集成 24/24、安全 19/19、健康 5/5，均无 skip。首轮受限环境临时 MongoDB 启动失败，正常本机权限重跑通过。静态校验确认旧 6 个路径与所有旧组件深等，新增 6 个草案操作、121 个引用可解析。首次远端 server/web/security/operations 通过，hygiene 因全文件 SHA 变化失败。授权修正后的检查在本地验证原冻结 SHA、旧定义、草案与引用，并通过 17 项拒绝错误改动的回归检查；workflow YAML 与脚本可解析，其余四个任务、触发条件和兼容性快照检查不变。未修改应用代码或业务测试，冻结快照未更新。
+
+## C1 正式任务覆盖说明（2026-11-05）
+
+已批准的 C1 任务为只读产品、公司、话术及知识摘要，详细来源/分页/公开审核/签名/迁移见 [C1-read-api.md](C1-read-api.md)。机器定义见同目录 OpenAPI 的 GlobalSiteC1* 组件及 /products、/company-profile、/playbook、/knowledge/summaries 路径；新增 scope 为 products:read/company:read/playbook:read/knowledge:read。S1 建议的 /globalsite/* 路径仍保持未实现草案，不能混用；新接口不宣称实现 C2–C4。本文前述 S1 仅文档范围/不创建根 AGENTS 的限制为历史记录，C1 已授权业务实现并维护根 AGENTS。旧接口与 GS-D01 保持不变；所有集成请求增加共享每凭证120次/分钟防护，429 遵守 Retry-After。

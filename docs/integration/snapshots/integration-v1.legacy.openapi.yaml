@@ -1,0 +1,691 @@
+openapi: 3.0.3
+info:
+  title: Genesis_CRM Integration API
+  version: 1.0.0
+  description: |
+    Genesis_CRM 对外集成接口（v1）。供 AutoForceAI 等获客系统以**服务凭证**接入，
+    完成线索交接、成交/流失回流与摘要查询。
+
+    ## 边界约定（冻结点）
+    - **认证**：`Authorization: Bearer <service-token>`。服务凭证由 Genesis 管理员签发，
+      绑定一个或多个 projectId，带 scope，可轮换、可撤销。禁止使用用户 JWT 或账号密码。
+    - **项目**：除特别说明外，所有端点必须显式携带 `X-Project-Id`，且该项目必须在凭证
+      绑定的项目集合内。不存在默认项目回退。
+    - **版本**：请求体携带 `schemaVersion: "1.0"`。v1 内只允许向后兼容地新增可选字段；
+      删除/改名/改变语义必须发布 v2。
+    - **幂等**：客户交接以 `(projectId, sourceSystem, externalId)` 为业务唯一键，
+      以 `Idempotency-Key` 为请求幂等键。邮箱不是幂等键，只用于发现可能重复客户。
+    - **更新**：首次交接允许创建或关联客户；后续自动同步只补齐空字段，
+      不覆盖销售人工维护的字段（负责人、阶段、跟进、报价、备注）。
+    - **错误**：统一错误体 `{"success": false, "error": {"code", "message", "details?"}}`，
+      `code` 为稳定机器可读错误码，消费方按 code 而非 HTTP 文案做分支。
+
+    ## 稳定性承诺
+    以下端点为 v1 冻结集：`health`、`customers/upsert`、`outcomes`、`stats/overview`。
+    `customers/{externalRef}` 与 `customers/{externalRef}/quotations` 为阶段 5.2
+    预留的只读查询，同样在 v1 内保证向后兼容。
+  contact:
+    name: Genesis_CRM Team
+
+servers:
+  - url: http://localhost:5000/api/integrations/v1
+    description: 本地开发
+
+tags:
+  - name: meta
+  - name: customers
+  - name: outcomes
+  - name: stats
+
+paths:
+  /health:
+    get:
+      tags: [meta]
+      summary: 校验契约版本、凭证、项目绑定与 scope
+      operationId: getIntegrationHealth
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: 凭证与项目绑定有效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                success: true
+                data:
+                  ok: true
+                  contractVersion: "1.0"
+                  serverTime: "2026-09-23T04:00:00.000Z"
+                  projectId: "66cf2f1a9b2c4d5e6f708192"
+                  projectName: "Genesis Bags 主项目"
+                  scopes: ["customers:upsert", "outcomes:read", "stats:read", "quotations:read"]
+                  credentialId: "66cf3000aa1b2c3d4e5f6071"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+
+  /customers/upsert:
+    post:
+      tags: [customers]
+      summary: 按外部 ID 幂等创建或关联客户
+      operationId: upsertCustomer
+      description: |
+        语义：
+        - `(projectId, sourceSystem, externalId)` 已关联 → 只补齐空字段，返回 `unchanged`。
+        - 未关联但同项目邮箱已存在 → 建立外部引用，返回 `linked`（不报错、不无限重试）。
+        - 否则创建新客户，返回 `created`；`name` 缺失时依次用 `company`、
+          `未命名询盘 <externalId>` 兜底。
+        - 相同 `Idempotency-Key` 重复请求返回首次的相同结果；同键不同载荷返回 409。
+      security:
+        - serviceToken: ["customers:upsert"]
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+          description: 请求幂等键；重试必须复用原键。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpsertRequest'
+            example:
+              schemaVersion: "1.0"
+              sourceSystem: "autoforce"
+              externalId: "lead:1024"
+              initialStatus: "pending"
+              name: "Jane Miller"
+              company: "Sunrise Retail GmbH"
+              email: "jane@sunrise-retail.de"
+              phone: "+49 30 123456"
+              country: "Germany"
+              interestedProducts: "drawstring bags, canvas tote bags"
+              leadSource: "AutoForceAI / Website AI Chat"
+              productModel: "GB-2026-A"
+              productCategory: "Cotton Bags"
+              expectedQuantity: "5000 pcs"
+              targetPrice: "USD 1.20/pc"
+              moq: "1000 pcs"
+              requirementNotes: "询盘摘要：客户关注环保棉布袋，Q4 备货，目标交期 45 天。"
+              tags: ["autoforce", "channel:website-ai-chat"]
+      responses:
+        '200':
+          description: 幂等命中（linked / unchanged / 幂等重放）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerUpsertResponse'
+              example:
+                success: true
+                data:
+                  action: "unchanged"
+                  customerId: "66cf3100bb2c3d4e5f607182"
+                  projectId: "66cf2f1a9b2c4d5e6f708192"
+                  externalId: "lead:1024"
+                  remoteUpdatedAt: "2026-09-23T04:00:00.000Z"
+        '201':
+          description: 新客户已创建
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerUpsertResponse'
+              example:
+                success: true
+                data:
+                  action: "created"
+                  customerId: "66cf3100bb2c3d4e5f607182"
+                  projectId: "66cf2f1a9b2c4d5e6f708192"
+                  externalId: "lead:1024"
+                  remoteUpdatedAt: "2026-09-23T04:00:00.000Z"
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /outcomes:
+    get:
+      tags: [outcomes]
+      summary: 游标式增量读取成交/流失事件
+      operationId: listOutcomes
+      description: |
+        事件来自客户状态时间线中 `toStatus ∈ {won, lost}` 的状态变更。
+        消费方保存返回的 opaque cursor，下次从该处继续；事件按 `eventId` 幂等处理。
+        首次调用不传 cursor，从最早事件开始；空结果时 `nextCursor` 为 null。
+      security:
+        - serviceToken: ["outcomes:read"]
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 上次响应返回的 opaque cursor。
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: 增量事件批
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutcomeFeedResponse'
+              example:
+                success: true
+                data:
+                  items:
+                    - eventId: "66cf4000cc2c3d4e5f607183"
+                      cursor: "eyJhdCI6IjIwMjYtMDktMjNUMDM6NTk6MDAuMDAwWiIsImlkIjoiNjZjZjQwMDBjYzJjM2Q0ZTVmNjA3MTgzIn0"
+                      customerId: "66cf3100bb2c3d4e5f607182"
+                      externalId: "lead:1024"
+                      fromStatus: "negotiating"
+                      toStatus: "won"
+                      occurredAt: "2026-09-23T03:59:00.000Z"
+                  nextCursor: "eyJhdCI6IjIwMjYtMDktMjNUMDM6NTk6MDAuMDAwWiIsImlkIjoiNjZjZjQwMDBjYzJjM2Q0ZTVmNjA3MTgzIn0"
+                  hasMore: false
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+
+  /stats/overview:
+    get:
+      tags: [stats]
+      summary: 集成门户摘要（客户总数 / 漏斗 / 成交 / 报价状态）
+      operationId: getStatsOverview
+      security:
+        - serviceToken: ["stats:read"]
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: 项目级摘要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsOverviewResponse'
+              example:
+                success: true
+                data:
+                  projectId: "66cf2f1a9b2c4d5e6f708192"
+                  totalCustomers: 132
+                  funnel:
+                    - { status: "pending", count: 40 }
+                    - { status: "contacted", count: 25 }
+                    - { status: "replied", count: 18 }
+                    - { status: "interested", count: 15 }
+                    - { status: "quoting", count: 12 }
+                    - { status: "negotiating", count: 8 }
+                    - { status: "won", count: 10 }
+                    - { status: "lost", count: 4 }
+                  wonCount: 10
+                  lostCount: 4
+                  quotations:
+                    - { status: "draft", count: 3 }
+                    - { status: "sent", count: 6 }
+                    - { status: "negotiating", count: 2 }
+                    - { status: "accepted", count: 9 }
+                    - { status: "rejected", count: 1 }
+                    - { status: "expired", count: 0 }
+                  generatedAt: "2026-09-23T04:00:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/ProjectMismatch'
+
+  /customers/{externalRef}:
+    get:
+      tags: [customers]
+      summary: （阶段 5.2 预留）按外部 ID 查询客户状态
+      operationId: getCustomerByExternalRef
+      security:
+        - serviceToken: ["customers:upsert"]
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: externalRef
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 外部 ID，如 `lead:1024`（需 URL 编码）。
+      responses:
+        '200':
+          description: 客户状态摘要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerStatusResponse'
+              example:
+                success: true
+                data:
+                  customerId: "66cf3100bb2c3d4e5f607182"
+                  externalId: "lead:1024"
+                  name: "Jane Miller"
+                  company: "Sunrise Retail GmbH"
+                  status: "negotiating"
+                  ownerName: "Alice"
+                  lastFollowUpAt: "2026-09-22T10:00:00.000Z"
+                  updatedAt: "2026-09-23T03:59:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /customers/{externalRef}/quotations:
+    get:
+      tags: [customers]
+      summary: （阶段 5.2 预留）按外部 ID 查询客户报价状态
+      operationId: getCustomerQuotationsByExternalRef
+      security:
+        - serviceToken: ["quotations:read"]
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: externalRef
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 报价摘要列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerQuotationsResponse'
+              example:
+                success: true
+                data:
+                  customerId: "66cf3100bb2c3d4e5f607182"
+                  items:
+                    - quotationId: "66cf5000dd2c3d4e5f607184"
+                      quotationNo: "Q2026-0091"
+                      status: "sent"
+                      totalAmount: 6000
+                      currency: "USD"
+                      updatedAt: "2026-09-21T08:30:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenScope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    serviceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: |
+        Genesis 管理员签发的服务凭证（形如 `gci_...`）。数据库只存哈希，
+        原始 token 仅创建时显示一次。凭证绑定项目集合与 scope，支持轮换与撤销。
+
+  parameters:
+    ProjectId:
+      name: X-Project-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-f\d]{24}$'
+      description: 目标项目 ID。必须显式携带且在凭证绑定的项目集合内；无默认项目回退。
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: |
+                稳定错误码：`UNAUTHORIZED`（token 缺失/无效/撤销/过期）、
+                `FORBIDDEN_SCOPE`（缺 scope）、`PROJECT_MISMATCH`（项目未绑定/不存在）、
+                `VALIDATION_ERROR`（请求字段不合法，4xx，消费方不应无限重试）、
+                `UNSUPPORTED_CONTRACT_VERSION`（schemaVersion 不受支持）、
+                `NOT_FOUND`、`CONFLICT`（幂等键冲突且载荷不同）、
+                `RATE_LIMITED`、`INTERNAL_ERROR`。
+              example: "FORBIDDEN_SCOPE"
+            message:
+              type: string
+              example: "凭证缺少所需 scope: outcomes:read"
+            details:
+              type: array
+              items:
+                type: object
+            requestId:
+              type: string
+              description: 服务端请求 ID，用于工单排查（与审计日志对应）。
+          required: [code, message]
+      required: [success, error]
+
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [ok, contractVersion, serverTime, projectId, scopes]
+          properties:
+            ok: { type: boolean }
+            contractVersion: { type: string, example: "1.0" }
+            serverTime: { type: string, format: date-time }
+            projectId: { type: string }
+            projectName: { type: string, nullable: true }
+            scopes:
+              type: array
+              items: { type: string }
+            credentialId: { type: string, nullable: true }
+      required: [success, data]
+
+    CustomerUpsertRequest:
+      type: object
+      required: [schemaVersion, sourceSystem, externalId]
+      properties:
+        schemaVersion:
+          type: string
+          const: "1.0"
+        sourceSystem:
+          type: string
+          description: 来源系统标识；AutoForceAI 固定为 `autoforce`。
+          example: "autoforce"
+        externalId:
+          type: string
+          maxLength: 128
+          description: 稳定外部主键（如 `lead:<id>`）。禁止复用邮箱。
+        initialStatus:
+          type: string
+          enum: [pending, contacted, interested]
+          description: |
+            仅创建时生效。映射：AutoForceAI new→pending、contacted→contacted、
+            converted→interested；dropped 不自动推送。
+        name: { type: string, maxLength: 120 }
+        company: { type: string, maxLength: 200 }
+        email:
+          type: string
+          format: email
+          maxLength: 200
+          description: 规范化小写；仅作为可能重复的辅助匹配条件，不是幂等键。
+        phone: { type: string, maxLength: 60 }
+        country: { type: string, maxLength: 120 }
+        interestedProducts: { type: string, maxLength: 500 }
+        leadSource:
+          type: string
+          maxLength: 120
+          description: 建议格式 `AutoForceAI / <channel>`。
+        productModel: { type: string, maxLength: 200 }
+        productCategory: { type: string, maxLength: 200 }
+        expectedQuantity:
+          type: string
+          maxLength: 120
+          description: 保留单位，如 `5000 pcs`。
+        targetPrice:
+          type: string
+          maxLength: 120
+          description: 保留币种，如 `USD 1.20/pc`。
+        moq: { type: string, maxLength: 120 }
+        requirementNotes:
+          type: string
+          maxLength: 5000
+          description: AI 需求摘要；不复制完整会话。
+        tags:
+          type: array
+          maxItems: 30
+          items: { type: string }
+          description: 建议包含 `autoforce`、`channel:<slug>`。
+
+    CustomerUpsertResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [action, customerId, projectId, externalId, remoteUpdatedAt]
+          properties:
+            action:
+              type: string
+              enum: [created, linked, unchanged]
+            customerId: { type: string }
+            projectId: { type: string }
+            externalId: { type: string }
+            remoteUpdatedAt: { type: string, format: date-time }
+      required: [success, data]
+
+    OutcomeEvent:
+      type: object
+      required: [eventId, cursor, customerId, toStatus, occurredAt]
+      properties:
+        eventId:
+          type: string
+          description: 消费方按此幂等去重。
+        cursor:
+          type: string
+          description: opaque；消费方无需解析，下一次请求原样带回。
+        customerId: { type: string }
+        externalId:
+          type: string
+          nullable: true
+          description: 无外部引用（CRM 原生客户）时为 null。
+        fromStatus:
+          type: string
+          nullable: true
+          enum: [pending, contacted, replied, interested, quoting, negotiating, won, lost, null]
+        toStatus:
+          type: string
+          enum: [won, lost]
+        occurredAt: { type: string, format: date-time }
+
+    OutcomeFeedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [items, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OutcomeEvent'
+            nextCursor:
+              type: string
+              nullable: true
+            hasMore: { type: boolean }
+      required: [success, data]
+
+    FunnelStage:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          type: string
+          enum: [pending, contacted, replied, interested, quoting, negotiating, won, lost]
+        count: { type: integer, minimum: 0 }
+
+    QuotationStatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          type: string
+          enum: [draft, sent, negotiating, accepted, rejected, expired]
+        count: { type: integer, minimum: 0 }
+
+    StatsOverviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [projectId, totalCustomers, funnel, wonCount, lostCount, quotations, generatedAt]
+          properties:
+            projectId: { type: string }
+            totalCustomers: { type: integer, minimum: 0 }
+            funnel:
+              type: array
+              items:
+                $ref: '#/components/schemas/FunnelStage'
+            wonCount: { type: integer, minimum: 0 }
+            lostCount: { type: integer, minimum: 0 }
+            quotations:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuotationStatusCount'
+            generatedAt: { type: string, format: date-time }
+      required: [success, data]
+
+    CustomerStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [customerId, status, updatedAt]
+          properties:
+            customerId: { type: string }
+            externalId: { type: string, nullable: true }
+            name: { type: string, nullable: true }
+            company: { type: string, nullable: true }
+            status:
+              type: string
+              enum: [pending, contacted, replied, interested, quoting, negotiating, won, lost]
+            ownerName: { type: string, nullable: true }
+            lastFollowUpAt: { type: string, format: date-time, nullable: true }
+            updatedAt: { type: string, format: date-time }
+      required: [success, data]
+
+    QuotationSummary:
+      type: object
+      required: [quotationId, status, updatedAt]
+      properties:
+        quotationId: { type: string }
+        quotationNo: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [draft, sent, negotiating, accepted, rejected, expired]
+        totalAmount: { type: number, nullable: true }
+        currency: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time }
+
+    CustomerQuotationsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [customerId, items]
+          properties:
+            customerId: { type: string }
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuotationSummary'
+      required: [success, data]
+
+  responses:
+    Unauthorized:
+      description: token 缺失 / 无效 / 已撤销 / 已过期
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: { code: "UNAUTHORIZED", message: "服务凭证无效或已失效" }
+    ForbiddenScope:
+      description: 凭证缺少该端点所需 scope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: { code: "FORBIDDEN_SCOPE", message: "凭证缺少所需 scope: customers:upsert" }
+    ProjectMismatch:
+      description: 项目不存在，或未绑定到该凭证
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: { code: "PROJECT_MISMATCH", message: "项目不存在或凭证未绑定该项目" }
+    ValidationError:
+      description: 请求字段不合法（消费方不应无限重试）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: "VALIDATION_ERROR"
+              message: "数据校验未通过"
+              details:
+                - field: "body.externalId"
+                  message: "Required"
+    IdempotencyConflict:
+      description: 相同 Idempotency-Key 但载荷不同
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: { code: "CONFLICT", message: "Idempotency-Key 已被不同载荷使用" }
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: { code: "NOT_FOUND", message: "客户不存在" }
