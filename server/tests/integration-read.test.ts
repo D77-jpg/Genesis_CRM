@@ -73,6 +73,10 @@ before(async () => {
   tenant = await import('../src/models/tenant-context');
   credentials = await import('../src/services/integration-credential.service');
   orgA = String(new db.Types.ObjectId()); orgB = String(new db.Types.ObjectId());
+  await models.Organization.create([
+    { _id: orgA, name: 'FICTIONAL C1 A', slug: 'c1-org-a', plan: 'enterprise', limits: { integrationCredentialsPerProject: 1000 } },
+    { _id: orgB, name: 'FICTIONAL C1 B', slug: 'c1-org-b', plan: 'enterprise', limits: { integrationCredentialsPerProject: 1000 } },
+  ]);
   async function project(code: string, org: string) {
     return String((await models.Project.create({ name: code, slug: code.toLowerCase(), code,
       companyName: 'FICTIONAL ' + code, organizationId: org, mailProfileKey: 'default',

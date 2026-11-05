@@ -9,6 +9,11 @@ import './tenant-setup';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 
 export const AUDIT_ACTIONS = [
+  'integration.credential.create',
+  'integration.credential.rotate',
+  'integration.credential.revoke',
+  'integration.credential.list',
+  'integration.logs.view',
   'auth.login.success',
   'auth.login.failed',
   'auth.login.locked',

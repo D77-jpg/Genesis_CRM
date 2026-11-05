@@ -52,6 +52,7 @@ const IntegrationRequestLogSchema = new Schema<IIntegrationRequestLog>(
 // 审计检索：按凭证 / 项目 + 时间倒序
 IntegrationRequestLogSchema.index({ credentialId: 1, createdAt: -1 });
 IntegrationRequestLogSchema.index({ projectId: 1, createdAt: -1 });
+IntegrationRequestLogSchema.index({ organizationId: 1, projectId: 1, createdAt: -1, _id: -1 });
 
 export const IntegrationRequestLog = model<IIntegrationRequestLog>(
   'IntegrationRequestLog',

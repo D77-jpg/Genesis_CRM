@@ -66,6 +66,7 @@ export const INTEGRATION_SCOPES = [
   'company:read',
   'playbook:read',
   'knowledge:read',
+  'inquiries:write', // Reserved, explicitly shown as unavailable until its endpoint is implemented.
 ] as const;
 export type IntegrationScope = (typeof INTEGRATION_SCOPES)[number];
 

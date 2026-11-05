@@ -12,6 +12,7 @@
  * 安全约定：原始 token 只在 create / rotate 时打印一次，请立即妥善保存。
  */
 import { connectDatabase, disconnectDatabase } from '../config/db';
+import { migrateCredentialIndexes } from '../services/integration-credential-migration.service';
 import { createLogger } from '../config/logger';
 import { INTEGRATION_SCOPES } from '../constants';
 import { IntegrationCredential, Project } from '../models';
@@ -55,6 +56,11 @@ async function main(): Promise<void> {
 
   try {
     switch (args.command) {
+      case 'migrate': {
+        const result = await migrateCredentialIndexes();
+        console.log(JSON.stringify(result));
+        break;
+      }
       case 'create': {
         const name = one(args, 'name');
         const projects = many(args, 'project');
@@ -73,7 +79,7 @@ async function main(): Promise<void> {
         // Keep the pre-C1 default grant unchanged. Public-data scopes require an
         // explicit operator selection; adding an enum must not broaden defaults.
         const scopes = scopesRaw ? scopesRaw.split(',').map((s) => s.trim()).filter(Boolean)
-          : INTEGRATION_SCOPES.filter(s => !['products:read', 'company:read', 'playbook:read', 'knowledge:read'].includes(s));
+          : INTEGRATION_SCOPES.filter(s => !['products:read', 'company:read', 'playbook:read', 'knowledge:read', 'inquiries:write'].includes(s));
         const expiresRaw = one(args, 'expires');
         const { credential, token } = await createCredential({
           name,
@@ -121,7 +127,7 @@ async function main(): Promise<void> {
       case 'rotate': {
         const id = one(args, 'id');
         if (!id) throw new Error('缺少 --id <credentialId>');
-        const { credential, token } = await rotateCredential(id);
+        const { credential, token } = await rotateCredential(id, Number(one(args, 'grace-seconds') ?? 0));
         logger.info('凭证已轮换，旧 token 立即失效', { id: String(credential._id) });
         console.log('\n==== 新 token（仅显示一次，请立即保存） ====');
         console.log(token);

@@ -17,6 +17,9 @@ const candidate = parse(readFileSync(contractPath, 'utf8'));
 const c1Bytes = readFileSync('docs/integration/snapshots/globalsite-c1.json');
 assert.equal(createHash('sha256').update(c1Bytes.toString('utf8').replace(/\r\n/g, '\n')).digest('hex'), '53b8132d3a7fcd354f38b71787fd439ba05895e9aec2da39a78816e371b2f4cd', 'C1 frozen snapshot drift');
 const c1 = JSON.parse(c1Bytes);
+const c2Bytes = readFileSync('docs/integration/snapshots/globalsite-c2.json','utf8').replace(/\r\n/g,'\n');
+assert.equal(createHash('sha256').update(c2Bytes).digest('hex'),'9a805701d8d0c7d377cef90039b987f20051cbcbcdcdd75b951aa0733e343eb9','C2 frozen snapshot drift');
+const c2=JSON.parse(c2Bytes);
 const routes = {
   '/globalsite/capabilities': ['get', 'C1', 'globalsite:read'],
   '/globalsite/products': ['get', 'C2', 'products:read'],
@@ -30,6 +33,13 @@ const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'optio
 
 function validate(document) {
   document = structuredClone(document);
+if(document['x-globalsite-c2']) {
+ assert.deepEqual(document['x-globalsite-c2'],{status:'stable',implemented:true,task:'C2-credentials',reservedScope:'inquiries:write',description:'私有管理API使用CRM用户会话；inquiries:write按用户确认预选并标记待开放，不代表询盘端点已实现。'});
+ delete document['x-globalsite-c2'];
+ for(const [path,operations] of Object.entries(c2.paths)){assert.deepEqual(document.paths[path],operations,'C2 operation frozen: '+path);delete document.paths[path]}
+ for(const category of ['schemas','parameters','responses','securitySchemes'])for(const [name,value]of Object.entries(c2[category])){assert.deepEqual(document.components[category][name],value,'C2 component frozen: '+name);delete document.components[category][name]}
+}
+document = structuredClone(document);
 if (document['x-globalsite-c1']) {
   assert.deepEqual(document['x-globalsite-c1'], { status:'stable', implemented:true, task:'C1-read-api', description:'新任务批准的 /products 等 C1 路径；S1 /globalsite/* 草案仍未实现，不能当别名调用。' });
   delete document['x-globalsite-c1'];
@@ -65,7 +75,7 @@ const projected = structuredClone(document);
     assert(has(frozen.components, category), 'Unapproved component category: ' + category);
     for (const name of Object.keys(entries)) {
       if (has(frozen.components[category], name)) continue;
-      assert(!name.startsWith('GlobalSiteC1'), 'Unapproved C1 component: ' + name);
+      assert(!name.startsWith('GlobalSiteC1') && !name.startsWith('GlobalSiteC2'), 'Unapproved C1 component: ' + name);
       assert(['schemas', 'parameters', 'responses'].includes(category)
         && /^GlobalSite[A-Za-z0-9]+$/.test(name), 'Unapproved new component: ' + name);
       delete projected.components[category][name];
@@ -120,6 +130,11 @@ validate(frozen);
 const result = validate(candidate);
 assert.equal(result.draftCount, 6, 'S1 must include all six reviewed draft operations');
 const cases = [
+ ['C2 auth removed',d=>{d.paths['/credentials'].post.security=[]}],
+ ['C2 role widened',d=>{d.paths['/settings'].get['x-required-roles'].push('user')}],
+ ['C2 servers changed',d=>{d.paths['/credentials'].get.servers=[]}],
+ ['C2 token leaked in list',d=>{d.components.schemas.GlobalSiteC2Credential.properties.token={type:'string'}}],
+ ['C2 metadata removed',d=>{delete d['x-globalsite-c2']}],
   ['unknown C1 component', d => {d.components.schemas.GlobalSiteC1Unexpected={type:'string'}}],
   ['C1 scope changed', d => {d.paths['/products'].get['x-required-scope']='stats:read'}],
   ['C1 removed', d => {delete d.paths['/playbook']}],

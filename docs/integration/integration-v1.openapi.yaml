@@ -794,8 +794,239 @@ paths:
         '429':
           $ref: '#/components/responses/GlobalSiteC1RateLimited'
 
+  /credentials:
+    get:
+      summary: GlobalSite C2 Credentials
+      operationId: globalSiteC2Credentials
+      servers:
+        - url: /api/projects/integrations
+      x-status: stable
+      x-implementation-phase: C2
+      x-required-roles:
+        - admin
+        - project_admin
+      security:
+        - GlobalSiteC2Session: []
+        - GlobalSiteC2UserBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC2Page'
+        - $ref: '#/components/parameters/GlobalSiteC2Limit'
+      responses:
+        '200':
+          description: '成功；Cache-Control: private, no-store。列表/日志永不返回token或hash。'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC2Credentials'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/GlobalSiteC2Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GlobalSiteC2Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      summary: GlobalSite C2 Create
+      operationId: globalSiteC2Create
+      servers:
+        - url: /api/projects/integrations
+      x-status: stable
+      x-implementation-phase: C2
+      x-required-roles:
+        - admin
+        - project_admin
+      security:
+        - GlobalSiteC2Session: []
+        - GlobalSiteC2UserBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC2Csrf'
+      responses:
+        '201':
+          description: '成功；Cache-Control: private, no-store。列表/日志永不返回token或hash。'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC2Issued'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/GlobalSiteC2Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GlobalSiteC2Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalSiteC2Create'
+  /credentials/{credentialId}/rotate:
+    post:
+      summary: GlobalSite C2 Rotate
+      operationId: globalSiteC2Rotate
+      servers:
+        - url: /api/projects/integrations
+      x-status: stable
+      x-implementation-phase: C2
+      x-required-roles:
+        - admin
+        - project_admin
+      security:
+        - GlobalSiteC2Session: []
+        - GlobalSiteC2UserBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC2CredentialId'
+        - $ref: '#/components/parameters/GlobalSiteC2Csrf'
+      responses:
+        '200':
+          description: '成功；Cache-Control: private, no-store。列表/日志永不返回token或hash。'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC2Issued'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/GlobalSiteC2Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GlobalSiteC2Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalSiteC2Rotate'
+  /credentials/{credentialId}/revoke:
+    post:
+      summary: GlobalSite C2 Revoke
+      operationId: globalSiteC2Revoke
+      servers:
+        - url: /api/projects/integrations
+      x-status: stable
+      x-implementation-phase: C2
+      x-required-roles:
+        - admin
+        - project_admin
+      security:
+        - GlobalSiteC2Session: []
+        - GlobalSiteC2UserBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC2CredentialId'
+        - $ref: '#/components/parameters/GlobalSiteC2Csrf'
+      responses:
+        '200':
+          description: '成功；Cache-Control: private, no-store。列表/日志永不返回token或hash。'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC2Revoked'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/GlobalSiteC2Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GlobalSiteC2Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /request-logs:
+    get:
+      summary: GlobalSite C2 Logs
+      operationId: globalSiteC2Logs
+      servers:
+        - url: /api/projects/integrations
+      x-status: stable
+      x-implementation-phase: C2
+      x-required-roles:
+        - admin
+        - project_admin
+      security:
+        - GlobalSiteC2Session: []
+        - GlobalSiteC2UserBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/GlobalSiteC2Page'
+        - $ref: '#/components/parameters/GlobalSiteC2Limit'
+        - $ref: '#/components/parameters/GlobalSiteC2LogCredential'
+      responses:
+        '200':
+          description: '成功；Cache-Control: private, no-store。列表/日志永不返回token或hash。'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC2Logs'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/GlobalSiteC2Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GlobalSiteC2Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /settings:
+    get:
+      summary: GlobalSite C2 Settings
+      operationId: globalSiteC2Settings
+      servers:
+        - url: /api/projects/integrations
+      x-status: stable
+      x-implementation-phase: C2
+      x-required-roles:
+        - admin
+        - project_admin
+      security:
+        - GlobalSiteC2Session: []
+        - GlobalSiteC2UserBearer: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: '成功；Cache-Control: private, no-store。列表/日志永不返回token或hash。'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSiteC2Settings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/GlobalSiteC2Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/GlobalSiteC2Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
 components:
   securitySchemes:
+    GlobalSiteC2Session:
+      type: apiKey
+      in: cookie
+      name: cdlm_access
+      description: CRM用户Cookie会话；不是服务凭证。
+    GlobalSiteC2UserBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 兼容现有用户JWT；不是gci_服务凭证。
+
     serviceToken:
       type: http
       scheme: bearer
@@ -805,6 +1036,44 @@ components:
         原始 token 仅创建时显示一次。凭证绑定项目集合与 scope，支持轮换与撤销。
 
   parameters:
+    GlobalSiteC2Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 1
+    GlobalSiteC2Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    GlobalSiteC2CredentialId:
+      name: credentialId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^[a-fA-F0-9]{24}$
+    GlobalSiteC2Csrf:
+      name: X-CSRF-Token
+      in: header
+      required: false
+      description: Cookie会话写请求必填且与会话Cookie匹配；旧Bearer用户JWT方式保持兼容。
+      schema:
+        type: string
+    GlobalSiteC2LogCredential:
+      name: credentialId
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: ^[a-fA-F0-9]{24}$
+
     ProjectId:
       name: X-Project-Id
       in: header
@@ -907,6 +1176,333 @@ components:
         pattern: ^[a-f0-9]{64}$
 
   schemas:
+    GlobalSiteC2Credential:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - scopes
+        - createdBy
+        - createdAt
+        - lastUsedAt
+        - expiresAt
+        - previousValidUntil
+        - status
+        - projectCount
+      properties:
+        id:
+          type: string
+          description: 凭证稳定 ID；非明文或哈希。
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        scopes:
+          type: array
+          items:
+            type: string
+            enum:
+              - products:read
+              - company:read
+              - playbook:read
+              - knowledge:read
+              - customers:upsert
+              - inquiries:write
+              - outcomes:read
+              - stats:read
+              - quotations:draft
+              - quotations:read
+        createdBy:
+          type: object
+          additionalProperties: false
+          required:
+            - id
+            - displayName
+          properties:
+            id:
+              type: string
+              description: 用户 ID
+            displayName:
+              type: string
+              description: 当前显示名称
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        previousValidUntil:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum:
+            - active
+            - expired
+            - revoked
+        projectCount:
+          type: integer
+          minimum: 1
+          description: 此凭证绑定的项目数量；只有全部绑定项目均在管理员权限内才可管理。
+    GlobalSiteC2Create:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - scopes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        scopes:
+          type: array
+          minItems: 1
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - products:read
+              - company:read
+              - playbook:read
+              - knowledge:read
+              - customers:upsert
+              - inquiries:write
+              - outcomes:read
+              - stats:read
+              - quotations:draft
+              - quotations:read
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 可选到期时间，必须晚于服务端现在；null表示无固定到期。
+    GlobalSiteC2Rotate:
+      type: object
+      additionalProperties: false
+      properties:
+        graceSeconds:
+          type: integer
+          minimum: 0
+          maximum: 604800
+          default: 86400
+          description: 旧令牌宽限秒数；0立即失效；默认24小时，最长7天。脚本默认仍为0。
+    GlobalSiteC2Issued:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - credential
+            - token
+          properties:
+            credential:
+              $ref: '#/components/schemas/GlobalSiteC2Credential'
+            token:
+              type: string
+              pattern: ^gci_[a-f0-9]{48}$
+              description: 仅本次创建/轮换响应提供，必须no-store，不得持久化、记录或重放取回。
+    GlobalSiteC2Revoked:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: '#/components/schemas/GlobalSiteC2Credential'
+    GlobalSiteC2Log:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - createdAt
+        - method
+        - route
+        - statusCode
+        - latencyMs
+      properties:
+        id:
+          type: string
+          description: 日志 ID
+        createdAt:
+          type: string
+          format: date-time
+        method:
+          type: string
+          description: HTTP 方法
+        route:
+          type: string
+          description: 路由模板；无查询串
+        statusCode:
+          type: integer
+          minimum: 100
+          maximum: 599
+        latencyMs:
+          type: number
+          minimum: 0
+    GlobalSiteC2Credentials:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - page
+            - limit
+            - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GlobalSiteC2Credential'
+            page:
+              type: integer
+              minimum: 1
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 50
+            total:
+              type: integer
+              minimum: 0
+    GlobalSiteC2Logs:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - page
+            - limit
+            - total
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GlobalSiteC2Log'
+            page:
+              type: integer
+              minimum: 1
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 50
+            total:
+              type: integer
+              minimum: 0
+    GlobalSiteC2Settings:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - scopes
+            - globalsitePreset
+            - quota
+          properties:
+            scopes:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                  - name
+                  - available
+                properties:
+                  name:
+                    type: string
+                    enum:
+                      - products:read
+                      - company:read
+                      - playbook:read
+                      - knowledge:read
+                      - customers:upsert
+                      - inquiries:write
+                      - outcomes:read
+                      - stats:read
+                      - quotations:draft
+                      - quotations:read
+                  available:
+                    type: boolean
+            globalsitePreset:
+              type: array
+              items:
+                type: string
+                enum:
+                  - products:read
+                  - company:read
+                  - playbook:read
+                  - knowledge:read
+                  - customers:upsert
+                  - inquiries:write
+                  - outcomes:read
+                  - stats:read
+                  - quotations:draft
+                  - quotations:read
+            quota:
+              type: object
+              additionalProperties: false
+              required:
+                - limit
+                - used
+              properties:
+                limit:
+                  type: integer
+                  minimum: 1
+                used:
+                  type: integer
+                  minimum: 0
+
     Error:
       type: object
       properties:
@@ -2116,6 +2712,20 @@ components:
           $ref: '#/components/schemas/GlobalSiteC1Product'
 
   responses:
+    GlobalSiteC2Forbidden:
+      description: 用户不是项目管理员/管理员，或CSRF校验失败。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GlobalSiteC2Conflict:
+      description: >-
+        达到凭证数量上限(details.reason=CREDENTIAL_LIMIT)，或并发轮换/正在宽限期(details.reason=ROTATION_IN_PROGRESS)。不自动重试；用户确认后重操作。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
     Unauthorized:
       description: token 缺失 / 无效 / 已撤销 / 已过期
       content:
@@ -2242,3 +2852,10 @@ x-globalsite-c1:
   implemented: true
   task: C1-read-api
   description: 新任务批准的 /products 等 C1 路径；S1 /globalsite/* 草案仍未实现，不能当别名调用。
+
+x-globalsite-c2:
+  status: stable
+  implemented: true
+  task: C2-credentials
+  reservedScope: inquiries:write
+  description: 私有管理API使用CRM用户会话；inquiries:write按用户确认预选并标记待开放，不代表询盘端点已实现。
