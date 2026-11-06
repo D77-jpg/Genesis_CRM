@@ -1,0 +1,1175 @@
+{
+  "paths": {
+    "/webhook": {
+      "get": {
+        "summary": "GlobalSite C4 /webhook get",
+        "operationId": "globalSiteC4getwebhook",
+        "servers": [
+          {
+            "url": "/api/projects/integrations"
+          }
+        ],
+        "x-status": "stable",
+        "x-implementation-phase": "C4",
+        "x-required-roles": [
+          "admin",
+          "project_admin"
+        ],
+        "security": [
+          {
+            "GlobalSiteC2Session": []
+          },
+          {
+            "GlobalSiteC2UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；private,no-store。无密钥、载荷正文、原始URL或响应体进入投递日志。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC4ConfigState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "目标网址不安全或DNS不可用；BAD_REQUEST。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/GlobalSiteC2Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/GlobalSiteC2Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      },
+      "put": {
+        "summary": "GlobalSite C4 /webhook put",
+        "operationId": "globalSiteC4putwebhook",
+        "servers": [
+          {
+            "url": "/api/projects/integrations"
+          }
+        ],
+        "x-status": "stable",
+        "x-implementation-phase": "C4",
+        "x-required-roles": [
+          "admin",
+          "project_admin"
+        ],
+        "security": [
+          {
+            "GlobalSiteC2Session": []
+          },
+          {
+            "GlobalSiteC2UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/GlobalSiteC2Csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；private,no-store。无密钥、载荷正文、原始URL或响应体进入投递日志。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC4Issued"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "目标网址不安全或DNS不可用；BAD_REQUEST。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/GlobalSiteC2Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/GlobalSiteC2Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GlobalSiteC4ConfigInput"
+              }
+            }
+          }
+        },
+        "callbacks": {
+          "globalSiteEvent": {
+            "{$request.body#/targetUrl}": {
+              "post": {
+                "summary": "CRM Worker → GlobalSite（接收端另行实现）",
+                "operationId": "globalSiteC4ReceiveEvent",
+                "security": [
+                  {
+                    "GlobalSiteC4Signature": []
+                  }
+                ],
+                "description": "先对原始body验证HMAC及±300秒时间窗，再事务按(projectId,eventId)去重至少30天；重复合法事件返回2xx。签名为v1=hex(HMAC-SHA256(密钥UTF8文本, timestamp+\".\"+原始body字节))。重试每次使用新时间戳，同一eventId/body不变。2xx确认；3xx不跟随；其余重试最多8次。",
+                "parameters": [
+                  {
+                    "name": "X-GlobalCRM-Timestamp",
+                    "in": "header",
+                    "required": true,
+                    "schema": {
+                      "type": "string",
+                      "pattern": "^[0-9]{10}$"
+                    }
+                  },
+                  {
+                    "name": "X-GlobalCRM-Signature",
+                    "in": "header",
+                    "required": true,
+                    "schema": {
+                      "type": "string",
+                      "pattern": "^v1=[a-f0-9]{64}$"
+                    }
+                  },
+                  {
+                    "name": "X-GlobalCRM-Event-Id",
+                    "in": "header",
+                    "required": true,
+                    "schema": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{24}$"
+                    }
+                  },
+                  {
+                    "name": "X-GlobalCRM-Key-Id",
+                    "in": "header",
+                    "required": true,
+                    "schema": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{24}$"
+                    }
+                  }
+                ],
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/GlobalSiteC4Event"
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "204": {
+                    "description": "已持久保存或已处理同事件；不得在持久去重前确认。"
+                  },
+                  "400": {
+                    "description": "载荷无效"
+                  },
+                  "401": {
+                    "description": "签名/时间戳无效或过期"
+                  },
+                  "500": {
+                    "description": "暂时失败，将重试"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook/rotate-secret": {
+      "post": {
+        "summary": "GlobalSite C4 /webhook/rotate-secret post",
+        "operationId": "globalSiteC4postwebhookrotatesecret",
+        "servers": [
+          {
+            "url": "/api/projects/integrations"
+          }
+        ],
+        "x-status": "stable",
+        "x-implementation-phase": "C4",
+        "x-required-roles": [
+          "admin",
+          "project_admin"
+        ],
+        "security": [
+          {
+            "GlobalSiteC2Session": []
+          },
+          {
+            "GlobalSiteC2UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/GlobalSiteC2Csrf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；private,no-store。无密钥、载荷正文、原始URL或响应体进入投递日志。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC4Issued"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "目标网址不安全或DNS不可用；BAD_REQUEST。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/GlobalSiteC2Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/GlobalSiteC2Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "revision"
+                ],
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook/deliveries": {
+      "get": {
+        "summary": "GlobalSite C4 /webhook/deliveries get",
+        "operationId": "globalSiteC4getwebhookdeliveries",
+        "servers": [
+          {
+            "url": "/api/projects/integrations"
+          }
+        ],
+        "x-status": "stable",
+        "x-implementation-phase": "C4",
+        "x-required-roles": [
+          "admin",
+          "project_admin"
+        ],
+        "security": [
+          {
+            "GlobalSiteC2Session": []
+          },
+          {
+            "GlobalSiteC2UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "running",
+                "delivered",
+                "failed",
+                "cancelled"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；private,no-store。无密钥、载荷正文、原始URL或响应体进入投递日志。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC4Deliveries"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "目标网址不安全或DNS不可用；BAD_REQUEST。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/GlobalSiteC2Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/GlobalSiteC2Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/webhook/deliveries/{deliveryId}/attempts": {
+      "get": {
+        "summary": "GlobalSite C4 /webhook/deliveries/{deliveryId}/attempts get",
+        "operationId": "globalSiteC4getwebhookdeliveriesdeliveryIdattempts",
+        "servers": [
+          {
+            "url": "/api/projects/integrations"
+          }
+        ],
+        "x-status": "stable",
+        "x-implementation-phase": "C4",
+        "x-required-roles": [
+          "admin",
+          "project_admin"
+        ],
+        "security": [
+          {
+            "GlobalSiteC2Session": []
+          },
+          {
+            "GlobalSiteC2UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "deliveryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；private,no-store。无密钥、载荷正文、原始URL或响应体进入投递日志。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC4Attempts"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "目标网址不安全或DNS不可用；BAD_REQUEST。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/GlobalSiteC2Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/GlobalSiteC2Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/webhook/deliveries/{deliveryId}/retry": {
+      "post": {
+        "summary": "GlobalSite C4 /webhook/deliveries/{deliveryId}/retry post",
+        "operationId": "globalSiteC4postwebhookdeliveriesdeliveryIdretry",
+        "servers": [
+          {
+            "url": "/api/projects/integrations"
+          }
+        ],
+        "x-status": "stable",
+        "x-implementation-phase": "C4",
+        "x-required-roles": [
+          "admin",
+          "project_admin"
+        ],
+        "security": [
+          {
+            "GlobalSiteC2Session": []
+          },
+          {
+            "GlobalSiteC2UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/GlobalSiteC2Csrf"
+          },
+          {
+            "name": "deliveryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功；private,no-store。无密钥、载荷正文、原始URL或响应体进入投递日志。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC4Retried"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "目标网址不安全或DNS不可用；BAD_REQUEST。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/GlobalSiteC2Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/GlobalSiteC2Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "GlobalSiteC4ConfigInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "targetUrl",
+        "events",
+        "enabled"
+      ],
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "targetUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2000,
+          "description": "公开HTTPS；禁止账号、查询、fragment、自定义端口及内网；保存和每次发送均DNS校验固定IP。"
+        },
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "lead.status_changed",
+              "deal.won",
+              "deal.lost",
+              "quotation.sent"
+            ]
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "GlobalSiteC4Config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "projectId",
+        "targetUrl",
+        "events",
+        "enabled",
+        "revision",
+        "generation",
+        "keyId",
+        "activeSince",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "targetUrl": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "lead.status_changed",
+              "deal.won",
+              "deal.lost",
+              "quotation.sent"
+            ]
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "generation": {
+          "type": "integer"
+        },
+        "keyId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "activeSince": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "GlobalSiteC4ConfigState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "config"
+          ],
+          "properties": {
+            "config": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "projectId",
+                "targetUrl",
+                "events",
+                "enabled",
+                "revision",
+                "generation",
+                "keyId",
+                "activeSince",
+                "updatedAt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{24}$"
+                },
+                "projectId": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{24}$"
+                },
+                "targetUrl": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "events": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "lead.status_changed",
+                      "deal.won",
+                      "deal.lost",
+                      "quotation.sent"
+                    ]
+                  }
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "revision": {
+                  "type": "integer"
+                },
+                "generation": {
+                  "type": "integer"
+                },
+                "keyId": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{24}$"
+                },
+                "activeSince": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "nullable": true
+            }
+          }
+        }
+      }
+    },
+    "GlobalSiteC4Issued": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "config",
+            "signingSecret"
+          ],
+          "properties": {
+            "config": {
+              "$ref": "#/components/schemas/GlobalSiteC4Config"
+            },
+            "signingSecret": {
+              "type": "string",
+              "nullable": true,
+              "description": "仅首次创建或轮换返回一次；64位十六进制，作为UTF-8文本HMAC密钥。普通保存为null。",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "GlobalSiteC4Event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "eventId",
+        "type",
+        "projectId",
+        "occurredAt",
+        "data"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "enum": [
+            "1.0"
+          ]
+        },
+        "eventId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "lead.status_changed",
+            "deal.won",
+            "deal.lost",
+            "quotation.sent"
+          ]
+        },
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "customerId",
+            "prospectId",
+            "crmInquiryId",
+            "externalInquiryId",
+            "fromStatus",
+            "toStatus",
+            "quotationId",
+            "sourceEventId"
+          ],
+          "properties": {
+            "customerId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            },
+            "prospectId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$",
+              "nullable": true
+            },
+            "crmInquiryId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            },
+            "externalInquiryId": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "fromStatus": {
+              "type": "string",
+              "maxLength": 50,
+              "nullable": true
+            },
+            "toStatus": {
+              "type": "string",
+              "maxLength": 50,
+              "nullable": true
+            },
+            "quotationId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$",
+              "nullable": true
+            },
+            "sourceEventId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$",
+              "description": "原始CustomerEvent ID（与outcomes.eventId相同）；quotation.sent使用Quotation ID。用于跨轮询/Webhook业务归并，不替代每条通知eventId的传输去重。"
+            }
+          }
+        }
+      }
+    },
+    "GlobalSiteC4Delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "status",
+        "occurredAt",
+        "createdAt",
+        "attempts",
+        "nextAttemptAt",
+        "lastStatusCode",
+        "lastErrorCode",
+        "generation"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "lead.status_changed",
+            "deal.won",
+            "deal.lost",
+            "quotation.sent"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "delivered",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nextAttemptAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastStatusCode": {
+          "type": "integer",
+          "nullable": true
+        },
+        "lastErrorCode": {
+          "type": "string",
+          "maxLength": 80,
+          "nullable": true
+        },
+        "generation": {
+          "type": "integer"
+        }
+      }
+    },
+    "GlobalSiteC4Attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "deliveryId",
+        "attempt",
+        "status",
+        "startedAt",
+        "finishedAt",
+        "statusCode",
+        "errorCode",
+        "durationMs"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "deliveryId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "started",
+            "delivered",
+            "failed",
+            "unknown"
+          ]
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        },
+        "statusCode": {
+          "type": "integer",
+          "nullable": true
+        },
+        "errorCode": {
+          "type": "string",
+          "maxLength": 80,
+          "nullable": true
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "nullable": true
+        }
+      }
+    },
+    "GlobalSiteC4Deliveries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "items",
+            "hasMore",
+            "nextCursor"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/GlobalSiteC4Delivery"
+              }
+            },
+            "hasMore": {
+              "type": "boolean"
+            },
+            "nextCursor": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$",
+              "nullable": true
+            }
+          }
+        }
+      }
+    },
+    "GlobalSiteC4Attempts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "items",
+            "hasMore",
+            "nextCursor"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/GlobalSiteC4Attempt"
+              }
+            },
+            "hasMore": {
+              "type": "boolean"
+            },
+            "nextCursor": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$",
+              "nullable": true
+            }
+          }
+        }
+      }
+    },
+    "GlobalSiteC4Retried": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "$ref": "#/components/schemas/GlobalSiteC4Delivery"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "status": "stable",
+    "implemented": true,
+    "task": "C4-webhook",
+    "description": "仅C3归档且客户来源globalsite的记录。每条关联询盘独立eventId；客户级结果不是精确归因。配置启用后新记录，不历史补推。quotation.sent为首次标记已发送，非SMTP送达。接收端另行实现；原outcomes不变。"
+  },
+  "securitySchemes": {
+    "GlobalSiteC4Signature": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-GlobalCRM-Signature",
+      "description": "HMAC-SHA256 of timestamp + period + exact raw body using project signing secret. Required timestamp, key ID and event ID headers; receiver verifies time window and durable deduplication."
+    }
+  }
+}

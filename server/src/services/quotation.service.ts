@@ -356,6 +356,7 @@ export async function createQuotation(
       moq: input.moq,
       notes: input.notes,
       status: input.status,
+      ...(input.status === "sent" ? {globalSiteSentAt:new Date()} : {}),
       createdBy: actor ? new Types.ObjectId(actor.id) : undefined,
     } as Partial<IQuotation>);
   } catch (error) {
@@ -408,7 +409,7 @@ export async function updateQuotation(
   try {
     doc = await Quotation.findOneAndUpdate(
       { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId), ...projectScope(actor) },
-      { $set: patch, $inc: { version: 1 } },
+      { $set: patch, $inc: { version: 1 }, ...(input.status === "sent" ? {$min:{globalSiteSentAt:new Date()}} : {}) },
       { new: true, runValidators: true },
     );
   } catch (error) {
@@ -436,7 +437,7 @@ export async function updateQuotationStatus(
 
   const doc = await Quotation.findOneAndUpdate(
     { _id: new Types.ObjectId(quotationId), customerId: new Types.ObjectId(customerId), ...projectScope(actor) },
-    { $set: { status: input.status }, $inc: { version: 1 } },
+    { $set: { status: input.status }, $inc: { version: 1 }, ...(input.status === "sent" ? {$min:{globalSiteSentAt:new Date()}} : {}) },
     { new: true, runValidators: true },
   );
   if (!doc) throw ApiError.notFound('报价单不存在或无权修改');

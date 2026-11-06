@@ -1,3 +1,4 @@
+import {webhookZh,webhookEn} from './webhooks';
 import {inquiryZh,inquiryEn} from './inquiries';
 import { integrationsZh, integrationsEn } from './integrations';
 /**
@@ -15,6 +16,7 @@ import { AUTO_PHRASES, AUTO_TRANSLATIONS } from './auto-translations';
 export type Language = 'zh' | 'en';
 
 const zh = {
+  ...webhookZh,
   ...integrationsZh,
   ...inquiryZh,
   'common.loading': '正在加载…',
@@ -319,6 +321,7 @@ const zh = {
 export type TranslationKey = keyof typeof zh;
 
 const en: Record<TranslationKey, string> = {
+  ...webhookEn,
   ...integrationsEn,
   ...inquiryEn,
   'common.loading': 'Loading…',

@@ -143,6 +143,8 @@ jobs:
         run: npm run test:credentials-ui --prefix ../server
       - name: C3 inquiry management browser regression (fictional isolated data)
         run: npm run test:inquiries-ui --prefix ../server
+      - name: C4 webhook browser regression (fictional isolated data)
+        run: npm run test:webhooks-ui --prefix ../server
       - uses: actions/upload-artifact@v4
         if: always()
         with:

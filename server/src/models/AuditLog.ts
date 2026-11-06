@@ -9,6 +9,7 @@ import './tenant-setup';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 
 export const AUDIT_ACTIONS = [
+  'integration.webhook.saved','integration.webhook.rotated','integration.webhook.retried',
   'integration.credential.create',
   'integration.credential.rotate',
   'integration.credential.revoke',
