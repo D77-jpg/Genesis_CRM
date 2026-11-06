@@ -20,3 +20,6 @@
 - 签名为原始body字节HMAC(timestamp+句点+body)，±300秒且接收端持久eventId去重；密钥仅首次/轮换一次性返回，禁止存浏览器/日志/截图。配置变更取消旧generation，不能改投旧事件。
 - Webhook只允许公开HTTPS，全部DNS IPv4检查并固定、禁重定向，绝无GLOBALSITE_ALLOW_LOCAL例外。发送前复查项目/客户/询盘，Worker组织恢复/租约围栏不可省略。
 - 新模型与索引迁移010；源码扫描页事务落盘/推进、多询盘分批、未知结果原ID重试，含崩溃最多8次预算；配置/重发复查当前项目管理员权限并事务审计。修改集成页运行credentials-ui、webhooks-ui。
+
+- C5 当前只做 docs/integration/oauth-设计.md 设计评审；用户明确要求确认后才实现。设计 PR 保持草稿，不因既有自动合并授权而越过该门槛；禁止提前改业务代码、OpenAPI、依赖或执行迁移。
+- C5 推荐 Cookie/sid 真实登录与邮件 OTP 证据、code+PKCE S256/OIDC；登录授权与业务服务凭证分离，不按邮箱自动绑定或继承 CRM 管理权。协议与模型细节以批准后的唯一契约为准，GlobalSite 接收入口另补。
