@@ -1,3 +1,4 @@
+import { mountOAuth } from './services/oauth-provider';
 /**
  * Express 应用装配
  * ------------------------------------------------------------------
@@ -98,6 +99,7 @@ export function createApp(): Application {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
+  mountOAuth(app);
   // Tracking is a token-only public resource loaded by external mail clients.
   // It returns no CRM data, so it must not be rejected by the CRM UI CORS list.
   app.use((req, res, next) => {

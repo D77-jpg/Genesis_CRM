@@ -1,0 +1,2803 @@
+{
+  "metadata": {
+    "status": "stable",
+    "task": "C5-oauth",
+    "approvedDesign": "oauth-设计.md",
+    "description": "Separate identity protocol; business service credentials and existing API remain unchanged."
+  },
+  "paths": {
+    "/oidc/.well-known/openid-configuration": {
+      "get": {
+        "operationId": "c5Discovery",
+        "summary": "C5 OIDC discovery",
+        "security": [],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Discovery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/oidc/jwks": {
+      "get": {
+        "operationId": "c5Jwks",
+        "summary": "C5 public signing keys",
+        "security": [],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Jwks"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/oidc/auth": {
+      "get": {
+        "operationId": "c5Authorize",
+        "summary": "C5 authorization code with mandatory PKCE S256",
+        "security": [],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "code"
+              ]
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "nonce",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "code_challenge",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            }
+          },
+          {
+            "name": "code_challenge_method",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "S256"
+              ]
+            }
+          },
+          {
+            "name": "prompt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "login",
+                "consent",
+                "none"
+              ]
+            }
+          },
+          {
+            "name": "max_age",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 600
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "CRM interaction or registered callback"
+          },
+          "303": {
+            "description": "CRM interaction or exact registered callback; code/state/iss only"
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/oidc/auth/{uid}": {
+      "get": {
+        "operationId": "c5Resume",
+        "summary": "C5 browser-bound one-time protocol resume",
+        "security": [],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Continue validated authorization"
+          },
+          "303": {
+            "description": "Continue validated authorization"
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/oidc/token": {
+      "post": {
+        "operationId": "c5Token",
+        "summary": "C5 code exchange / rotating refresh",
+        "security": [
+          {
+            "C5Basic": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "grant_type",
+                      "code",
+                      "redirect_uri",
+                      "code_verifier"
+                    ],
+                    "properties": {
+                      "grant_type": {
+                        "type": "string",
+                        "enum": [
+                          "authorization_code"
+                        ]
+                      },
+                      "code": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "redirect_uri": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "code_verifier": {
+                        "type": "string",
+                        "minLength": 43,
+                        "maxLength": 128,
+                        "pattern": "^[A-Za-z0-9._~-]+$"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "grant_type",
+                      "refresh_token"
+                    ],
+                    "properties": {
+                      "grant_type": {
+                        "type": "string",
+                        "enum": [
+                          "refresh_token"
+                        ]
+                      },
+                      "refresh_token": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "scope": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "(^| )openid( |$)",
+                        "description": "When reducing scopes, openid remains mandatory for this identity-only client."
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Token"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/oidc/me": {
+      "get": {
+        "operationId": "c5UserInfo",
+        "summary": "C5 userinfo; online grant, CRM session and tenant checks",
+        "security": [
+          {
+            "C5AccessToken": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5UserInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/oidc/token/revocation": {
+      "post": {
+        "operationId": "c5Revocation",
+        "summary": "C5 revoke token family; unknown token also 200",
+        "security": [
+          {
+            "C5Basic": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "token_type_hint": {
+                    "type": "string",
+                    "enum": [
+                      "access_token",
+                      "refresh_token"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revoked or unknown token; empty body"
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/auth/oauth/interactions/{uid}": {
+      "get": {
+        "operationId": "c5Interaction",
+        "summary": "C5 consent data; CRM browser session only",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5InteractionEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/auth/oauth/interactions/{uid}/decision": {
+      "post": {
+        "operationId": "c5Decision",
+        "summary": "C5 explicit consent / deny; session + CSRF + interaction cookie",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/C5Decision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5DecisionEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/auth/oauth/applications": {
+      "get": {
+        "operationId": "c5Applications",
+        "summary": "C5 current user authorized apps (viewer allowed)",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5GrantListEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/auth/oauth/applications/{grantId}/revoke": {
+      "post": {
+        "operationId": "c5GrantRevoke",
+        "summary": "C5 revoke own grant, requires CSRF",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5SuccessEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/auth/oauth/applications/revoke-all": {
+      "post": {
+        "operationId": "c5AppRevokeAll",
+        "summary": "C5 revoke own grants for client, requires CSRF",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "clientId"
+                ],
+                "properties": {
+                  "clientId": {
+                    "type": "string",
+                    "maxLength": 128
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5SuccessEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/oauth/clients": {
+      "get": {
+        "operationId": "c5ClientList",
+        "summary": "C5 platform administrator registered clients",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5ClientListEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      },
+      "post": {
+        "operationId": "c5ClientCreate",
+        "summary": "C5 register official GlobalSite; platform + CSRF + recent login",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/C5ClientInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5SecretEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/oauth/clients/{clientId}": {
+      "patch": {
+        "operationId": "c5ClientUpdate",
+        "summary": "C5 update/disable client; platform + CSRF + recent login",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/C5ClientPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5ClientEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    },
+    "/api/oauth/clients/{clientId}/rotate-secret": {
+      "post": {
+        "operationId": "c5ClientRotate",
+        "summary": "C5 one-time secret rotation; platform + CSRF + recent login",
+        "security": [
+          {
+            "C5Cookie": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/C5Rotate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5SecretEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/C5Error"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-phase": "C5-oauth"
+      }
+    }
+  },
+  "schemas": {
+    "C5Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "error"
+      ],
+      "properties": {
+        "error": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "error_description": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "C5Token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "access_token",
+        "token_type",
+        "expires_in",
+        "scope",
+        "id_token"
+      ],
+      "properties": {
+        "access_token": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "token_type": {
+          "type": "string",
+          "enum": [
+            "Bearer"
+          ]
+        },
+        "expires_in": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "scope": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "id_token": {
+          "type": "string",
+          "maxLength": 12000
+        },
+        "refresh_token": {
+          "type": "string",
+          "maxLength": 256
+        }
+      }
+    },
+    "C5Context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "organization_id",
+        "organization_name",
+        "project_id",
+        "project_name"
+      ],
+      "properties": {
+        "organization_id": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{24}$"
+        },
+        "organization_name": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "project_id": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{24}$"
+        },
+        "project_name": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "C5UserInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sub"
+      ],
+      "properties": {
+        "sub": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "email_verified": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "crm_context": {
+          "$ref": "#/components/schemas/C5Context"
+        }
+      }
+    },
+    "C5Discovery": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "issuer",
+        "authorization_endpoint",
+        "token_endpoint",
+        "userinfo_endpoint",
+        "jwks_uri",
+        "response_types_supported",
+        "code_challenge_methods_supported"
+      ],
+      "properties": {
+        "issuer": {
+          "type": "string",
+          "format": "uri"
+        },
+        "authorization_endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "token_endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "userinfo_endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "jwks_uri": {
+          "type": "string",
+          "format": "uri"
+        },
+        "revocation_endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "response_types_supported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "code_challenge_methods_supported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "id_token_signing_alg_values_supported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "C5Jwks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "keys"
+      ],
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kty",
+              "kid",
+              "n",
+              "e"
+            ],
+            "properties": {
+              "kty": {
+                "type": "string",
+                "maxLength": 16
+              },
+              "kid": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "use": {
+                "type": "string",
+                "maxLength": 16
+              },
+              "alg": {
+                "type": "string",
+                "maxLength": 16
+              },
+              "n": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "e": {
+                "type": "string",
+                "maxLength": 32
+              }
+            }
+          }
+        }
+      }
+    },
+    "C5ClientInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "operator",
+        "privacyUrl",
+        "termsUrl",
+        "redirectUris",
+        "scopes"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "operator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "privacyUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "termsUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "redirectUris": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "openid",
+              "profile",
+              "email",
+              "crm.context",
+              "offline_access"
+            ]
+          }
+        }
+      }
+    },
+    "C5Client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clientId",
+        "name",
+        "operator",
+        "privacyUrl",
+        "termsUrl",
+        "redirectUris",
+        "scopes",
+        "status",
+        "version",
+        "createdAt",
+        "previousValidUntil"
+      ],
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "operator": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "privacyUrl": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "termsUrl": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "redirectUris": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "openid",
+              "profile",
+              "email",
+              "crm.context",
+              "offline_access"
+            ]
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "disabled"
+          ]
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "previousValidUntil": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        }
+      }
+    },
+    "C5ClientPatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "operator": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "privacyUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "termsUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "redirectUris": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "openid",
+              "profile",
+              "email",
+              "crm.context",
+              "offline_access"
+            ]
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "disabled"
+          ]
+        }
+      }
+    },
+    "C5Rotate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "graceSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400,
+          "default": 0
+        }
+      }
+    },
+    "C5Grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "clientId",
+        "clientName",
+        "operator",
+        "projectId",
+        "projectName",
+        "scopes",
+        "status",
+        "createdAt",
+        "lastUsedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{24}$"
+        },
+        "clientId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "clientName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "operator": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{24}$"
+        },
+        "projectName": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "openid",
+              "profile",
+              "email",
+              "crm.context",
+              "offline_access"
+            ]
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "revoked",
+            "expired"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        }
+      }
+    },
+    "C5Decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "approve",
+            "deny"
+          ]
+        },
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{24}$"
+        },
+        "scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "openid",
+              "profile",
+              "email",
+              "crm.context",
+              "offline_access"
+            ]
+          }
+        }
+      }
+    },
+    "C5Interaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uid",
+        "application",
+        "scopes",
+        "projects",
+        "freshLoginRequired",
+        "identity"
+      ],
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "application": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "clientId",
+            "name",
+            "operator",
+            "redirectHost",
+            "privacyUrl",
+            "termsUrl"
+          ],
+          "properties": {
+            "clientId": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "operator": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "redirectHost": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "privacyUrl": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "termsUrl": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "openid",
+              "profile",
+              "email",
+              "crm.context",
+              "offline_access"
+            ]
+          }
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{24}$"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 200
+              }
+            }
+          }
+        },
+        "freshLoginRequired": {
+          "type": "boolean"
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "organizationName"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "organizationName": {
+              "type": "string",
+              "maxLength": 160
+            }
+          }
+        }
+      }
+    },
+    "C5InteractionEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "$ref": "#/components/schemas/C5Interaction"
+        }
+      }
+    },
+    "C5DecisionEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "resumeUrl"
+          ],
+          "properties": {
+            "resumeUrl": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        }
+      }
+    },
+    "C5ClientEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "client"
+          ],
+          "properties": {
+            "client": {
+              "$ref": "#/components/schemas/C5Client"
+            }
+          }
+        }
+      }
+    },
+    "C5SecretEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "client",
+            "clientSecret"
+          ],
+          "properties": {
+            "client": {
+              "$ref": "#/components/schemas/C5Client"
+            },
+            "clientSecret": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        }
+      }
+    },
+    "C5ClientListEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "items"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/C5Client"
+              }
+            }
+          }
+        }
+      }
+    },
+    "C5GrantListEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "items",
+            "nextCursor"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/C5Grant"
+              }
+            },
+            "nextCursor": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 128
+            }
+          }
+        }
+      }
+    },
+    "C5SuccessEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "revoked"
+          ],
+          "properties": {
+            "revoked": {
+              "type": "boolean",
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "securitySchemes": {
+    "C5Cookie": {
+      "type": "apiKey",
+      "in": "cookie",
+      "name": "cdlm_access",
+      "description": "CRM browser session with active sid. Mutations also require X-CSRF-Token and trusted Origin; no Bearer fallback."
+    },
+    "C5Basic": {
+      "type": "http",
+      "scheme": "basic",
+      "description": "Confidential OAuth client authentication; no service credentials."
+    },
+    "C5AccessToken": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "opaque",
+      "description": "C5 access token only, audience userinfo; no CRM JWT or IntegrationCredential."
+    }
+  }
+}

@@ -69,6 +69,8 @@ export const ROUTES = {
   organization: '/organization',
   billing: '/billing',
   platform: '/platform',
+  oauthApplications: '/security/applications',
+  oauthClients: '/platform/oauth-clients',
 } as const;
 
 /** 生成客户详情页路径 */

@@ -49,6 +49,9 @@ const AiSettingsPage = React.lazy(() => import('@/pages/ai-settings').then((m) =
 const OrganizationPage = React.lazy(() => import('@/pages/organization').then((m) => ({ default: m.OrganizationPage })));
 const BillingPage = React.lazy(() => import('@/pages/billing').then((m) => ({ default: m.BillingPage })));
 const PlatformPage = React.lazy(() => import('@/pages/platform').then((m) => ({ default: m.PlatformPage })));
+const OAuthConsentPage = React.lazy(()=>import('@/pages/oauth').then(m=>({default:m.OAuthConsentPage})));
+const OAuthApplicationsPage = React.lazy(()=>import('@/pages/oauth').then(m=>({default:m.OAuthApplicationsPage})));
+const OAuthClientsPage = React.lazy(()=>import('@/pages/oauth').then(m=>({default:m.OAuthClientsPage})));
 const NotFoundPage = React.lazy(() => import('@/pages/not-found').then((m) => ({ default: m.NotFoundPage })));
 
 /** 懒加载页面的统一 Suspense 包装（局部工具，不对外导出） */
@@ -57,6 +60,7 @@ function withSuspense(node: React.ReactNode): React.JSX.Element {
 }
 
 export const router = createBrowserRouter([
+  { path: '/oauth/authorize', element: withSuspense(<OAuthConsentPage />) },
   {
     path: ROUTES.login,
     element: withSuspense(
@@ -150,6 +154,8 @@ export const router = createBrowserRouter([
         path: 'platform',
         element: <PlatformRoute>{withSuspense(<PlatformPage />)}</PlatformRoute>,
       },
+      { path: 'security/applications', element: withSuspense(<OAuthApplicationsPage />) },
+      { path: 'platform/oauth-clients', element: <PlatformRoute>{withSuspense(<OAuthClientsPage />)}</PlatformRoute> },
       { path: '*', element: withSuspense(<NotFoundPage />) },
     ],
   },

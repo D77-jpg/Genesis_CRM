@@ -21,5 +21,9 @@
 - Webhook只允许公开HTTPS，全部DNS IPv4检查并固定、禁重定向，绝无GLOBALSITE_ALLOW_LOCAL例外。发送前复查项目/客户/询盘，Worker组织恢复/租约围栏不可省略。
 - 新模型与索引迁移010；源码扫描页事务落盘/推进、多询盘分批、未知结果原ID重试，含崩溃最多8次预算；配置/重发复查当前项目管理员权限并事务审计。修改集成页运行credentials-ui、webhooks-ui。
 
-- C5 当前只做 docs/integration/oauth-设计.md 设计评审；用户明确要求确认后才实现。设计 PR 保持草稿，不因既有自动合并授权而越过该门槛；禁止提前改业务代码、OpenAPI、依赖或执行迁移。
+- C5 设计已获用户确认，可继续本仓实现；GlobalSite 入口另补。先更新唯一 OpenAPI，再实现；Node 22、oidc-provider、哈希令牌 adapter、原子消费/事务与原 CRM Cookie/OTP 证据均须测试，旧快照不变。
 - C5 推荐 Cookie/sid 真实登录与邮件 OTP 证据、code+PKCE S256/OIDC；登录授权与业务服务凭证分离，不按邮箱自动绑定或继承 CRM 管理权。协议与模型细节以批准后的唯一契约为准，GlobalSite 接收入口另补。
+
+- C5 实现使用 Node >=22.12、oidc-provider 9.13.3；独立 /oidc 协议不能接受 CRM JWT/服务凭证，私有管理只认有 sid 的 Cookie/CSRF/Origin。迁移011部署全部新索引；索引/事务/专用签名 keyring 不满足时只关闭 OAuth。
+- OAuth code/access/refresh 仅存摘要，敏感协议 payload 独立用途加密；授权码/刷新消费与签发事务化，adapter 操作串行。外部 client secret 哈希验证，不写库/日志/browser storage；UI只显示一次。组织/项目/原CRM会话/安全版本每次在线复查，旧 session 缺真实认证证据必须重登。
+- C5 只对官方服务端客户端开放；每次新登录显式选项目并确认，offline_access 默认不选，未选 scope 记为 rejected。不按邮箱自动合并，不继承CRM角色；GlobalSite入口另补。改界面后运行 test:oauth-ui，截图仅隔离虚构数据且 secret 弹窗关闭。

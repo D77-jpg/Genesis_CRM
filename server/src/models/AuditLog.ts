@@ -9,6 +9,7 @@ import './tenant-setup';
 import { Schema, model, Types, type HydratedDocument } from 'mongoose';
 
 export const AUDIT_ACTIONS = [
+  'oauth.client.created', 'oauth.client.updated', 'oauth.client.rotated', 'oauth.consent.approved', 'oauth.consent.denied', 'oauth.grant.revoked', 'oauth.token.revoked', 'oauth.token.reused',
   'integration.webhook.saved','integration.webhook.rotated','integration.webhook.retried',
   'integration.credential.create',
   'integration.credential.rotate',

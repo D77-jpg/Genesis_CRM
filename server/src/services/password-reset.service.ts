@@ -84,7 +84,7 @@ export async function resetPasswordWithToken(token: string, password: string): P
 
   await User.updateOne(
     { _id: user._id },
-    { $set: { passwordHash, failedLoginAttempts: 0 }, $unset: { lockedUntil: 1 } },
+    { $set: { passwordHash, failedLoginAttempts: 0 }, $inc: { oauthSecurityVersion: 1 }, $unset: { lockedUntil: 1 } },
   );
   await AuthSession.updateMany({ userId: user._id }, { $set: { revokedAt: now } });
   await AuthChallenge.updateMany(

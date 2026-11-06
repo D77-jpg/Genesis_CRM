@@ -2,7 +2,7 @@
 
 日期：2026-11-06
 仓库：GlobalCRM；分支：feat/globalsite-c5-oauth；代码基线：7645191037b4fa9be9096639d02ffe9f75e3c5b3。
-**状态：待用户确认的设计提案，尚未实现。本文不代表接口已上线。确认前只提交文档，不改业务代码、OpenAPI、冻结快照、依赖或数据库。**
+**状态：用户已于 2026-11-06 确认推荐方案，进入 C5 实施。GlobalSite 登录入口另补；实现完成与检查通过前不宣称已上线。**
 
 ## 1. 推荐方案与交付边界
 
@@ -19,7 +19,7 @@
 | 保持登录 | 默认不申请；用户勾选后最长 30 天，受 CRM 原会话有效期限制 | 7 天未使用或原 CRM 会话结束，需要重新登录 |
 | 运行环境 | 实现时把 CRM 的 OAuth 运行基线对齐 Node 22 的受维护补丁版本 | 保持 Express 4 / TypeScript / Mongoose 8，不升级无关依赖 |
 
-本次只设计 CRM 身份提供端。GlobalSite 登录按钮、回调、账号绑定、本地会话加密存储和撤销检查在后续 **GlobalSite 单仓任务**实现；本任务不得修改该仓库。CRM 端通过模拟服务端客户端验收，不宣称双仓登录入口已完成。
+本次实现 CRM 身份提供端。GlobalSite 登录按钮、回调、账号绑定、本地会话加密存储和撤销检查在后续 **GlobalSite 单仓任务**实现；本任务不得修改该仓库。CRM 端通过模拟服务端客户端验收，不宣称双仓登录入口已完成。
 
 业务同步、询盘写入仍只经 [Integration API 契约](integration-v1.openapi.yaml) 和 [双方对接设计](globalsite-对接设计.md)，继续使用 C2 服务凭证、scope 和显式绑定项目。C5 身份协议是额外的登录入口，不允许 OAuth 令牌替代 IntegrationCredential，不建立跨仓代码或数据库依赖。
 
@@ -90,7 +90,7 @@ sequenceDiagram
 
 ## 5. 客户端登记与生命周期
 
-首期只允许平台管理员登记官方 GlobalSite（后台页面 + 同服务的部署脚本）；普通项目管理员不能创建 OAuth 客户端冒充官方应用。各环境使用不同 client_id、secret、回调白名单。
+首期只允许平台管理员登记官方 GlobalSite（本期通过后台页面；后续脚本须复用同一服务规则）；普通项目管理员不能创建 OAuth 客户端冒充官方应用。各环境使用不同 client_id、secret、回调白名单。
 
 登记字段：client_id（服务端随机不可改）、展示名称（1–80）、运营方、隐私政策和服务条款链接、redirect_uris（1–5 个精确地址，每个 <=2048）、allowedScopes、allowedOrganizationIds 或 official-active-organizations 策略、status、登记组织、创建人、secretHash、secretVersion、createdAt/updatedAt。展示文本转义，链接只允许审核过的公开 HTTPS；首期不自动抓取头像、域声明或远程配置。
 
@@ -193,7 +193,7 @@ GlobalSite 后续必须遵守：
 | PATCH /api/oauth/clients/{clientId} | 平台管理员 + CSRF + 近期登录；字段白名单 | 更改/停用及版本，不返回 secret |
 | POST /api/oauth/clients/{clientId}/rotate-secret | 同上；graceSeconds 0..86400 | 一次性 secret 与旧密钥失效时间 |
 
-/oidc/me 是推荐 userinfo 路径，Discovery 的 userinfo_endpoint 指向它；不与现有 /api/auth/me 混用。标准身份端点不走 Integration API 的 requireServiceToken/requireScope，也不接收 X-Project-Id 来改变上下文；私有管理接口仍按 CRM 的响应规范、会话/CSRF 和角色审计。
+/oidc/me 是推荐 userinfo 路径，Discovery 的 userinfo_endpoint 指向它；不与现有 /api/auth/me 混用。标准身份端点不走 Integration API 的 requireServiceToken/requireScope，也不接收 X-Project-Id 来改变上下文；私有管理接口成功体沿用 CRM success/data 包装，错误使用 C5Error；会话/CSRF 与角色审计保持独立。
 
 max_age 只能要求更近认证，不能放宽 10 分钟安全要求；max_age=0 与 prompt=login 强制重登。prompt 参数不支持的值明确拒绝；authorization 错误仅在 client/redirect 已验证后带原 state/iss 返回。请求重复参数、超长、未知敏感参数、scope 超出登记范围均校验拒绝。协议库真实路径/元数据须在实现首步验证，与此提案不一致则先修订再冻结，不能只改实际行为。
 
@@ -238,13 +238,13 @@ Mongo 事务要求与 C3/C4 相同的副本集能力；不具备事务/唯一索
 | OIDC_SIGNING_KEYRING_PATH | 运维挂载只读、受权限保护的私钥 keyring 路径；示例仅占位，文件不入 git |
 | OIDC_ACTIVE_KEY_ID | 当前签名 kid，必须对应 keyring 内的专用 RSA 私钥 |
 | OIDC_ALLOW_LOOPBACK=false | 仅非生产精确 loopback 开发客户端例外 |
-| OIDC_RATE_LIMIT_STORE_URL | 可选共享限流服务；单进程内存降级，多副本启用前必须配置共享后端 |
+| 不新增独立限流配置 | OAuthRateBucket 使用现有 Mongo，按登记组织隔离并共享计数 |
 
 签名 RS256，建议 RSA 3072 位；只允许批准算法，拒绝 none/对称算法混淆。专用 OIDC 签名 keyring 不复用 CRM JWT_SECRET、service token、Webhook 或邮件密钥。私钥从部署 secret 文件读取，内存使用；不通过 UI 返回、日志或 Mongo payload 保存，公开 JWKS 只输出公钥。
 
 常规轮换先公布新公钥再签名，新旧 kid 并存；旧公钥至少保留 7 天，覆盖 ID Token、时钟容差与客户端 JWKS 缓存（建议 <=5 分钟）。紧急泄漏撤销相应客户端/授权并强制在线检查，不能声称删除 JWKS 就能清除所有离线缓存。issuer 变更需显式迁移身份映射与重新授权。
 
-启用缺关键配置时仅新 OAuth 端点 503、readiness 报该可选功能不可用；核心 CRM 不能被可选服务阻断。日志只报缺失项名称，不输出密钥/原始地址 query。迁移与配置准备完成后灰度官方客户端，检查成功率、invalid_grant、刷新重用、拒绝授权、限流，不记录令牌值。
+启用缺关键配置时仅新 OAuth 端点 503、C5 discovery 报该功能不可用，原有健康接口保持不变；核心 CRM 不能被可选服务阻断。日志只报缺失项名称，不输出密钥/原始地址 query。迁移与配置准备完成后灰度官方客户端，检查成功率、invalid_grant、刷新重用、拒绝授权、限流，不记录令牌值。
 
 ## 13. 安全、限流、审计与保留
 
@@ -309,3 +309,10 @@ Mongo 事务要求与 C3/C4 相同的副本集能力；不具备事务/唯一索
 - [oidc-provider 官方文档](https://github.com/panva/node-oidc-provider/blob/main/docs/README.md)：挂载与 adapter/interaction 扩展；具体版本、配置和数据库 adapter 由实施测试确定。
 
 本文为待审设计；批准后实现阶段的唯一机器契约仍为 integration-v1.openapi.yaml，双方流程与映射以 globalsite-对接设计.md 为准。发生不一致先停下报告，不按本文推测未发布接口的实际响应。
+
+
+## 实施核对（C5）
+
+用户已确认推荐方案。实际端点、字段与错误体以唯一 YAML 的 C5 部分为准；部署见 [oauth-部署.md](oauth-部署.md)。实现使用受维护 oidc-provider 9.13.3、Mongo 事务、串行 adapter 与摘要句柄；客户端外部 secret 先按哈希校验，再仅在进程内交给协议库独立的内部认证值，库中不保存外部 secret。标准协议处理由库完成，未 fork。OAuthInteraction 同时存 provider Session/Interaction 的加密 payload；新增 OAuthRateBucket 共享限流，均使用 tenant。启用前核对事务能力及所有新模型索引。每次新登录显式确认；拒绝的可选 scope 写入协议 grant 的 rejected scope，防止重复询问。未配置功能降级为 503，不影响旧系统。
+
+本期提供客户端登记管理页；登录接入方、自动关联和本站会话管理仍留给 GlobalSite 单独任务。未新增对外通用第三方注册或脚本入口。

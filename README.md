@@ -381,3 +381,8 @@ Compose 会先运行一次性的 `migrate` 服务，成功后启动 API、Worker
 ## GlobalSite C4 状态/成交通知
 
 项目“集成与连接”新增可选Webhook配置、一次性签名密钥、投递日志与手动重发，默认关闭。部署先运行server npm run migrate（010），需事务副本集；GlobalSite接收端另补后再启用，当前outcomes轮询不变。说明、签名协议、来源与一次发送语义及文件清单见 [C4 Webhook](docs/integration/C4-webhook.md)。无新增环境变量或依赖。
+
+
+### C5：GlobalSite 身份登录提供端
+
+CRM 提供授权码 + PKCE S256 / OIDC、授权确认、用户资料、刷新与吊销，以及“已授权应用”和平台“登录应用登记”页面。业务 Integration API 服务凭证与身份登录分开。默认关闭；启用需 Node >=22.12、Mongo 事务、迁移011、专用签名 keyring 与可信 HTTPS 入口。GlobalSite 登录入口另补，不按邮箱自动合并账号。详见 [OAuth 部署说明](docs/integration/oauth-部署.md) 与 [设计](docs/integration/oauth-设计.md)，机器定义以 [唯一 OpenAPI](docs/integration/integration-v1.openapi.yaml) 为准。

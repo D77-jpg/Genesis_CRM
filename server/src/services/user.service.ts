@@ -149,6 +149,7 @@ export async function updateUser(actorId: string, targetId: string, input: Updat
   if (input.displayName !== undefined) {
     target.displayName = input.displayName.trim() || target.username;
   }
+  if (input.email !== undefined || input.twoFactorEnabled !== undefined) { target.$inc('oauthSecurityVersion', 1); }
   if (input.email !== undefined) {
     const email = input.email.trim().toLowerCase() || undefined;
     if (email) {
@@ -188,7 +189,7 @@ export async function resetPassword(targetId: string, password: string): Promise
   const passwordHash = await hashPassword(password);
   const result = await User.updateOne(
     { _id: targetId },
-    { $set: { passwordHash, failedLoginAttempts: 0 }, $unset: { lockedUntil: 1 } },
+    { $set: { passwordHash, failedLoginAttempts: 0 }, $inc: { oauthSecurityVersion: 1 }, $unset: { lockedUntil: 1 } },
   );
   if (result.matchedCount === 0) throw ApiError.notFound('用户不存在');
   // A password reset must invalidate every existing browser session and pending auth challenge.
@@ -206,6 +207,7 @@ export async function setUserStatus(actorId: string, targetId: string, status: U
     await assertCanRevokeAdmin(actorId, target, '停用');
   }
 
+  if (status === 'disabled') target.$inc('oauthSecurityVersion', 1);
   target.status = status;
   await target.save({ validateBeforeSave: false });
   if (status === 'disabled') {

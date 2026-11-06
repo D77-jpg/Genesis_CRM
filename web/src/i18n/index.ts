@@ -1,3 +1,4 @@
+import {oauthZh,oauthEn} from './oauth';
 import {webhookZh,webhookEn} from './webhooks';
 import {inquiryZh,inquiryEn} from './inquiries';
 import { integrationsZh, integrationsEn } from './integrations';
@@ -16,6 +17,7 @@ import { AUTO_PHRASES, AUTO_TRANSLATIONS } from './auto-translations';
 export type Language = 'zh' | 'en';
 
 const zh = {
+  ...oauthZh,
   ...webhookZh,
   ...integrationsZh,
   ...inquiryZh,
@@ -321,6 +323,7 @@ const zh = {
 export type TranslationKey = keyof typeof zh;
 
 const en: Record<TranslationKey, string> = {
+  ...oauthEn,
   ...webhookEn,
   ...integrationsEn,
   ...inquiryEn,
