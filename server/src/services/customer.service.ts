@@ -97,7 +97,8 @@ export function buildCustomerFilter(query: ListCustomersQuery): FilterQuery<ICus
   }
   // 业务来源筛选：'all' / 空 = 不限；其余精确匹配（兼容 Excel 导入的自定义来源）
   if (query.leadSource && query.leadSource !== 'all') {
-    filter.leadSource = query.leadSource.trim();
+    if (query.leadSource === 'globalsite') { const and=(filter.$and??[]) as Record<string, unknown>[]; filter.$and=[...and,{$or:[{leadSource:'globalsite'},{globalSiteSource:true}]}]; }
+    else filter.leadSource = query.leadSource.trim();
   }
   // 优先级筛选：'all' = 不限
   if (query.priority && query.priority !== 'all') {

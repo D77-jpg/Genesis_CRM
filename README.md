@@ -372,3 +372,7 @@ Compose 会先运行一次性的 `migrate` 服务，成功后启动 API、Worker
 - 安全问题：`support@genesisgroup.cn`，标题请注明 `[GlobalCRM Security]`
 
 如果这个项目对你的团队有帮助，欢迎 Star、提交 Issue 或参与改进。
+
+## GlobalSite J1 / C3 对接
+
+已新增服务凭证询盘写入、客户来源筛选、站内负责人提醒、异步私有附件与待审核回复草稿。接口/权限/幂等以 docs/integration/integration-v1.openapi.yaml 为准；部署迁移、可选附件来源配置及限制见 [J1 / C3 说明](docs/integration/J1-C3-询盘写入.md)。GlobalSite 使用独立数据库，仅通过 Integration API 通信。

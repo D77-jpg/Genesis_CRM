@@ -31,8 +31,16 @@ const routes = {
 const has = (object, key) => Object.hasOwn(object, key);
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']);
 
+const c3Bytes=readFileSync("docs/integration/snapshots/globalsite-c3.json","utf8");
+assert.equal(createHash("sha256").update(c3Bytes.replace(/\r\n/g,"\n")).digest("hex"),"3879f370c506772e82274bdce5507eab1cce5964e56f98c3e74c1b6175d42062","C3 frozen snapshot drift");
+const c3=JSON.parse(c3Bytes);
 function validate(document) {
   document = structuredClone(document);
+  if(document["x-globalsite-c3"]){
+    assert.deepEqual(document["x-globalsite-c3"],c3.metadata,"C3 metadata frozen"); delete document["x-globalsite-c3"];
+    for(const [p,v]of Object.entries(c3.paths)){assert.deepEqual(document.paths[p],v,"C3 operation frozen: "+p);delete document.paths[p];}
+    for(const [n,v]of Object.entries(c3.schemas)){assert.deepEqual(document.components.schemas[n],v,"C3 schema frozen: "+n);delete document.components.schemas[n];}
+  }
 if(document['x-globalsite-c2']) {
  assert.deepEqual(document['x-globalsite-c2'],{status:'stable',implemented:true,task:'C2-credentials',reservedScope:'inquiries:write',description:'私有管理API使用CRM用户会话；inquiries:write按用户确认预选并标记待开放，不代表询盘端点已实现。'});
  delete document['x-globalsite-c2'];
@@ -130,6 +138,11 @@ validate(frozen);
 const result = validate(candidate);
 assert.equal(result.draftCount, 6, 'S1 must include all six reviewed draft operations');
 const cases = [
+ ['C3 auth removed',d=>{d.paths['/inquiries'].post.security=[]}],
+ ['C3 scope widened',d=>{d.paths['/inquiries'].post['x-required-scope']='products:read'}],
+ ['C3 payload limit widened',d=>{d.components.schemas.GlobalSiteC3Input.properties.message.maxLength=999999}],
+ ['C3 metadata removed',d=>{delete d['x-globalsite-c3']}],
+ ['C3 private draft anonymous',d=>{d.paths['/globalsite-inquiries/{inquiryId}/reply-draft'].post.security=[]}],
  ['C2 auth removed',d=>{d.paths['/credentials'].post.security=[]}],
  ['C2 role widened',d=>{d.paths['/settings'].get['x-required-roles'].push('user')}],
  ['C2 servers changed',d=>{d.paths['/credentials'].get.servers=[]}],

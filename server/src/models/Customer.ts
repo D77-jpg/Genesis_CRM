@@ -17,6 +17,10 @@ import {
 } from '../constants';
 
 export interface ICustomer {
+  globalSiteSource?:boolean;
+  globalSiteLastInquiryAt?:Date;
+  globalSiteLastSiteName?:string;
+  globalSiteLastPageUrl?:string;
   /** 所属项目空间 */
   projectId: Types.ObjectId;
   /** 姓名 / 联系人（必填） */
@@ -178,6 +182,10 @@ const CustomerSchema = new Schema<ICustomer, CustomerModel, ICustomerMethods>(
       enum: { values: CUSTOMER_SOURCE, message: '客户来源取值非法' },
       default: 'manual',
     },
+    globalSiteSource: { type: Boolean, index: true },
+    globalSiteLastInquiryAt: Date,
+    globalSiteLastSiteName: String,
+    globalSiteLastPageUrl: String,
     // 业务来源：自由字符串（兼容历史自定义值），不设 enum
     leadSource: { type: String, trim: true, maxlength: 120 },
     priority: {

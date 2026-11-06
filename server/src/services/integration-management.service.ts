@@ -38,7 +38,7 @@ export async function credentialDto(credential: IntegrationCredentialDocument) {
 }
 export async function managementSettings(actor: AuthUser) {
   const s = await managementScope(actor);
-  return { scopes: INTEGRATION_SCOPES.map(name => ({ name, available: name !== 'inquiries:write' })),
+  return { scopes: INTEGRATION_SCOPES.map(name => ({ name, available: true })),
     globalsitePreset: GLOBALSITE_PRESET, quota: await credentialQuota(String(s.projectId), String(s.organizationId)) };
 }
 export async function listManagedCredentials(actor: AuthUser, page: number, limit: number) {

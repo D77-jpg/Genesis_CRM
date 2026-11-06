@@ -1,3 +1,4 @@
+import {GlobalSiteNotifications} from '@/components/customers/globalsite-inquiries';
 /**
  * Top bar — a compact utility strip. Page titles live in the content area;
  * this bar holds project context, global customer search and quick tools.
@@ -153,6 +154,7 @@ export function Header({ onOpenMobileNav, sidebarCollapsed, onToggleSidebar }: H
           <TooltipContent side="bottom">{t('header.scratchpad')} · Ctrl/Cmd + Shift + M</TooltipContent>
         </Tooltip>
 
+        <GlobalSiteNotifications />
         <LanguageToggle />
         <ThemeToggle />
         <UserMenu />

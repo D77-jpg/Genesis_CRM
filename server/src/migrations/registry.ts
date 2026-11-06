@@ -1,3 +1,4 @@
+import {globalSiteInquiryMigration} from './009-globalsite-inquiries';
 import { defaultOrganizationMigration } from './001-default-organization';
 import { bootstrapProjectsMigration } from './002-bootstrap-projects';
 import { bootstrapAdminMigration } from './003-bootstrap-admin';
@@ -18,4 +19,5 @@ export const migrations: Migration[] = [
   legacyQuotationVersionMigration,
   indexSynchronizationMigration,
   backfillLetterOrganizationMigration,
+  globalSiteInquiryMigration,
 ];

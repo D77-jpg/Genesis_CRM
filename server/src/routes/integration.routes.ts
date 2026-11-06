@@ -1,3 +1,4 @@
+import {installInquiryRoute} from './integration-inquiry.routes';
 import { installIntegrationReadRoutes } from './integration-read.routes';
 import { integrationCredentialLimit } from '../middleware/integration-limit.middleware';
 /**
@@ -41,6 +42,7 @@ const router = Router();
 router.use(integrationAuditLog, requireServiceToken, requireIntegrationProject);
 
 installIntegrationReadRoutes(router);
+installInquiryRoute(router);
 router.get('/health', integrationCredentialLimit, healthHandler);
 
 router.post(

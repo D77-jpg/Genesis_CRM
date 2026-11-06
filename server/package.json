@@ -37,7 +37,7 @@
     "test:e2e": "node --require ./tests/os-user-info.cjs --import tsx --test tests/p3-main-flow.test.ts",
     "load": "node --import tsx scripts/load-test.ts",
     "test:health": "node --require ./tests/os-user-info.cjs --import tsx --test tests/health-readiness.test.ts",
-    "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts tests/integration-read.test.ts tests/integration-credentials.test.ts",
+    "test:integration": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration.test.ts tests/integration-read.test.ts tests/integration-credentials.test.ts tests/integration-inquiries.test.ts",
     "integration:credential": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-credential.ts",
     "test:fixture": "node tests/start-fixture.cjs",
     "eval:knowledge:validate": "node --require ./tests/os-user-info.cjs --import tsx evaluation/knowledge/schema.ts",
@@ -59,7 +59,10 @@
     "test:website-research": "node --require ./tests/os-user-info.cjs --import tsx --test tests/website-public-web.test.ts tests/website-research.test.ts",
     "dev:workspace": "node --require ./scripts/os-user-info.cjs --import tsx src/local-workspace.ts",
     "integration:public": "node --require ./scripts/os-user-info.cjs --import tsx src/scripts/integration-public.ts",
-    "test:credentials-ui": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration-credentials-ui.test.ts"
+    "test:credentials-ui": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/integration-credentials-ui.test.ts",
+    "test:inquiries": "node --require ./tests/os-user-info.cjs --import tsx --test tests/integration-inquiries.test.ts",
+    "test:inquiries-ui": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/integration-inquiries-ui.test.ts",
+    "test:fixture:j1": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx tests/start-j1-fixture.ts"
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "^1.0.0",

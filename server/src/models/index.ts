@@ -168,3 +168,5 @@ export type {
   OutreachAutomationConfigDocument,
   OutreachAutomationEnrollmentDocument,
 } from './OutreachAutomation';
+
+export {IntegrationInquiry,IntegrationInquiryAttachment,IntegrationInquiryLock} from './IntegrationInquiry';

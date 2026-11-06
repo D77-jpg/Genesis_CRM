@@ -1,0 +1,1202 @@
+{
+  "paths": {
+    "/inquiries": {
+      "post": {
+        "operationId": "createGlobalSiteInquiry",
+        "summary": "接收 GlobalSite 询盘并关联待开发客户",
+        "description": "先归档并事务保存客户、附件任务和站内负责人通知，再返回201；重放保留首次结果。来源globalsite。只补空字段，不覆盖负责人/阶段或既有外部引用。按邮箱匹配，企业域名唯一匹配时可合并；公共邮箱/歧义不按域名合并。嵌套载荷严格校验；签名附件URL不参与业务内容散列；首次地址供后台下载，重放不刷新地址，过期会显示附件失败；其他业务内容改变返回409。附件失败不撤销询盘。返回相对CRM前端地址。",
+        "security": [
+          {
+            "serviceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "x-status": "stable",
+        "x-required-scope": "inquiries:write",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GlobalSiteC3Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "首次成功或同业务询盘重放；项目和组织隔离",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC3Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Field validation failed (existing CRM middleware)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Rejected safely; errors use existing ErrorResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/globalsite-inquiries": {
+      "get": {
+        "operationId": "listGlobalSiteInquiries",
+        "summary": "listGlobalSiteInquiries",
+        "servers": [
+          {
+            "url": "/api"
+          }
+        ],
+        "security": [
+          {
+            "GlobalSiteC2UserBearer": []
+          },
+          {
+            "GlobalSiteC2Session": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "x-required-roles": [
+          "admin",
+          "project_admin",
+          "user",
+          "viewer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized CRM user response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC3List"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User session required"
+          },
+          "403": {
+            "description": "Read-only accounts cannot write"
+          },
+          "404": {
+            "description": "Not accessible in this project/customer"
+          },
+          "422": {
+            "description": "Field validation failed (existing CRM middleware)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/globalsite-inquiries/notifications": {
+      "get": {
+        "operationId": "globalSiteInquiryNotifications",
+        "summary": "globalSiteInquiryNotifications",
+        "servers": [
+          {
+            "url": "/api"
+          }
+        ],
+        "security": [
+          {
+            "GlobalSiteC2UserBearer": []
+          },
+          {
+            "GlobalSiteC2Session": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "x-required-roles": [
+          "admin",
+          "project_admin",
+          "user",
+          "viewer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized CRM user response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC3Notices"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User session required"
+          },
+          "403": {
+            "description": "Read-only accounts cannot write"
+          },
+          "404": {
+            "description": "Not accessible in this project/customer"
+          },
+          "422": {
+            "description": "Field validation failed (existing CRM middleware)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/globalsite-inquiries/{inquiryId}/read": {
+      "post": {
+        "operationId": "markGlobalSiteInquiryRead",
+        "summary": "markGlobalSiteInquiryRead",
+        "servers": [
+          {
+            "url": "/api"
+          }
+        ],
+        "security": [
+          {
+            "GlobalSiteC2UserBearer": []
+          },
+          {
+            "GlobalSiteC2Session": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "inquiryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/GlobalSiteC2Csrf"
+          }
+        ],
+        "x-required-roles": [
+          "admin",
+          "project_admin",
+          "user"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorized CRM user response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "read": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "read"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User session required"
+          },
+          "403": {
+            "description": "Read-only accounts cannot write"
+          },
+          "404": {
+            "description": "Not accessible in this project/customer"
+          },
+          "422": {
+            "description": "Field validation failed (existing CRM middleware)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/globalsite-inquiries/{inquiryId}/reply-draft": {
+      "post": {
+        "operationId": "draftGlobalSiteInquiryReply",
+        "summary": "draftGlobalSiteInquiryReply",
+        "servers": [
+          {
+            "url": "/api"
+          }
+        ],
+        "security": [
+          {
+            "GlobalSiteC2UserBearer": []
+          },
+          {
+            "GlobalSiteC2Session": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "inquiryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/GlobalSiteC2Csrf"
+          }
+        ],
+        "x-required-roles": [
+          "admin",
+          "project_admin",
+          "user"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorized CRM user response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSiteC3DraftResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User session required"
+          },
+          "403": {
+            "description": "Read-only accounts cannot write"
+          },
+          "404": {
+            "description": "Not accessible in this project/customer"
+          },
+          "422": {
+            "description": "Field validation failed (existing CRM middleware)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/globalsite-inquiries/{inquiryId}/attachments/{attachmentId}": {
+      "get": {
+        "operationId": "downloadGlobalSiteInquiryAttachment",
+        "summary": "downloadGlobalSiteInquiryAttachment",
+        "servers": [
+          {
+            "url": "/api"
+          }
+        ],
+        "security": [
+          {
+            "GlobalSiteC2UserBearer": []
+          },
+          {
+            "GlobalSiteC2Session": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "inquiryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "x-required-roles": [
+          "admin",
+          "project_admin",
+          "user",
+          "viewer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Private forced attachment download",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Attachment unavailable or unauthorized"
+          },
+          "422": {
+            "description": "Field validation failed (existing CRM middleware)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "GlobalSiteC3Product": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "globalSiteProductId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        },
+        "crmProductId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$",
+          "nullable": true
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "globalSiteProductId",
+        "crmProductId",
+        "name"
+      ]
+    },
+    "GlobalSiteC3Attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        },
+        "fileName": {
+          "type": "string",
+          "maxLength": 160,
+          "minLength": 1
+        },
+        "downloadUrl": {
+          "type": "string",
+          "maxLength": 2000,
+          "format": "uri"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mime": {
+          "type": "string",
+          "enum": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "application/pdf"
+          ]
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2097152
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "fileName",
+        "downloadUrl",
+        "expiresAt",
+        "mime",
+        "bytes",
+        "sha256"
+      ]
+    },
+    "GlobalSiteC3Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pageUrl": {
+          "type": "string",
+          "maxLength": 2000,
+          "format": "uri"
+        },
+        "referrer": {
+          "type": "string",
+          "maxLength": 2000,
+          "format": "uri",
+          "nullable": true
+        },
+        "utm": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "type": "string",
+              "maxLength": 200,
+              "nullable": true
+            },
+            "medium": {
+              "type": "string",
+              "maxLength": 200,
+              "nullable": true
+            },
+            "campaign": {
+              "type": "string",
+              "maxLength": 200,
+              "nullable": true
+            },
+            "term": {
+              "type": "string",
+              "maxLength": 200,
+              "nullable": true
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 200,
+              "nullable": true
+            }
+          },
+          "required": [
+            "source",
+            "medium",
+            "campaign",
+            "term",
+            "content"
+          ]
+        },
+        "device": {
+          "type": "string",
+          "enum": [
+            "desktop",
+            "mobile",
+            "tablet",
+            "unknown"
+          ]
+        },
+        "firstVisitAt": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        }
+      },
+      "required": [
+        "pageUrl",
+        "referrer",
+        "utm",
+        "device",
+        "firstVisitAt"
+      ]
+    },
+    "GlobalSiteC3Input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "enum": [
+            "1.0"
+          ]
+        },
+        "sourceSystem": {
+          "type": "string",
+          "enum": [
+            "globalsite"
+          ]
+        },
+        "externalInquiryId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        },
+        "site": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contact": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "email": {
+              "type": "string",
+              "maxLength": 200,
+              "format": "email"
+            },
+            "phone": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "company": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "country": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "required": [
+            "name",
+            "email",
+            "phone",
+            "company",
+            "country"
+          ]
+        },
+        "products": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/components/schemas/GlobalSiteC3Product"
+          }
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000,
+          "nullable": true
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 8000,
+          "minLength": 1
+        },
+        "attachments": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/components/schemas/GlobalSiteC3Attachment"
+          }
+        },
+        "source": {
+          "$ref": "#/components/schemas/GlobalSiteC3Source"
+        },
+        "spamScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "sourceSystem",
+        "externalInquiryId",
+        "site",
+        "submittedAt",
+        "contact",
+        "products",
+        "quantity",
+        "message",
+        "attachments",
+        "source",
+        "spamScore"
+      ]
+    },
+    "GlobalSiteC3Result": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inquiryId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "customerId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "prospectId": {
+          "type": "string",
+          "nullable": true,
+          "enum": [
+            null
+          ]
+        },
+        "customerUrl": {
+          "type": "string",
+          "pattern": "^/customers/[a-f0-9]{24}$"
+        },
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "created",
+            "linked"
+          ]
+        },
+        "attachmentStatus": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "none"
+          ]
+        },
+        "sourceSystem": {
+          "type": "string",
+          "enum": [
+            "globalsite"
+          ]
+        }
+      },
+      "required": [
+        "inquiryId",
+        "customerId",
+        "prospectId",
+        "customerUrl",
+        "projectId",
+        "action",
+        "attachmentStatus",
+        "sourceSystem"
+      ]
+    },
+    "GlobalSiteC3Draft": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "letterId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "customerId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft"
+          ]
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "letterId",
+        "customerId",
+        "status",
+        "url"
+      ]
+    },
+    "GlobalSiteC3PrivateInquiry": {
+      "type": "object",
+      "description": "Tenant/project/customer-authorized view; signed download addresses are never returned.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "customerId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "externalInquiryId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "site": {
+          "type": "object"
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contact": {
+          "type": "object"
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/GlobalSiteC3Product"
+          }
+        },
+        "quantity": {
+          "type": "integer",
+          "nullable": true
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 8000
+        },
+        "source": {
+          "$ref": "#/components/schemas/GlobalSiteC3Source"
+        },
+        "spamScore": {
+          "type": "integer"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "fileName": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "mime": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "bytes": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "stored",
+                  "failed"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 300,
+                "nullable": true
+              },
+              "errorCode": {
+                "type": "string",
+                "maxLength": 80,
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "fileName",
+              "mime",
+              "bytes",
+              "status",
+              "url",
+              "errorCode"
+            ]
+          }
+        },
+        "read": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "customerId",
+        "externalInquiryId",
+        "site",
+        "submittedAt",
+        "contact",
+        "products",
+        "quantity",
+        "message",
+        "source",
+        "spamScore",
+        "attachments",
+        "read"
+      ]
+    },
+    "GlobalSiteC3Response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "$ref": "#/components/schemas/GlobalSiteC3Result"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "GlobalSiteC3List": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/GlobalSiteC3PrivateInquiry"
+              }
+            },
+            "hasMore": {
+              "type": "boolean"
+            },
+            "nextCursor": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$",
+              "nullable": true
+            }
+          },
+          "required": [
+            "items",
+            "hasMore",
+            "nextCursor"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "GlobalSiteC3DraftResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "$ref": "#/components/schemas/GlobalSiteC3Draft"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "GlobalSiteC3Notices": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$"
+                  },
+                  "customerId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{24}$"
+                  },
+                  "url": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "siteName": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "submittedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "customerId",
+                  "url",
+                  "siteName",
+                  "submittedAt"
+                ]
+              }
+            },
+            "count": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "items",
+            "count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  "metadata": {
+    "status": "stable",
+    "implemented": true,
+    "task": "J1-C3",
+    "description": "POST /inquiries is implemented; S1 /globalsite/inquiries remains an unimplemented historical draft. C2 inquiries:write is now available. Private helper operations use /api and CRM user authentication."
+  }
+}

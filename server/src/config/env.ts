@@ -16,6 +16,8 @@ const booleanish = z
   .transform((v) => ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase()));
 
 export const envSchema = z.object({
+  GLOBALSITE_ATTACHMENT_ORIGINS: z.string().default(''),
+  GLOBALSITE_ALLOW_LOCAL: booleanish.default(false),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   /** Deployment environment. NODE_ENV controls Node/runtime behavior; APP_ENV names dev/staging/prod. */
   APP_ENV: z.enum(['development', 'staging', 'production']).optional(),

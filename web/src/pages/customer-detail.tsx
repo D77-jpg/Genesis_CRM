@@ -1,3 +1,4 @@
+import {GlobalSiteInquiries} from '@/components/customers/globalsite-inquiries';
 import {PendingDrafts} from '@/components/letters/pending-drafts';
 import { OutreachSequenceDialog } from '@/components/customers/outreach-sequence-dialog';
 import { DraftCleanupDialog } from '@/components/customers/draft-cleanup-dialog';
@@ -1044,6 +1045,7 @@ export function CustomerDetailPage(): React.JSX.Element {
 
       {/* ---------------------------- 跟进记录 / 客户动态 ---------------------------- */}
 
+      <GlobalSiteInquiries customerId={customer.id} onDraft={()=>{void reloadLetters();void refreshDrafts();}} />
       <CustomerActivity customerId={customer.id} onCustomerChanged={() => void reloadCustomer()} />
 
       {/* ---------------------------- 报价单 ---------------------------- */}
