@@ -376,3 +376,8 @@ Compose 会先运行一次性的 `migrate` 服务，成功后启动 API、Worker
 ## GlobalSite J1 / C3 对接
 
 已新增服务凭证询盘写入、客户来源筛选、站内负责人提醒、异步私有附件与待审核回复草稿。接口/权限/幂等以 docs/integration/integration-v1.openapi.yaml 为准；部署迁移、可选附件来源配置及限制见 [J1 / C3 说明](docs/integration/J1-C3-询盘写入.md)。GlobalSite 使用独立数据库，仅通过 Integration API 通信。
+
+
+## GlobalSite C4 状态/成交通知
+
+项目“集成与连接”新增可选Webhook配置、一次性签名密钥、投递日志与手动重发，默认关闭。部署先运行server npm run migrate（010），需事务副本集；GlobalSite接收端另补后再启用，当前outcomes轮询不变。说明、签名协议、来源与一次发送语义及文件清单见 [C4 Webhook](docs/integration/C4-webhook.md)。无新增环境变量或依赖。

@@ -14,3 +14,9 @@
 - J1/C3 新建 POST /inquiries，唯一业务询盘键和 IntegrationIdempotency 双重保护；先事务存档及站内通知，再异步拉附件。项目/组织/客户归属同时检查，不覆盖人工负责人/阶段/其他外部引用。新模型使用 tenant，新增索引迁移009。
 - 询盘原文与临时附件URL加密；URL不进入日志或私有DTO。下载仅允许配置的精确源、固定DNS/IP、校验大小/MIME/SHA256且禁重定向。GLOBALSITE_ALLOW_LOCAL 仅允许非生产显式loopback联调；不能开放任意内网。
 - 回复通过CRM用户权限、EmailSuppression与既有sendLetter(saveAsDraft:true)生成待审稿，不自动发送；单条询盘固定草稿幂等键。站内负责人提醒持久化，同步显示至顶栏。
+
+- C4 Webhook为CRM单仓任务，GlobalSite只读且接收端另补；项目级配置默认关闭，无新增service scope。旧outcomes、C1/C2/C3快照不变，C4单独冻结。
+- Webhook仅C3询盘关联的globalsite客户；客户级结果不可冒充精确询盘归因。quotation.sent仅首次标记sent，内部globalSiteSentAt同报价写入、不进旧DTO、不回填历史。
+- 签名为原始body字节HMAC(timestamp+句点+body)，±300秒且接收端持久eventId去重；密钥仅首次/轮换一次性返回，禁止存浏览器/日志/截图。配置变更取消旧generation，不能改投旧事件。
+- Webhook只允许公开HTTPS，全部DNS IPv4检查并固定、禁重定向，绝无GLOBALSITE_ALLOW_LOCAL例外。发送前复查项目/客户/询盘，Worker组织恢复/租约围栏不可省略。
+- 新模型与索引迁移010；源码扫描页事务落盘/推进、多询盘分批、未知结果原ID重试，含崩溃最多8次预算；配置/重发复查当前项目管理员权限并事务审计。修改集成页运行credentials-ui、webhooks-ui。

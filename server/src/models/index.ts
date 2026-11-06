@@ -170,3 +170,5 @@ export type {
 } from './OutreachAutomation';
 
 export {IntegrationInquiry,IntegrationInquiryAttachment,IntegrationInquiryLock} from './IntegrationInquiry';
+
+export {IntegrationWebhook,IntegrationWebhookEvent,IntegrationWebhookAttempt} from './IntegrationWebhook';

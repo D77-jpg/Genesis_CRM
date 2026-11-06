@@ -14,6 +14,8 @@ assert.equal(createHash('sha256').update(frozenBytes).digest('hex'), frozenSha,
 const parse = (text) => yaml.load(text, { schema: yaml.JSON_SCHEMA });
 const frozen = parse(frozenBytes.toString('utf8'));
 const candidate = parse(readFileSync(contractPath, 'utf8'));
+// All approved additions, including callback bodies, must resolve before projection.
+(function walk(v){if(!v||typeof v!=='object')return;if(v.$ref){assert(v.$ref.startsWith('#/'),'Local contract reference required');let target=candidate;for(const k of v.$ref.slice(2).split('/'))target=target?.[k.replace(/~1/g,'/').replace(/~0/g,'~')];assert(target,'Unresolved approved reference: '+v.$ref);}for(const child of Object.values(v))walk(child);})(candidate);
 const c1Bytes = readFileSync('docs/integration/snapshots/globalsite-c1.json');
 assert.equal(createHash('sha256').update(c1Bytes.toString('utf8').replace(/\r\n/g, '\n')).digest('hex'), '53b8132d3a7fcd354f38b71787fd439ba05895e9aec2da39a78816e371b2f4cd', 'C1 frozen snapshot drift');
 const c1 = JSON.parse(c1Bytes);
@@ -34,8 +36,13 @@ const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'optio
 const c3Bytes=readFileSync("docs/integration/snapshots/globalsite-c3.json","utf8");
 assert.equal(createHash("sha256").update(c3Bytes.replace(/\r\n/g,"\n")).digest("hex"),"3879f370c506772e82274bdce5507eab1cce5964e56f98c3e74c1b6175d42062","C3 frozen snapshot drift");
 const c3=JSON.parse(c3Bytes);
+const c4Bytes=readFileSync("docs/integration/snapshots/globalsite-c4.json","utf8").replace(/\r\n/g,"\n");
+assert.equal(createHash("sha256").update(c4Bytes).digest("hex"),"55ca41bc5e9e790ec329890a33433f64671d47e4c4a7364cc34bbd9abfb7be58","C4 frozen snapshot drift");
+const c4=JSON.parse(c4Bytes);
 function validate(document) {
   document = structuredClone(document);
+  if(document["x-globalsite-c4"]){assert.deepEqual(document["x-globalsite-c4"],c4.metadata,"C4 metadata frozen");delete document["x-globalsite-c4"];for(const [n,v]of Object.entries(c4.securitySchemes)){assert.deepEqual(document.components.securitySchemes[n],v,"C4 signature auth frozen");delete document.components.securitySchemes[n];}for(const [p,v]of Object.entries(c4.paths)){assert.deepEqual(document.paths[p],v,"C4 operation frozen: "+p);delete document.paths[p];}for(const [n,v]of Object.entries(c4.schemas)){assert.deepEqual(document.components.schemas[n],v,"C4 schema frozen: "+n);delete document.components.schemas[n];}}
+
   if(document["x-globalsite-c3"]){
     assert.deepEqual(document["x-globalsite-c3"],c3.metadata,"C3 metadata frozen"); delete document["x-globalsite-c3"];
     for(const [p,v]of Object.entries(c3.paths)){assert.deepEqual(document.paths[p],v,"C3 operation frozen: "+p);delete document.paths[p];}
@@ -138,6 +145,11 @@ validate(frozen);
 const result = validate(candidate);
 assert.equal(result.draftCount, 6, 'S1 must include all six reviewed draft operations');
 const cases = [
+ ["C4 callback anonymous",d=>{d.paths["/webhook"].put.callbacks.globalSiteEvent["{$request.body#/targetUrl}"].post.security=[]}],
+ ["C4 auth removed",d=>{d.paths["/webhook"].put.security=[]}],
+ ["C4 callback signature removed",d=>{d.paths["/webhook"].put.callbacks.globalSiteEvent["{$request.body#/targetUrl}"].post.parameters=[]}],
+ ["C4 event schema changed",d=>{d.components.schemas.GlobalSiteC4Event.required=[]}],
+ ["C4 snapshot metadata removed",d=>{delete d["x-globalsite-c4"]}],
  ['C3 auth removed',d=>{d.paths['/inquiries'].post.security=[]}],
  ['C3 scope widened',d=>{d.paths['/inquiries'].post['x-required-scope']='products:read'}],
  ['C3 payload limit widened',d=>{d.components.schemas.GlobalSiteC3Input.properties.message.maxLength=999999}],

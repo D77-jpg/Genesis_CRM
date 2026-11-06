@@ -65,3 +65,10 @@
 - Six private management operations use CRM user session/JWT, explicit project binding and admin/project_admin role. Service tokens cannot manage credentials.
 - Existing base, quotation, C1 snapshots and S1 draft operations remain unchanged. Reserved inquiries:write is explicitly unavailable and does not implement its draft endpoint.
 - Rotation retains credential ID and old immediate CLI behavior by default; UI may explicitly request bounded grace. New/old token hashes are never returned by management list/logs.
+
+
+## GlobalSite C4 additive freeze (2026-11-06)
+
+- Snapshot: snapshots/globalsite-c4.json. Digest and deep-equality enforced by scripts/check-integration-contract.cjs; existing legacy/C1/C2/C3 snapshots unchanged.
+- Six private project-admin operations and signed outbound callback; CRM user session+CSRF/project binding, no new service scope. Stable payload ID, timestamp HMAC and receiver dedupe required.
+- GlobalSite receiver is a separate task. Existing GET /outcomes remains unchanged and available for polling.

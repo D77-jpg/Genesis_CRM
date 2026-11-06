@@ -1,3 +1,4 @@
+import {globalSiteWebhookMigration} from './010-globalsite-webhooks';
 import {globalSiteInquiryMigration} from './009-globalsite-inquiries';
 import { defaultOrganizationMigration } from './001-default-organization';
 import { bootstrapProjectsMigration } from './002-bootstrap-projects';
@@ -20,4 +21,5 @@ export const migrations: Migration[] = [
   indexSynchronizationMigration,
   backfillLetterOrganizationMigration,
   globalSiteInquiryMigration,
+  globalSiteWebhookMigration,
 ];

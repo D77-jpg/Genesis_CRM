@@ -43,6 +43,7 @@ export interface IQuotationProposalTrace {
 }
 
 export interface IQuotation {
+  globalSiteSentAt?: Date;
   projectId: Types.ObjectId;
   /** 报价单编号（唯一） */
   quotationNo: string;
@@ -210,6 +211,7 @@ const QuotationSchema = new Schema<IQuotation>(
       index: true,
     },
     version: { type: Number, default: 1, min: 1 },
+    globalSiteSentAt: {type: Date, select: false},
     proposalTrace: { type: ProposalTraceSchema },
     integrationIdempotencyKey: { type: String, maxlength: 64, select: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },

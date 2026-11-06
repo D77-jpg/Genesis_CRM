@@ -1,5 +1,5 @@
 # GlobalSite ↔ GlobalCRM 对接设计（唯一契约之一）
-日期 2026-11-04；状态 **S1 草案，C1–C4 尚未实现**。唯一机器契约为同目录 [integration-v1.openapi.yaml](integration-v1.openapi.yaml)；本文解释流程/映射/状态，不覆盖 YAML 字段约束；遇冲突先暂停报告。已有报价扩展仍由 quotation-draft-v1.1.openapi.yaml 管理，本任务不修改它。
+日期 2026-11-06；当前 C1–C4 已实现（GlobalSite Webhook 接收端另补）。前述S1设计章节保留为历史记录；后附C1/C2/J1/C4修订优先。唯一机器契约为同目录 [integration-v1.openapi.yaml](integration-v1.openapi.yaml)；本文解释流程/映射/状态，不覆盖 YAML 字段约束；遇冲突先暂停报告。已有报价扩展仍由 quotation-draft-v1.1.openapi.yaml 管理，本任务不修改它。
 核对基线：GlobalCRM origin/main b99b67c（开工时本地 f4f6525，切到最新主线再编辑）；已读 routes/integration.routes.ts、controller、validator、integration.service、credential service、Product/AgentKnowledge/IntegrationIdempotency 模型。GlobalSite 设计引用本文和 YAML，不复制定义。
 
 ## 1. 仓库边界与已知差异
@@ -12,7 +12,7 @@ GlobalSite 独立账号与 globalsite 数据库、可独立销售；CRM 仅接�
 3. 调现有 health 校验 contractVersion 1.0、项目/scopes；再调用 C1 能力端点。404/缺 scope 显示不支持，不能理解为空产品。新端点都走 integrationAuditLog → requireServiceToken → requireIntegrationProject → requireScope → handler。
 4. 拉取明确授权对外公开的产品与资料 → 本站候选 → 人工确认事实。CRM “已批准”不等于本站事实已确认。
 5. 访客询盘先存 GlobalSite；worker 调现有 customers/upsert 得 customerId，再调 C4 为该条询盘归档；两步各自持久投递/幂等键。不需要的可选同步 scope 缺失不影响本地使用。
-6. 现有 outcomes 拉 won/lost；GlobalSite 按已保存 customerId 关联到本组织询盘。CRM 不为本站新增 webhook，MVP 轮询即可。
+6. 现有 outcomes 拉 won/lost；GlobalSite 按已保存 customerId 关联到本组织询盘。S1历史决策为仅轮询；现已由下方C4授权任务新增可选Webhook，原轮询仍保留。
 7. 轮换 token 后重新 health/能力校验再恢复队列；401/403 暂停；换项目必须新连接、明确是否补推历史，不修改旧投递目的地。
 
 | 类别 | 方法与相对 /api/integrations/v1 路径 | scope | 状态 |
@@ -129,3 +129,12 @@ GlobalSite预设包含products:read/company:read/playbook:read/knowledge:read/cu
 回复入口使用CRM用户权限、EmailSuppression及既有 sendLetter(saveAsDraft:true)，仅生成可审核草稿，不触发发送。无AI配置时使用不编造价格/交期/认证的确认需求模板。客户列表按 globalsite 来源筛选；域名合并可能与档案邮箱不同，草稿收件人始终使用本条询盘邮箱。
 
 S7 每15分钟/手动拉C1产品与资料，保持空页水位；本地人工修改或已确认事实不覆盖，CRM更新进入待审核差异。产品归档只标记来源状态；本站保留数据并提示审核。询盘先在本站存档，独立持久投递/指数退避，401/403暂停连接，断连停止后续派发；重新连接同项目才恢复，换项目新建连接。每5分钟轮询已有 outcomes，按eventId去重、仅关联已保存customerId；C4 Webhook仍未实现。不得调用GS-D01中的旧状态/报价接口。
+
+
+## C4 正式修订（2026-11-06）
+
+用户当前C4为状态/成交Webhook，替代S1建议编号含义；询盘归档已由J1/C3 POST /inquiries实现，旧 /globalsite/inquiries 仍未实现。原文中“C4尚未实现Webhook”的历史说明由本节覆盖。
+
+项目管理员在原集成设置配置目标/订阅，首次生成与轮换一次性HMAC密钥。私有 /webhook* 管理API与OpenAPI callback/GlobalSiteC4*字段为唯一机器依据；不新增服务scope，旧outcomes和C1–C3端点/快照不变。来源限定C3归档且globalsite来源的客户，携带每条原externalInquiryId；客户级结果不承诺独立询盘归因。quotation.sent表示每份报价首次标记sent，不代表邮件送达。
+
+安全协议、原始字节签名/±300秒窗口/持久eventId去重、8次指数退避、配置代次取消旧队列、源事件扫描/多询盘分页、SSRF与部署迁移010详见 [C4-webhook.md](C4-webhook.md)。GlobalSite本次未修改，接收端另补；上线前保持通知关闭，现有S7继续outcomes轮询。
