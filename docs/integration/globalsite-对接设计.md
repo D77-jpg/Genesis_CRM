@@ -117,3 +117,15 @@ GlobalSite预设包含products:read/company:read/playbook:read/knowledge:read/cu
 创建/轮换只在本次响应返回明文（private,no-store），永不落库/审计/列表或浏览器持久存储。轮换保持credentialId，生成新令牌，在同一记录仅保存当前/上一个SHA256哈希和旧令牌截止时间；默认UI宽限24小时，0立即失效，最长7天。过期以服务端时钟判断，不依赖清理任务；宽限期中不再次宽限轮换，避免提前作废承诺。脚本默认0兼容既有即时轮换；吊销立即使新旧令牌全部失效。
 
 套餐每项目有效凭证默认starter=3、growth=10、enterprise=50，可通过Organization.limits.integrationCredentialsPerProject覆盖。已过期/吊销不占位；轮换同一记录不额外占位。唯一多键seatKeys索引原子占据所有绑定项目的席位，保护并发创建；已有无seatKeys凭证计入既有占用且保持可用。新建有组织项目凭证必须同组织；无组织历史项目仅保留受控旧脚本行为，后台不开放。索引部署与验证见C2交付文档。所有创建/轮换/吊销（含脚本）调用同一服务并记录不含token/hash的审计元数据。
+
+## J1 / C3 正式覆盖（2026-11-06）
+
+本次批准的询盘接口为 POST /api/integrations/v1/inquiries（inquiries:write），替代 S1 建议的 customers/upsert + /globalsite/inquiries 两步交接；旧草案不作为可调用别名。C2 的保留权限现正式可用，原有 C1/C2/legacy 契约结构保持冻结。新机器定义、可空字段及边界以 GlobalSiteC3* 为准，单独冻结 globalsite-c3.json。
+
+新增独立询盘记录，内部复用客户补空字段/邮箱查重规则；新联系人创建 pending Customer，便于直接使用既有写信、业务员归属和 outcomes，不自动转换为 Prospect。邮箱精确匹配；非公共企业域名只在唯一候选时合并，公共邮箱与歧义不猜测。已有客户负责人/阶段/外部引用不变。新客户分配项目创建者（当前活跃且同组织/有项目权限），否则项目管理员，缺有效管理员则保持未分配并提示通知；站内负责人通知与询盘同事务持久化，不自动发送营销邮件。
+
+幂等键必填，IntegrationIdempotency 保留首次结果，业务唯一键 (organizationId,projectId,sourceSystem,externalInquiryId) 跨凭证轮换/重试去重；同业务ID修改内容409。附件临时下载地址与到期时间属于运输元数据，不参与业务散列，其余内容严格一致；首次地址供后台下载，幂等重放不更新它，过期显示附件失败而不撤销询盘。附件最多3个×2MiB；异步下载、校验MIME/大小/SHA256后存CRM私有storage，失败仅标记失败；不能读取任意内网/跟随重定向。传输URL加密存储，不返回浏览器、不进日志。附件签名失效保留失败状态，原询盘不丢失。
+
+回复入口使用CRM用户权限、EmailSuppression及既有 sendLetter(saveAsDraft:true)，仅生成可审核草稿，不触发发送。无AI配置时使用不编造价格/交期/认证的确认需求模板。客户列表按 globalsite 来源筛选；域名合并可能与档案邮箱不同，草稿收件人始终使用本条询盘邮箱。
+
+S7 每15分钟/手动拉C1产品与资料，保持空页水位；本地人工修改或已确认事实不覆盖，CRM更新进入待审核差异。产品归档只标记来源状态；本站保留数据并提示审核。询盘先在本站存档，独立持久投递/指数退避，401/403暂停连接，断连停止后续派发；重新连接同项目才恢复，换项目新建连接。每5分钟轮询已有 outcomes，按eventId去重、仅关联已保存customerId；C4 Webhook仍未实现。不得调用GS-D01中的旧状态/报价接口。

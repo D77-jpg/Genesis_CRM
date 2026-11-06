@@ -67,7 +67,7 @@ const FILLABLE_FIELDS = [
   'requirementNotes',
 ] as const;
 
-function fillEmptyFields(customer: CustomerDocument, body: UpsertCustomerBody): void {
+export function fillEmptyFields(customer: CustomerDocument, body: UpsertCustomerBody): void {
   for (const field of FILLABLE_FIELDS) {
     const incoming = body[field as keyof UpsertCustomerBody];
     if (typeof incoming !== 'string' || incoming === '') continue;
@@ -95,6 +95,8 @@ function toUpsertResult(
     remoteUpdatedAt: customer.updatedAt.toISOString(),
   };
 }
+
+export function findIntegrationCustomerByEmail(projectId:string,email:string){return Customer.findOne({projectId,email});}
 
 async function findByExternalRef(
   projectId: string,
@@ -129,7 +131,7 @@ function replayFrom<T>(record: {
   };
 }
 
-async function reserveIdempotency<T>(
+export async function reserveIdempotency<T>(
   credentialId: string,
   projectId: string,
   key: string,
@@ -191,7 +193,7 @@ async function reserveIdempotency<T>(
   throw ApiError.conflict('同一 Idempotency-Key 的请求仍在处理中，请稍后重试');
 }
 
-async function completeIdempotency<T extends object>(
+export async function completeIdempotency<T extends object>(
   reservation: Extract<IdempotencyReservation<T>, { kind: 'owner' }>,
   result: T,
   statusCode: number,
@@ -210,7 +212,7 @@ async function completeIdempotency<T extends object>(
   return { result, statusCode };
 }
 
-async function abandonIdempotency(
+export async function abandonIdempotency(
   reservation: Extract<IdempotencyReservation<unknown>, { kind: 'owner' }>,
 ): Promise<void> {
   await IntegrationIdempotency.updateOne(
@@ -259,7 +261,7 @@ export async function upsertCustomer(input: {
       // 未关联：邮箱辅助判重（仅同项目）
       let customer: CustomerDocument | null = null;
       if (body.email) {
-        customer = await Customer.findOne({ projectId, email: body.email });
+        customer = await findIntegrationCustomerByEmail(projectId, body.email);
       }
 
       if (customer) {
@@ -349,7 +351,7 @@ export interface IntegrationQuotationResult {
   updatedAt: string;
 }
 
-function stableJson(value: unknown): string {
+export function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;

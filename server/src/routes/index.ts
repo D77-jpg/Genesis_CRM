@@ -1,3 +1,4 @@
+import inquiryRoutes from './integration-inquiry.routes';
 /**
  * API 路由汇总
  *   /api/health          健康检查（无需登录）
@@ -123,6 +124,7 @@ router.use('/integrations/v1', integrationRoutes);
 router.use('/organizations', organizationRoutes);
 router.use('/platform', platformRoutes);
 router.use('/projects', projectRoutes);
+router.use('/globalsite-inquiries',requireAuth,requireProject,inquiryRoutes);
 router.use('/customers', requireAuth, requireProject, customerRoutes);
 router.use('/website-research', requireAuth, requireProject, websiteResearchRoutes);
 router.use('/letters', requireAuth, requireProject, letterRoutes);

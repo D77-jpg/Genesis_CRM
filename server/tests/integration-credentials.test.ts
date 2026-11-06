@@ -41,10 +41,10 @@ test('explicit project and current organization membership are mandatory', async
   assert.equal((await f.request(`/credentials/${made.body.data.credential.id}/rotate`, { method: 'POST', body: {}, role: 'foreign', project: String(f.b._id) })).status, 404);
   const foreign = await f.request('/credentials', { role: 'foreign', project: String(f.b._id) }); assert.equal(foreign.body.data.total, 0);
 });
-test('GlobalSite preset preserves explicitly approved unavailable inquiry scope', async () => {
+test('GlobalSite preset preserves approved inquiry scope now available in C3', async () => {
   const s = await f.request('/settings'); assert.equal(s.status, 200); valid('/settings', 'get', 200, s.body);
   assert.equal(s.body.data.globalsitePreset.length, 7); assert.ok(s.body.data.globalsitePreset.includes('inquiries:write'));
-  assert.equal(s.body.data.scopes.find((v: any) => v.name === 'inquiries:write').available, false);
+  assert.equal(s.body.data.scopes.find((v: any) => v.name === 'inquiries:write').available, true);
 });
 test('create returns plaintext once with no-store; lists/database/audit never contain it', async () => {
   const r = await create(); assert.equal(r.status, 201); valid('/credentials', 'post', 201, r.body);

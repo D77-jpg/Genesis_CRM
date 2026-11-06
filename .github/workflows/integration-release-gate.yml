@@ -32,7 +32,7 @@ jobs:
       MONGODB_URI: mongodb://127.0.0.1:27017/cdlm_ci
       NODE_ENV: test
       # CI fixture 值（非真实凭证）：agent/mail 测试进程启动时 env 校验需要
-      JWT_SECRET: ci-fixture-jwt-secret-0123456789abcdef
+      JWT_SECRET: ci-fixture-jwt-secret-0123456789abcdef # gitleaks:allow -- public CI fixture, never a live credential
       ADMIN_PASSWORD: ci-fixture-password
     steps:
       - uses: actions/checkout@v4
@@ -141,6 +141,8 @@ jobs:
         env:
           C2_UI_SCREENSHOTS: ${{ runner.temp }}/c2-ui-evidence
         run: npm run test:credentials-ui --prefix ../server
+      - name: C3 inquiry management browser regression (fictional isolated data)
+        run: npm run test:inquiries-ui --prefix ../server
       - uses: actions/upload-artifact@v4
         if: always()
         with:

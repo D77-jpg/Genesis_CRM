@@ -1,3 +1,4 @@
+import {startInquiryAttachmentWorker,stopInquiryAttachmentWorker} from '../services/integration-inquiry-worker.service';
 /**
  * Background job runtime shared by the standalone worker and (for
  * single-process development) the API.
@@ -37,6 +38,7 @@ export function startBackgroundJobs(): void {
     startOutreachAutomationWorker();
     startAgentTaskWorker();
     startWebsiteResearchWorker();
+    startInquiryAttachmentWorker();
     startKnowledgeDocumentWorker();
     startKnowledgeIndexWorker();
     logger.info('后台任务已启动（邮件队列 / 收件箱 / 获客 / 自动跟进 / Agent / 知识库）');
@@ -53,6 +55,7 @@ export function stopBackgroundJobs(): void {
   stopOutreachAutomationWorker();
   stopAgentTaskWorker();
   stopWebsiteResearchWorker();
+  stopInquiryAttachmentWorker();
   stopKnowledgeDocumentWorker();
   stopKnowledgeIndexWorker();
   semanticPool.close();

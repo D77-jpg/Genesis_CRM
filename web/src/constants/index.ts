@@ -357,6 +357,7 @@ export const CUSTOMER_LEAD_SOURCE_OPTIONS: { value: string; label: string }[] =
 /** 列表「来源」筛选下拉：不限 + 各规范来源 */
 export const CUSTOMER_LEAD_SOURCE_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: '全部来源' },
+  { value: 'globalsite', label: 'GlobalSite' },
   ...CUSTOMER_LEAD_SOURCE_OPTIONS,
 ];
 

@@ -38,7 +38,7 @@ test('C2 real browser: one-time token, copy, reload, rotate, revoke, bilingual r
     await createButton.click();
     const dialog = page.getByRole('dialog');
     assert.equal(await dialog.getByRole('checkbox', { name: /逐条询盘归档/ }).isChecked(), true);
-    await dialog.getByText('逐条询盘归档尚未开放。', { exact: false }).waitFor();
+    assert.equal(await dialog.getByText('逐条询盘归档尚未开放。', { exact: false }).count(),0);
     await dialog.getByLabel('凭证名称', { exact: true }).fill('FICTIONAL Website');
     await dialog.getByRole('button', { name: '新建凭证', exact: true }).click();
     await page.getByRole('heading', { name: '保存你的连接凭证' }).waitFor();
