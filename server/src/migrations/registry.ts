@@ -1,3 +1,4 @@
+import { globalSiteOAuthMigration } from './011-globalsite-oauth';
 import {globalSiteWebhookMigration} from './010-globalsite-webhooks';
 import {globalSiteInquiryMigration} from './009-globalsite-inquiries';
 import { defaultOrganizationMigration } from './001-default-organization';
@@ -22,4 +23,5 @@ export const migrations: Migration[] = [
   backfillLetterOrganizationMigration,
   globalSiteInquiryMigration,
   globalSiteWebhookMigration,
+  globalSiteOAuthMigration,
 ];

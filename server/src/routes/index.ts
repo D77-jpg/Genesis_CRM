@@ -1,3 +1,4 @@
+import oauthRoutes from './oauth.routes';
 import inquiryRoutes from './integration-inquiry.routes';
 /**
  * API 路由汇总
@@ -61,6 +62,8 @@ import platformRoutes from './platform.routes';
 import publicRoutes from './public.routes';
 
 const router = Router();
+// Identity management has its own Cookie-only checks; no service credential fallback.
+router.use(oauthRoutes);
 
 /* ---------- 公开接口 ---------- */
 router.get('/health', healthHandler);

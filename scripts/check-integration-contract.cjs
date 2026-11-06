@@ -39,7 +39,17 @@ const c3=JSON.parse(c3Bytes);
 const c4Bytes=readFileSync("docs/integration/snapshots/globalsite-c4.json","utf8").replace(/\r\n/g,"\n");
 assert.equal(createHash("sha256").update(c4Bytes).digest("hex"),"55ca41bc5e9e790ec329890a33433f64671d47e4c4a7364cc34bbd9abfb7be58","C4 frozen snapshot drift");
 const c4=JSON.parse(c4Bytes);
+const c5Bytes=readFileSync('docs/integration/snapshots/globalsite-c5.json','utf8').replace(/\r\n/g,'\n');
+assert.equal(createHash('sha256').update(c5Bytes).digest('hex'),'35adc47dbdd5aac4f283cb93403fc41b8b184d74911032311adcdc731e5f07f5','C5 frozen snapshot drift');
+const c5=JSON.parse(c5Bytes);
 function validate(document) {
+  document=structuredClone(document);
+  if(document['x-globalsite-c5']){
+    assert.deepEqual(document['x-globalsite-c5'],c5.metadata,'C5 metadata frozen');delete document['x-globalsite-c5'];
+    for(const [p,v] of Object.entries(c5.paths)){assert.deepEqual(document.paths[p],v,'C5 operation frozen: '+p);delete document.paths[p];}
+    for(const [n,v] of Object.entries(c5.schemas)){assert.deepEqual(document.components.schemas[n],v,'C5 schema frozen: '+n);delete document.components.schemas[n];}
+    for(const [n,v] of Object.entries(c5.securitySchemes)){assert.deepEqual(document.components.securitySchemes[n],v,'C5 security frozen: '+n);delete document.components.securitySchemes[n];}
+  }
   document = structuredClone(document);
   if(document["x-globalsite-c4"]){assert.deepEqual(document["x-globalsite-c4"],c4.metadata,"C4 metadata frozen");delete document["x-globalsite-c4"];for(const [n,v]of Object.entries(c4.securitySchemes)){assert.deepEqual(document.components.securitySchemes[n],v,"C4 signature auth frozen");delete document.components.securitySchemes[n];}for(const [p,v]of Object.entries(c4.paths)){assert.deepEqual(document.paths[p],v,"C4 operation frozen: "+p);delete document.paths[p];}for(const [n,v]of Object.entries(c4.schemas)){assert.deepEqual(document.components.schemas[n],v,"C4 schema frozen: "+n);delete document.components.schemas[n];}}
 
@@ -145,6 +155,10 @@ validate(frozen);
 const result = validate(candidate);
 assert.equal(result.draftCount, 6, 'S1 must include all six reviewed draft operations');
 const cases = [
+ ['C5 PKCE weakened',d=>{d.paths['/oidc/auth'].get.parameters=[]}],
+ ['C5 userinfo auth removed',d=>{d.paths['/oidc/me'].get.security=[]}],
+ ['C5 identity data widened',d=>{d.components.schemas.C5UserInfo.additionalProperties=true}],
+ ['C5 metadata removed',d=>{delete d['x-globalsite-c5']}],
  ["C4 callback anonymous",d=>{d.paths["/webhook"].put.callbacks.globalSiteEvent["{$request.body#/targetUrl}"].post.security=[]}],
  ["C4 auth removed",d=>{d.paths["/webhook"].put.security=[]}],
  ["C4 callback signature removed",d=>{d.paths["/webhook"].put.callbacks.globalSiteEvent["{$request.body#/targetUrl}"].post.parameters=[]}],

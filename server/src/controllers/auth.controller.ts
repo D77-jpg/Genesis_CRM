@@ -46,6 +46,7 @@ async function completeLogin(req: Request, res: Response, user: AuthUser, detail
   const session = await createAuthSession(user, {
     ip: req.ip,
     userAgent: req.headers['user-agent'],
+    authenticated: true, twoFactor: detail.twoFactor === true,
   });
   const access = signToken(user, session.sessionId);
   setAuthCookies(res, {

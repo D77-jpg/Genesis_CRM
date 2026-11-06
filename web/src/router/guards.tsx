@@ -66,7 +66,7 @@ export function ProtectedRoute(): React.JSX.Element {
 
   // Organization/billing/platform screens must work before the first project
   // exists (a freshly provisioned tenant has no project yet).
-  const projectOptional = [ROUTES.organization, ROUTES.billing, ROUTES.platform].includes(location.pathname as typeof ROUTES.organization);
+  const projectOptional = [ROUTES.organization, ROUTES.billing, ROUTES.platform, ROUTES.oauthApplications, ROUTES.oauthClients].includes(location.pathname as typeof ROUTES.organization);
   if (projectLoading || !projectInitialized) return <PageLoader label={t('common.loading')} />;
   if (!activeProject && !projectOptional) return <PageLoader label={projectError || t('errors.forbidden')} />;
 
@@ -75,6 +75,9 @@ export function ProtectedRoute(): React.JSX.Element {
 
 /** 已登录时不再显示登录页 */
 export function GuestRoute({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const location = useLocation();
+  const requested = (location.state as {from?: string}|null)?.from;
+  const target = requested?.startsWith('/') && !requested.startsWith('//') ? requested : ROUTES.dashboard;
   const { t } = useI18n();
   const status = useAuthStore((state) => state.status);
   const initialized = useAuthStore((state) => state.initialized);
@@ -85,7 +88,7 @@ export function GuestRoute({ children }: { children: React.ReactNode }): React.J
   }, [initialized, bootstrap]);
 
   if (!initialized) return <PageLoader label={t('common.loading')} />;
-  if (status === 'authenticated') return <Navigate to={ROUTES.dashboard} replace />;
+  if (status === 'authenticated') return <Navigate to={target} replace />;
   return <>{children}</>;
 }
 

@@ -138,3 +138,13 @@ S7 每15分钟/手动拉C1产品与资料，保持空页水位；本地人工修
 项目管理员在原集成设置配置目标/订阅，首次生成与轮换一次性HMAC密钥。私有 /webhook* 管理API与OpenAPI callback/GlobalSiteC4*字段为唯一机器依据；不新增服务scope，旧outcomes和C1–C3端点/快照不变。来源限定C3归档且globalsite来源的客户，携带每条原externalInquiryId；客户级结果不承诺独立询盘归因。quotation.sent表示每份报价首次标记sent，不代表邮件送达。
 
 安全协议、原始字节签名/±300秒窗口/持久eventId去重、8次指数退避、配置代次取消旧队列、源事件扫描/多询盘分页、SSRF与部署迁移010详见 [C4-webhook.md](C4-webhook.md)。GlobalSite本次未修改，接收端另补；上线前保持通知关闭，现有S7继续outcomes轮询。
+
+
+## C5 身份登录设计评审（2026-11-06，待确认）
+
+新增 [oauth-设计.md](oauth-设计.md) 供审批：推荐授权码 + PKCE / OIDC，CRM 登录与 C2 业务服务凭证分离；不按邮箱自动合并账号，显式选择组织内项目。当前只提交设计，尚无 C5 可用端点、scope、模型或迁移；OpenAPI 与所有冻结快照保持不变。用户确认后，先在 integration-v1.openapi.yaml 增加 C5 标准身份端点与独立冻结，再实现 CRM；GlobalSite 入口与账号绑定另开本站任务。本文历史 S1 和 C1–C4 已实现部分不被本提案改写。
+
+
+## C5 实施契约（用户已确认）
+
+用户于 2026-11-06 确认 oauth-设计.md 推荐方案。身份协议使用独立 /oidc 路径，标准 OIDC 响应；私有授权与客户端管理走 CRM Cookie/sid + CSRF。唯一机器定义已加入 integration-v1.openapi.yaml 的 C5 组件与端点级 servers，旧 Integration API 及 C1–C4 冻结不变。OAuth scope 仅 openid/profile/email/crm.context/offline_access，不授予业务接口权限；后台同步仍使用 C2 服务凭证。部署索引迁移011；可选配置缺失只关闭新功能。GlobalSite 接收入口和账号绑定另补。

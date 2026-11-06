@@ -64,7 +64,9 @@
     "test:inquiries-ui": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/integration-inquiries-ui.test.ts",
     "test:fixture:j1": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx tests/start-j1-fixture.ts",
     "test:webhooks": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/integration-webhooks.test.ts",
-    "test:webhooks-ui": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/integration-webhooks-ui.test.ts"
+    "test:webhooks-ui": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/integration-webhooks-ui.test.ts",
+    "test:oauth": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/oauth.test.ts",
+    "test:oauth-ui": "node --require ./tests/isolated-env.cjs --require ./tests/os-user-info.cjs --import tsx --test tests/oauth-ui.test.ts"
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "^1.0.0",
@@ -83,6 +85,7 @@
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
     "nodemailer": "^10.0.1",
+    "oidc-provider": "9.13.3",
     "pdf-parse": "2.4.5",
     "pdfkit": "^0.20.2",
     "playwright": "1.62.0",
@@ -111,7 +114,7 @@
     "typescript": "^5.7.3"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.12.0"
   },
   "overrides": {
     "body-parser": "^1.20.9",

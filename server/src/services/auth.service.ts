@@ -59,11 +59,16 @@ function newRefreshToken(): string {
 /** Create a server-side session and return the opaque refresh cookie value. */
 export async function createAuthSession(
   user: AuthUser,
-  metadata: { ip?: string; userAgent?: string } = {},
+  metadata: { ip?: string; userAgent?: string; authenticated?: boolean; twoFactor?: boolean } = {},
 ): Promise<AuthSessionResult> {
   const refreshToken = newRefreshToken();
   const expiresAt = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
+  const identity = metadata.authenticated ? await User.findById(user.id).select('+oauthSecurityVersion') : null;
+  const authenticatedAt = identity ? new Date() : undefined;
   const session = await AuthSession.create({
+    authenticatedAt,
+    ...(identity ? { amr: metadata.twoFactor ? ['pwd', 'otp'] : ['pwd'], securityVersionAtLogin: identity.oauthSecurityVersion ?? 0 } : {}),
+    ...(identity && metadata.twoFactor ? { mfaVerifiedAt: authenticatedAt } : {}),
     userId: user.id,
     tokenHash: hashRefreshToken(refreshToken),
     expiresAt,

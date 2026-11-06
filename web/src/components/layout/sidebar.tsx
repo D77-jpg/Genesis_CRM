@@ -67,6 +67,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.aiSettings, labelKey: 'nav.aiSettings', icon: Settings2, end: false, adminOnly: true },
   { to: ROUTES.organization, labelKey: 'nav.organization', icon: Building2, end: false, managerOnly: true },
   { to: ROUTES.billing, labelKey: 'nav.billing', icon: CreditCard, end: false, adminOnly: true },
+  { to: ROUTES.oauthApplications, labelKey: 'oauth.title', icon: ShieldCheck, end: false },
+  { to: ROUTES.oauthClients, labelKey: 'oauth.clients', icon: KeyRound, end: false, platformOnly: true },
   { to: ROUTES.platform, labelKey: 'nav.platform', icon: Globe2, end: false, platformOnly: true },
 ];
 

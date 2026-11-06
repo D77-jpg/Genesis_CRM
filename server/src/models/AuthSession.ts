@@ -8,6 +8,10 @@ import './tenant-setup';
 import { Schema, Types, model, type HydratedDocument } from 'mongoose';
 
 export interface IAuthSession {
+  authenticatedAt?: Date;
+  amr?: string[];
+  mfaVerifiedAt?: Date;
+  securityVersionAtLogin?: number;
   userId: Types.ObjectId;
   tokenHash: string;
   expiresAt: Date;
@@ -23,6 +27,10 @@ export type AuthSessionDocument = HydratedDocument<IAuthSession>;
 
 const AuthSessionSchema = new Schema<IAuthSession>(
   {
+    authenticatedAt: Date,
+    amr: [String],
+    mfaVerifiedAt: Date,
+    securityVersionAtLogin: Number,
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     tokenHash: { type: String, required: true, unique: true, select: false },
     expiresAt: { type: Date, required: true },

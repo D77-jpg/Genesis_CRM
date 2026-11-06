@@ -30,6 +30,9 @@ export default defineConfig({
     // Windows the watcher can hit EBUSY on those files and crash the dev server.
     watch: { ignored: ['**/node_modules/**', '**/.git/**', '**/.*.tmpdir/**', '**/.*.tmp'] },
     proxy: {
+      '/oidc': { target: API_TARGET, changeOrigin: true },
+      '/api/auth/oauth': { target: API_TARGET, changeOrigin: true },
+      '/api/oauth': { target: API_TARGET, changeOrigin: true },
       '/api': {
         target: API_TARGET,
         changeOrigin: true,
@@ -44,6 +47,9 @@ export default defineConfig({
     host: true,
     port: 4173,
     proxy: {
+      '/oidc': { target: API_TARGET, changeOrigin: true },
+      '/api/auth/oauth': { target: API_TARGET, changeOrigin: true },
+      '/api/oauth': { target: API_TARGET, changeOrigin: true },
       '/api': {
         target: API_TARGET,
         changeOrigin: true,

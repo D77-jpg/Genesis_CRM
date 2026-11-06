@@ -2,6 +2,12 @@
 # deploy a separate TLS terminator for public traffic (see docs/operations/docker-runtime.md).
 x-server-env: &server-env
   NODE_ENV: production
+  OIDC_ENABLED: ${OIDC_ENABLED:-false}
+  OIDC_ISSUER: ${OIDC_ISSUER:-}
+  OIDC_PUBLIC_WEB_ORIGIN: ${OIDC_PUBLIC_WEB_ORIGIN:-}
+  OIDC_SIGNING_KEYRING_PATH: ${OIDC_SIGNING_KEYRING_PATH:-}
+  OIDC_ACTIVE_KEY_ID: ${OIDC_ACTIVE_KEY_ID:-}
+  OIDC_ALLOW_LOOPBACK: "false"
   APP_ENV: ${APP_ENV:-production}
   HOST: 0.0.0.0
   PORT: "5000"

@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Install（锁定依赖）
         run: npm ci
       - name: Integration API 契约测试（23 项，mongodb-memory-server 自举）
@@ -50,6 +50,7 @@ jobs:
           npm run test:agent
           npm run test:prospecting
           npm run test:outreach-automation
+          npm run test:oauth
           npm run test:security
           npm run test:health
           npx tsc --noEmit --strict --esModuleInterop --skipLibCheck --target ES2022 --module CommonJS --moduleResolution Node tests/prospecting-profiles.test.ts tests/prospecting.test.ts tests/security-hardening.test.ts tests/health-readiness.test.ts
@@ -105,7 +106,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: H-12 Mongo backup and H-13 container safety tests (skip=0)
         run: |
           node --test scripts/mongo-backup.test.cjs scripts/docker-runtime.test.cjs
@@ -121,7 +122,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Install（锁定依赖）
         run: npm ci
       - name: Guarded braces recursion and build consumer regression
@@ -145,11 +146,17 @@ jobs:
         run: npm run test:inquiries-ui --prefix ../server
       - name: C4 webhook browser regression (fictional isolated data)
         run: npm run test:webhooks-ui --prefix ../server
+      - name: C5 OAuth consent and authorized applications browser regression
+        env:
+          C5_UI_SCREENSHOTS: ${{ runner.temp }}/c5-ui-evidence
+        run: npm run test:oauth-ui --prefix ../server
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: c2-credentials-fictional-ui
-          path: ${{ runner.temp }}/c2-ui-evidence/*.png
+          path: |
+            ${{ runner.temp }}/c2-ui-evidence/*.png
+            ${{ runner.temp }}/c5-ui-evidence/*.png
           if-no-files-found: ignore
 
   security:
@@ -160,7 +167,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Install locked server and web dependencies
         run: |
           npm ci --prefix server
@@ -221,7 +228,7 @@ jobs:
           echo "OK"
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Install locked YAML parser (no dependency changes)
         shell: bash
         run: npm ci --prefix web --ignore-scripts --no-audit --no-fund
